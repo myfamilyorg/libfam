@@ -34,6 +34,21 @@
 
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
 	i64 result;
+#ifdef __aarch64__
+	__asm__ volatile(
+	    "mov x8, %1\n"
+	    "mov x0, %2\n"
+	    "mov x1, %3\n"
+	    "mov x2, %4\n"
+	    "mov x3, %5\n"
+	    "mov x4, %6\n"
+	    "mov x5, %7\n"
+	    "svc #0\n"
+	    "mov %0, x0\n"
+	    : "=r"(result)
+	    : "r"(sysno), "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5)
+	    : "x0", "x1", "x2", "x3", "x4", "x5", "x8", "memory");
+#elif defined(__x86_64__)
 	register i64 _a3 __asm__("r10") = a3;
 	register i64 _a4 __asm__("r8") = a4;
 	register i64 _a5 __asm__("r9") = a5;
@@ -42,10 +57,25 @@ i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
 			 : "a"(sysno), "D"(a0), "S"(a1), "d"(a2), "r"(_a3),
 			   "r"(_a4), "r"(_a5)
 			 : "rcx", "r11", "memory");
+#endif /* __x86_64__ */
 	return result;
 }
 
-#if TEST == 1
+extern bool _debug_no_exit;
+
+#ifdef __aarch64__
+#define SYSCALL_EXIT                 \
+	if (_debug_no_exit) return;  \
+	__asm__ volatile(            \
+	    "mov x8, #93\n"          \
+	    "mov x0, %0\n"           \
+	    "svc #0\n"               \
+	    :                        \
+	    : "r"((i64)status)       \
+	    : "x8", "x0", "memory"); \
+	while (true) {               \
+	}
+#elif defined(__x86_64__)
 #define SYSCALL_EXIT                                     \
 	if (_debug_no_exit) return;                      \
 	__asm__ volatile(                                \
@@ -57,18 +87,7 @@ i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
 	    : "%rax", "%rdi", "%rcx", "%r11", "memory"); \
 	while (true) {                                   \
 	}
-#else
-#define SYSCALL_EXIT                                     \
-	__asm__ volatile(                                \
-	    "movq $60, %%rax\n"                          \
-	    "movq %0, %%rdi\n"                           \
-	    "syscall\n"                                  \
-	    :                                            \
-	    : "r"((i64)status)                           \
-	    : "%rax", "%rdi", "%rcx", "%r11", "memory"); \
-	while (true) {                                   \
-	}
-#endif /* TEST */
+#endif /* __x86_64__ */
 
 #ifdef COVERAGE
 void __gcov_dump(void);

@@ -8,7 +8,7 @@ XXDIR_HEADER=./src/include/libfam/xxdir_dat.h
 INCLUDE_DIR=./src/include
 XCFLAGS=-Wno-pointer-sign
 if [ "${CC}" = "" ]; then
-	CC=gcc
+	CC=clang
 fi
 
 # make the output directory
