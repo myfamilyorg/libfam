@@ -65,4 +65,30 @@ jobs:
       - name: test
         run: |
           ./.ci/test
+  linux_amd64_coverage:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux-amd64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Check linux version
+        run: uname -a
+      - name: coverage
+        run: |
+          ./.ci/coverage
+  linux_aarch64_coverage:
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        platform: [linux-aarch64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Check linux version
+        run: uname -a
+      - name: coverage
+        run: |
+          ./.ci/coverage
 
