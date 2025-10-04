@@ -1,0 +1,43 @@
+#!/bin/bash
+
+./build clean all --cc=gcc -flto || exit $?;
+
+ldd target/lib/libfam.so  | grep "statically linked" || { echo "not statically linked!"; exit 1; }
+UNDEFINED_COUNT=$(nm target/lib/libfam.so | grep " U " | wc -l)
+if [ "$UNDEFINED_COUNT" -ne 0 ]; then
+	echo "Error: Found $UNDEFINED_COUNT undefined symbols"
+	nm target/lib/libfam.so | grep " U "
+	exit 1
+fi
+
+./build clean all --cc=clang -flto || exit $?;
+
+ldd target/lib/libfam.so  | grep "statically linked" || { echo "not statically linked!"; exit 1; }
+UNDEFINED_COUNT=$(nm target/lib/libfam.so | grep " U " | wc -l)
+if [ "$UNDEFINED_COUNT" -ne 0 ]; then
+        echo "Error: Found $UNDEFINED_COUNT undefined symbols"
+        nm target/lib/libfam.so | grep " U "
+        exit 1
+fi
+
+./build clean all --cc=gcc --cflags="-O0" || exit $?;
+
+ldd target/lib/libfam.so  | grep "statically linked" || { echo "not statically linked!"; exit 1; }
+UNDEFINED_COUNT=$(nm target/lib/libfam.so | grep " U " | wc -l)
+if [ "$UNDEFINED_COUNT" -ne 0 ]; then 
+        echo "Error: Found $UNDEFINED_COUNT undefined symbols"
+        nm target/lib/libfam.so | grep " U "
+        exit 1  
+fi
+
+./build clean all --cc=clang --cflags="-O0" || exit $?;
+
+ldd target/lib/libfam.so  | grep "statically linked" || { echo "not statically linked!"; exit 1; }
+UNDEFINED_COUNT=$(nm target/lib/libfam.so | grep " U " | wc -l)
+if [ "$UNDEFINED_COUNT" -ne 0 ]; then
+        echo "Error: Found $UNDEFINED_COUNT undefined symbols"
+        nm target/lib/libfam.so | grep " U "
+        exit 1
+fi
+
+echo "All builds successfully completed!";
