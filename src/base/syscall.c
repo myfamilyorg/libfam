@@ -29,8 +29,15 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
+#ifdef __aarch64__
+#define SYS_write 64
+#define SYS_gettimeofday 169
+#elif defined(__amd64__)
 #define SYS_write 1
 #define SYS_gettimeofday 96
+#else
+#error "Unsupported Platform"
+#endif /* ARCH */
 
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
 	i64 result;
