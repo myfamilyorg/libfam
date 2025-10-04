@@ -413,6 +413,7 @@ Test(stack_fails) {
 	_debug_no_exit = true;
 
 	__stack_chk_fail();
+	__stack_chk_guard();
 
 	_debug_no_write = false;
 	_debug_no_exit = false;
