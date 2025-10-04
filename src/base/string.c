@@ -1,0 +1,194 @@
+/********************************************************************************
+ * MIT License
+ *
+ * Copyright (c) 2025 Christopher Gilliard
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+
+#include <libfam/limits.h>
+#include <libfam/string.h>
+#include <libfam/types.h>
+#include <libfam/utils.h>
+
+PUBLIC u64 strlen(const u8 *x) {
+	const u8 *y = x;
+	while (*x) x++;
+	return x - y;
+}
+
+PUBLIC i32 strcmp(const u8 *x, const u8 *y) {
+	while (*x == *y && *x) x++, y++;
+	return *x > *y ? 1 : *y > *x ? -1 : 0;
+}
+
+PUBLIC u8 *strcpy(u8 *dest, const u8 *src) {
+	u8 *ptr = dest;
+	while ((*ptr++ = *src++));
+	return dest;
+}
+
+PUBLIC u8 *strcat(u8 *dest, const u8 *src) {
+	u8 *ptr = dest;
+	while (*ptr) ptr++;
+	while ((*ptr++ = *src++));
+	return dest;
+}
+
+PUBLIC u8 *strchr(const u8 *s, i32 c) {
+	do
+		if (*s == c) return (u8 *)s;
+	while (*s++);
+	return !c ? (u8 *)s : NULL;
+}
+
+PUBLIC i32 strncmp(const u8 *x, const u8 *y, u64 n) {
+	while (n > 0 && *x == *y && *x) x++, y++, n--;
+	if (n == 0) return 0;
+	return (u8)*x - (u8)*y;
+}
+
+PUBLIC void *memset(void *dest, i32 c, u64 n) {
+	u64 i;
+	for (i = 0; i < n; i++) ((u8 *)dest)[i] = (u8)c;
+	return dest;
+}
+
+PUBLIC void *memcpy(void *dest, const void *src, u64 n) {
+	u8 *d = (u8 *)dest;
+	const u8 *s = (const u8 *)src;
+	while (n--) *d++ = *s++;
+	return dest;
+}
+
+PUBLIC i32 memcmp(const void *s1, const void *s2, u64 n) {
+	const u8 *p1 = (const u8 *)s1;
+	const u8 *p2 = (const u8 *)s2;
+	u64 i;
+	for (i = 0; i < n; i++)
+		if (p1[i] != p2[i]) return (i32)(p1[i] - p2[i]);
+	return 0;
+}
+
+PUBLIC void *memmove(void *dest, const void *src, u64 n) {
+	u8 *d = (u8 *)dest;
+	const u8 *s = (u8 *)src;
+	u64 i;
+
+	if (dest == NULL || src == NULL || n == 0) {
+		return dest;
+	}
+
+	if (d <= s || d >= s + n) {
+		for (i = 0; i < n; i++) {
+			d[i] = s[i];
+		}
+	} else {
+		for (i = n; i > 0; i--) {
+			d[i - 1] = s[i - 1];
+		}
+	}
+
+	return dest;
+}
+
+PUBLIC u64 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals) {
+	u64 pos = 0;
+	i32 is_negative;
+	u64 int_part;
+	f64 frac_part;
+	i32 i;
+
+	if (v != v) {
+		buf[0] = 'n';
+		buf[1] = 'a';
+		buf[2] = 'n';
+		buf[3] = '\0';
+		return 3;
+	}
+
+	if (v > 1.7976931348623157e308 || v < -1.7976931348623157e308) {
+		if (v < 0) buf[pos++] = '-';
+		buf[pos++] = 'i';
+		buf[pos++] = 'n';
+		buf[pos++] = 'f';
+		buf[pos] = '\0';
+		return pos;
+	}
+
+	is_negative = v < 0;
+	if (is_negative) {
+		buf[pos++] = '-';
+		v = -v;
+	}
+
+	if (v == 0.0) {
+		buf[pos++] = '0';
+		buf[pos] = '\0';
+		return pos;
+	}
+
+	if (max_decimals < 0) max_decimals = 0;
+	if (max_decimals > 17) max_decimals = 17;
+
+	int_part = (u64)v;
+	frac_part = v - (f64)int_part;
+
+	if (max_decimals > 0) {
+		f64 rounding = 0.5;
+		for (i = 0; i < max_decimals; i++) rounding /= 10.0;
+		v += rounding;
+		int_part = (u64)v;
+		frac_part = v - (f64)int_part;
+	}
+
+	if (int_part == 0) {
+		buf[pos++] = '0';
+	} else {
+		u64 int_start = pos;
+		while (int_part > 0) {
+			buf[pos++] = '0' + (int_part % 10);
+			int_part /= 10;
+		}
+		for (i = 0; i < (i32)(pos - int_start) / 2; i++) {
+			u8 t = buf[int_start + i];
+			buf[int_start + i] = buf[pos - 1 - i];
+			buf[pos - 1 - i] = t;
+		}
+	}
+
+	if (frac_part > 0 && max_decimals > 0) {
+		buf[pos++] = '.';
+		u64 frac_start = pos;
+		i32 digits = 0;
+		while (digits < max_decimals) {
+			frac_part *= 10;
+			i32 digit = (i32)frac_part;
+			buf[pos++] = '0' + digit;
+			frac_part -= digit;
+			digits++;
+		}
+		while (pos > frac_start && buf[pos - 1] == '0') pos--;
+		if (pos == frac_start) pos--;
+	}
+
+	buf[pos] = '\0';
+	return pos;
+}

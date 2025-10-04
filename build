@@ -1,0 +1,103 @@
+#!/bin/bash
+
+usage() {
+        echo "Usage: build [<target>] [<options> ...]";
+        echo "  where <target> is one of: all | test | cov | install | clean | help";
+        echo "Options:";
+        echo "  -s := run in silent mode (less output)";
+	echo "  --cc=<compiler> := c compiler to use default 'clang'";
+	echo "  --cflags=<cflags> := c flags to use default '-O3 -Werror -Wall -std=x11'";
+	echo "  --f=<filter> := filter to target single test (e.g. --f=alloc1) default: all tests";
+	echo "  -flto := run with flto (link time optimization)";
+        exit -1;
+}
+
+check_single_option() {
+    if [ "$SPEC" = "1" ]; then
+        echo "Only a single option may be specified!";
+	usage;
+        exit -1;
+    fi
+    SPEC=1;
+}
+
+TEST=0;
+CLEAN=0;
+ALL=0;
+FLTO=0;
+COV=0;
+INSTALL=0;
+SILENT=0;
+SPEC=0;
+CC=clang;
+CFLAGS="-O3 \
+	-Werror \
+	-Wall \
+	-funroll-loops \
+	-std=c11";
+FILTER=*;
+
+for var in "$@"; do
+	case "$var" in
+	test)
+		check_single_option
+		TEST=1;
+		;;
+	clean)
+		CLEAN=1;
+		;;
+	cov)
+		check_single_option
+		COV=1;
+		;;
+	all)
+		check_single_option
+		ALL=1;
+		;;
+	install)
+		check_single_option
+		INSTALL=1;
+		;;
+	help)
+		usage
+		;;
+	--f=*)
+		FILTER="${var#*=}";
+		;;
+	-s)
+		SILENT=1;
+		;;
+	--cc=*)
+		CC="${var#*=}";
+		;;
+	--cflags=*)
+		CFLAGS="${var#*=}";
+		;;
+	-flto)
+		FLTO=1;
+		;;
+	*)
+		echo "Unepxected value specified: '$var'";
+		usage
+		;;
+	esac
+done
+
+if [ "$CLEAN" = "1" ]; then
+        . ./scripts/clean.sh
+fi
+if [ "$TEST" = "1" ]; then
+	. ./scripts/test.sh
+fi
+if [ "$COV" = "1" ]; then
+	. ./scripts/cov.sh
+fi
+if [ "$ALL" = "1" ] || [ "$SPEC" = "0" ]; then
+	if [ "$CLEAN" != "1" ] || [ "$ALL" = "1" ]; then
+		. ./scripts/all.sh
+	fi
+fi
+if [ "$INSTALL" = "1" ]; then
+	. ./scripts/install.sh
+fi
+
