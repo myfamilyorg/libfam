@@ -32,9 +32,11 @@
 #ifdef __aarch64__
 #define SYS_write 64
 #define SYS_gettimeofday 169
+#define SYS_getrandom 278
 #elif defined(__amd64__)
 #define SYS_write 1
 #define SYS_gettimeofday 96
+#define SYS_getrandom 318
 #else
 #error "Unsupported Platform"
 #endif /* ARCH */
@@ -135,3 +137,16 @@ CLEANUP:
 	RETURN;
 }
 
+i32 getrandom(void *buffer, u64 length, u32 flags) {
+	i64 v;
+INIT:
+	if (length > 256) ERROR(EIO);
+	if (!buffer) ERROR(EFAULT);
+	v = raw_syscall(SYS_getrandom, (i64)buffer, (i64)length, (i64)flags, 0,
+			0, 0);
+	if (v < 0) ERROR(-v);
+	if (v < length) ERROR(EIO);
+	OK(v);
+CLEANUP:
+	RETURN;
+}

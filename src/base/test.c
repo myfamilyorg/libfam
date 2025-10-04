@@ -26,6 +26,7 @@
 #include <libfam/builtin.h>
 #include <libfam/debug.h>
 #include <libfam/limits.h>
+#include <libfam/linux.h>
 #include <libfam/rbtree.h>
 #include <libfam/sysext.h>
 #include <libfam/test_base.h>
@@ -417,5 +418,15 @@ Test(stack_fails) {
 
 	_debug_no_write = false;
 	_debug_no_exit = false;
+}
+
+Test(rand1) {
+	u8 buf[128] = {0}, zero[128] = {0}, bigbuf[1024] = {0};
+	ASSERT(!memcmp(buf, zero, sizeof(buf)), "equal");
+	ASSERT_EQ(getrandom(buf, sizeof(buf), GRND_RANDOM), sizeof(buf),
+		  "rand");
+	ASSERT_EQ(getrandom(bigbuf, sizeof(bigbuf), GRND_RANDOM), -1, "rand");
+	ASSERT(memcmp(buf, zero, sizeof(buf)), "not equal");
+	ASSERT_EQ(gettimeofday(NULL, NULL), -1, "null gettimeofday");
 }
 
