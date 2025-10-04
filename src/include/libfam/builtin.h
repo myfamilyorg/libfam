@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2025 Christopher Gilliard
  *
- * Permission is hereby granted, free of u8ge, to any person obtaining a copy
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
@@ -34,9 +34,15 @@ static __inline u8 clz_u32(u32 x) {
 #ifdef USE_COMPILER_BUILTINS
 	return __builtin_clz(x);
 #else
+#ifdef __aarch64__
+	u32 result;
+	__asm__("clz %w0, %w1" : "=r"(result) : "r"(x));
+	return result;
+#else
 	u32 result;
 	__asm__("lzcntl %1, %0" : "=r"(result) : "r"(x) :);
 	return result;
+#endif
 #endif /* USE_COMPILER_BUILTINS */
 }
 
@@ -44,9 +50,15 @@ static __inline u8 clz_u64(u64 x) {
 #ifdef USE_COMPILER_BUILTINS
 	return __builtin_clzll(x);
 #else
+#ifdef __aarch64__
+	u64 result;
+	__asm__("clz %x0, %x1" : "=r"(result) : "r"(x));
+	return result;
+#else
 	u64 result;
 	__asm__("lzcntq %1, %0" : "=r"(result) : "r"(x) :);
 	return result;
+#endif
 #endif /* USE_COMPILER_BUILTINS */
 }
 
@@ -62,9 +74,19 @@ static __inline u8 ctz_u32(u32 x) {
 #ifdef USE_COMPILER_BUILTINS
 	return __builtin_ctz(x);
 #else
+#ifdef __aarch64__
+	u32 result;
+	__asm__(
+	    "rbit %w0, %w1\n\t"
+	    "clz %w0, %w0"
+	    : "=r"(result)
+	    : "r"(x));
+	return result;
+#else
 	u32 result;
 	__asm__("tzcntl %1, %0" : "=r"(result) : "r"(x) :);
 	return result;
+#endif
 #endif /* USE_COMPILER_BUILTINS */
 }
 
@@ -72,14 +94,28 @@ static __inline u8 ctz_u64(u64 x) {
 #ifdef USE_COMPILER_BUILTINS
 	return __builtin_ctzll(x);
 #else
+#ifdef __aarch64__
+	u64 result;
+	__asm__(
+	    "rbit %x0, %x1\n\t"
+	    "clz %x0, %x0"
+	    : "=r"(result)
+	    : "r"(x));
+	return result;
+#else
 	u64 result;
 	__asm__("tzcntq %1, %0" : "=r"(result) : "r"(x) :);
 	return result;
+#endif
 #endif /* USE_COMPILER_BUILTINS */
 }
 
 static __inline void __attribute__((unused)) trap(void) {
+#ifdef __aarch64__
+	__asm__ volatile("udf #0" ::: "memory");
+#else
 	__asm__ volatile("ud2" ::: "memory");
+#endif
 }
 
 #endif /* _BUILTIN_H */
