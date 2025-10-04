@@ -404,3 +404,17 @@ Test(memmove) {
 	memmove(out + 5, out, 8);
 	ASSERT(!memcmp(out, "aaa", 3), "memmove cmp");
 }
+
+void __stack_chk_fail(void);
+void __stack_chk_guard(void);
+
+Test(stack_fails) {
+	_debug_no_write = true;
+	_debug_no_exit = true;
+
+	__stack_chk_fail();
+
+	_debug_no_write = false;
+	_debug_no_exit = false;
+}
+
