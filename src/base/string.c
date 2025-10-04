@@ -66,46 +66,32 @@ PUBLIC i32 strncmp(const u8 *x, const u8 *y, u64 n) {
 }
 
 PUBLIC void *memset(void *dest, i32 c, u64 n) {
-	u64 i;
-	for (i = 0; i < n; i++) ((u8 *)dest)[i] = (u8)c;
+	u8 *tmp = dest;
+	while (n--) *tmp++ = (u8)c;
 	return dest;
 }
 
 PUBLIC void *memcpy(void *dest, const void *src, u64 n) {
 	u8 *d = (u8 *)dest;
-	const u8 *s = (const u8 *)src;
+	const u8 *s = (void *)src;
 	while (n--) *d++ = *s++;
 	return dest;
 }
 
 PUBLIC i32 memcmp(const void *s1, const void *s2, u64 n) {
-	const u8 *p1 = (const u8 *)s1;
-	const u8 *p2 = (const u8 *)s2;
-	u64 i;
-	for (i = 0; i < n; i++)
-		if (p1[i] != p2[i]) return (i32)(p1[i] - p2[i]);
+	const u8 *p1 = (void *)s1;
+	const u8 *p2 = (void *)s2;
+	while (n--) {
+		i32 diff = *p1++ - *p2++;
+		if (diff) return diff;
+	}
 	return 0;
 }
 
 PUBLIC void *memmove(void *dest, const void *src, u64 n) {
-	u8 *d = (u8 *)dest;
-	const u8 *s = (u8 *)src;
-	u64 i;
-
-	if (dest == NULL || src == NULL || n == 0) {
-		return dest;
-	}
-
-	if (d <= s || d >= s + n) {
-		for (i = 0; i < n; i++) {
-			d[i] = s[i];
-		}
-	} else {
-		for (i = n; i > 0; i--) {
-			d[i - 1] = s[i - 1];
-		}
-	}
-
+	u8 *d = (void *)((u8 *)dest + n);
+	u8 *s = (void *)((u8 *)src + n);
+	while (n--) d--, s--, *d = *s;
 	return dest;
 }
 
