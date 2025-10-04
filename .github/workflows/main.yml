@@ -26,7 +26,7 @@ jobs:
       - name: build
         run: |
           ./.ci/build
- linux_aarch64:
+  linux_aarch64:
     runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
