@@ -151,7 +151,21 @@ static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
 }
 
 static __inline u64 __aand64(volatile u64 *ptr, u64 value) {
+#ifdef __aarch64__
+	u64 old, tmp;
+	__asm__ volatile(
+	    "1: ldaxr %0, [%2]\n" /* Load-exclusive 64-bit */
+	    "and %1, %0, %3\n"	  /* Bitwise AND (64-bit) */
+	    "stxr w4, %1, [%2]\n" /* Store-exclusive 64-bit */
+	    "cbnz w4, 1b\n"	  /* Retry if store failed */
+	    "dmb ish\n"		  /* Memory barrier */
+	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
+	    : "r"(value)
+	    : "x4", "memory");
+	return old;
+#elif defined(__x86_64__)
 	return __atomic_and_fetch(ptr, value, __ATOMIC_SEQ_CST);
+#endif /* __x86_64__ */
 }
 
 static __inline u64 __aadd64(volatile u64 *ptr, u64 value) {
