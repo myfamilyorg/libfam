@@ -72,7 +72,7 @@ else
 fi
 
 INCDIR="src/include";
-SUB_DIRS="base crypto core store";
+SUB_DIRS="base crypto bible core store";
 LIB_OUTPUT_DIR="./target/lib";
 BIN_DIR="./target/bin";
 
