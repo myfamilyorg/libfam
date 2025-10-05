@@ -49,7 +49,7 @@ static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
 		    "2: mov %w1, #1\n" /* Set success = 1 (success) */
 		    "3: dmb ish\n"     /* Memory barrier */
 		    : "=&r"(result), "=&r"(success)
-		    : "r"(a), "r"(*expected), "r"(desired)
+		    : "r"(ptr), "r"(*expected), "r"(desired)
 		    : "w1", "memory" /* Use w1 instead of x0, x1 */
 		);
 		if (success) break;
@@ -61,24 +61,93 @@ static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
 }
 
 static __inline u32 __aand32(volatile u32 *ptr, u32 value) {
+#ifdef __aarch64__
+	u32 old, tmp;
+	__asm__ volatile(
+	    "1: ldaxr %w0, [%2]\n" /* Load-exclusive 32-bit */
+	    "and %w1, %w0, %w3\n"  /* Bitwise AND */
+	    "stxr w4, %w1, [%2]\n" /* Store-exclusive */
+	    "cbnz w4, 1b\n"	   /* Retry if store failed */
+	    "dmb ish\n"		   /* Memory barrier */
+	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
+	    : "r"(value)
+	    : "x4", "memory");
+	return old;
+#elif defined(__x86_64__)
 	return __atomic_and_fetch(ptr, value, __ATOMIC_SEQ_CST);
+#endif /* __x64_64__ */
 }
 
 static __inline u32 __aadd32(volatile u32 *ptr, u32 value) {
+#ifdef __aarch64__
+	u32 old, tmp;
+	__asm__ volatile(
+	    "1: ldaxr %w0, [%2]\n" /* Load-exclusive 32-bit */
+	    "add %w1, %w0, %w3\n"  /* Compute new value */
+	    "stxr w4, %w1, [%2]\n" /* Store-exclusive */
+	    "cbnz w4, 1b\n"	   /* Retry if store failed */
+	    "dmb ish\n"		   /* Memory barrier */
+	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
+	    : "r"(value)
+	    : "x4", "memory");
+	return old;
+
+#elif defined(__x86_64__)
 	return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
+#endif /* __x86_64__ */
 }
 
 static __inline u32 __asub32(volatile u32 *ptr, u32 value) {
-	return __atomic_sub_fetch(ptr, value, __ATOMIC_SEQ_CST);
+	return __aadd32(ptr, -value);
 }
 
 static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
+#ifdef __aarch64__
+	u32 old, tmp;
+	__asm__ volatile(
+	    "1: ldaxr %w0, [%2]\n" /* Load-exclusive 32-bit */
+	    "orr %w1, %w0, %w3\n"  /* Bitwise OR */
+	    "stxr w4, %w1, [%2]\n" /* Store-exclusive */
+	    "cbnz w4, 1b\n"	   /* Retry if store failed */
+	    "dmb ish\n"		   /* Memory barrier */
+	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
+	    : "r"(value)
+	    : "x4", "memory");
+	return old;
+#elif defined(__x86_64__)
 	return __atomic_or_fetch(ptr, value, __ATOMIC_SEQ_CST);
+#endif /* __x86_64__ */
 }
 
 static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
+#ifdef __aarch64__
+	u64 result;
+	i32 success;
+	u64 orig_expected = *expected;
+	i32 retries = 5;
+	while (retries--) {
+		__asm__ volatile(
+		    "ldaxr %0, [%2]\n"
+		    "cmp %0, %3\n"
+		    "b.ne 1f\n"
+		    "stxr w1, %4, [%2]\n"
+		    "cbz w1, 2f\n"
+		    "1: mov %w1, #0\n"
+		    "b 3f\n"
+		    "2: mov %w1, #1\n"
+		    "3: dmb ish\n"
+		    : "=&r"(result), "=&r"(success)
+		    : "r"(ptr), "r"(*expected), "r"(desired)
+		    : "x0", "x1", "memory");
+		if (success) break;
+		*expected = result;
+		if (result != orig_expected) break;
+	}
+	return success;
+#elif defined(__x86_64__)
 	return __atomic_compare_exchange_n(ptr, expected, desired, false,
 					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+#endif /* __x86_64__ */
 }
 
 static __inline u64 __aand64(volatile u64 *ptr, u64 value) {
@@ -86,15 +155,43 @@ static __inline u64 __aand64(volatile u64 *ptr, u64 value) {
 }
 
 static __inline u64 __aadd64(volatile u64 *ptr, u64 value) {
+#ifdef __aarch64__
+	u64 old, tmp;
+	__asm__ volatile(
+	    "1: ldaxr %0, [%2]\n" /* Load-exclusive 64-bit */
+	    "add %1, %0, %3\n"	  /* Compute new value */
+	    "stxr w4, %1, [%2]\n" /* Store-exclusive */
+	    "cbnz w4, 1b\n"	  /* Retry if store failed */
+	    "dmb ish\n"		  /* Memory barrier */
+	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
+	    : "r"(value)
+	    : "x4", "memory");
+	return old;
+#elif defined(__x86_64__)
 	return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
+#endif /* __x86_64__ */
 }
 
 static __inline u64 __asub64(volatile u64 *ptr, u64 value) {
-	return __atomic_sub_fetch(ptr, value, __ATOMIC_SEQ_CST);
+	return __aadd64(ptr, -value);
 }
 
 static __inline u64 __aor64(volatile u64 *ptr, u64 value) {
+#ifdef __aarch64__
+	u64 old, tmp;
+	__asm__ volatile(
+	    "1: ldaxr %0, [%2]\n" /* Load-exclusive 64-bit */
+	    "orr %1, %0, %3\n"	  /* Bitwise OR (64-bit) */
+	    "stxr w4, %1, [%2]\n" /* Store-exclusive 64-bit */
+	    "cbnz w4, 1b\n"	  /* Retry if store failed */
+	    "dmb ish\n"		  /* Memory barrier */
+	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
+	    : "r"(value)
+	    : "x4", "memory");
+	return old;
+#elif defined(__x86_64__)
 	return __atomic_or_fetch(ptr, value, __ATOMIC_SEQ_CST);
+#endif /* __x86_64__ */
 }
 
 static __inline u32 __aload32(const volatile u32 *ptr) {
