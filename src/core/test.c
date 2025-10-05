@@ -410,7 +410,7 @@ Test(alloc2) {
 }
 
 #define ALLOC_THREADS 32
-#define ALLOC_TCOUNT (4 * 1024)
+#define ALLOC_TCOUNT (32 * 1024)
 
 Test(alloc3) {
 	i32 i;
