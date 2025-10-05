@@ -340,7 +340,7 @@ Test(builtins) {
 }
 
 Test(string_chr_cat) {
-	const u8 *in = "abcdefgh";
+	const char *in = "abcdefgh";
 	ASSERT_EQ(strchr(in, 'c'), in + 2, "strchr");
 	ASSERT_EQ(strchr(in, 'v'), NULL, "strchr miss");
 	ASSERT_EQ(strchr(in, 0), in + strlen(in), "strchr strlen");

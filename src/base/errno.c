@@ -44,7 +44,7 @@ PUBLIC void perror(const u8 *s) {
 	write(STDERR_FD, "\n", 1);
 }
 
-const u8 *strerror(i32 err_code) {
+char *strerror(i32 err_code) {
 	switch (err_code) {
 		case SUCCESS:
 			return "Success";

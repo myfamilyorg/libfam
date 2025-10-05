@@ -34,40 +34,40 @@ PUBLIC u64 strlen(const char *x) {
 	return x - y;
 }
 
-PUBLIC i32 strcmp(const u8 *x, const u8 *y) {
+PUBLIC i32 strcmp(const char *x, const char *y) {
 	while (*x == *y && *x) x++, y++;
 	return *x > *y ? 1 : *y > *x ? -1 : 0;
 }
 
-PUBLIC u8 *strcpy(u8 *dest, const u8 *src) {
-	u8 *ptr = dest;
+PUBLIC char *strcpy(char *dest, const char *src) {
+	char *ptr = dest;
 	while ((*ptr++ = *src++));
 	return dest;
 }
 
-PUBLIC u8 *strcat(u8 *dest, const u8 *src) {
-	u8 *ptr = dest;
+PUBLIC char *strcat(char *dest, const char *src) {
+	char *ptr = dest;
 	while (*ptr) ptr++;
 	while ((*ptr++ = *src++));
 	return dest;
 }
 
-PUBLIC u8 *strchr(const u8 *s, i32 c) {
+PUBLIC char *strchr(const char *s, i32 c) {
 	do
-		if (*s == c) return (u8 *)s;
+		if (*s == c) return (char *)s;
 	while (*s++);
-	return !c ? (u8 *)s : NULL;
+	return !c ? (char *)s : NULL;
 }
 
-PUBLIC i32 strncmp(const u8 *x, const u8 *y, u64 n) {
+PUBLIC i32 strncmp(const char *x, const char *y, u64 n) {
 	while (n > 0 && *x == *y && *x) x++, y++, n--;
 	if (n == 0) return 0;
-	return (u8)*x - (u8)*y;
+	return (char)*x - (char)*y;
 }
 
 PUBLIC void *memset(void *dest, i32 c, u64 n) {
 	u8 *tmp = dest;
-	while (n--) *tmp++ = (u8)c;
+	while (n--) *tmp++ = (char)c;
 	return dest;
 }
 

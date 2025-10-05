@@ -1051,3 +1051,9 @@ Test(match_overflow) {
 	ASSERT_EQ(compress_read_symbols(&strm, lengths, codes, NULL, 0), -1,
 		  "match overflow");
 }
+
+Test(strstr) {
+	const char *s = "abcdefghi";
+	ASSERT_EQ(strstr(s, "def"), s + 3, "strstr1");
+	ASSERT_EQ(strstr(s, "x"), NULL, "no match");
+}

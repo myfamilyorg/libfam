@@ -40,12 +40,12 @@ typedef enum {
 } Int128DisplayType;
 
 u64 strlen(const char *msg);
-i32 strncmp(const u8 *x, const u8 *y, u64 n);
-u8 *strcpy(u8 *dest, const u8 *src);
-i32 strcmp(const u8 *x, const u8 *y);
-u8 *strstr(const u8 *s, const u8 *sub);
-u8 *strcat(u8 *dest, const u8 *src);
-u8 *strchr(const u8 *s, i32 c);
+i32 strncmp(const char *x, const char *y, u64 n);
+char *strcpy(char *dest, const char *src);
+i32 strcmp(const char *x, const char *y);
+char *strstr(const char *s, const char *sub);
+char *strcat(char *dest, const char *src);
+char *strchr(const char *s, i32 c);
 void *memset(void *ptr, i32 x, u64 n);
 void *memcpy(void *dst, const void *src, u64 n);
 void *memmove(void *dst, const void *src, u64 n);

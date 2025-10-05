@@ -92,3 +92,12 @@ CLEANUP:
 	RETURN;
 }
 
+PUBLIC char *strstr(const char *s, const char *sub) {
+	for (; *s; s++) {
+		const u8 *tmps = s, *tmpsub = sub;
+		while (*tmps == *tmpsub && *tmps) tmps++, tmpsub++;
+		if (*tmpsub == '\0') return (u8 *)s;
+	}
+	return NULL;
+}
+
