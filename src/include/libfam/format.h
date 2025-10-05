@@ -134,29 +134,29 @@
 		_p__;                                                          \
 	})
 
-/* clang-format off */
 #ifdef __clang__
-#define FORMAT(f, fmt, ...)                                                  \
-	({                                                                   \
-		_Pragma("GCC diagnostic push");                              \
+#define FORMAT(f, fmt, ...)                                                    \
+	({                                                                     \
+		_Pragma("GCC diagnostic push");                                \
+		/* clang-format off */                                       \
 		_Pragma("GCC diagnostic ignored \"-Wincompatible-pointer-types-discards-qualifiers\""); \
-		format_append(                                               \
-		    f, fmt __VA_OPT__(                                       \
-			   , FOR_EACH(FORMAT_ITEM, _, (, ), __VA_ARGS__)));  \
-		_Pragma("GCC diagnostic pop");                               \
+		/* clang-format on */                                          \
+		format_append(                                                 \
+		    f, fmt __VA_OPT__(                                         \
+			   , FOR_EACH(FORMAT_ITEM, _, (, ), __VA_ARGS__)));    \
+		_Pragma("GCC diagnostic pop");                                 \
 	})
 #else
 #define FORMAT(f, fmt, ...)                                                   \
-        ({                                                                    \
-	 	_Pragma("GCC diagnostic push");                               \
-                _Pragma("GCC diagnostic ignored \"-Wdiscarded-qualifiers\""); \
-                format_append(                                                \
-                    f, fmt __VA_OPT__(                                        \
-                           , FOR_EACH(FORMAT_ITEM, _, (, ), __VA_ARGS__)));   \
+	({                                                                    \
+		_Pragma("GCC diagnostic push");                               \
+		_Pragma("GCC diagnostic ignored \"-Wdiscarded-qualifiers\""); \
+		format_append(                                                \
+		    f, fmt __VA_OPT__(                                        \
+			   , FOR_EACH(FORMAT_ITEM, _, (, ), __VA_ARGS__)));   \
 		_Pragma("GCC diagnostic pop");                                \
-        })
+	})
 #endif
-/* clang-format on */
 
 #define println(fmt, ...)                                                     \
 	({                                                                    \
