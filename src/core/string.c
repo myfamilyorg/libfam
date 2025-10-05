@@ -48,34 +48,40 @@ CLEANUP:
 
 i32 i128_to_string(u8 buf[MAX_I128_STRING_LEN], i128 value,
 		   Int128DisplayType t) {
-	i32 len, ret;
+	i32 len;
 	u128 abs_v;
 	bool is_negative = value < 0;
-INIT:
 	if (is_negative) {
 		*buf++ = '-';
 		abs_v = value == I128_MIN ? (u128)1 << 127 : (u128)(-value);
 	} else
 		abs_v = (u128)value;
 	len = u128_to_string(buf, abs_v, t);
-	ret = len < 0 ? len : is_negative ? len + 1 : len;
-	OK(ret);
-CLEANUP:
-	RETURN;
+	return len < 0 ? len : is_negative ? len + 1 : len;
 }
+
 i32 u128_to_string(u8 buf[MAX_U128_STRING_LEN], u128 value,
 		   Int128DisplayType t) {
-	u8 temp[MAX_U128_STRING_LEN] = {0};
+	u8 temp[MAX_U128_STRING_LEN];
 	i32 i = 0, j = 0;
 	bool hex =
 	    t == Int128DisplayTypeHexUpper || t == Int128DisplayTypeHexLower;
-	u8 mod_val = hex ? 16 : t == Int128DisplayTypeDecimal ? 10 : 2;
+	bool commas = t == Int128DisplayTypeCommas;
+	u8 mod_val =
+	    hex ? 16 : (commas || t == Int128DisplayTypeDecimal ? 10 : 2);
 	const u8 *hex_code = t == Int128DisplayTypeHexUpper
 				 ? "0123456789ABCDEF"
 				 : "0123456789abcdef";
-INIT:
-	if (hex) j = 2, buf[0] = '0', buf[1] = 'x';
-	if (value == 0) buf[j++] = '0', buf[j] = '\0', OK(j);
+	if (hex) {
+		j = 2;
+		buf[0] = '0';
+		buf[1] = 'x';
+	}
+	if (value == 0) {
+		buf[j++] = '0';
+		buf[j] = '\0';
+		return j;
+	}
 	while (value > 0) {
 		temp[i++] = hex_code[(value % mod_val)];
 		if (mod_val == 16)
@@ -85,11 +91,30 @@ INIT:
 		else if (mod_val == 2)
 			value >>= 1;
 	}
-	for (; i > 0; j++) buf[j] = temp[--i];
-	buf[j] = '\0';
-	OK(j);
-CLEANUP:
-	RETURN;
+	if (commas) {
+		u64 digit_count = i;
+		u64 comma_count = digit_count > 3 ? (digit_count - 1) / 3 : 0;
+		u64 total_bytes = digit_count + comma_count;
+		j = 0;
+		i--;
+		u64 digits_until_comma = digit_count % 3 ? digit_count % 3 : 3;
+		while (i >= 0) {
+			buf[j++] = temp[i--];
+			digits_until_comma--;
+			if (digits_until_comma == 0 && i >= 0) {
+				buf[j++] = ',';
+				digits_until_comma = 3;
+			}
+		}
+		buf[j] = '\0';
+		return total_bytes;
+	} else {
+		for (; i > 0; j++) {
+			buf[j] = temp[--i];
+		}
+		buf[j] = '\0';
+		return j;
+	}
 }
 
 PUBLIC char *strstr(const char *s, const char *sub) {

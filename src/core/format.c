@@ -35,13 +35,14 @@ typedef enum {
 	FormatAlignRight,
 } FormatAlignment;
 typedef enum {
-	FormatSpecTypeNone = 0,
-	FormatSpecTypeBinary = 1,
-	FormatSpecTypeHexUpper = 2,
-	FormatSpecTypeHexLower = 3,
-	FormatSpecTypeChar = 4,
-	FormatSpecTypeEscapeBracketRight = 5,
-	FormatSpecTypeEscapeBracketLeft = 6,
+	FormatSpecTypeNone,
+	FormatSpecTypeBinary,
+	FormatSpecTypeHexUpper,
+	FormatSpecTypeHexLower,
+	FormatSpecTypeCommas,
+	FormatSpecTypeChar,
+	FormatSpecTypeEscapeBracketRight,
+	FormatSpecTypeEscapeBracketLeft,
 } FormatSpecType;
 
 typedef struct {
@@ -117,6 +118,11 @@ INIT:
 			ret.t = FormatSpecTypeHexLower;
 			ret.total_bytes++;
 			p++;
+		} else if (*p == 'n') {
+			if (ret.t != FormatSpecTypeNone) ERROR(EPROTO);
+			ret.t = FormatSpecTypeCommas;
+			ret.total_bytes++;
+			p++;
 		} else if (*p == '}') {
 			break;
 		} else
@@ -164,6 +170,8 @@ STATIC Int128DisplayType format_get_displayType(const FormatSpec *spec) {
 		return Int128DisplayTypeBinary;
 	else if (spec->t == FormatSpecTypeHexUpper)
 		return Int128DisplayTypeHexUpper;
+	else if (spec->t == FormatSpecTypeCommas)
+		return Int128DisplayTypeCommas;
 	else
 		return Int128DisplayTypeHexLower;
 }
@@ -235,9 +243,7 @@ CLEANUP:
 	RETURN;
 }
 STATIC i32 format_proc_invalid(Formatter *f, const FormatSpec *spec) {
-INIT:
-CLEANUP:
-	RETURN;
+	return 0;
 }
 
 PUBLIC i32 format_append(Formatter *f, const u8 *p, ...) {

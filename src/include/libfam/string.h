@@ -28,7 +28,7 @@
 
 #include <libfam/types.h>
 
-#define MAX_U128_STRING_LEN 150
+#define MAX_U128_STRING_LEN 255
 #define MAX_I128_STRING_LEN (MAX_U128_STRING_LEN + 1)
 #define MAX_F64_STRING_LEN 41
 
@@ -37,6 +37,7 @@ typedef enum {
 	Int128DisplayTypeHexUpper,
 	Int128DisplayTypeHexLower,
 	Int128DisplayTypeBinary,
+	Int128DisplayTypeCommas,
 } Int128DisplayType;
 
 u64 strlen(const char *msg);

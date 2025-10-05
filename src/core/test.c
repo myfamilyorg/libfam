@@ -983,6 +983,9 @@ Test(format1) {
 	FORMAT(&f, "{}", x);
 	ASSERT(!strcmp("101", format_to_string(&f)), "101");
 	format_clear(&f);
+	FORMAT(&f, "{n}", 1001);
+	ASSERT(!strcmp("1,001", format_to_string(&f)), "101 commas");
+	format_clear(&f);
 	ASSERT_BYTES(0);
 }
 
