@@ -33,113 +33,9 @@
 
 #define FORMATTER_INIT {0};
 
-#ifdef __clang__
-/* clang-format off */
-#define FORMAT_ITEM(ign, value)                                                \
-        ({                                                                     \
-                Printable _p__ = _Generic((value),                             \
-                    char: ((Printable){                                        \
-                        .t = IntType,                                          \
-                        .data.ivalue =                                         \
-                            _Generic((value), char: (value), default: 0)}),    \
-                    signed char: ((Printable){.t = IntType,                    \
-                                              .data.ivalue = _Generic((value), \
-                                              signed char: (value),            \
-                                              default: 0)}),                   \
-                    short int: ((Printable){.t = IntType,                      \
-                                            .data.ivalue = _Generic((value),   \
-                                            short int: (value),                \
-                                            default: 0)}),                     \
-                    int: ((Printable){                                         \
-                        .t = IntType,                                          \
-                        .data.ivalue =                                         \
-                            _Generic((value), int: (value), default: 0)}),     \
-                    long: ((Printable){                                        \
-                        .t = IntType,                                          \
-                        .data.ivalue =                                         \
-                            _Generic((value), long: (value), default: 0)}),    \
-                    long long: ((Printable){.t = IntType,                      \
-                                            .data.ivalue = _Generic((value),   \
-                                            long long: (value),                \
-                                            default: 0)}),                     \
-                    __int128_t: ((Printable){.t = IntType,                     \
-                                             .data.ivalue = _Generic((value),  \
-                                             __int128_t: (value),              \
-                                             default: 0)}),                    \
-                    unsigned char: (                                           \
-                             (Printable){.t = UIntType,                         \
-                                         .data.uvalue = _Generic((value),      \
-                                         unsigned char: (value),               \
-                                         default: 0)}),                        \
-                    unsigned short int: (                                      \
-                             (Printable){.t = UIntType,                         \
-                                         .data.uvalue = _Generic((value),      \
-                                         unsigned short int: (value),          \
-                                         default: 0)}),                        \
-                    unsigned int: (                                            \
-                             (Printable){.t = UIntType,                        \
-                                         .data.uvalue = _Generic((value),      \
-                                         unsigned int: (value),                \
-                                         default: 0)}),                        \
-                    unsigned long: (                                           \
-                             (Printable){.t = UIntType,                         \
-                                         .data.uvalue = _Generic((value),      \
-                                         unsigned long: (value),               \
-                                         default: 0)}),                        \
-                    unsigned long long: (                                      \
-                             (Printable){.t = UIntType,                         \
-                                         .data.uvalue = _Generic((value),      \
-                                         unsigned long long: (value),          \
-                                         default: 0)}),                        \
-                    __uint128_t: ((Printable){.t = UIntType,                   \
-                                              .data.uvalue = _Generic((value), \
-                                              __uint128_t: (value),            \
-                                              default: 0)}),                   \
-                    char *: ((Printable){.t = StringType,                      \
-                                         .data.svalue = _Generic((value),      \
-                                         char *: (value),                      \
-                                         default: NULL)}),                     \
-                    const char *: ((Printable){.t = StringType,                \
-                                         .data.svalue = _Generic((value),      \
-					 const char *: (value),                \
-                                         default: NULL)}),                     \
-                    signed char *: (                                           \
-                             (Printable){.t = StringType,                      \
-                                         .data.svalue = _Generic((value),      \
-                                         char *: (value),                      \
-                                         default: NULL)}),                     \
-                    u8 *: ((Printable){.t = StringType,                        \
-                                       .data.svalue = _Generic((value),        \
-                                       const u8 *: (value), u8 *: (value),     \
-                                       default: NULL)}),                       \
-                    const u8 *: ((Printable){.t = StringType,                  \
-                                       .data.svalue = _Generic((value),        \
-                                       const u8 *: (value),                    \
-                                       default: NULL)}),                       \
-                    void *: ((Printable){.t = UIntType,                        \
-                                         .data.uvalue = _Generic((value),      \
-                                         void *: ((u64)value),                 \
-                                         default: 0)}),                        \
-                    double: ((Printable){.t = FloatType,                       \
-                                         .data.fvalue = _Generic((value),      \
-                                         double: (value),                      \
-                                         default: 0.0)}),                      \
-                    float: ((Printable){                                       \
-                        .t = FloatType,                                        \
-                        .data.fvalue =                                         \
-                            _Generic((value), float: (value), default: 0.0)}), \
-                    default: ((Printable){                                     \
-                        .t = StringType,                                       \
-                        .data.svalue = (u8 *)"unsupported"}));                 \
-                    _p__; \
-        })
-/* clang-format on */
-#else
 /* clang-format off */
 #define FORMAT_ITEM(ign, value)                                                \
 	({                                                                     \
-	        _Pragma("GCC diagnostic push");                                \
-                _Pragma("GCC diagnostic ignored \"-Wdiscarded-qualifiers\"");  \
 		Printable _p__ = _Generic((value),                             \
 		    char: ((Printable){                                        \
 			.t = IntType,                                          \
@@ -170,12 +66,12 @@
 					     __int128_t: (value),              \
 					     default: 0)}),                    \
 		    unsigned char: (                                           \
-			     (Printable){.t = UIntType,                         \
+			     (Printable){.t = UIntType,                        \
 					 .data.uvalue = _Generic((value),      \
 					 unsigned char: (value),               \
 					 default: 0)}),                        \
 		    unsigned short int: (                                      \
-			     (Printable){.t = UIntType,                         \
+			     (Printable){.t = UIntType,                        \
 					 .data.uvalue = _Generic((value),      \
 					 unsigned short int: (value),          \
 					 default: 0)}),                        \
@@ -185,12 +81,12 @@
 					 unsigned int: (value),                \
 					 default: 0)}),                        \
 		    unsigned long: (                                           \
-			     (Printable){.t = UIntType,                         \
+			     (Printable){.t = UIntType,                        \
 					 .data.uvalue = _Generic((value),      \
 					 unsigned long: (value),               \
 					 default: 0)}),                        \
 		    unsigned long long: (                                      \
-			     (Printable){.t = UIntType,                         \
+			     (Printable){.t = UIntType,                        \
 					 .data.uvalue = _Generic((value),      \
 					 unsigned long long: (value),          \
 					 default: 0)}),                        \
@@ -234,11 +130,9 @@
 		    default: ((Printable){                                     \
 			.t = StringType,                                       \
 			.data.svalue = (u8 *)"unsupported"}));                 \
-                    _Pragma("GCC diagnostic pop");                             \
 		    _p__;                                                      \
 	})
 /* clang-format on */
-#endif
 
 /* clang-format off */
 #ifdef __clang__

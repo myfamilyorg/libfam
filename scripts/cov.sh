@@ -16,7 +16,7 @@ CC=gcc
 CFLAGS="-O0 \
 	-Werror \
 	-Wall \
-	-std=c89 \
+	-std=c11 \
 	-fvisibility=hidden \
 	-fno-pie \
 	-fPIC \
