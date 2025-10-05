@@ -28,9 +28,11 @@
 #include <libfam/atomic.h>
 #include <libfam/bitmap.h>
 #include <libfam/bitstream.h>
+#include <libfam/compress.h>
 #include <libfam/debug.h>
 #include <libfam/format.h>
 #include <libfam/limits.h>
+#include <libfam/linux.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
@@ -354,6 +356,19 @@ Test(stubs) {
 	ASSERT_EQ(__umodti3(v2, v1), 0, "umod1");
 }
 
+Test(memory) {
+	void *a = alloc(1);
+	ASSERT(allocated_bytes(), "alloc");
+	release(a);
+	ASSERT(!allocated_bytes(), "release");
+	a = alloc(1);
+	ASSERT(allocated_bytes(), "alloc");
+	reset_allocated_bytes();
+	ASSERT(!allocated_bytes(), "release");
+	release(a);
+	reset_allocated_bytes();
+}
+
 Test(alloc1) {
 	Alloc *a = alloc_init(AllocMap, 8);
 	void *tmp = balloc(a, 8);
@@ -601,5 +616,416 @@ Test(alloc_all_slabs) {
 	brelease(a, ptr7);
 
 	alloc_destroy(a);
+}
+
+Test(sysext) {
+	const u8 *path = "/tmp/01234567789abc.txt";
+	i32 fd;
+	u128 v1, v2;
+
+	getentropy(&v1, sizeof(u128));
+	getentropy(&v2, sizeof(u128));
+	ASSERT(v1 != v2, "getentropy");
+
+	unlink(path);
+	ASSERT(!exists(path), "!exists");
+	fd = file(path);
+	flush(fd);
+	ASSERT(exists(path), "exists");
+	close(fd);
+	unlink(path);
+}
+
+typedef struct {
+	i32 value1;
+	i32 value2;
+	i32 value3;
+	i32 value4;
+	i32 value5;
+	u32 uvalue1;
+	u32 uvalue2;
+} SharedStateData;
+
+Test(futex1) {
+	void *base = smap(sizeof(SharedStateData));
+	i32 cpid;
+	SharedStateData *state = (SharedStateData *)base;
+	state->uvalue1 = (u32)0;
+	if ((cpid = two())) {
+		while (state->uvalue1 == 0) {
+			futex(&state->uvalue1, FUTEX_WAIT, 0, NULL, NULL, 0);
+		}
+		ASSERT(state->uvalue1, "value1");
+		state->value2++;
+	} else {
+		state->uvalue1 = 1;
+		futex(&state->uvalue1, FUTEX_WAKE, 1, NULL, NULL, 0);
+		_exit(0);
+	}
+	await(cpid);
+	ASSERT(state->value2, "value2");
+	munmap(base, sizeof(SharedStateData));
+}
+
+Test(sys) {
+	i32 fd, fd2;
+	i32 pid = getpid();
+	i32 ret = kill(pid, 0);
+	i32 ret2 = kill(I32_MAX, 0);
+	const u8 *path = "/tmp/systest.dat";
+	ASSERT(!ret, "our pid");
+	ASSERT(ret2, "invalid pid");
+	errno = 0;
+	ASSERT(getrandom(NULL, 512, 0), "len>256");
+	ASSERT_EQ(errno, EIO, "eio");
+	ASSERT(getrandom(NULL, 128, 0), "null buf");
+	ASSERT_EQ(errno, EFAULT, "efault");
+
+	_debug_no_exit = true;
+	abort();
+	_debug_no_exit = false;
+
+	unlink(path);
+	fd = file(path);
+	fd2 = fcntl(fd, F_DUPFD);
+	ASSERT(fd != fd2, "ne");
+	ASSERT(fd > 0, "fd>0");
+	ASSERT(fd2 > 0, "fd2>0");
+	close(fd);
+	close(fd2);
+	unlink(path);
+	msleep(1);
+
+	fd = epoll_create1(0);
+	ASSERT(fd > 0, "epfd>0");
+	ASSERT_EQ(epoll_ctl(fd, EPOLL_CTL_ADD, -1, NULL), -1, "epoll_ctl");
+	ASSERT_EQ(errno, EFAULT, "efault");
+	errno = 0;
+	ASSERT_EQ(epoll_pwait(fd, NULL, 0, 1, NULL, 0), -1, "epoll_pwait");
+	ASSERT_EQ(errno, EINVAL, "einval");
+	close(fd);
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	ASSERT(fd > 0, "fd>0");
+	ASSERT(shutdown(fd, 0), "shutdown");
+	ASSERT(accept(fd, NULL, NULL), "accept");
+	ASSERT(bind(fd, NULL, 0), "bind");
+	ASSERT(connect(fd, NULL, 0), "connect");
+	ASSERT(setsockopt(fd, 0, 0, NULL, 0), "setsockopt");
+	ASSERT(getsockname(fd, NULL, NULL), "getsockname");
+	ASSERT(!listen(fd, 0), "listen");
+	ASSERT(getsockopt(0, 0, 0, NULL, NULL), "getsockopt is err");
+	close(fd);
+
+	fd2 = fcntl(fd, F_GETLEASE);
+
+	ASSERT_EQ(mmap(NULL, 1024, 100, 100, 100, 100), MAP_FAILED,
+		  "mmap fail");
+}
+
+Test(file) {
+	u8 buf[10];
+	const char *path = "/tmp/core_file.txt";
+	unlink(path);
+	i32 i, fd = file(path);
+	ASSERT(fd > 0, "fd");
+	ASSERT(write(fd, "test", 4), "write");
+	lseek(fd, 0, SEEK_SET);
+	ASSERT_EQ(read(fd, buf, sizeof(buf)), 4, "read");
+	ASSERT(!memcmp(buf, "test", 4), "memcmp");
+	ASSERT(!yield(), "yield");
+
+	fresize(fd, 2);
+	ASSERT(!close(fd), "close");
+
+	fd = file(path);
+	ASSERT_EQ(fsize(fd), 2, "len=2");
+	char *ptr = fmap(fd, 2, 0);
+	ASSERT_EQ(ptr[0], 't', "t");
+	ASSERT_EQ(ptr[1], 'e', "e");
+	munmap(ptr, 2);
+	close(fd);
+
+	ptr = map(128);
+	for (i = 0; i < 128; i++) ASSERT(!ptr[i], "!ptr");
+
+	munmap(ptr, 128);
+
+	unlink(path);
+}
+
+Test(pipetwo) {
+	u8 buf[10] = {0};
+	i32 pid;
+	i32 fds[2];
+	ASSERT(!pipe(fds), "pipe");
+	if ((pid = two())) {
+		i32 len = read(fds[0], buf, sizeof(buf));
+		ASSERT_EQ(len, 3, "len=3");
+	} else {
+		strcpy(buf, "abc");
+		write(fds[1], buf, 3);
+		_exit(0);
+	}
+	ASSERT(pid > 0, "pid>0");
+	ASSERT(!reap(pid), "reap");
+	close(fds[0]);
+	close(fds[1]);
+}
+
+Test(pipefork) {
+	u8 buf[10] = {0};
+	i32 pid;
+	i32 fds[2];
+	ASSERT(!pipe(fds), "pipe");
+	if ((pid = fork())) {
+		close(fds[1]);
+		i32 len = read(fds[0], buf, sizeof(buf));
+		ASSERT_EQ(len, 3, "len=3");
+		ASSERT(!memcmp(buf, "abc", 3), "abc");
+	} else {
+		close(fds[0]);
+		strcpy(buf, "abc");
+		write(fds[1], buf, 3);
+		_exit(0);
+	}
+	await(pid);
+	close(fds[0]);
+}
+
+bool sig_recv = false;
+void test_handler(i32 sig) {
+	ASSERT_EQ(sig, SIGUSR1, "sigusr1");
+	sig_recv = true;
+}
+#define SIGSET_T_SIZE 8
+
+Test(signal) {
+	i32 fds[2];
+	u8 buf[10];
+	struct rt_sigaction act = {0};
+	i32 pid;
+	act.k_sa_handler = test_handler;
+	act.k_sa_flags = SA_RESTORER;
+	act.k_sa_restorer = restorer;
+	ASSERT(!rt_sigaction(SIGUSR1, &act, NULL, SIGSET_T_SIZE),
+	       "rt_sigaction");
+	ASSERT(!pipe(fds), "pipe");
+	if ((pid = fork())) {
+		i32 len;
+		close(fds[1]);
+		kill(pid, SIGUSR1);
+		len = read(fds[0], buf, sizeof(buf));
+		ASSERT_EQ(len, 1, "read x");
+		ASSERT_EQ(buf[0], 'x', "buf[0]=x");
+	} else {
+		close(fds[0]);
+		while (!sig_recv) yield();
+		write(fds[1], "x", 1);
+		_exit(0);
+	}
+	await(pid);
+	close(fds[0]);
+}
+
+u8 LOCALHOST[4] = {127, 0, 0, 1};
+
+u16 test_ntohs(u16 net) { return ((net & 0xFF) << 8) | ((net >> 8) & 0xFF); }
+u16 test_htons(u16 host) { return ((host & 0xFF) << 8) | ((host >> 8) & 0xFF); }
+
+i32 test_socket_listen(i32 *fd, const u8 addr[4], u16 port, u16 backlog) {
+	i32 opt = 1, flags;
+	i32 error = 0;
+	i32 len = sizeof(error);
+	struct sockaddr_in address = {0};
+	socklen_t addr_len;
+	i32 ret;
+
+	if (!fd || !addr) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	ret = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (ret < 0) return -1;
+
+	if (getsockopt(ret, SOL_SOCKET, SO_REUSEADDR, &error, &len)) {
+		close(ret);
+		return -1;
+	}
+
+	if (setsockopt(ret, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+		close(ret);
+		return -1;
+	}
+
+	if ((flags = fcntl(ret, F_GETFL, 0)) == -1) {
+		close(ret);
+		return -1;
+	}
+	if (fcntl(ret, F_SETFL, flags | O_NONBLOCK) == -1) {
+		close(ret);
+		return -1;
+	}
+
+	address.sin_family = AF_INET;
+	memcpy(&address.sin_addr, addr, 4);
+	address.sin_port = test_htons(port);
+
+	if (bind(ret, (struct sockaddr *)&address, sizeof(address))) {
+		close(ret);
+		return -1;
+	}
+	if (listen(ret, backlog) == -1) {
+		close(ret);
+		return -1;
+	}
+
+	addr_len = sizeof(address);
+	if (getsockname(ret, (struct sockaddr *)&address, &addr_len) == -1) {
+		close(ret);
+		return -1;
+	}
+
+	*fd = ret;
+	return test_ntohs(address.sin_port);
+}
+
+Test(sock_sys) {
+	i32 server = 0, client = 0, inbound = 0;
+	struct sockaddr_in address = {0};
+	i32 port = test_socket_listen(&server, LOCALHOST, 0, 10);
+	ASSERT(port > 0, "port");
+	ASSERT(server > 0, "server");
+
+	address.sin_family = AF_INET;
+	memcpy(&address.sin_addr, LOCALHOST, 4);
+	address.sin_port = test_htons(port);
+	client = socket(AF_INET, SOCK_STREAM, 0);
+	ASSERT(client > 0, "client");
+	ASSERT(!connect(client, (struct sockaddr *)&address, sizeof(address)),
+	       "connect");
+
+	inbound = accept(server, NULL, NULL);
+	ASSERT(inbound > 0, "inbound");
+	ASSERT(!shutdown(client, SHUT_RDWR), "shutdown");
+
+	close(server);
+	close(inbound);
+	close(client);
+}
+
+Test(epoll) {
+	struct epoll_event events[1];
+	struct epoll_event ev = {0};
+	i32 efd = epoll_create1(0);
+	i32 server = 0;
+	i32 port = test_socket_listen(&server, LOCALHOST, 0, 10);
+
+	ASSERT(server > 0, "server");
+	ASSERT(port > 0, "port");
+
+	ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+	ev.data.ptr = &server;
+
+	ASSERT(!epoll_ctl(efd, EPOLL_CTL_ADD, server, &ev), "epoll_ctl");
+	ASSERT(!epoll_pwait(efd, events, 1, 1, NULL, 0), "epoll_pwait");
+
+	close(efd);
+	close(server);
+}
+
+#define MSYNC_SIZE 4096
+
+Test(msync) {
+	const u8 *path = "/tmp/msync_test";
+	unlink(path);
+	i32 fd = file(path);
+	ASSERT(fd > 0, "fd");
+	ASSERT(!fresize(fd, MSYNC_SIZE), "fresize");
+	u8 data2[MSYNC_SIZE] = {0};
+	u8 *data = fmap(fd, MSYNC_SIZE, 0);
+	data[0] = 99;
+	ASSERT(!msync(data, MSYNC_SIZE, MS_SYNC), "msync");
+	read(fd, data2, MSYNC_SIZE);
+	ASSERT_EQ(data2[0], 99, "synced");
+
+	munmap(data, MSYNC_SIZE);
+	close(fd);
+	unlink(path);
+}
+
+Test(format1) {
+	Formatter f = FORMATTER_INIT;
+	FORMAT(&f, "{}", 1);
+	ASSERT(!strcmp("1", format_to_string(&f)), "1");
+	format_clear(&f);
+	FORMAT(&f, "{}", -1);
+	ASSERT(!strcmp("-1", format_to_string(&f)), "-1");
+	format_clear(&f);
+	FORMAT(&f, "x={x}", 0xFE);
+	ASSERT(!strcmp("x=0xfe", format_to_string(&f)), "x=0xfe");
+	format_clear(&f);
+	FORMAT(&f, "x={X},...", 255);
+	ASSERT(!strcmp("x=0xFF,...", format_to_string(&f)), "x=0xFF,...");
+	format_clear(&f);
+	FORMAT(&f, "a={},b={},c={},d={x}", "test", 1.23456, 9999, 253);
+	ASSERT(!strcmp("a=test,b=1.23456,c=9999,d=0xfd", format_to_string(&f)),
+	       "multi");
+	format_clear(&f);
+	FORMAT(&f, "a={c},b={b} {nothing", (u8)'a', 3);
+	ASSERT(!strcmp("a=a,b=11 {nothing", format_to_string(&f)),
+	       "char and bin");
+	format_clear(&f);
+	u64 x = 101;
+	FORMAT(&f, "{}", x);
+	ASSERT(!strcmp("101", format_to_string(&f)), "101");
+	format_clear(&f);
+	ASSERT_BYTES(0);
+}
+
+#define FILE_ITER 128
+
+Test(compress_file1) {
+	i32 i;
+	const u8 *path = "./resources/xxdir/akjv.txt";
+	i32 fd = file(path);
+	u64 file_size = fsize(fd);
+	u8 *in = fmap(fd, file_size, 0);
+	u64 capacity = compress_bound(file_size);
+	u8 *out = alloc(sizeof(u8) * capacity);
+	u8 *verify = alloc(sizeof(u8) * file_size);
+	i64 comp_sum = 0, decomp_sum = 0, ret1 = 0;
+
+	ASSERT(in, "fmap");
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+
+	for (i = 0; i < FILE_ITER; i++) {
+		i64 timer;
+		timer = micros();
+		ret1 = compress(in, file_size, out, capacity);
+		i64 diff_compress = micros() - timer;
+		timer = micros();
+		i64 ret2 = decompress(out, ret1, verify, file_size);
+		i64 diff_decompress = micros() - timer;
+		ASSERT_EQ(file_size, ret2, "size match");
+		ASSERT(!memcmp(in, verify, file_size), "verify");
+		decomp_sum += diff_decompress;
+		comp_sum += diff_compress;
+	}
+	(void)comp_sum;
+	(void)decomp_sum;
+	/*
+	println("Avg compress={},Avg decompress={},size={}/{}",
+		comp_sum / FILE_ITER, decomp_sum / FILE_ITER, ret1, file_size);
+		*/
+
+	munmap(in, file_size);
+	release(out);
+	release(verify);
+	close(fd);
+	ASSERT_BYTES(0);
 }
 
