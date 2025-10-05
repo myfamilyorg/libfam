@@ -35,6 +35,13 @@
 #define SHM_CHUNKS_DEFAULT 64
 Alloc *global_allocator = NULL;
 
+#define _p(msg)                                     \
+	do {                                        \
+		write(STDERR_FD, msg, strlen(msg)); \
+		perror("global allocator");         \
+		_exit(-1);                          \
+	} while (0);
+
 STATIC u64 chunks_to_allocate(void) {
 	u128 chunks = SHM_CHUNKS_DEFAULT;
 	u8 *env_chunks = getenv("SHARED_MEMORY_CHUNKS");
@@ -45,12 +52,8 @@ STATIC u64 chunks_to_allocate(void) {
 void __attribute__((constructor)) init_global_allocator(void) {
 	u64 size = chunks_to_allocate();
 	global_allocator = alloc_init(AllocSmap, size);
-	if (!global_allocator) {
-		const u8 *msg = "Global allocator init failure!\n";
-		write(STDERR_FD, msg, strlen(msg));
-		perror("global_allocator");
-		_exit(-1);
-	}
+	const u8 *msg = "Global allocator init failure!\n";
+	if (!global_allocator) _p(msg);
 }
 
 PUBLIC void *alloc(u64 size) { return balloc(global_allocator, size); }

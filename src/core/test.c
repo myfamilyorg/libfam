@@ -1028,7 +1028,7 @@ Test(overflow_compress) {
 	u64 itt = 0;
 	BitStreamReader strm = {NULL};
 	ASSERT_EQ(compress_proc_match(MATCH_OFFSET + 127, &strm, NULL, 0, &itt),
-		  -1, "match overflow");
+		  -1, "overflow");
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
 	u32 frequencies[SYMBOL_COUNT] = {0};
@@ -1040,4 +1040,14 @@ Test(overflow_compress) {
 
 	ASSERT_EQ(compress_read_symbols(&strm2, lengths, codes, NULL, 0), -1,
 		  "write overflow");
+}
+
+Test(match_overflow) {
+	u8 data[1024] = {0};
+	BitStreamReader strm = {data, sizeof(data)};
+	u8 lengths[SYMBOL_COUNT] = {0};
+	u16 codes[SYMBOL_COUNT] = {0};
+	lengths[MATCH_OFFSET + 127] = 8;
+	ASSERT_EQ(compress_read_symbols(&strm, lengths, codes, NULL, 0), -1,
+		  "match overflow");
 }
