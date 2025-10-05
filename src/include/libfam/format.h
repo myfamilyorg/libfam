@@ -33,7 +33,6 @@
 
 #define FORMATTER_INIT {0};
 
-/* clang-format off */
 #define FORMAT_ITEM(ign, value)                                                \
 	({                                                                     \
 		Printable _p__ = _Generic((value),                             \
@@ -65,31 +64,31 @@
 					     .data.ivalue = _Generic((value),  \
 					     __int128_t: (value),              \
 					     default: 0)}),                    \
-		    unsigned char: (                                           \
-			     (Printable){.t = UIntType,                        \
-					 .data.uvalue = _Generic((value),      \
-					 unsigned char: (value),               \
-					 default: 0)}),                        \
-		    unsigned short int: (                                      \
-			     (Printable){.t = UIntType,                        \
-					 .data.uvalue = _Generic((value),      \
-					 unsigned short int: (value),          \
-					 default: 0)}),                        \
-		    unsigned int: (                                            \
-			     (Printable){.t = UIntType,                        \
-					 .data.uvalue = _Generic((value),      \
-					 unsigned int: (value),                \
-					 default: 0)}),                        \
-		    unsigned long: (                                           \
-			     (Printable){.t = UIntType,                        \
-					 .data.uvalue = _Generic((value),      \
-					 unsigned long: (value),               \
-					 default: 0)}),                        \
-		    unsigned long long: (                                      \
-			     (Printable){.t = UIntType,                        \
-					 .data.uvalue = _Generic((value),      \
-					 unsigned long long: (value),          \
-					 default: 0)}),                        \
+		    unsigned char: ((Printable){                               \
+			.t = UIntType,                                         \
+			.data.uvalue = _Generic((value),                       \
+			unsigned char: (value),                                \
+			default: 0)}),                                         \
+		    unsigned short int: ((Printable){                          \
+			.t = UIntType,                                         \
+			.data.uvalue = _Generic((value),                       \
+			unsigned short int: (value),                           \
+			default: 0)}),                                         \
+		    unsigned int: ((Printable){                                \
+			.t = UIntType,                                         \
+			.data.uvalue = _Generic((value),                       \
+			unsigned int: (value),                                 \
+			default: 0)}),                                         \
+		    unsigned long: ((Printable){                               \
+			.t = UIntType,                                         \
+			.data.uvalue = _Generic((value),                       \
+			unsigned long: (value),                                \
+			default: 0)}),                                         \
+		    unsigned long long: ((Printable){                          \
+			.t = UIntType,                                         \
+			.data.uvalue = _Generic((value),                       \
+			unsigned long long: (value),                           \
+			default: 0)}),                                         \
 		    __uint128_t: ((Printable){.t = UIntType,                   \
 					      .data.uvalue = _Generic((value), \
 					      __uint128_t: (value),            \
@@ -98,23 +97,25 @@
 					 .data.svalue = _Generic((value),      \
 					 char *: (value),                      \
 					 default: NULL)}),                     \
-                    const char *: ((Printable){.t = StringType,                \
-                                         .data.svalue = _Generic((value),      \
-                                         const char *: (value),                \
-                                         default: NULL)}),                     \
-		    signed char *: (                                           \
-			     (Printable){.t = StringType,                      \
-					 .data.svalue = _Generic((value),      \
-					 char *: (value),                      \
-					 default: NULL)}),                     \
+		    const char *: ((Printable){                                \
+			.t = StringType,                                       \
+			.data.svalue = _Generic((value),                       \
+			const char *: (value),                                 \
+			default: NULL)}),                                      \
+		    signed char *: ((Printable){                               \
+			.t = StringType,                                       \
+			.data.svalue = _Generic((value),                       \
+			char *: (value),                                       \
+			default: NULL)}),                                      \
 		    u8 *: ((Printable){.t = StringType,                        \
 				       .data.svalue = _Generic((value),        \
-				       const u8 *: (value), u8 *: (value),     \
+				       const u8 *: (value),                    \
+				       u8 *: (value),                          \
 				       default: NULL)}),                       \
 		    const u8 *: ((Printable){.t = StringType,                  \
-                                       .data.svalue = _Generic((value),        \
-                                       const u8 *: (value),                    \
-                                       default: NULL)}),                       \
+					     .data.svalue = _Generic((value),  \
+					     const u8 *: (value),              \
+					     default: NULL)}),                 \
 		    void *: ((Printable){.t = UIntType,                        \
 					 .data.uvalue = _Generic((value),      \
 					 void *: ((u64)value),                 \
@@ -130,9 +131,8 @@
 		    default: ((Printable){                                     \
 			.t = StringType,                                       \
 			.data.svalue = (u8 *)"unsupported"}));                 \
-		    _p__;                                                      \
+		_p__;                                                          \
 	})
-/* clang-format on */
 
 /* clang-format off */
 #ifdef __clang__
