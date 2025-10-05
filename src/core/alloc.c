@@ -203,6 +203,7 @@ void *balloc(Alloc *a, u64 size) {
 }
 
 void brelease(Alloc *a, void *ptr) {
+	if (!ptr) return;
 	if ((u8 *)ptr > (u8 *)a &&
 	    (u8 *)ptr < (u8 *)a + TOTAL_SIZE(a->chunks)) {
 		release_slab(a, ptr);

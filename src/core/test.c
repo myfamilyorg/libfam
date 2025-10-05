@@ -993,6 +993,48 @@ Test(format1) {
 	ASSERT_BYTES(0);
 }
 
+Test(format2) {
+	Formatter f = FORMATTER_INIT;
+	FORMAT(&f, "'{:5x}'", 10);
+	ASSERT(!strcmp("'  0xa'", format_to_string(&f)), "alignment hex");
+	format_clear(&f);
+	FORMAT(&f, "'{{' {}", 10);
+	ASSERT(!strcmp("'{' 10", format_to_string(&f)), "esc bracket left");
+	format_clear(&f);
+	FORMAT(&f, "'}}' {n}", 1000);
+	ASSERT(!strcmp("'}' 1,000", format_to_string(&f)),
+	       "esc bracket right and commas");
+	format_clear(&f);
+	FORMAT(&f, "{nn}", 10);
+	ASSERT(!strcmp("{nn}", format_to_string(&f)), "formatting error");
+	format_clear(&f);
+	FORMAT(&f, "'{:<20}'", 10);
+	ASSERT(!strcmp("'10                  '", format_to_string(&f)),
+	       "formatting error");
+	format_clear(&f);
+	FORMAT(&f, "'{:>20}'", 10);
+	ASSERT(!strcmp("'                  10'", format_to_string(&f)),
+	       "formatting error");
+	format_clear(&f);
+	FORMAT(&f, "{n{}", 10);
+	ASSERT(!strcmp("{n{}", format_to_string(&f)), "formatting error - int");
+	format_clear(&f);
+	i8 x = 'v';
+	FORMAT(&f, "{c}", x);
+	ASSERT(!strcmp("v", format_to_string(&f)), "i8 as char");
+	format_clear(&f);
+	FORMAT(&f, "{z}", "abc");
+	ASSERT(!strcmp("{z}", format_to_string(&f)),
+	       "formatting error - string");
+	format_clear(&f);
+	Printable p = {.t = 100, .data.ivalue = 100};
+	format_append(&f, "{}", p);
+	ASSERT(!strcmp("", format_to_string(&f)),
+	       "formatting error - invalid type");
+
+	format_clear(&f);
+}
+
 #define FILE_ITER 4
 
 Test(compress_file1) {

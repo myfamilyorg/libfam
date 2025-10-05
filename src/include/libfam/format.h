@@ -202,7 +202,13 @@ typedef struct {
 	u64 pos;
 } Formatter;
 
-typedef enum { IntType, UIntType, StringType, FloatType } PrintableType;
+typedef enum {
+	IntType,
+	UIntType,
+	StringType,
+	FloatType,
+	PRINTABLE_SIZE
+} PrintableType;
 
 typedef struct {
 	PrintableType t;

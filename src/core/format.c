@@ -28,6 +28,7 @@
 #include <libfam/limits.h>
 #include <libfam/memory.h>
 #include <libfam/string.h>
+#include <libfam/test_base.h>
 #include <libfam/utils.h>
 
 typedef enum {
@@ -243,9 +244,6 @@ INIT:
 CLEANUP:
 	RETURN;
 }
-STATIC i32 format_proc_invalid(Formatter *f, const FormatSpec *spec) {
-	return 0;
-}
 
 PUBLIC i32 format_append(Formatter *f, const u8 *p, ...) {
 	__builtin_va_list args;
@@ -288,7 +286,7 @@ INIT:
 				f64 v = next.data.fvalue;
 				if (format_proc_float(f, &spec, v) < 0) ERROR();
 			} else {
-				if (format_proc_invalid(f, &spec) < 0) ERROR();
+				ERROR(EPROTO);
 			}
 			p = np + spec.total_bytes;
 		} else {
