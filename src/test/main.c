@@ -160,7 +160,7 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	}
 
 	ms = (f64)(micros() - total) / (f64)1000;
-	len = f64_to_string(buf, ms, 3);
+	len = f64_to_string(buf, ms, 3, false);
 	buf[len] = 0;
 
 	write(STDERR_FD, SPACER, strlen(SPACER));

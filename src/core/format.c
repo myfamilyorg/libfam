@@ -236,8 +236,9 @@ STATIC i32 format_proc_float(Formatter *f, const FormatSpec *spec, f64 value) {
 	u8 buf[MAX_F64_STRING_LEN];
 	u64 raw_bytes;
 INIT:
-	raw_bytes = f64_to_string(buf, value,
-				  spec->has_precision ? spec->precision : 5);
+	raw_bytes =
+	    f64_to_string(buf, value, spec->has_precision ? spec->precision : 5,
+			  spec->t == FormatSpecTypeCommas);
 	if (format_proc_padding(f, spec, buf, raw_bytes) < 0) ERROR();
 CLEANUP:
 	RETURN;

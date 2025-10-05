@@ -192,19 +192,19 @@ Test(f64_to_string) {
 	u8 buf[64] = {0};
 	u64 len;
 
-	len = f64_to_string(buf, 0.3, 1);
+	len = f64_to_string(buf, 0.3, 1, false);
 	ASSERT_EQ(len, 3, "len=3");
 	ASSERT(!strcmp(buf, "0.3"), "0.3");
 
-	len = f64_to_string(buf, 0.0 / 0.0, 6);
+	len = f64_to_string(buf, 0.0 / 0.0, 6, false);
 	ASSERT(!strcmp(buf, "nan"), "nan");
 	ASSERT_EQ(len, 3, "nan_len");
 
-	len = f64_to_string(buf, 1.0 / 0.0, 6);
+	len = f64_to_string(buf, 1.0 / 0.0, 6, false);
 	ASSERT(!strcmp(buf, "inf"), "inf");
 	ASSERT_EQ(len, 3, "inf_len");
 
-	len = f64_to_string(buf, -1.0 / 0.0, 6);
+	len = f64_to_string(buf, -1.0 / 0.0, 6, false);
 	ASSERT(!strcmp(buf, "-inf"), "neg_inf");
 	ASSERT_EQ(len, 4, "neg_inf_len");
 
@@ -212,55 +212,59 @@ Test(f64_to_string) {
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Woverflow"
 #pragma GCC diagnostic ignored "-Wliteral-range"
-	len = f64_to_string(buf, 1.8e308, 6);
+	len = f64_to_string(buf, 1.8e308, 6, false);
 	ASSERT(!strcmp(buf, "inf"), "overflow_inf");
 	ASSERT_EQ(len, 3, "overflow_inf_len");
 #pragma GCC diagnostic pop
 
-	len = f64_to_string(buf, 0.0, 6);
+	len = f64_to_string(buf, 0.0, 6, false);
 	ASSERT(!strcmp(buf, "0"), "zero");
 	ASSERT_EQ(len, 1, "zero_len");
-	len = f64_to_string(buf, -0.0, 6);
+	len = f64_to_string(buf, -0.0, 6, false);
 	ASSERT(!strcmp(buf, "0"), "neg_zero");
 	ASSERT_EQ(len, 1, "neg_zero_len");
 
-	len = f64_to_string(buf, 123.0, 0);
+	len = f64_to_string(buf, 123.0, 0, false);
 	ASSERT(!strcmp(buf, "123"), "int_pos");
 	ASSERT_EQ(len, 3, "int_pos_len");
 
-	len = f64_to_string(buf, -123.0, 0);
+	len = f64_to_string(buf, -123.0, 0, false);
 	ASSERT(!strcmp(buf, "-123"), "int_neg");
 
 	ASSERT_EQ(len, 4, "int_neg_len");
 
-	len = f64_to_string(buf, 123.456789, 6);
+	len = f64_to_string(buf, 123.456789, 6, false);
 	ASSERT(!strcmp(buf, "123.456789"), "frac");
 	ASSERT_EQ(len, 10, "frac_len");
 
-	len = f64_to_string(buf, -123.456789, 6);
+	len = f64_to_string(buf, -123.456789, 6, false);
 	ASSERT(!strcmp(buf, "-123.456789"), "neg_frac");
 	ASSERT_EQ(len, 11, "neg_frac_len");
 
-	len = f64_to_string(buf, 0.9999995, 6);
+	len = f64_to_string(buf, 0.9999995, 6, false);
 	ASSERT(!strcmp(buf, "1"), "round_up");
 	ASSERT_EQ(len, 1, "round_up_len");
 
-	len = f64_to_string(buf, 123.4000, 6);
+	len = f64_to_string(buf, 123.4000, 6, false);
 	ASSERT(!strcmp(buf, "123.4"), "trim_zeros");
 	ASSERT_EQ(len, 5, "trim_zeros_len");
 
-	len = f64_to_string(buf, 123.0000001, 6);
+	len = f64_to_string(buf, 123.0000001, 6, false);
 	ASSERT(!strcmp(buf, "123"), "remove_decimal");
 	ASSERT_EQ(len, 3, "remove_decimal_len");
 
-	len = f64_to_string(buf, 123.456789123456789, 18);
+	len = f64_to_string(buf, 123.456789123456789, 18, false);
 	buf[len] = 0;
 	ASSERT(!strcmp(buf, "123.45678912345678668"), "max_decimals");
 	ASSERT_EQ(len, 21, "max_decimals_len");
 
-	len = f64_to_string(buf, 123.456, -1);
+	len = f64_to_string(buf, 123.456, -1, false);
 	ASSERT(!strcmp(buf, "123"), "neg_decimals");
 	ASSERT_EQ(len, 3, "neg_decimals_len");
+
+	len = f64_to_string(buf, 9993234.334, 2, true);
+	ASSERT(!strcmp(buf, "9,993,234.33"), "commas");
+	ASSERT_EQ(strlen("9,993,234.33"), len, "commas len");
 }
 
 Test(limits) {

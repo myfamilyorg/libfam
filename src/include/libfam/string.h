@@ -30,7 +30,7 @@
 
 #define MAX_U128_STRING_LEN 255
 #define MAX_I128_STRING_LEN (MAX_U128_STRING_LEN + 1)
-#define MAX_F64_STRING_LEN 41
+#define MAX_F64_STRING_LEN 64
 
 typedef enum {
 	Int128DisplayTypeDecimal,
@@ -51,11 +51,10 @@ void *memset(void *ptr, i32 x, u64 n);
 void *memcpy(void *dst, const void *src, u64 n);
 void *memmove(void *dst, const void *src, u64 n);
 i32 memcmp(const void *s1, const void *s2, u64 n);
-u64 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals);
+u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
+		 bool commas);
 i32 string_to_u128(const u8 *buf, u64 len, u128 *result);
-i32 i128_to_string(u8 buf[MAX_I128_STRING_LEN], i128 value,
-		   Int128DisplayType t);
-i32 u128_to_string(u8 buf[MAX_U128_STRING_LEN], u128 value,
-		   Int128DisplayType t);
+u8 i128_to_string(u8 buf[MAX_I128_STRING_LEN], i128 value, Int128DisplayType t);
+u8 u128_to_string(u8 buf[MAX_U128_STRING_LEN], u128 value, Int128DisplayType t);
 
 #endif /* _STRING_H */

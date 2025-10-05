@@ -46,9 +46,9 @@ CLEANUP:
 	RETURN;
 }
 
-i32 i128_to_string(u8 buf[MAX_I128_STRING_LEN], i128 value,
-		   Int128DisplayType t) {
-	i32 len;
+u8 i128_to_string(u8 buf[MAX_I128_STRING_LEN], i128 value,
+		  Int128DisplayType t) {
+	u8 len;
 	u128 abs_v;
 	bool is_negative = value < 0;
 	if (is_negative) {
@@ -60,8 +60,8 @@ i32 i128_to_string(u8 buf[MAX_I128_STRING_LEN], i128 value,
 	return len < 0 ? len : is_negative ? len + 1 : len;
 }
 
-i32 u128_to_string(u8 buf[MAX_U128_STRING_LEN], u128 value,
-		   Int128DisplayType t) {
+u8 u128_to_string(u8 buf[MAX_U128_STRING_LEN], u128 value,
+		  Int128DisplayType t) {
 	u8 temp[MAX_U128_STRING_LEN];
 	i32 i = 0, j = 0;
 	bool hex =

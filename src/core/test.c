@@ -986,6 +986,10 @@ Test(format1) {
 	FORMAT(&f, "{n}", 1001);
 	ASSERT(!strcmp("1,001", format_to_string(&f)), "101 commas");
 	format_clear(&f);
+	FORMAT(&f, "x=${n.2}", 1234567.930432);
+	ASSERT(!strcmp("x=$1,234,567.93", format_to_string(&f)),
+	       "dollar format");
+	format_clear(&f);
 	ASSERT_BYTES(0);
 }
 
