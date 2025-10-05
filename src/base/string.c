@@ -28,8 +28,8 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
-PUBLIC u64 strlen(const u8 *x) {
-	const u8 *y = x;
+PUBLIC u64 strlen(const char *x) {
+	const char *y = x;
 	while (*x) x++;
 	return x - y;
 }

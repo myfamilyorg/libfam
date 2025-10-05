@@ -39,7 +39,7 @@ typedef enum {
 	Int128DisplayTypeBinary,
 } Int128DisplayType;
 
-u64 strlen(const u8 *msg);
+u64 strlen(const char *msg);
 i32 strncmp(const u8 *x, const u8 *y, u64 n);
 u8 *strcpy(u8 *dest, const u8 *src);
 i32 strcmp(const u8 *x, const u8 *y);
