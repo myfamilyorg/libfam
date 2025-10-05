@@ -3,6 +3,8 @@
 # Define the target directory for the library
 LIB_DIR="/usr/lib"
 LIB_VERSION="0.0.1"
+CZIP_BIN=./target/bin/czip
+CZIP_INSTALL_DIR=/usr/local/bin
 
 # Copy the shared library to the subdirectory
 cp target/lib/libfam.so "$LIB_DIR/libfam.so.${LIB_VERSION}"
@@ -18,3 +20,9 @@ ldconfig
 
 # Copy include directory
 cp -rp src/include/libfam /usr/include
+
+# Copy czip
+if [ -e ${CZIP_BIN} ]; then
+	mkdir -p ${CZIP_INSTALL_DIR}
+	cp ${CZIP_BIN} ${CZIP_INSTALL_DIR}
+fi

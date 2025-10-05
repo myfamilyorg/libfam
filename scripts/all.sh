@@ -33,3 +33,5 @@ if needs_linking "$LIB_NAME" $OBJECTS; then
 		${COMMAND} || exit $?;
 	fi
 fi
+
+. ./scripts/czip.sh
