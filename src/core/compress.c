@@ -481,10 +481,6 @@ STATIC i64 compress_read_symbols(BitStreamReader *strm,
 					     &itt) < 0)
 			return -1;
 	}
-	if (symbol != SYMBOL_TERM) {
-		errno = EOVERFLOW;
-		return -1;
-	}
 	return itt;
 }
 

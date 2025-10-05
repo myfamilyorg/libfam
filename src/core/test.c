@@ -29,6 +29,7 @@
 #include <libfam/bitmap.h>
 #include <libfam/bitstream.h>
 #include <libfam/compress.h>
+#include <libfam/compress_impl.h>
 #include <libfam/debug.h>
 #include <libfam/format.h>
 #include <libfam/limits.h>
@@ -1021,4 +1022,22 @@ Test(compress_min) {
 	i64 r1 = compress("", 0, out, compress_bound(0));
 	i64 r2 = decompress(out, r1, verify, 0);
 	ASSERT_EQ(r2, 0, "0 len");
+}
+
+Test(overflow_compress) {
+	u64 itt = 0;
+	BitStreamReader strm = {NULL};
+	ASSERT_EQ(compress_proc_match(MATCH_OFFSET + 127, &strm, NULL, 0, &itt),
+		  -1, "match overflow");
+	u8 lengths[SYMBOL_COUNT] = {0};
+	u16 codes[SYMBOL_COUNT] = {0};
+	u32 frequencies[SYMBOL_COUNT] = {0};
+	compress_calculate_frequencies("abc", 3, frequencies);
+	compress_calculate_lengths(frequencies, lengths);
+	compress_calculate_codes(lengths, codes);
+	u8 data[1024] = {0};
+	BitStreamReader strm2 = {data, sizeof(data)};
+
+	ASSERT_EQ(compress_read_symbols(&strm2, lengths, codes, NULL, 0), -1,
+		  "write overflow");
 }
