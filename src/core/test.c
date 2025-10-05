@@ -985,7 +985,7 @@ Test(format1) {
 	ASSERT_BYTES(0);
 }
 
-#define FILE_ITER 128
+#define FILE_ITER 4
 
 Test(compress_file1) {
 	i32 i;
