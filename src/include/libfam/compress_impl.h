@@ -82,8 +82,10 @@ typedef struct {
 
 STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm, u8 *out,
 			       u64 capacity, u64 *itt);
-i64 compress_read_symbols(BitStreamReader *strm, const u8 lengths[SYMBOL_COUNT],
-			  const u16 codes[SYMBOL_COUNT], u8 *out, u64 capacity);
+STATIC i64 compress_read_symbols(BitStreamReader *strm,
+				 const u8 lengths[SYMBOL_COUNT],
+				 const u16 codes[SYMBOL_COUNT], u8 *out,
+				 u64 capacity);
 STATIC void compress_calculate_frequencies(const u8 *in, u32 len,
 					   u32 frequencies[SYMBOL_COUNT]);
 STATIC void compress_calculate_lengths(const u32 frequencies[SYMBOL_COUNT],
