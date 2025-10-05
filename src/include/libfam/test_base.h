@@ -23,8 +23,8 @@
  *
  *******************************************************************************/
 
-#ifndef _TEST_H
-#define _TEST_H
+#ifndef _TEST_BASE_H
+#define _TEST_BASE_H
 
 #include <libfam/colors.h>
 #include <libfam/string.h>
@@ -140,4 +140,4 @@ CLEANUP:
 	} while (0);
 #endif /* ASSERT */
 
-#endif /* _TEST_H */
+#endif /* _TEST_BASE_H */

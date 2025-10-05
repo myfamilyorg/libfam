@@ -24,12 +24,13 @@
  *******************************************************************************/
 
 #include <libfam/bitstream.h>
+#include <libfam/builtin.h>
 #include <libfam/compress_impl.h>
 #include <libfam/utils.h>
 
 STATIC u16 compress_get_match_code(u16 len, u32 dist) {
-	u32 len_bits = 31 - __builtin_clz(len - 3);
-	u32 dist_bits = 31 - __builtin_clz(dist);
+	u32 len_bits = 31 - clz_u32(len - 3);
+	u32 dist_bits = 31 - clz_u32(dist);
 	return ((len_bits << LEN_SHIFT) | dist_bits);
 }
 

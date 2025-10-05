@@ -30,25 +30,124 @@
 #include <libfam/string.h>
 #include <libfam/utils.h>
 
-STATIC const u8 *find_next_placeholder(const u8 *p) {
-	while (true) {
-		while (*p != '{')
-			if (!*p++) return NULL;
-		if (p[1] == '}' || (p[1] &&
-				    (p[1] == 'X' || p[1] == 'x' ||
-				     p[1] == 'c' || p[1] == 'b') &&
-				    p[2] == '}'))
+typedef enum {
+	FormatAlignLeft,
+	FormatAlignRight,
+} FormatAlignment;
+typedef enum {
+	FormatSpecTypeNone = 0,
+	FormatSpecTypeBinary = 1,
+	FormatSpecTypeHexUpper = 2,
+	FormatSpecTypeHexLower = 3,
+	FormatSpecTypeChar = 4,
+	FormatSpecTypeEscapeBracketRight = 5,
+	FormatSpecTypeEscapeBracketLeft = 6,
+} FormatSpecType;
+
+typedef struct {
+	bool has_precision;
+	u32 precision;
+	bool has_width;
+	u32 width;
+	FormatAlignment align;
+	FormatSpecType t;
+	u32 total_bytes;
+} FormatSpec;
+
+STATIC i32 format_parse_spec(const u8 *p, FormatSpec *spec) {
+	FormatSpec ret = {.t = FormatSpecTypeNone, .total_bytes = 2};
+INIT:
+	p++;
+	while (*p) {
+		if (*p == '.') {
+			if (ret.has_precision) ERROR(EPROTO);
+			ret.has_precision = true;
+			p++;
+			if (*p > '9' || *p < '0') ERROR(EPROTO);
+			ret.precision = *p - '0';
+			ret.total_bytes += 2;
+			p++;
+		} else if (*p == '{') {
+			if (ret.has_precision || ret.has_width ||
+			    ret.t != FormatSpecTypeNone)
+				ERROR(EPROTO);
+			ret.t = FormatSpecTypeEscapeBracketLeft;
+			break;
+		} else if (*p == ':') {
+			if (ret.has_width) ERROR(EPROTO);
+			ret.has_width = true;
+			p++;
+			ret.align = FormatAlignRight;
+			if (*p == '<') {
+				ret.align = FormatAlignLeft;
+				p++;
+				ret.total_bytes++;
+			} else if (*p == '>') {
+				ret.align = FormatAlignRight;
+				p++;
+				ret.total_bytes++;
+			}
+
+			ret.width = 0;
+
+			while (*p >= '0' && *p <= '9') {
+				ret.width = ret.width * 10 + (*p - '0');
+				if (ret.width > 999) ERROR(EPROTO);
+				p++;
+				ret.total_bytes++;
+			}
+			ret.total_bytes++;
+		} else if (*p == 'c') {
+			if (ret.t != FormatSpecTypeNone) ERROR(EPROTO);
+			ret.t = FormatSpecTypeChar;
+			ret.total_bytes++;
+			p++;
+		} else if (*p == 'b') {
+			if (ret.t != FormatSpecTypeNone) ERROR(EPROTO);
+			ret.t = FormatSpecTypeBinary;
+			ret.total_bytes++;
+			p++;
+		} else if (*p == 'X') {
+			if (ret.t != FormatSpecTypeNone) ERROR(EPROTO);
+			ret.t = FormatSpecTypeHexUpper;
+			ret.total_bytes++;
+			p++;
+		} else if (*p == 'x') {
+			if (ret.t != FormatSpecTypeNone) ERROR(EPROTO);
+			ret.t = FormatSpecTypeHexLower;
+			ret.total_bytes++;
+			p++;
+		} else if (*p == '}') {
+			break;
+		} else
+			ERROR(EPROTO);
+	}
+	*spec = ret;
+CLEANUP:
+	RETURN;
+}
+
+STATIC const u8 *find_next_placeholder(const u8 *p, FormatSpec *spec) {
+	while (*p) {
+		if (*p == '{') {
+			if (format_parse_spec(p, spec) < 0) return NULL;
 			return p;
+		} else if (*p == '}' && p[1] == '}') {
+			*spec =
+			    (FormatSpec){.t = FormatSpecTypeEscapeBracketRight,
+					 .total_bytes = 2};
+			return p;
+		}
 		p++;
 	}
+	return NULL;
 }
 
 STATIC i32 format_try_resize(Formatter *f, u64 len) {
 	u64 needed = len + f->pos;
 INIT:
 	if (needed > f->capacity) {
-		u64 to_alloc =
-		    needed <= 8 ? 8 : 1UL << (64 - __builtin_clzl(needed));
+		u64 to_alloc = needed <= 8 ? 8 : 1UL << (64 - clz_u64(needed));
 		void *tmp = resize(f->buf, to_alloc);
 		if (!tmp) ERROR();
 		f->buf = tmp;
@@ -58,66 +157,133 @@ CLEANUP:
 	RETURN;
 }
 
-PUBLIC i32 format_append(Formatter *f, const u8 *fmt, ...) {
+STATIC Int128DisplayType format_get_displayType(const FormatSpec *spec) {
+	if (spec->t == FormatSpecTypeNone)
+		return Int128DisplayTypeDecimal;
+	else if (spec->t == FormatSpecTypeBinary)
+		return Int128DisplayTypeBinary;
+	else if (spec->t == FormatSpecTypeHexUpper)
+		return Int128DisplayTypeHexUpper;
+	else
+		return Int128DisplayTypeHexLower;
+}
+
+STATIC i32 format_proc_padding(Formatter *f, const FormatSpec *spec,
+			       const u8 *value, u64 raw_bytes) {
+	u64 aligned_bytes, i;
+INIT:
+	aligned_bytes = !spec->has_width	  ? raw_bytes
+			: spec->width > raw_bytes ? spec->width
+						  : raw_bytes;
+	if (format_try_resize(f, aligned_bytes) < 0) ERROR();
+	if (spec->align == FormatAlignRight)
+		for (i = raw_bytes; i < aligned_bytes; i++)
+			f->buf[f->pos++] = ' ';
+	memcpy(f->buf + f->pos, value, raw_bytes);
+	f->pos += raw_bytes;
+	if (spec->align == FormatAlignLeft)
+		for (i = raw_bytes; i < aligned_bytes; i++)
+			f->buf[f->pos++] = ' ';
+
+CLEANUP:
+	RETURN;
+}
+
+STATIC i32 format_proc_uint(Formatter *f, const FormatSpec *spec, u128 value) {
+	u8 buf[MAX_U128_STRING_LEN];
+	Int128DisplayType idt = format_get_displayType(spec);
+	u64 raw_bytes;
+INIT:
+	if (spec->t == FormatSpecTypeChar) {
+		buf[0] = value <= I8_MAX ? value : '?';
+		raw_bytes = 1;
+	} else
+		raw_bytes = u128_to_string(buf, value, idt);
+	if (format_proc_padding(f, spec, buf, raw_bytes) < 0) ERROR();
+CLEANUP:
+	RETURN;
+}
+
+STATIC i32 format_proc_int(Formatter *f, const FormatSpec *spec, i128 value) {
 	u8 buf[MAX_I128_STRING_LEN];
-	const u8 *p = fmt;
+	Int128DisplayType idt = format_get_displayType(spec);
+	u64 raw_bytes;
+INIT:
+	if (spec->t == FormatSpecTypeChar) {
+		buf[0] = value <= I8_MAX ? value : '?';
+		raw_bytes = 1;
+	} else
+		raw_bytes = i128_to_string(buf, value, idt);
+	if (format_proc_padding(f, spec, buf, raw_bytes) < 0) ERROR();
+CLEANUP:
+	RETURN;
+}
+
+STATIC i32 format_proc_string(Formatter *f, const FormatSpec *spec,
+			      const u8 *value) {
+	return format_proc_padding(f, spec, value, strlen(value));
+}
+
+STATIC i32 format_proc_float(Formatter *f, const FormatSpec *spec, f64 value) {
+	u8 buf[MAX_F64_STRING_LEN];
+	u64 raw_bytes;
+INIT:
+	raw_bytes = f64_to_string(buf, value,
+				  spec->has_precision ? spec->precision : 5);
+	if (format_proc_padding(f, spec, buf, raw_bytes) < 0) ERROR();
+CLEANUP:
+	RETURN;
+}
+STATIC i32 format_proc_invalid(Formatter *f, const FormatSpec *spec) {
+INIT:
+CLEANUP:
+	RETURN;
+}
+
+PUBLIC i32 format_append(Formatter *f, const u8 *p, ...) {
 	__builtin_va_list args;
+	FormatSpec spec;
 	u64 len;
 	Printable next;
 INIT:
-	__builtin_va_start(args, fmt);
+	__builtin_va_start(args, p);
 	while (*p != '\0') {
-		const u8 *np = find_next_placeholder(p);
+		const u8 *np = find_next_placeholder(p, &spec);
 		if (np) {
-			Int128DisplayType idt;
-			bool is_char = false;
-			if (np[1] == '}')
-				idt = Int128DisplayTypeDecimal;
-			else if (np[1] == 'b' && np[2] == '}')
-				idt = Int128DisplayTypeBinary;
-			else if (np[1] == 'X' && np[2] == '}')
-				idt = Int128DisplayTypeHexUpper;
-			else if (np[1] == 'c' && np[2] == '}')
-				is_char = true;
-			else if (np[1] == 'x' && np[2] == '}')
-				idt = Int128DisplayTypeHexLower;
-
 			len = np - p;
 			if (format_try_resize(f, len) < 0) ERROR();
 			memcpy(f->buf + f->pos, p, len);
 			f->pos += len;
+			if (spec.t == FormatSpecTypeEscapeBracketRight) {
+				if (format_proc_string(f, &spec, "}") < 0)
+					ERROR();
 
-			next = __builtin_va_arg(args, Printable);
-			if (is_char &&
-			    (next.t == UIntType || next.t == IntType)) {
-				if (format_try_resize(f, 1) < 0) ERROR();
-				f->buf[f->pos++] = next.data.uvalue <= I8_MAX
-						       ? next.data.uvalue
-						       : '?';
-			} else if (next.t == UIntType) {
-				len =
-				    u128_to_string(buf, next.data.uvalue, idt);
-				if (format_try_resize(f, len) < 0) ERROR();
-				memcpy(f->buf + f->pos, buf, len);
-				f->pos += len;
-			} else if (next.t == IntType) {
-				len =
-				    i128_to_string(buf, next.data.ivalue, idt);
-				if (format_try_resize(f, len) < 0) ERROR();
-				memcpy(f->buf + f->pos, buf, len);
-				f->pos += len;
-			} else if (next.t == StringType) {
-				len = strlen(next.data.svalue);
-				if (format_try_resize(f, len) < 0) ERROR();
-				memcpy(f->buf + f->pos, next.data.svalue, len);
-				f->pos += len;
-			} else if (next.t == FloatType) {
-				len = f64_to_string(buf, next.data.fvalue, 5);
-				if (format_try_resize(f, len) < 0) ERROR();
-				memcpy(f->buf + f->pos, buf, len);
-				f->pos += len;
+				p = np + spec.total_bytes;
+				continue;
+			} else if (spec.t == FormatSpecTypeEscapeBracketLeft) {
+				if (format_proc_string(f, &spec, "{") < 0)
+					ERROR();
+				p = np + spec.total_bytes;
+				continue;
 			}
-			p = np + 2 + (np[1] != '}');
+			next = __builtin_va_arg(args, Printable);
+			if (next.t == UIntType) {
+				u128 v = next.data.uvalue;
+				if (format_proc_uint(f, &spec, v) < 0) ERROR();
+			} else if (next.t == IntType) {
+				i128 v = next.data.ivalue;
+				if (format_proc_int(f, &spec, v) < 0) ERROR();
+			} else if (next.t == StringType) {
+				const u8 *s = next.data.svalue;
+				if (format_proc_string(f, &spec, s) < 0)
+					ERROR();
+			} else if (next.t == FloatType) {
+				f64 v = next.data.fvalue;
+				if (format_proc_float(f, &spec, v) < 0) ERROR();
+			} else {
+				if (format_proc_invalid(f, &spec) < 0) ERROR();
+			}
+			p = np + spec.total_bytes;
 		} else {
 			len = strlen(p);
 			if (format_try_resize(f, len) < 0) ERROR();
@@ -126,6 +292,7 @@ INIT:
 			break;
 		}
 	}
+
 CLEANUP:
 	__builtin_va_end(args);
 	RETURN;
