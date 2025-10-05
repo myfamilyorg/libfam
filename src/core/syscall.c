@@ -29,6 +29,39 @@
 #include <libfam/syscall.h>
 #include <libfam/utils.h>
 
+#ifdef __aarch64__
+#define SYS_epoll_create1 20
+#define SYS_epoll_pwait 22
+#define SYS_epoll_ctl 21
+#define SYS_fcntl 25
+#define SYS_unlinkat 35
+#define SYS_ftruncate 46
+#define SYS_openat 56
+#define SYS_close 57
+#define SYS_pipe2 59
+#define SYS_lseek 62
+#define SYS_read 63
+#define SYS_fdatasync 83
+#define SYS_futex 98
+#define SYS_nanosleep 101
+#define SYS_sched_yield 124
+#define SYS_kill 129
+#define SYS_rt_sigaction 134
+#define SYS_getpid 172
+#define SYS_socket 198
+#define SYS_bind 200
+#define SYS_listen 201
+#define SYS_accept 202
+#define SYS_connect 203
+#define SYS_getsockname 204
+#define SYS_setsockopt 208
+#define SYS_getsockopt 209
+#define SYS_shutdown 210
+#define SYS_munmap 215
+#define SYS_mmap 222
+#define SYS_msync 227
+#define SYS_clone3 435
+#elif defined(__x86_64__)
 #define SYS_read 0
 #define SYS_close 3
 #define SYS_lseek 8
@@ -60,6 +93,7 @@
 #define SYS_epoll_create1 291
 #define SYS_pipe2 293
 #define SYS_clone3 435
+#endif /* __x86_64__ */
 
 i32 pipe2(i32 fds[2], i32 flags) {
 	i32 v;
