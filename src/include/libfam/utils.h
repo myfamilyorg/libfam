@@ -30,6 +30,11 @@
 
 #define STDERR_FD 2
 
+#ifndef COVERAGE
+#define INLINE __attribute__((always_inline)) __inline
+#else
+#define INLINE
+#endif
 #define PUBLIC __attribute__((visibility("default")))
 
 #define INIT             \

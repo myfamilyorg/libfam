@@ -996,31 +996,18 @@ Test(compress_file1) {
 	u64 capacity = compress_bound(file_size);
 	u8 *out = alloc(sizeof(u8) * capacity);
 	u8 *verify = alloc(sizeof(u8) * file_size);
-	i64 comp_sum = 0, decomp_sum = 0, ret1 = 0;
 
 	ASSERT(in, "fmap");
 	ASSERT(out, "out");
 	ASSERT(verify, "verify");
 
 	for (i = 0; i < FILE_ITER; i++) {
-		i64 timer;
-		timer = micros();
-		ret1 = compress(in, file_size, out, capacity);
-		i64 diff_compress = micros() - timer;
-		timer = micros();
+		i64 ret1 = compress(in, file_size, out, capacity);
+		ASSERT(ret1 > 0, "ret1>0");
 		i64 ret2 = decompress(out, ret1, verify, file_size);
-		i64 diff_decompress = micros() - timer;
 		ASSERT_EQ(file_size, ret2, "size match");
 		ASSERT(!memcmp(in, verify, file_size), "verify");
-		decomp_sum += diff_decompress;
-		comp_sum += diff_compress;
 	}
-	(void)comp_sum;
-	(void)decomp_sum;
-	/*
-	println("Avg compress={},Avg decompress={},size={}/{}",
-		comp_sum / FILE_ITER, decomp_sum / FILE_ITER, ret1, file_size);
-		*/
 
 	munmap(in, file_size);
 	release(out);
@@ -1029,3 +1016,9 @@ Test(compress_file1) {
 	ASSERT_BYTES(0);
 }
 
+Test(compress_min) {
+	u8 out[1024], verify[1024];
+	i64 r1 = compress("", 0, out, compress_bound(0));
+	i64 r2 = decompress(out, r1, verify, 0);
+	ASSERT_EQ(r2, 0, "0 len");
+}

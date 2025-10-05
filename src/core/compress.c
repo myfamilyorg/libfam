@@ -419,8 +419,8 @@ STATIC void compress_build_lookup_table(
 	}
 }
 
-__attribute__((always_inline)) __inline STATIC i32 compress_proc_match(
-    u16 symbol, BitStreamReader *strm, u8 *out, u64 capacity, u64 *itt) {
+INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
+				      u8 *out, u64 capacity, u64 *itt) {
 	u16 match_code, base_length, len_extra, actual_length, base_dist,
 	    dist_extra, actual_distance;
 	match_code = symbol - MATCH_OFFSET;
