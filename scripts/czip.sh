@@ -1,6 +1,8 @@
 #!/bin/bash
 
-CZIP_SRC=etc/czip.c
+CZIP_SRC="etc/czip.c"
+OUT_BIN="./target/bin/czip"
+LIB_DIR="./target/lib"
 
 if [ "${CFLAGS}" = "" ]; then
 	CFLAGS="-O3 -flto"
@@ -8,7 +10,6 @@ fi
 if [ "${CC}" = "" ]; then
 	CC=clang
 fi
-OUT_BIN="./target/bin/czip"
 
 if [ ! -e ${OUT_BIN} ] || [ ${CZIP_SRC} -nt ${OUT_BIN} ]; then
 	COMMAND="${CC} \
@@ -16,7 +17,7 @@ if [ ! -e ${OUT_BIN} ] || [ ${CZIP_SRC} -nt ${OUT_BIN} ]; then
 		-Isrc/include ${CZIP_SRC} \
 		${CFLAGS} \
 		-o ${OUT_BIN} \
-		-lfam -Ltarget/lib"
+		-lfam -L${LIB_DIR}"
 	echo ${COMMAND}
 	${COMMAND}
 fi
