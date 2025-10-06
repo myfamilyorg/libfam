@@ -1135,6 +1135,18 @@ Test(lstat) {
 	ASSERT(!(res = lstat(path, &st)), "lstat");
 	ASSERT(!st.st_mtime, "set to 0");
 	ASSERT_EQ(st.st_mode, 33523, "updated permissions");
+	memset(&st, 0, sizeof(st));
+	ASSERT(!fstatat(AT_FDCWD, path, &st, 0), "fstatat");
+	ASSERT(!st.st_mtime, "set to 0");
+	ASSERT_EQ(st.st_mode, 33523, "updated permissions");
+
+	times[0].tv_sec = 7;
+	times[1].tv_sec = 8;
+	ASSERT(!futimesat(AT_FDCWD, path, times, 0), "utime");
+	ASSERT(!fstatat(AT_FDCWD, path, &st, 0), "fstatat");
+	ASSERT_EQ(st.st_mtime, 8, "set to 8");
+	ASSERT_EQ(st.st_atime, 7, "set to 7");
+
 	close(fd);
 	unlink(path);
 }

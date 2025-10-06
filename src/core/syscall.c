@@ -94,6 +94,8 @@
 #define SYS_futex 202
 #define SYS_epoll_ctl 233
 #define SYS_openat 257
+#define SYS_futimesat 261
+#define SYS_fstatat 262
 #define SYS_unlinkat 263
 #define SYS_epoll_pwait 281
 #define SYS_epoll_create1 291
@@ -507,6 +509,28 @@ i32 fchmod(i32 fd, u32 mode) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_fchmod, (i64)fd, (i64)mode, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 futimesat(i32 dirfd, const u8 *pathname, const struct timeval *times,
+	      i32 flags) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_futimesat, (i64)dirfd, (i64)pathname,
+			     (i64)times, (i64)flags, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+i32 fstatat(i32 dirfd, const u8 *pathname, struct stat *buf, i32 flags) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_fstatat, (i64)dirfd, (i64)pathname, (i64)buf,
+			     (i64)flags, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:

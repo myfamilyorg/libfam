@@ -78,6 +78,9 @@ i32 msync(void *addr, u64 length, i32 flags);
 void _exit(i32 status);
 i32 lstat(const u8 *path, struct stat *buf);
 i32 utimes(const u8 *path, const struct timeval *times);
+i32 futimesat(i32 dirfd, const u8 *path, const struct timeval *times,
+	      i32 flags);
+i32 fstatat(i32 dirfd, const u8 *pathname, struct stat *buf, i32 flags);
 i32 fchmod(i32 fd, u32 mode);
 
 #endif /* _SYSCALL_H */
