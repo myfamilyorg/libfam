@@ -238,6 +238,51 @@ typedef struct {
 	u64 bits[_NSIG / (8 * sizeof(u64))];
 } sigset_t;
 
+/*
+struct stat {
+	u64 st_dev;
+	u64 st_ino;
+	u32 st_mode;
+	u32 st_nlink;
+	u32 st_uid;
+	u32 st_gid;
+	u64 st_rdev;
+	u64 __pad1;
+	i64 st_size;
+	i32 st_blksize;
+	i32 __pad2;
+	i64 st_blocks;
+	i64 st_atime;
+	u64 st_atime_nsec;
+	i64 st_mtime;
+	u64 st_mtime_nsec;
+	i64 st_ctime;
+	u64 st_ctime_nsec;
+	u32 __unused4;
+	u32 __unused5;
+};
+*/
+struct stat {
+	u64 st_dev;	  /* 64-bit */
+	u64 st_ino;	  /* 64-bit */
+	u64 st_nlink;	  /* 64-bit */
+	u32 st_mode;	  /* 32-bit */
+	u32 st_uid;	  /* 32-bit */
+	u32 st_gid;	  /* 32-bit */
+	u32 __pad0;	  /* 32-bit padding */
+	u64 st_rdev;	  /* 64-bit */
+	i64 st_size;	  /* 64-bit */
+	i64 st_blksize;	  /* 64-bit */
+	i64 st_blocks;	  /* 64-bit */
+	u64 st_atime;	  /* 64-bit */
+	u64 st_atimensec; /* 64-bit */
+	u64 st_mtime;	  /* 64-bit */
+	u64 st_mtimensec; /* 64-bit */
+	u64 st_ctime;	  /* 64-bit */
+	u64 st_ctimensec; /* 64-bit */
+	i64 __unused[3];  /* 64-bit each */
+};
+
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5);
 
 #endif /* _LINUX_H */

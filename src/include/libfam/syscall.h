@@ -35,6 +35,7 @@ struct timespec;
 struct epoll_event;
 struct sigset_t;
 struct rt_sigaction;
+struct stat;
 
 i32 pipe2(i32 fds[2], i32 flags);
 i32 getpid(void);
@@ -75,5 +76,8 @@ i64 futex(u32 *uaddr, i32 futex_op, u32 val, const struct timespec *timeout,
 	  u32 *uaddr2, u32 val3);
 i32 msync(void *addr, u64 length, i32 flags);
 void _exit(i32 status);
+i32 lstat(const u8 *path, struct stat *buf);
+i32 utimes(const u8 *path, const struct timeval *times);
+i32 fchmod(i32 fd, u32 mode);
 
 #endif /* _SYSCALL_H */

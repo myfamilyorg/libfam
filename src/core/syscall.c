@@ -30,6 +30,7 @@
 #include <libfam/utils.h>
 
 #ifdef __aarch64__
+#define SYS_lstat 6
 #define SYS_epoll_create1 20
 #define SYS_epoll_pwait 22
 #define SYS_epoll_ctl 21
@@ -42,8 +43,10 @@
 #define SYS_lseek 62
 #define SYS_read 63
 #define SYS_fdatasync 83
+#define SYS_fchmod 94
 #define SYS_futex 98
 #define SYS_nanosleep 101
+#define SYS_utimes 102
 #define SYS_sched_yield 124
 #define SYS_kill 129
 #define SYS_rt_sigaction 134
@@ -64,6 +67,7 @@
 #elif defined(__x86_64__)
 #define SYS_read 0
 #define SYS_close 3
+#define SYS_lstat 6
 #define SYS_lseek 8
 #define SYS_mmap 9
 #define SYS_munmap 11
@@ -85,6 +89,8 @@
 #define SYS_fcntl 72
 #define SYS_fdatasync 75
 #define SYS_ftruncate 77
+#define SYS_fchmod 91
+#define SYS_utimes 235
 #define SYS_futex 202
 #define SYS_epoll_ctl 233
 #define SYS_openat 257
@@ -470,6 +476,37 @@ i32 msync(void *addr, u64 length, i32 flags) {
 INIT:
 	v = (i32)raw_syscall(SYS_msync, (i64)addr, (i64)length, (i64)flags, 0,
 			     0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+#include <libfam/test_base.h>
+i32 lstat(const u8 *path, struct stat *buf) {
+	i64 v;
+INIT:
+	v = raw_syscall(SYS_lstat, (i64)path, (i64)buf, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 utimes(const u8 *path, const struct timeval *times) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_utimes, (i64)path, (i64)times, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 fchmod(i32 fd, u32 mode) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_fchmod, (i64)fd, (i64)mode, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:
