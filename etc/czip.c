@@ -245,6 +245,7 @@ i32 compress_file(const u8 *f, bool console) {
 	return 0;
 }
 
+/*
 #ifdef __aarch64__
 __asm__(
     ".section .text\n"
@@ -276,9 +277,9 @@ __asm__(
     "    mov %rax, %rdi\n"
     "    mov $60, %rax\n"
     "    syscall\n");
-#endif /* __x86_64__ */
+#endif *//* __x86_64__ */
 
-int main(int argc, u8 **argv, u8 **envp) {
+int main(int argc, char **argv, char **envp) {
 	i32 i;
 	bool decompress = false;
 	bool console = false;

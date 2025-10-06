@@ -13,8 +13,6 @@ fi
 
 if [ ! -e ${OUT_BIN} ] || [ ${CZIP_SRC} -nt ${OUT_BIN} ]; then
 	COMMAND="${CC} \
-		-ffreestanding \
-		-nostdlib \
 		-Wno-pointer-sign \
 		-Isrc/include ${CZIP_SRC} \
 		${CFLAGS} \
