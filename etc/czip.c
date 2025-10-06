@@ -64,6 +64,10 @@ i32 decompress_file(const u8 *f, bool console) {
 	uncompressed[len - 3] = 0;
 
 	fd = file(f);
+	if (fd < 0) {
+		println("Could not open file '{}'.", f);
+		return -1;
+	}
 	file_size = fsize(fd);
 
 	if (file_size < sizeof(i64)) {
@@ -108,7 +112,6 @@ i32 decompress_file(const u8 *f, bool console) {
 		}
 
 		close(fd);
-		close(fd_out);
 		munmap(in, file_size);
 		munmap(out, decomp_size);
 
@@ -248,6 +251,7 @@ i32 compress_file(const u8 *f, bool console) {
 		munmap(in, file_size);
 		fresize(fd_out, result + sizeof(u64));
 		close(fd_out);
+		close(fd);
 		unlink(f);
 	}
 
