@@ -28,6 +28,7 @@
 #include <libfam/atomic.h>
 #include <libfam/bitmap.h>
 #include <libfam/builtin.h>
+#include <libfam/debug.h>
 #include <libfam/limits.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
@@ -197,6 +198,9 @@ void alloc_destroy(Alloc *a) {
 }
 
 void *balloc(Alloc *a, u64 size) {
+#if TEST == 1
+	if (_debug_alloc_failure) return NULL;
+#endif /* TEST */
 	void *ret = alloc_slab(a, size);
 	if (!ret) ret = alloc_map(a, size);
 	return ret;

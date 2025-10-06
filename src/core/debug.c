@@ -33,5 +33,6 @@ bool _debug_fail_fcntl = false;
 bool _debug_fail_epoll_create1 = false;
 bool _debug_fail_clone3 = false;
 bool _debug_alloc_init_failure = false;
+bool _debug_alloc_failure = false;
 u64 _debug_alloc_cas_loop = 0;
 

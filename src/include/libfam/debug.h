@@ -41,6 +41,7 @@ extern bool _debug_fail_clone3;
 extern bool _debug_alloc_init_failure;
 extern u64 _debug_alloc_cas_loop;
 extern bool _debug_bible_invalid_hash;
+extern bool _debug_alloc_failure;
 #endif /* TEST */
 
 #endif /* _DEBUG_H */

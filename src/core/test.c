@@ -1031,8 +1031,18 @@ Test(format2) {
 	format_append(&f, "{}", p);
 	ASSERT(!strcmp("", format_to_string(&f)),
 	       "formatting error - invalid type");
-
 	format_clear(&f);
+	_debug_alloc_failure = true;
+	FORMAT(&f, "{}", "abc");
+	ASSERT_EQ(format_to_string(&f), NULL, "alloc failure");
+	format_clear(&f);
+	FORMAT(&f, "{{");
+	ASSERT_EQ(format_to_string(&f), NULL, "alloc failure");
+	format_clear(&f);
+	FORMAT(&f, "}}");
+	ASSERT_EQ(format_to_string(&f), NULL, "alloc failure");
+	format_clear(&f);
+	_debug_alloc_failure = false;
 }
 
 #define FILE_ITER 4
