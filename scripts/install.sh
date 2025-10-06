@@ -1,22 +1,25 @@
 #!/bin/bash
 
 # Define the target directory for the library
-LIB_DIR="/usr/lib"
 LIB_VERSION="0.0.1"
+LIB_DIR="/usr/lib/libfam-${LIB_VERSION}"
 CZIP_BIN=./target/bin/czip
 CZIP_INSTALL_DIR=/usr/local/bin
 
+# Ensure directory exists
+mkdir -p $LIB_DIR;
+
 # Copy the shared library to the subdirectory
-cp target/lib/libfam.so "$LIB_DIR/libfam.so.${LIB_VERSION}"
+cp target/lib/libfam.so "$LIB_DIR/libfam.so"
 
-# Remove any existing symlink in the subdirectory
-unlink "$LIB_DIR/libfam.so" 2>/dev/null || true
-
-# Create a symlink for the library
-ln -s "$LIB_DIR/libfam.so.${LIB_VERSION}" "$LIB_DIR/libfam.so"
+# Add ld config
+echo "/usr/lib/libfam-${LIB_VERSION}" > /etc/ld.so.conf.d/fam.conf
 
 # Update the dynamic linker cache
 ldconfig
+
+# Remove any existing includes
+rm -rf /usr/include/libfam
 
 # Copy include directory
 cp -rp src/include/libfam /usr/include
