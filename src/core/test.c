@@ -1117,22 +1117,22 @@ Test(strstr) {
 	ASSERT_EQ(strstr(s, "x"), NULL, "no match");
 }
 
-Test(lstat) {
-	const u8 *path = "/tmp/lstat1.txt";
+Test(fstat) {
+	const u8 *path = "/tmp/fstat1.txt";
 	unlink(path);
 	i32 fd = file(path);
 	ASSERT(fd > 0, "fd");
 	struct stat st;
 	errno = 0;
 	i32 res;
-	ASSERT(!(res = lstat(path, &st)), "lstat");
+	ASSERT(!(res = fstatat(AT_FDCWD, path, &st, 0)), "fstatat 1");
 	ASSERT(st.st_mtime, "non 0");
 	ASSERT_EQ(st.st_mode, 33152, "default permissions");
 	ASSERT(!fchmod(fd, 755), "chmod");
 	struct timeval times[2] = {0};
-	ASSERT(!utimes(path, times), "utime");
+	ASSERT(!futimesat(AT_FDCWD, path, times, 0), "utime");
 	errno = 0;
-	ASSERT(!(res = lstat(path, &st)), "lstat");
+	ASSERT(!(res = fstatat(AT_FDCWD, path, &st, 0)), "fstat 2");
 	ASSERT(!st.st_mtime, "set to 0");
 	ASSERT_EQ(st.st_mode, 33523, "updated permissions");
 	memset(&st, 0, sizeof(st));
