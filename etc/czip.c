@@ -245,7 +245,6 @@ i32 compress_file(const u8 *f, bool console) {
 	return 0;
 }
 
-/*
 #ifdef __aarch64__
 __asm__(
     ".section .text\n"
@@ -256,8 +255,11 @@ __asm__(
     "    add x3, x0, #1\n"
     "    lsl x3, x3, #3\n"
     "    add x2, x1, x3\n"
-    "    sub sp, sp, x3\n"
+    "    mov x4, sp\n"
+    "    bic x4, x4, #15\n"
+    "    mov sp, x4\n"
     "    bl main\n"
+    "    mov x0, x0\n"
     "    mov x8, #93\n"
     "    svc #0\n");
 #elif defined(__x86_64__)
@@ -277,7 +279,7 @@ __asm__(
     "    mov %rax, %rdi\n"
     "    mov $60, %rax\n"
     "    syscall\n");
-#endif *//* __x86_64__ */
+#endif /* __x86_64__ */
 
 int main(int argc, char **argv, char **envp) {
 	i32 i;
