@@ -55,6 +55,11 @@ i32 decompress_file(const u8 *f, bool console) {
 		return -1;
 	}
 
+	if (len >= sizeof(uncompressed)) {
+		println("Path '{}' is too long!", f);
+		return -1;
+	}
+
 	memcpy(uncompressed, f, len - 3);
 	uncompressed[len - 3] = 0;
 
@@ -211,6 +216,10 @@ i32 compress_file(const u8 *f, bool console) {
 		munmap(in, file_size);
 
 	} else {
+		if (strlen(f) > sizeof(compressed) - strlen(".cz") - 1) {
+			println("Path is too long '{}'", f);
+			return -1;
+		}
 		strcpy(compressed, f);
 		strcat(compressed, ".cz");
 
