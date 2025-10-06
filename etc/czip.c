@@ -30,7 +30,7 @@
 #include <libfam/sysext.h>
 #include <libfam/version.h>
 
-i32 decompress_file(const u8 *f) {
+i32 decompress_file(const u8 *f, bool console) {
 	u8 *in, *out;
 	u8 uncompressed[2048];
 	u64 len = strlen(f), decomp_size;
@@ -58,11 +58,6 @@ i32 decompress_file(const u8 *f) {
 	memcpy(uncompressed, f, len - 3);
 	uncompressed[len - 3] = 0;
 
-	if (exists(uncompressed)) {
-		println("File '{}', already exists!", uncompressed);
-		return -1;
-	}
-
 	fd = file(f);
 	file_size = fsize(fd);
 
@@ -78,39 +73,81 @@ i32 decompress_file(const u8 *f) {
 	}
 
 	memcpy(&decomp_size, in, sizeof(i64));
-	fd_out = file(uncompressed);
-	if (fd_out < 0) {
-		println("Could not open file '{}'!", uncompressed);
-		return -1;
-	}
-	if (fresize(fd_out, decomp_size) < 0) {
-		println("Could not resize file '{}'!", uncompressed);
-		return -1;
-	}
-	out = fmap(fd_out, decomp_size, 0);
-	if (!out) {
-		println("Could not memory map file '{}'!", uncompressed);
-		return -1;
-	}
+	if (console) {
+		fd_out = 1;
+		out = map(decomp_size);
+		if (!out) {
+			println("Could not create memory map!");
+			return -1;
+		}
+		result = decompress(in + sizeof(i64), file_size - sizeof(i64),
+				    out, decomp_size);
 
-	result = decompress(in + sizeof(i64), file_size - sizeof(i64), out,
-			    decomp_size);
+		if (result < 0) {
+			println("Decompression failed: {}", strerror(errno));
+			return -1;
+		}
 
-	if (result < 0) {
-		println("Decompression failed: {}", strerror(errno));
-		return -1;
+		u64 bytes_written = 0;
+		while (bytes_written < decomp_size) {
+			u64 written = write(fd_out, (u8 *)out + bytes_written,
+					    decomp_size - bytes_written);
+			if (written == -1) {
+				println("Write failed: {}", strerror(errno));
+				munmap(out, decomp_size);
+				munmap(in, file_size);
+				close(fd);
+				return -1;
+			}
+			bytes_written += written;
+		}
+
+		close(fd);
+		close(fd_out);
+		munmap(in, file_size);
+		munmap(out, decomp_size);
+
+	} else {
+		if (exists(uncompressed)) {
+			println("File '{}', already exists!", uncompressed);
+			return -1;
+		}
+
+		fd_out = file(uncompressed);
+		if (fd_out < 0) {
+			println("Could not open file '{}'!", uncompressed);
+			return -1;
+		}
+		if (fresize(fd_out, decomp_size) < 0) {
+			println("Could not resize file '{}'!", uncompressed);
+			return -1;
+		}
+		out = fmap(fd_out, decomp_size, 0);
+		if (!out) {
+			println("Could not memory map file '{}'!",
+				uncompressed);
+			return -1;
+		}
+
+		result = decompress(in + sizeof(i64), file_size - sizeof(i64),
+				    out, decomp_size);
+
+		if (result < 0) {
+			println("Decompression failed: {}", strerror(errno));
+			return -1;
+		}
+
+		close(fd);
+		close(fd_out);
+		munmap(in, file_size);
+		munmap(out, decomp_size);
+		unlink(f);
 	}
-
-	close(fd);
-	close(fd_out);
-	munmap(in, file_size);
-	munmap(out, decomp_size);
-	unlink(f);
 
 	return 0;
 }
 
-i32 compress_file(const u8 *f) {
+i32 compress_file(const u8 *f, bool console) {
 	u8 compressed[2048] = {0};
 	i32 fd, fd_out;
 	i64 file_size, result;
@@ -139,53 +176,99 @@ i32 compress_file(const u8 *f) {
 	}
 
 	bound = compress_bound(file_size);
-	strcpy(compressed, f);
-	strcat(compressed, ".cz");
 
-	if (exists(compressed)) {
-		println("File '{}' already exists!", compressed);
-		return -1;
+	if (console) {
+		fd_out = 1;
+		out = map(bound + sizeof(u64));
+		if (!out) {
+			println("Could not create memory map!");
+			return -1;
+		}
+		result = compress(in, file_size, out + sizeof(i64), bound);
+		if (result < 0) {
+			println("Compression failed: {}", strerror(errno));
+			return -1;
+		}
+		write(fd_out, &file_size, sizeof(i64));
+
+		u64 bytes_written = 0;
+		while (bytes_written < result) {
+			u64 written = write(
+			    fd_out, (u8 *)out + sizeof(i64) + bytes_written,
+			    result - bytes_written);
+			if (written == -1) {
+				println("Write failed: {}", strerror(errno));
+				munmap(out, bound + sizeof(i64));
+				munmap(in, file_size);
+				close(fd);
+				return -1;
+			}
+			bytes_written += written;
+		}
+
+		close(fd);
+		munmap(out, bound + sizeof(i64));
+		munmap(in, file_size);
+
+	} else {
+		strcpy(compressed, f);
+		strcat(compressed, ".cz");
+
+		if (exists(compressed)) {
+			println("File '{}' already exists!", compressed);
+			return -1;
+		}
+
+		fd_out = file(compressed);
+		if (fresize(fd_out, bound + sizeof(i64)) < 0) {
+			println("File resize failed: {}", strerror(errno));
+			return -1;
+		}
+		out = fmap(fd_out, bound + sizeof(i64), 0);
+		if (!out) {
+			println("Could not memory map file '{}'!", compressed);
+			return -1;
+		}
+		memcpy(out, &file_size, sizeof(i64));
+		result = compress(in, file_size, out + sizeof(i64), bound);
+		if (result < 0) {
+			println("Compression failed: {}", strerror(errno));
+			return -1;
+		}
+		munmap(out, bound + sizeof(i64));
+		munmap(in, file_size);
+		fresize(fd_out, result + sizeof(u64));
+		close(fd_out);
+		unlink(f);
 	}
-	fd_out = file(compressed);
-	if (fresize(fd_out, bound + sizeof(i64)) < 0) {
-		println("File resize failed: {}", strerror(errno));
-		return -1;
-	}
-	out = fmap(fd_out, bound, 0);
-	result = compress(in, file_size, out + sizeof(i64), bound);
-	if (result < 0) {
-		println("Compression failed: {}", strerror(errno));
-		return -1;
-	}
-	memcpy(out, &file_size, sizeof(i64));
-	munmap(out, bound);
-	munmap(in, file_size);
-	fresize(fd_out, result + sizeof(u64));
-	close(fd_out);
-	unlink(f);
 
 	return 0;
 }
 
 int main(int argc, char **argv) {
 	i32 i;
+	bool decompress = false;
+	bool console = false;
 	for (i = 0; i < argc; i++) {
 		if (!strcmp(argv[i], "-V")) {
 			println("czip {}", LIBFAM_VERSION);
 			return 0;
+		} else if (!strcmp(argv[i], "-d")) {
+			decompress = true;
+		} else if (!strcmp(argv[i], "-c")) {
+			console = true;
+		} else if (!strcmp(argv[i], "-dc") || !strcmp(argv[i], "-cd")) {
+			console = true;
+			decompress = true;
 		}
 	}
-	if (argc != 2 && argc != 3) {
-		println("Usage: czip [-d] <file>");
-		return -1;
-	}
-	if (argc == 3 && strcmp(argv[1], "-d")) {
-		println("Usage: czip [-d] <file>");
+	if (argc < 2 || argc > 4) {
+		println("Usage: czip [-dc] <file>");
 		return -1;
 	}
 
-	if (argc == 2)
-		return compress_file(argv[1]);
+	if (!decompress)
+		return compress_file(argv[argc - 1], console);
 	else
-		return decompress_file(argv[2]);
+		return decompress_file(argv[argc - 1], console);
 }
