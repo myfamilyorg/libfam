@@ -281,7 +281,7 @@ __asm__(
     "    syscall\n");
 #endif /* __x86_64__ */
 
-int main(int argc, char **argv, char **envp) {
+int main(int argc, u8 **argv, u8 **envp) {
 	i32 i;
 	bool decompress = false;
 	bool console = false;
