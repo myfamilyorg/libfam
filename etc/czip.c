@@ -28,6 +28,7 @@
 #include <libfam/memory.h>
 #include <libfam/string.h>
 #include <libfam/sysext.h>
+#include <libfam/version.h>
 
 i32 decompress_file(const u8 *f) {
 	u8 *in, *out;
@@ -167,6 +168,13 @@ i32 compress_file(const u8 *f) {
 }
 
 int main(int argc, char **argv) {
+	i32 i;
+	for (i = 0; i < argc; i++) {
+		if (!strcmp(argv[i], "-V")) {
+			println("czip {}", LIBFAM_VERSION);
+			return 0;
+		}
+	}
 	if (argc != 2 && argc != 3) {
 		println("Usage: czip [-d] <file>");
 		return -1;

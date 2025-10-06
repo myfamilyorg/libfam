@@ -1,3 +1,6 @@
+TAG=`git describe --tags`
+echo "#define LIBFAM_VERSION \"${TAG}\"" > src/include/libfam/version.h
+
 build_dir() {
         local DIR="$1";
         local IS_TEST="$2";
