@@ -8,7 +8,7 @@ usage() {
 	echo "  --cc=<compiler> := c compiler to use default 'clang'";
 	echo "  --cflags=<cflags> := c flags to use default '-O3 -Werror -Wall -std=x11'";
 	echo "  --f=<filter> := filter to target single test (e.g. --f=alloc1) default: all tests";
-	echo "  -flto := run with flto (link time optimization)";
+	echo "  --quick := run without flto (link time optimization)";
         exit -1;
 }
 
@@ -24,7 +24,7 @@ check_single_option() {
 TEST=0;
 CLEAN=0;
 ALL=0;
-FLTO=0;
+FLTO=1;
 COV=0;
 INSTALL=0;
 SILENT=0;
@@ -73,8 +73,8 @@ for var in "$@"; do
 	--cflags=*)
 		CFLAGS="${var#*=}";
 		;;
-	-flto)
-		FLTO=1;
+	--quick)
+		FLTO=0;
 		;;
 	*)
 		echo "Unepxected value specified: '$var'";
