@@ -38,6 +38,7 @@ typedef struct {
 	u32 length;
 } Bible;
 
+void init_bible(void);
 void bible_verse(const Bible *bible, u16 verse, u8 buf[MAX_VERSE_LEN]);
 const Bible *bible(void);
 

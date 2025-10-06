@@ -67,13 +67,14 @@ STATIC void bible_build_offsets(Bible *bible) {
 	bible->lengths[j - 1] = len;
 }
 
-STATIC void __attribute__((constructor)) __init_bible(void) {
+void init_bible(void) {
 	const u8 *msg = "Bible hash did not match! Halting!\n";
 #if TEST == 1
 	bool _debug = _debug_bible_invalid_hash;
 #else
 	bool _debug = false;
 #endif /* TEST */
+
 	bool v = _debug
 		     ? true
 		     : bible_check_hash(xxdir_file_0, xxdir_file_size_0) != 0;
@@ -94,4 +95,3 @@ void bible_verse(const Bible *bible, u16 verse, u8 buf[MAX_VERSE_LEN]) {
 }
 
 const Bible *bible(void) { return &__bible; }
-

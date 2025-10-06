@@ -27,6 +27,8 @@
 #include <libfam/debug.h>
 #include <libfam/test.h>
 
+void __attribute__((constructor)) __init_bible(void) { init_bible(); }
+
 Test(bible1) {
 	u8 buf[MAX_VERSE_LEN];
 	const Bible *b = bible();
