@@ -1034,13 +1034,13 @@ Test(format2) {
 	format_clear(&f);
 	_debug_alloc_failure = true;
 	FORMAT(&f, "{}", "abc");
-	ASSERT_EQ(format_to_string(&f), NULL, "alloc failure");
+	ASSERT(!strcmp(format_to_string(&f), ""), "alloc failure");
 	format_clear(&f);
 	FORMAT(&f, "{{");
-	ASSERT_EQ(format_to_string(&f), NULL, "alloc failure");
+	ASSERT(!strcmp(format_to_string(&f), ""), "alloc failure");
 	format_clear(&f);
 	FORMAT(&f, "}}");
-	ASSERT_EQ(format_to_string(&f), NULL, "alloc failure");
+	ASSERT(!strcmp(format_to_string(&f), ""), "alloc failure");
 	format_clear(&f);
 	_debug_alloc_failure = false;
 }

@@ -310,7 +310,7 @@ PUBLIC void format_clear(Formatter *f) {
 }
 
 PUBLIC const u8 *format_to_string(Formatter *f) {
-	if (format_try_resize(f, 1) < 0) return NULL;
+	if (format_try_resize(f, 1) < 0) return "";
 	f->buf[f->pos++] = '\0';
 	return f->buf;
 }
