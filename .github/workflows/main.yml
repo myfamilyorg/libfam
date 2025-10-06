@@ -91,4 +91,30 @@ jobs:
       - name: coverage
         run: |
           ./.ci/coverage
+  linux_amd64_end2end:
+    runs-on: ubuntu-latest
+    strategy: 
+      matrix: 
+        platform: [linux-amd64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Check linux version
+        run: uname -a
+      - name: external
+        run: |
+          ./.ci/external
+  linux_aarch64_end2end:
+    runs-on: ubuntu-24.04-arm
+    strategy: 
+      matrix: 
+        platform: [linux-aarch64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Check linux version
+        run: uname -a
+      - name: external
+        run: |
+          ./.ci/external
 
