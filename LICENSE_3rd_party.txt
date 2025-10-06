@@ -2,3 +2,7 @@
 which is licensed under the MIT license.
 ./scr/crypto/aes.c was based largely on https://github.com/kokke/tiny-AES-c
 which is licensed under the unlicense.
+
+Several of the other files incorporated ideas from other projects, but I do not remember which ones exactly.
+If I missed giving your project attribution, please contact me and we'll add any necessary information to this
+file.
