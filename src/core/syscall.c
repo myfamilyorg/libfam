@@ -170,7 +170,7 @@ void *mmap(void *addr, u64 length, i32 prot, i32 flags, i32 fd, i64 offset) {
 		return ret;
 }
 
-i32 munmap(void *addr, u64 len) {
+PUBLIC i32 munmap(void *addr, u64 len) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_munmap, (i64)addr, (i64)len, 0, 0, 0, 0);
@@ -180,7 +180,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 close(i32 fd) {
+PUBLIC i32 close(i32 fd) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_close, (i64)fd, 0, 0, 0, 0, 0);
