@@ -1,0 +1,4 @@
+./src/crypto/sha3.c was based largely on https://github.com/brainhub/SHA3IUF
+which is licensed under the MIT license.
+./scr/crypto/aes.c was based largely on https://github.com/kokke/tiny-AES-c
+which is licensed under the unlicense.
