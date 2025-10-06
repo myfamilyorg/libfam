@@ -69,7 +69,12 @@ STATIC void bible_build_offsets(Bible *bible) {
 
 STATIC void __attribute__((constructor)) __init_bible(void) {
 	const u8 *msg = "Bible hash did not match! Halting!\n";
-	bool v = _debug_bible_invalid_hash
+#if TEST == 1
+	bool _debug = _debug_bible_invalid_hash;
+#else
+	bool _debug = false;
+#endif /* TEST */
+	bool v = _debug
 		     ? true
 		     : bible_check_hash(xxdir_file_0, xxdir_file_size_0) != 0;
 	if (v) {
