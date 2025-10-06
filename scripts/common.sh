@@ -96,7 +96,7 @@ if [ "$FLTO" = "1" ]; then
 fi
 
 if [ "${LDFLAGS}" = "" ]; then
-        LDFLAGS="-O3 -ffreestanding -nostdlib -fstack-protector -shared -fvisibility=hidden";
+        LDFLAGS="-O3 -ffreestanding -nostdlib -fstack-protector -shared -fvisibility=hidden -D_FORTIFY_SOURCE=2";
         if [ "${FLTO}" = "1" ]; then
                 LDFLAGS="${LDFLAGS} -flto=auto";
         fi

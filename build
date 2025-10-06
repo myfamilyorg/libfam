@@ -35,6 +35,7 @@ CFLAGS="-O3 \
 	-Wall \
 	-funroll-loops \
 	-fstack-protector \
+	-D_FORTIFY_SOURCE=2 \
 	-std=c11";
 FILTER=*;
 
