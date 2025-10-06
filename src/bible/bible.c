@@ -24,6 +24,7 @@
  *******************************************************************************/
 
 #include <libfam/bible.h>
+#include <libfam/debug.h>
 #include <libfam/sha3.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
@@ -68,9 +69,13 @@ STATIC void bible_build_offsets(Bible *bible) {
 
 STATIC void __attribute__((constructor)) __init_bible(void) {
 	const u8 *msg = "Bible hash did not match! Halting!\n";
-	if (bible_check_hash(xxdir_file_0, xxdir_file_size_0) != 0) {
+	bool v = _debug_bible_invalid_hash
+		     ? true
+		     : bible_check_hash(xxdir_file_0, xxdir_file_size_0) != 0;
+	if (v) {
 		write(2, msg, strlen(msg));
 		_exit(-1);
+		return;
 	}
 	__bible.length = xxdir_file_size_0;
 	bible_build_offsets(&__bible);

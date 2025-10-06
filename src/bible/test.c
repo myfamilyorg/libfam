@@ -24,6 +24,7 @@
  *******************************************************************************/
 
 #include <libfam/bible.h>
+#include <libfam/debug.h>
 #include <libfam/test.h>
 
 Test(bible1) {
@@ -39,4 +40,20 @@ Test(bible1) {
 		       "Revelation||22||21||The grace of our Lord Jesus Christ "
 		       "be with you all. Amen."),
 	       "rev2221");
+}
+
+i32 bible_check_hash(const u8 *text, u64 len);
+void __init_bible(void);
+
+Test(bible2) {
+	ASSERT_EQ(bible_check_hash("testtest", 8), -1, "invalid hash");
+	_debug_no_exit = true;
+	_debug_no_write = true;
+	_debug_bible_invalid_hash = true;
+
+	__init_bible();
+
+	_debug_bible_invalid_hash = false;
+	_debug_no_exit = false;
+	_debug_no_write = false;
 }
