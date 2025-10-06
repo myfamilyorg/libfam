@@ -3,21 +3,21 @@
 ./build clean all --cc=clang
 sudo ./build install
 
-head -c 1G /dev/urandom > ./1gb.txt
-INITIAL_CHECKSUM=`md5sum ./1gb.txt`
+head -c 5G /dev/urandom > ./5gb.txt
+INITIAL_CHECKSUM=`md5sum ./5gb.txt`
 echo "initial checksum=${INITIAL_CHECKSUM}"
-czip ./1gb.txt
-if [ -e ./1gb.txt ]; then
+czip ./5gb.txt
+if [ -e ./5gb.txt ]; then
 	echo "file was not deleted, exiting!";
 	exit 1;
 fi
-ls -l ./1gb.txt.cz
-czip -d ./1gb.txt.cz
-FINAL_CHECKSUM=`md5sum ./1gb.txt`
+ls -l ./5gb.txt.cz
+czip -d ./5gb.txt.cz
+FINAL_CHECKSUM=`md5sum ./5gb.txt`
 echo "final checksum=${FINAL_CHECKSUM}"
 if [ "${FINAL_CHECKSUM}" != "${INITIAL_CHECKSUM}" ]; then
 	echo "checksum mismatch, exiting!";
 	exit 1;
 fi
-rm ./1gb.txt
+rm ./5gb.txt
 echo "Success!"
