@@ -43,7 +43,7 @@
 #define SYS_lseek 62
 #define SYS_read 63
 #define SYS_fdatasync 83
-#define SYS_fchmod 94
+#define SYS_fchmod 52
 #define SYS_futex 98
 #define SYS_nanosleep 101
 #define SYS_utimes 102
@@ -56,6 +56,8 @@
 #define SYS_listen 201
 #define SYS_accept 202
 #define SYS_connect 203
+#define SYS_futimesat 88
+#define SYS_fstatat 79
 #define SYS_getsockname 204
 #define SYS_setsockopt 208
 #define SYS_getsockopt 209

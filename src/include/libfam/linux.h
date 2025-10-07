@@ -238,30 +238,7 @@ typedef struct {
 	u64 bits[_NSIG / (8 * sizeof(u64))];
 } sigset_t;
 
-/*
-struct stat {
-	u64 st_dev;
-	u64 st_ino;
-	u32 st_mode;
-	u32 st_nlink;
-	u32 st_uid;
-	u32 st_gid;
-	u64 st_rdev;
-	u64 __pad1;
-	i64 st_size;
-	i32 st_blksize;
-	i32 __pad2;
-	i64 st_blocks;
-	i64 st_atime;
-	u64 st_atime_nsec;
-	i64 st_mtime;
-	u64 st_mtime_nsec;
-	i64 st_ctime;
-	u64 st_ctime_nsec;
-	u32 __unused4;
-	u32 __unused5;
-};
-*/
+#ifdef __x86_64__
 struct stat {
 	u64 st_dev;	  /* 64-bit */
 	u64 st_ino;	  /* 64-bit */
@@ -282,6 +259,30 @@ struct stat {
 	u64 st_ctimensec; /* 64-bit */
 	i64 __unused[3];  /* 64-bit each */
 };
+#elif defined(__aarch64__)
+struct stat {
+	unsigned long st_dev;  /* Device.  */
+	unsigned long st_ino;  /* File serial number.  */
+	unsigned int st_mode;  /* File mode.  */
+	unsigned int st_nlink; /* Link count.  */
+	unsigned int st_uid;   /* User ID of the file's owner.  */
+	unsigned int st_gid;   /* Group ID of the file's group. */
+	unsigned long st_rdev; /* Device number, if device.  */
+	unsigned long __pad1;
+	long st_size;	/* Size of file, in bytes.  */
+	int st_blksize; /* Optimal block size for I/O.  */
+	int __pad2;
+	long st_blocks; /* Number 512-byte blocks allocated. */
+	long st_atime;	/* Time of last access.  */
+	unsigned long st_atime_nsec;
+	long st_mtime; /* Time of last modification.  */
+	unsigned long st_mtime_nsec;
+	long st_ctime; /* Time of last status change.  */
+	unsigned long st_ctime_nsec;
+	unsigned int __unused4;
+	unsigned int __unused5;
+};
+#endif /* __aarch64__ */
 
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5);
 
