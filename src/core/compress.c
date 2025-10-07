@@ -23,7 +23,9 @@
  *
  *******************************************************************************/
 
+#ifdef __x86_64__
 #include <immintrin.h>
+#endif /* __x86_64__ */
 #include <libfam/bitstream.h>
 #include <libfam/builtin.h>
 #include <libfam/compress_impl.h>
@@ -439,7 +441,7 @@ INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 		}
 	}
 }
-#endif /* _x64_64__ */
+#endif /* _x86_64__ */
 
 INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 				      u8 *out, u64 capacity, u64 *itt) {
@@ -471,7 +473,7 @@ INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 	copy_with_avx2(out_dest, out_src, actual_length);
 #else
 	while (actual_length--) *out_dest++ = *out_src++;
-#endif /* !__x64_64__ */
+#endif /* !__x86_64__ */
 	return 0;
 }
 
