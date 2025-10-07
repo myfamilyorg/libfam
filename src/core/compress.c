@@ -28,6 +28,7 @@
 #endif /* __AVX2__ */
 #include <libfam/bitstream.h>
 #include <libfam/builtin.h>
+#include <libfam/bytestream.h>
 #include <libfam/compress_impl.h>
 #include <libfam/utils.h>
 
