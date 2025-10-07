@@ -37,14 +37,16 @@ void bytestream_push(ByteStream *strm, u8 b) {
 i32 bytestream_flush(ByteStream *strm) {
 	u16 i = 0;
 	u64 needed = strm->bytes_in_buffer + strm->offset;
-	if (needed > strm->max_size)
-		return -1;
+	if (needed > strm->max_size) return -1;
+#ifdef __AVX2__
 	else if (strm->offset + 32 < strm->max_size) {
 		_mm256_storeu_si256((__m256i *)(strm->data + strm->offset),
 				    *(__m256i *)&strm->buffer);
 		strm->offset += strm->bytes_in_buffer;
 		strm->bytes_in_buffer = 0;
-	} else
+	}
+#endif /* __AVX2__ */
+	else
 		while (strm->bytes_in_buffer--)
 			strm->data[strm->offset++] = strm->buffer[i++];
 	return 0;
