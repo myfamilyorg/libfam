@@ -23,7 +23,7 @@
  *
  *******************************************************************************/
 
-#ifdef __x86_64__
+#ifdef __AVX2__
 #include <immintrin.h>
 #endif /* __AVX2__ */
 #include <libfam/bitstream.h>
@@ -426,7 +426,7 @@ STATIC void compress_build_lookup_table(
 #ifdef __AVX2__
 INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 				  u64 actual_length) {
-	if (out_src + 32 < out_dest) {
+	if (out_src + 32 <= out_dest) {
 		u64 chunks = (actual_length + 31) >> 5;
 		while (chunks--) {
 			__m256i vec = _mm256_loadu_si256((__m256i *)out_src);

@@ -28,6 +28,7 @@
 #include <libfam/atomic.h>
 #include <libfam/bitmap.h>
 #include <libfam/bitstream.h>
+#include <libfam/bytestream.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/debug.h>
@@ -1158,3 +1159,18 @@ Test(fstatat) {
 	close(fd);
 	unlink(path);
 }
+
+Test(bytestream) {
+	i32 i;
+	u8 data[4096];
+	ByteStream strm = {data, sizeof(data)};
+	for (i = 0; i < 32; i++) bytestream_push(&strm, (i % 26) + 'a');
+	ASSERT(!bytestream_flush(&strm), "flush");
+	for (i = 0; i < 32; i++) bytestream_push(&strm, (i % 26) + 'a');
+	ASSERT(!bytestream_flush(&strm), "flush2");
+
+	u8 *exp =
+	    "abcdefghijklmnopqrstuvwxyzabcdefabcdefghijklmnopqrstuvwxyzabcdef";
+	ASSERT(!strncmp(data, exp, strlen(exp)), "exp");
+}
+
