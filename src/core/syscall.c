@@ -30,23 +30,23 @@
 #include <libfam/utils.h>
 
 #ifdef __aarch64__
-#define SYS_lstat 6
 #define SYS_epoll_create1 20
-#define SYS_epoll_pwait 22
 #define SYS_epoll_ctl 21
+#define SYS_epoll_pwait 22
 #define SYS_fcntl 25
 #define SYS_unlinkat 35
 #define SYS_ftruncate 46
+#define SYS_fchmod 52
 #define SYS_openat 56
 #define SYS_close 57
 #define SYS_pipe2 59
 #define SYS_lseek 62
 #define SYS_read 63
+#define SYS_fstatat 79
 #define SYS_fdatasync 83
-#define SYS_fchmod 52
+#define SYS_utimesat 88
 #define SYS_futex 98
 #define SYS_nanosleep 101
-#define SYS_utimes 102
 #define SYS_sched_yield 124
 #define SYS_kill 129
 #define SYS_rt_sigaction 134
@@ -56,8 +56,6 @@
 #define SYS_listen 201
 #define SYS_accept 202
 #define SYS_connect 203
-#define SYS_futimesat 88
-#define SYS_fstatat 79
 #define SYS_getsockname 204
 #define SYS_setsockopt 208
 #define SYS_getsockopt 209
@@ -69,7 +67,6 @@
 #elif defined(__x86_64__)
 #define SYS_read 0
 #define SYS_close 3
-#define SYS_lstat 6
 #define SYS_lseek 8
 #define SYS_mmap 9
 #define SYS_munmap 11
@@ -92,11 +89,10 @@
 #define SYS_fdatasync 75
 #define SYS_ftruncate 77
 #define SYS_fchmod 91
-#define SYS_utimes 235
 #define SYS_futex 202
 #define SYS_epoll_ctl 233
 #define SYS_openat 257
-#define SYS_futimesat 261
+#define SYS_utimesat 261
 #define SYS_fstatat 262
 #define SYS_unlinkat 263
 #define SYS_epoll_pwait 281
@@ -486,27 +482,6 @@ CLEANUP:
 	RETURN;
 }
 
-#include <libfam/test_base.h>
-i32 lstat(const u8 *path, struct stat *buf) {
-	i64 v;
-INIT:
-	v = raw_syscall(SYS_lstat, (i64)path, (i64)buf, 0, 0, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
-i32 utimes(const u8 *path, const struct timeval *times) {
-	i32 v;
-INIT:
-	v = (i32)raw_syscall(SYS_utimes, (i64)path, (i64)times, 0, 0, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
 i32 fchmod(i32 fd, u32 mode) {
 	i32 v;
 INIT:
@@ -517,11 +492,11 @@ CLEANUP:
 	RETURN;
 }
 
-i32 futimesat(i32 dirfd, const u8 *pathname, const struct timeval *times,
-	      i32 flags) {
+i32 utimesat(i32 dirfd, const u8 *pathname, const struct timeval *times,
+	     i32 flags) {
 	i32 v;
 INIT:
-	v = (i32)raw_syscall(SYS_futimesat, (i64)dirfd, (i64)pathname,
+	v = (i32)raw_syscall(SYS_utimesat, (i64)dirfd, (i64)pathname,
 			     (i64)times, (i64)flags, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);

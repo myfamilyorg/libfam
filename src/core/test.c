@@ -1131,7 +1131,7 @@ Test(fstatat) {
 	ASSERT_EQ(st.st_mode, 33152, "default permissions");
 	ASSERT(!fchmod(fd, 755), "chmod");
 	struct timeval times[2] = {0};
-	ASSERT(!futimesat(AT_FDCWD, path, times, 0), "utime");
+	ASSERT(!utimesat(AT_FDCWD, path, times, 0), "utime");
 	errno = 0;
 	ASSERT(!(res = fstatat(AT_FDCWD, path, &st, 0)), "fstatat 2");
 	ASSERT(!st.st_mtime, "set to 0");
@@ -1143,7 +1143,7 @@ Test(fstatat) {
 
 	times[0].tv_sec = 7;
 	times[1].tv_sec = 8;
-	ASSERT(!futimesat(AT_FDCWD, path, times, 0), "utime");
+	ASSERT(!utimesat(AT_FDCWD, path, times, 0), "utime");
 	ASSERT(!fstatat(AT_FDCWD, path, &st, 0), "fstatat");
 	ASSERT_EQ(st.st_mtime, 8, "set to 8");
 	ASSERT_EQ(st.st_atime, 7, "set to 7");

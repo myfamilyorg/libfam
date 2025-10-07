@@ -76,10 +76,7 @@ i64 futex(u32 *uaddr, i32 futex_op, u32 val, const struct timespec *timeout,
 	  u32 *uaddr2, u32 val3);
 i32 msync(void *addr, u64 length, i32 flags);
 void _exit(i32 status);
-i32 lstat(const u8 *path, struct stat *buf);
-i32 utimes(const u8 *path, const struct timeval *times);
-i32 futimesat(i32 dirfd, const u8 *path, const struct timeval *times,
-	      i32 flags);
+i32 utimesat(i32 dirfd, const u8 *path, const struct timeval *times, i32 flags);
 i32 fstatat(i32 dirfd, const u8 *pathname, struct stat *buf, i32 flags);
 i32 fchmod(i32 fd, u32 mode);
 
