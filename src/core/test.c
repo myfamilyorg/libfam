@@ -1066,6 +1066,13 @@ Test(compress_file1) {
 		ASSERT(ret1 > 0, "ret1>0");
 		i64 ret2 = decompress(out, ret1, verify, file_size);
 		ASSERT_EQ(file_size, ret2, "size match");
+		for (i = 0; i < file_size; i++) {
+			if (in[i] != verify[i]) {
+				print("MISMATCH:                    ");
+				println("in[{}]={c} ({}),verify[{}]={} ({})", i,
+					in[i], in[i], i, verify[i], verify[i]);
+			}
+		}
 		ASSERT(!memcmp(in, verify, file_size), "verify");
 	}
 

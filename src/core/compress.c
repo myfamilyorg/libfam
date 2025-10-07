@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <immintrin.h>
 #include <libfam/bitstream.h>
 #include <libfam/builtin.h>
 #include <libfam/compress_impl.h>
@@ -420,6 +421,26 @@ STATIC void compress_build_lookup_table(
 	}
 }
 
+#ifdef __x86_64__
+INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
+				  u64 actual_length) {
+	if (out_src + 32 < out_dest) {
+		u64 chunks = (actual_length + 31) >> 5;
+		while (chunks--) {
+			__m256i vec = _mm256_loadu_si256((__m256i *)out_src);
+			_mm256_storeu_si256((__m256i *)out_dest, vec);
+			out_src += 32;
+			out_dest += 32;
+		}
+	} else {
+		u64 remainder = actual_length;
+		while (remainder--) {
+			*out_dest++ = *out_src++;
+		}
+	}
+}
+#endif /* _x64_64__ */
+
 INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 				      u8 *out, u64 capacity, u64 *itt) {
 	u16 match_code, base_length, len_extra, actual_length, base_dist,
@@ -445,7 +466,12 @@ INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 	u8 *out_dest = out + *itt;
 	u8 *out_src = out + *itt - actual_distance;
 	*itt += actual_length;
+
+#ifdef __x86_64__
+	copy_with_avx2(out_dest, out_src, actual_length);
+#else
 	while (actual_length--) *out_dest++ = *out_src++;
+#endif /* !__x64_64__ */
 	return 0;
 }
 
