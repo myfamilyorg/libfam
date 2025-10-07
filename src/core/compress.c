@@ -514,7 +514,7 @@ STATIC i64 compress_read_symbols(BitStreamReader *strm,
 	return itt;
 }
 
-PUBLIC u64 compress_bound(u64 len) { return len + (len << 7) + 1024; }
+PUBLIC u64 compress_bound(u64 len) { return len + (len >> 7) + 1024; }
 
 PUBLIC i64 compress(const u8 *in, u64 len, u8 *out, u64 capacity) {
 	u64 offset = 0;

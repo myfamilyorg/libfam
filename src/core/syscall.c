@@ -482,7 +482,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 fchmod(i32 fd, u32 mode) {
+PUBLIC i32 fchmod(i32 fd, u32 mode) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_fchmod, (i64)fd, (i64)mode, 0, 0, 0, 0);
@@ -492,8 +492,8 @@ CLEANUP:
 	RETURN;
 }
 
-i32 utimesat(i32 dirfd, const u8 *pathname, const struct timeval *times,
-	     i32 flags) {
+PUBLIC i32 utimesat(i32 dirfd, const u8 *pathname, const struct timeval *times,
+		    i32 flags) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_utimesat, (i64)dirfd, (i64)pathname,
@@ -503,7 +503,7 @@ INIT:
 CLEANUP:
 	RETURN;
 }
-i32 fstatat(i32 dirfd, const u8 *pathname, struct stat *buf, i32 flags) {
+PUBLIC i32 fstatat(i32 dirfd, const u8 *pathname, struct stat *buf, i32 flags) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_fstatat, (i64)dirfd, (i64)pathname, (i64)buf,
