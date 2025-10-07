@@ -25,7 +25,7 @@
 
 #ifdef __x86_64__
 #include <immintrin.h>
-#endif /* __x86_64__ */
+#endif /* __AVX2__ */
 #include <libfam/bitstream.h>
 #include <libfam/builtin.h>
 #include <libfam/compress_impl.h>
@@ -423,7 +423,7 @@ STATIC void compress_build_lookup_table(
 	}
 }
 
-#ifdef __x86_64__
+#ifdef __AVX2__
 INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 				  u64 actual_length) {
 	if (out_src + 32 < out_dest) {
@@ -441,7 +441,7 @@ INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 		}
 	}
 }
-#endif /* _x86_64__ */
+#endif /* __AVX2__ */
 
 INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 				      u8 *out, u64 capacity, u64 *itt) {
@@ -469,11 +469,11 @@ INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 	u8 *out_src = out + *itt - actual_distance;
 	*itt += actual_length;
 
-#ifdef __x86_64__
+#ifdef __AVX2__
 	copy_with_avx2(out_dest, out_src, actual_length);
 #else
 	while (actual_length--) *out_dest++ = *out_src++;
-#endif /* !__x86_64__ */
+#endif /* !__AVX2__ */
 	return 0;
 }
 
