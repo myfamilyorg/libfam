@@ -43,6 +43,7 @@ typedef enum {
 u64 strlen(const char *msg);
 i32 strncmp(const char *x, const char *y, u64 n);
 char *strcpy(char *dest, const char *src);
+char *strncpy(char *dst, const char *src, u64 n);
 i32 strcmp(const char *x, const char *y);
 char *strstr(const char *s, const char *sub);
 char *strcat(char *dest, const char *src);
