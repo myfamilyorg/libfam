@@ -27,10 +27,6 @@
 #include <libfam/alloc_impl.h>
 #include <libfam/atomic.h>
 #include <libfam/bitmap.h>
-#include <libfam/bitstream.h>
-#include <libfam/bytestream.h>
-#include <libfam/compress.h>
-#include <libfam/compress_impl.h>
 #include <libfam/debug.h>
 #include <libfam/format.h>
 #include <libfam/limits.h>
@@ -270,80 +266,6 @@ Test(string_u128_fns) {
 	ASSERT_EQ(i128_to_string(buf, 0xF, Int128DisplayTypeBinary), 4,
 		  "binary 0xF");
 	ASSERT(!strcmp(buf, "1111"), "string 1111");
-}
-
-#define PERF_SIZE 200
-#define PERF_ITER (128)
-
-Test(bitstream_perf) {
-	u64 len_sum = 0;
-	u8 lengths[PERF_SIZE];
-	u8 codes[PERF_SIZE];
-	u8 data[PERF_SIZE * 4000];
-	Rng rng;
-	i32 i, c;
-
-	ASSERT(!rng_init(&rng), "rng init");
-	i64 write_micros = 0, read_micros = 0;
-	(void)write_micros;
-	(void)read_micros;
-
-	for (c = 0; c < PERF_ITER; c++) {
-		BitStreamWriter writer = {data};
-		BitStreamReader reader = {data, sizeof(data)};
-		rng_gen(&rng, lengths, sizeof(lengths));
-		rng_gen(&rng, codes, sizeof(codes));
-		for (i = 0; i < PERF_SIZE; i++)
-			lengths[i] = lengths[i] < 16 ? 1 : lengths[i] >> 4,
-			codes[i] &= (lengths[i] - 1);
-
-		i64 start = micros();
-		for (i = 0; i < PERF_SIZE; i++) {
-			if (writer.bits_in_buffer + lengths[i] > 64)
-				bitstream_writer_flush(&writer);
-			bitstream_writer_push(&writer, codes[i], lengths[i]);
-		}
-		bitstream_writer_flush(&writer);
-		write_micros += micros() - start;
-
-		start = micros();
-		for (i = 0; i < PERF_SIZE; i++) {
-			u32 value;
-			(void)value;
-			if (reader.bits_in_buffer < lengths[i]) {
-				bitstream_reader_load(&reader);
-				value =
-				    bitstream_reader_read(&reader, lengths[i]);
-				bitstream_reader_clear(&reader, lengths[i]);
-				ASSERT_EQ(value, codes[i], "codes equal1");
-				len_sum += lengths[i];
-			} else {
-				value =
-				    bitstream_reader_read(&reader, lengths[i]);
-				bitstream_reader_clear(&reader, lengths[i]);
-				ASSERT_EQ(value, codes[i], "codes equal2");
-				len_sum += lengths[i];
-			}
-		}
-		read_micros += micros() - start;
-	}
-
-	u64 read_mbps = 1000000 * ((len_sum / 8) / read_micros) / (1024 * 1024);
-	u64 write_mbps =
-	    1000000 * ((len_sum / 8) / write_micros) / (1024 * 1024);
-	(void)read_mbps;
-	(void)write_mbps;
-	/*println("");
-	println(
-	    "read_micros={},write_micros={},len={},read={} MBps,write={} MBps",
-	    read_micros, write_micros, len_sum, read_mbps, write_mbps);*/
-}
-
-Test(bitstream_overflow) {
-	u8 data[1024] = {0};
-	BitStreamReader strm = {data};
-	bitstream_reader_load(&strm);
-	ASSERT_EQ(strm.bit_offset, 0, "overflow no bytes read");
 }
 
 u128 __umodti3(u128 a, u128 b);
@@ -1046,79 +968,6 @@ Test(format2) {
 	_debug_alloc_failure = false;
 }
 
-#define FILE_ITER 4
-
-Test(compress_file1) {
-	i32 i;
-	const u8 *path = "./resources/xxdir/akjv.txt";
-	i32 fd = file(path);
-	u64 file_size = fsize(fd);
-	u8 *in = fmap(fd, file_size, 0);
-	u64 capacity = compress_bound(file_size);
-	u8 *out = alloc(sizeof(u8) * capacity);
-	u8 *verify = alloc(sizeof(u8) * file_size);
-
-	ASSERT(in, "fmap");
-	ASSERT(out, "out");
-	ASSERT(verify, "verify");
-
-	for (i = 0; i < FILE_ITER; i++) {
-		i64 ret1 = compress(in, file_size, out, capacity);
-		ASSERT(ret1 > 0, "ret1>0");
-		i64 ret2 = decompress(out, ret1, verify, file_size);
-		ASSERT_EQ(file_size, ret2, "size match");
-		for (i = 0; i < file_size; i++) {
-			if (in[i] != verify[i]) {
-				print("MISMATCH:                    ");
-				println("in[{}]={c} ({}),verify[{}]={} ({})", i,
-					in[i], in[i], i, verify[i], verify[i]);
-			}
-		}
-		ASSERT(!memcmp(in, verify, file_size), "verify");
-	}
-
-	munmap(in, file_size);
-	release(out);
-	release(verify);
-	close(fd);
-	ASSERT_BYTES(0);
-}
-
-Test(compress_min) {
-	u8 out[1024], verify[1024];
-	i64 r1 = compress("", 0, out, compress_bound(0));
-	i64 r2 = decompress(out, r1, verify, 0);
-	ASSERT_EQ(r2, 0, "0 len");
-}
-
-Test(overflow_compress) {
-	u64 itt = 0;
-	BitStreamReader strm = {NULL};
-	ASSERT_EQ(compress_proc_match(MATCH_OFFSET + 127, &strm, NULL, 0, &itt),
-		  -1, "overflow");
-	u8 lengths[SYMBOL_COUNT] = {0};
-	u16 codes[SYMBOL_COUNT] = {0};
-	u32 frequencies[SYMBOL_COUNT] = {0};
-	compress_calculate_frequencies("abc", 3, frequencies);
-	compress_calculate_lengths(frequencies, lengths);
-	compress_calculate_codes(lengths, codes);
-	u8 data[1024] = {0};
-	BitStreamReader strm2 = {data, sizeof(data)};
-
-	ASSERT_EQ(compress_read_symbols(&strm2, lengths, codes, NULL, 0), -1,
-		  "write overflow");
-}
-
-Test(match_overflow) {
-	u8 data[1024] = {0};
-	BitStreamReader strm = {data, sizeof(data)};
-	u8 lengths[SYMBOL_COUNT] = {0};
-	u16 codes[SYMBOL_COUNT] = {0};
-	lengths[MATCH_OFFSET + 127] = 8;
-	ASSERT_EQ(compress_read_symbols(&strm, lengths, codes, NULL, 0), -1,
-		  "match overflow");
-}
-
 Test(strstr) {
 	const char *s = "abcdefghi";
 	ASSERT_EQ(strstr(s, "def"), s + 3, "strstr1");
@@ -1159,18 +1008,3 @@ Test(fstatat) {
 	close(fd);
 	unlink(path);
 }
-
-Test(bytestream) {
-	i32 i;
-	u8 data[4096];
-	ByteStream strm = {data, sizeof(data)};
-	for (i = 0; i < 32; i++) bytestream_push(&strm, (i % 26) + 'a');
-	ASSERT(!bytestream_flush(&strm), "flush");
-	for (i = 0; i < 32; i++) bytestream_push(&strm, (i % 26) + 'a');
-	ASSERT(!bytestream_flush(&strm), "flush2");
-
-	u8 *exp =
-	    "abcdefghijklmnopqrstuvwxyzabcdefabcdefghijklmnopqrstuvwxyzabcdef";
-	ASSERT(!strncmp(data, exp, strlen(exp)), "exp");
-}
-

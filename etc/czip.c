@@ -25,11 +25,13 @@
 
 #include <libfam/compress.h>
 #include <libfam/format.h>
+#include <libfam/main.h>
 #include <libfam/memory.h>
 #include <libfam/string.h>
 #include <libfam/sysext.h>
 #include <libfam/version.h>
 
+/*
 i32 decompress_file(const u8 *f, bool console) {
 	u8 *in, *out;
 	u8 uncompressed[2048];
@@ -292,9 +294,10 @@ __asm__(
     "    mov %rax, %rdi\n"
     "    mov $60, %rax\n"
     "    syscall\n");
-#endif /* __x86_64__ */
+#endif *//* __x86_64__ */
 
 int main(int argc, u8 **argv, u8 **envp) {
+	/*
 	i32 i;
 	bool decompress = false;
 	bool console = false;
@@ -320,4 +323,6 @@ int main(int argc, u8 **argv, u8 **envp) {
 		return compress_file(argv[argc - 1], console);
 	else
 		return decompress_file(argv[argc - 1], console);
+		*/
+	return 0;
 }
