@@ -1085,7 +1085,7 @@ Test(match_array1) {
 	i32 i;
 	u8 in1[512] = {0};
 	u8 match_array[1025];
-	u16 frequencies[SYMBOL_COUNT];
+	u32 frequencies[SYMBOL_COUNT];
 
 	strcpy(in1, "testtest123");
 	compress_find_matches(in1, 512, match_array, frequencies);
@@ -1135,7 +1135,7 @@ Test(match_array_perf) {
 	i64 start = micros();
 	while (i < file_size) {
 		u32 len = min(block_len, file_size - i);
-		i32 rlen = compress16(in + i, len, out + out_offset, capacity);
+		i32 rlen = compress32(in + i, len, out + out_offset, capacity);
 		ASSERT(rlen >= 0, "rlen");
 		sum += rlen;
 		i += len;
@@ -1150,19 +1150,32 @@ Test(match_array_perf) {
 	close(fd);
 }
 
-Test(compress16) {
-	const u8 *path = "./resources/test_min.txt";
+Test(match_code_0) {
+	u8 x[1024], out[2048];
+	memcpy(x, "xyzaaaaa", strlen("xyzaaaaa1234567890"));
+	compress32(x, 256 + strlen("xyzaaaaa1234567890"), out, 2048);
+}
+
+Test(compress32) {
+	const u8 *path = "./resources/test_wikipedia.txt";
 	i32 fd = file(path);
 	u64 file_size = fsize(fd);
 	u8 *in = fmap(fd, file_size, 0);
 	u64 bound = compress_bound(file_size);
 	u8 *out = alloc(bound);
 	u8 *verify = alloc(file_size);
-	i32 result = compress16(in, file_size, out, bound);
-	ASSERT(result > 0, "compress16");
-	result = decompress16(out, result, verify, file_size);
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+	i32 result = compress32(in, file_size, out, bound);
+	ASSERT(result > 0, "compress32");
+	result = decompress32(out, result, verify, file_size);
+	for (u32 i = 0; i < file_size && i < 18200; i++) {
+		if (verify[i] != in[i])
+			println("verify[{}]={},in[{}]={}", i, verify[i], i,
+				in[i]);
+	}
 	ASSERT_EQ(result, file_size, "file_size");
-	ASSERT(!memcmp(verify, in, file_size), "verify");
+	ASSERT(!memcmp(verify, in, result), "verify");
 	release(out);
 	release(verify);
 }

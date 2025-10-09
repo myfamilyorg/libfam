@@ -29,7 +29,7 @@
 #include <libfam/types.h>
 
 u64 compress_bound(u64 source_len);
-i32 compress16(const u8 *in, u16 len, u8 *out, u32 capacity);
-i32 decompress16(const u8 *in, u32 len, u8 *out, u16 capacity);
+i32 compress32(const u8 *in, u32 len, u8 *out, u32 capacity);
+i32 decompress32(const u8 *in, u32 len, u8 *out, u32 capacity);
 
 #endif /* _COMPRESS_H */

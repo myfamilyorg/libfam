@@ -43,6 +43,7 @@
 #define MATCH_OFFSET (SYMBOL_TERM + 1)
 #define SYMBOL_COUNT (MATCH_OFFSET + MAX_MATCH_CODE + 1)
 #define MAX_CODE_LENGTH 9
+#define MAX_COMPRESS32_LEN (1 << 17)
 
 #define WRITE(strm, value, bits)                              \
 	do {                                                  \
@@ -83,6 +84,6 @@ typedef struct {
 } HuffmanMinHeap;
 
 STATIC void compress_find_matches(const u8 *in, u32 len, u8 *match_array,
-				  u16 frequencies[SYMBOL_COUNT]);
+				  u32 frequencies[SYMBOL_COUNT]);
 
 #endif /* _COMPRESS_IMPL_H */

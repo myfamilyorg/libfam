@@ -220,7 +220,7 @@ void run_compressor(CzipConfig *config) {
 			println("fmap failed: {}", strerror(errno));
 			_exit(-1);
 		}
-		i32 res = compress16(chunk, len, out, bound);
+		i32 res = compress32(chunk, len, out, bound);
 		if (res < 0) {
 			println("Compression error: {}.", strerror(errno));
 			_exit(-1);
@@ -340,7 +340,7 @@ void run_decompressor(CzipConfig *config) {
 		}
 		out += out_size % PAGE_SIZE;
 
-		i64 advance = decompress16(chunk, actual_size, out, CHUNK_SIZE);
+		i64 advance = decompress32(chunk, actual_size, out, CHUNK_SIZE);
 
 		munmap(chunk, actual_size + offset % PAGE_SIZE);
 

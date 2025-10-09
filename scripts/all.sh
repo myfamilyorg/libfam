@@ -34,4 +34,4 @@ if needs_linking "$LIB_NAME" $OBJECTS; then
 	fi
 fi
 
-. ./scripts/czip.sh
+. ./scripts/czip.sh || exit $?;

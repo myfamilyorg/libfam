@@ -107,16 +107,16 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 }
 
 STATIC void compress_find_matches(const u8 *in, u32 len, u8 *match_array,
-				  u16 frequencies[SYMBOL_COUNT]) {
-	u32 i = 0, j, max;
-	u64 out_itt = 0;
+				  u32 frequencies[SYMBOL_COUNT]) {
+	u32 i = 0, j, max, out_itt = 0;
 	LzHash hash = {0};
 	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
 
 	while (i < max) {
 		u16 mlen;
 		MatchInfo mi = lz_hash_get(&hash, in, i);
-		if (mi.len >= MIN_MATCH_LEN) {
+		if (mi.len >= MIN_MATCH_LEN &&
+		    (mi.dist >= 2 || mi.len > MIN_MATCH_LEN)) {
 			i8 mc = compress_get_match_code(mi.len, mi.dist);
 			frequencies[mc + MATCH_OFFSET]++;
 			match_array[out_itt++] = -mc;
@@ -206,7 +206,7 @@ STATIC void compress_compute_lengths(HuffmanNode *node, u8 length,
 	compress_compute_lengths(node->right, length + 1, lengths);
 }
 
-STATIC void compress_build_tree(const u16 frequencies[SYMBOL_COUNT],
+STATIC void compress_build_tree(const u32 frequencies[SYMBOL_COUNT],
 				u8 lengths[SYMBOL_COUNT],
 				HuffmanMinHeap *heap) {
 	i32 i;
@@ -240,7 +240,7 @@ STATIC void compress_build_tree(const u16 frequencies[SYMBOL_COUNT],
 	}
 }
 
-STATIC void compress_limit_lengths(const u16 frequencies[SYMBOL_COUNT],
+STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
 				   u8 lengths[SYMBOL_COUNT]) {
 	i32 i;
 	u32 excess = 0;
@@ -291,7 +291,7 @@ STATIC void compress_limit_lengths(const u16 frequencies[SYMBOL_COUNT],
 	}
 }
 
-STATIC void compress_calculate_lengths(const u16 frequencies[SYMBOL_COUNT],
+STATIC void compress_calculate_lengths(const u32 frequencies[SYMBOL_COUNT],
 				       u8 lengths[SYMBOL_COUNT]) {
 	HuffmanMinHeap heap;
 	HuffmanNode *root;
@@ -365,7 +365,8 @@ CLEANUP:
 
 STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			  const u8 lengths[SYMBOL_COUNT],
-			  const u8 match_array[2 * U16_MAX + 1], u8 *out) {
+			  const u8 match_array[2 * MAX_COMPRESS32_LEN + 1],
+			  u8 *out) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
 	compress_write_lengths(&strm, lengths);
@@ -377,7 +378,7 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			WRITE(&strm, code, length);
 			i += 2;
 		} else {
-			i8 match_code = -match_array[i];
+			u8 match_code = -(i8)match_array[i];
 			u16 symbol = (u16)match_code + MATCH_OFFSET;
 			u16 code = codes[symbol];
 			u8 length = lengths[symbol];
@@ -468,7 +469,7 @@ INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 #endif /* __AVX2__ */
 
 INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
-				      u8 *out, u16 capacity, u16 *itt) {
+				      u8 *out, u32 capacity, u32 *itt) {
 	u16 match_code, base_length, len_extra, actual_length, base_dist,
 	    dist_extra, actual_distance;
 	match_code = symbol - MATCH_OFFSET;
@@ -504,9 +505,9 @@ INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 STATIC i32 compress_read_symbols(BitStreamReader *strm,
 				 const u8 lengths[SYMBOL_COUNT],
 				 const u16 codes[SYMBOL_COUNT], u8 *out,
-				 u16 capacity) {
+				 u32 capacity) {
 	u16 lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
-	u16 itt = 0;
+	u32 itt = 0;
 	u16 symbol = 0;
 	u8 load_threshold = MAX_CODE_LENGTH + 7 + 15;
 
@@ -535,17 +536,15 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 			return -1;
 	}
 	return itt;
-
-	return 0;
 }
 
-PUBLIC i32 compress16(const u8 *in, u16 len, u8 *out, u32 capacity) {
-	u16 frequencies[SYMBOL_COUNT] = {0};
+PUBLIC i32 compress32(const u8 *in, u32 len, u8 *out, u32 capacity) {
+	u32 frequencies[SYMBOL_COUNT] = {0};
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
-	u8 match_array[2 * U16_MAX + 1] = {0};
+	u8 match_array[2 * MAX_COMPRESS32_LEN + 1] = {0};
 
-	if (capacity < compress_bound(len)) {
+	if (capacity < compress_bound(len) || len > MAX_COMPRESS32_LEN) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -556,7 +555,7 @@ PUBLIC i32 compress16(const u8 *in, u16 len, u8 *out, u32 capacity) {
 	return compress_write(codes, lengths, match_array, out);
 }
 
-PUBLIC i32 decompress16(const u8 *in, u32 len, u8 *out, u16 capacity) {
+PUBLIC i32 decompress32(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	BitStreamReader strm = {in, len};
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
