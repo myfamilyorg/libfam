@@ -174,10 +174,12 @@ void do_compress(const CzipFileHeader *header, i32 in_fd, i32 out_fd) {
 			_exit(-1);
 		}
 
+		/*
 		println(
 		    "chunk_size={},in_offset={},out_offset={},result={},out_"
 		    "offset_diff={}",
 		    chunk_size, in_offset, out_offset, result, out_offset_diff);
+		    */
 
 		munmap(out_chunk, out_max);
 		munmap(in_chunk, chunk_size);

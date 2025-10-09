@@ -1128,7 +1128,7 @@ Test(match_array_perf) {
 	u8 *in = fmap(fd, file_size, 0);
 
 	ASSERT(in, "in");
-	u32 block_len = U16_MAX;
+	u32 block_len = 2 * U16_MAX;
 	u64 sum = 0;
 	u64 out_offset = 0;
 
@@ -1144,7 +1144,7 @@ Test(match_array_perf) {
 	i64 diff = micros() - start;
 	(void)diff;
 	(void)sum;
-	/*println("diff={},len={}", diff, sum);*/
+	println("diff={},len={}", diff, sum);
 	munmap(in, file_size);
 	munmap(out, 4000000);
 	close(fd);

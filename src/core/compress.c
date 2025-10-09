@@ -529,10 +529,10 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 				return -1;
 			}
 			out[itt++] = symbol;
-		} else if (symbol == SYMBOL_TERM)
+		} else if (symbol == SYMBOL_TERM) {
 			break;
-		else if (compress_proc_match(symbol, strm, out, capacity,
-					     &itt) < 0)
+		} else if (compress_proc_match(symbol, strm, out, capacity,
+					       &itt) < 0)
 			return -1;
 	}
 	*bytes_consumed =
