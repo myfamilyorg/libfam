@@ -1080,3 +1080,103 @@ Test(bitstream_perf) {
 	    read_micros, write_micros, len_sum, read_mbps, write_mbps);
 	    */
 }
+
+Test(match_array1) {
+	i32 i;
+	u8 in1[512] = {0};
+	u8 match_array[1025];
+	u32 frequencies[SYMBOL_COUNT];
+
+	strcpy(in1, "testtest123");
+	compress_find_matches(in1, 512, match_array, frequencies);
+	ASSERT_EQ(match_array[0], 0, "0");
+	ASSERT_EQ(match_array[1], 't', "t");
+	ASSERT_EQ(match_array[2], 0, "0");
+	ASSERT_EQ(match_array[3], 'e', "e");
+	ASSERT_EQ(match_array[4], 0, "0");
+	ASSERT_EQ(match_array[5], 's', "s");
+	ASSERT_EQ(match_array[6], 0, "0");
+	ASSERT_EQ(match_array[7], 't', "t");
+	ASSERT_EQ(match_array[8], 254, "match code = 2 (-2 as i8)");
+	ASSERT_EQ(match_array[9], 0, "len extra=0");
+	ASSERT_EQ(match_array[10], 0, "dist extra1=0");
+	ASSERT_EQ(match_array[11], 0, "dist extra2=0");
+	ASSERT_EQ(match_array[12], 0, "0");
+	ASSERT_EQ(match_array[13], '1', "1a");
+	ASSERT_EQ(match_array[14], 0, "0");
+	ASSERT_EQ(match_array[15], '2', "2");
+	ASSERT_EQ(match_array[16], 0, "0");
+	ASSERT_EQ(match_array[17], '3', "3");
+	ASSERT_EQ(match_array[18], 0, "0");
+	ASSERT_EQ(match_array[19], 0, "0");
+	ASSERT_EQ(match_array[20], (u8)-112, "mc=112");
+	ASSERT_EQ(match_array[21], 125, "len extra bits=125");
+	ASSERT_EQ(match_array[22], 0, "dist extra bits1=0");
+	ASSERT_EQ(match_array[23], 0, "dist extra bits2=0");
+	for (i = 24; i < 511; i++)
+		ASSERT_EQ(match_array[i], 0, "match_array[{}]", i);
+	ASSERT_EQ(match_array[512], 1, "term");
+}
+
+Test(match_array_perf) {
+	u64 i = 0;
+	const u8 *path = "./resources/xxdir/akjv.txt";
+	i32 fd = file(path);
+	u64 file_size = fsize(fd);
+	u8 *out = map(4000000);
+	u32 capacity = 4000000;
+	u8 *in = fmap(fd, file_size, 0);
+
+	ASSERT(in, "in");
+	u32 block_len = 2 * U16_MAX;
+	u64 sum = 0;
+	u64 out_offset = 0;
+
+	i64 start = micros();
+	while (i < file_size) {
+		u32 len = min(block_len, file_size - i);
+		i32 rlen = compress32(in + i, len, out + out_offset, capacity);
+		ASSERT(rlen >= 0, "rlen");
+		sum += rlen;
+		i += len;
+		out_offset += rlen;
+	}
+	i64 diff = micros() - start;
+	(void)diff;
+	(void)sum;
+	println("diff={},len={}", diff, sum);
+	munmap(in, file_size);
+	munmap(out, 4000000);
+	close(fd);
+}
+
+Test(match_code_0) {
+	u8 x[1024], out[2048];
+	memcpy(x, "xyzaaaaa", strlen("xyzaaaaa1234567890"));
+	compress32(x, 256 + strlen("xyzaaaaa1234567890"), out, 2048);
+}
+
+Test(compress32) {
+	u64 bytes_consumed;
+	const u8 *path = "./resources/test_wikipedia.txt";
+	i32 fd = file(path);
+	u64 file_size = fsize(fd);
+	u8 *in = fmap(fd, file_size, 0);
+	u64 bound = compress_bound(file_size);
+	u8 *out = alloc(bound);
+	u8 *verify = alloc(file_size);
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+	i32 result = compress32(in, file_size, out, bound);
+	ASSERT(result > 0, "compress32");
+	result = decompress32(out, result, verify, file_size, &bytes_consumed);
+	for (u32 i = 0; i < file_size && i < 18200; i++) {
+		if (verify[i] != in[i])
+			println("verify[{}]={},in[{}]={}", i, verify[i], i,
+				in[i]);
+	}
+	ASSERT_EQ(result, file_size, "file_size");
+	ASSERT(!memcmp(verify, in, result), "verify");
+	release(out);
+	release(verify);
+}
