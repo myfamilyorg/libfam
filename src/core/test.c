@@ -1097,7 +1097,7 @@ Test(match_array1) {
 	ASSERT_EQ(match_array[5], 's', "s");
 	ASSERT_EQ(match_array[6], 0, "0");
 	ASSERT_EQ(match_array[7], 't', "t");
-	ASSERT_EQ(match_array[8], 254, "match code = 2 (-2 as i8)");
+	ASSERT_EQ(match_array[8], 4, "match code = 2 + 2");
 	ASSERT_EQ(match_array[9], 0, "len extra=0");
 	ASSERT_EQ(match_array[10], 0, "dist extra1=0");
 	ASSERT_EQ(match_array[11], 0, "dist extra2=0");
@@ -1109,7 +1109,7 @@ Test(match_array1) {
 	ASSERT_EQ(match_array[17], '3', "3");
 	ASSERT_EQ(match_array[18], 0, "0");
 	ASSERT_EQ(match_array[19], 0, "0");
-	ASSERT_EQ(match_array[20], (u8)-112, "mc=112");
+	ASSERT_EQ(match_array[20], 114, "mc=112 + 2");
 	ASSERT_EQ(match_array[21], 125, "len extra bits=125");
 	ASSERT_EQ(match_array[22], 0, "dist extra bits1=0");
 	ASSERT_EQ(match_array[23], 0, "dist extra bits2=0");

@@ -115,11 +115,10 @@ STATIC void compress_find_matches(const u8 *in, u32 len, u8 *match_array,
 	while (i < max) {
 		u16 mlen;
 		MatchInfo mi = lz_hash_get(&hash, in, i);
-		if (mi.len >= MIN_MATCH_LEN &&
-		    (mi.dist >= 2 || mi.len > MIN_MATCH_LEN)) {
-			i8 mc = compress_get_match_code(mi.len, mi.dist);
+		if (mi.len >= MIN_MATCH_LEN) {
+			u8 mc = compress_get_match_code(mi.len, mi.dist);
 			frequencies[mc + MATCH_OFFSET]++;
-			match_array[out_itt++] = -mc;
+			match_array[out_itt++] = mc + 2;
 			match_array[out_itt++] =
 			    compress_length_extra_bits_value(mc, mi.len);
 			u16 dist_extra =
@@ -378,7 +377,7 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			WRITE(&strm, code, length);
 			i += 2;
 		} else {
-			u8 match_code = -(i8)match_array[i];
+			u8 match_code = match_array[i] - 2;
 			u16 symbol = (u16)match_code + MATCH_OFFSET;
 			u16 code = codes[symbol];
 			u8 length = lengths[symbol];
