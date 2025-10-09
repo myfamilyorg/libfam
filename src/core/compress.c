@@ -505,7 +505,7 @@ INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 STATIC i32 compress_read_symbols(BitStreamReader *strm,
 				 const u8 lengths[SYMBOL_COUNT],
 				 const u16 codes[SYMBOL_COUNT], u8 *out,
-				 u32 capacity) {
+				 u32 capacity, u64 *bytes_consumed) {
 	u16 lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
 	u32 itt = 0;
 	u16 symbol = 0;
@@ -535,6 +535,8 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 					     &itt) < 0)
 			return -1;
 	}
+	*bytes_consumed =
+	    (strm->bit_offset - strm->bits_in_buffer + 64 + 7) / 8;
 	return itt;
 }
 
@@ -555,13 +557,15 @@ PUBLIC i32 compress32(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	return compress_write(codes, lengths, match_array, out);
 }
 
-PUBLIC i32 decompress32(const u8 *in, u32 len, u8 *out, u32 capacity) {
+PUBLIC i32 decompress32(const u8 *in, u32 len, u8 *out, u32 capacity,
+			u64 *bytes_consumed) {
 	BitStreamReader strm = {in, len};
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
 	compress_read_lengths(&strm, lengths);
 	compress_calculate_codes(lengths, codes);
-	return compress_read_symbols(&strm, lengths, codes, out, capacity);
+	return compress_read_symbols(&strm, lengths, codes, out, capacity,
+				     bytes_consumed);
 }
 
 PUBLIC u64 compress_bound(u64 len) { return len + (len >> 7) + 1024; }

@@ -30,6 +30,7 @@
 
 u64 compress_bound(u64 source_len);
 i32 compress32(const u8 *in, u32 len, u8 *out, u32 capacity);
-i32 decompress32(const u8 *in, u32 len, u8 *out, u32 capacity);
+i32 decompress32(const u8 *in, u32 len, u8 *out, u32 capacity,
+		 u64 *bytes_consumed);
 
 #endif /* _COMPRESS_H */

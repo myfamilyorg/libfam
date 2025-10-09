@@ -1157,6 +1157,7 @@ Test(match_code_0) {
 }
 
 Test(compress32) {
+	u64 bytes_consumed;
 	const u8 *path = "./resources/test_wikipedia.txt";
 	i32 fd = file(path);
 	u64 file_size = fsize(fd);
@@ -1168,7 +1169,7 @@ Test(compress32) {
 	ASSERT(verify, "verify");
 	i32 result = compress32(in, file_size, out, bound);
 	ASSERT(result > 0, "compress32");
-	result = decompress32(out, result, verify, file_size);
+	result = decompress32(out, result, verify, file_size, &bytes_consumed);
 	for (u32 i = 0; i < file_size && i < 18200; i++) {
 		if (verify[i] != in[i])
 			println("verify[{}]={},in[{}]={}", i, verify[i], i,
