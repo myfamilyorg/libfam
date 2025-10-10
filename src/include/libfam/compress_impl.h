@@ -43,7 +43,7 @@
 #define MATCH_OFFSET (SYMBOL_TERM + 1)
 #define SYMBOL_COUNT (MATCH_OFFSET + MAX_MATCH_CODE + 1)
 #define MAX_CODE_LENGTH 9
-#define MAX_COMPRESS32_LEN (1 << 17)
+#define MAX_COMPRESS32_LEN (1 << 18)
 
 #define WRITE(strm, value, bits)                              \
 	do {                                                  \

@@ -34,7 +34,7 @@
 #include <libfam/version.h>
 
 #define CZIP_VERSION 0
-#define CHUNK_SIZE (1 << 17)
+#define CHUNK_SIZE (1 << 18)
 #define PAGE_SIZE 4096
 #define MAX_PATH 1024
 

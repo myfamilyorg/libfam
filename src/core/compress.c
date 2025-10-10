@@ -358,6 +358,7 @@ INIT:
 				WRITE(strm, 0, 4);
 		}
 	}
+	bitstream_writer_flush(strm);
 CLEANUP:
 	RETURN;
 }
@@ -374,7 +375,7 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			u8 symbol = match_array[i + 1];
 			u16 code = codes[symbol];
 			u8 length = lengths[symbol];
-			WRITE(&strm, code, length);
+			bitstream_writer_push(&strm, code, length);
 			i += 2;
 		} else {
 			u8 match_code = match_array[i] - 2;
@@ -389,10 +390,32 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			u16 distance_extra_bits_value =
 			    match_array[i + 2] | match_array[i + 3] << 8;
 
-			if (strm.bits_in_buffer + length + len_extra_bits +
-				dist_extra_bits >
-			    64)
-				bitstream_writer_flush(&strm);
+			bitstream_writer_push(&strm, code, length);
+			bitstream_writer_push(&strm, len_extra_bits_value,
+					      len_extra_bits);
+			bitstream_writer_push(&strm, distance_extra_bits_value,
+					      dist_extra_bits);
+			i += 4;
+		}
+
+		if (match_array[i] == 0) {
+			u8 symbol = match_array[i + 1];
+			u16 code = codes[symbol];
+			u8 length = lengths[symbol];
+			bitstream_writer_push(&strm, code, length);
+			i += 2;
+		} else if (match_array[i] != 1) {
+			u8 match_code = match_array[i] - 2;
+			u16 symbol = (u16)match_code + MATCH_OFFSET;
+			u16 code = codes[symbol];
+			u8 length = lengths[symbol];
+			u16 len_extra_bits_value = match_array[i + 1];
+			u8 len_extra_bits =
+			    compress_length_extra_bits(match_code);
+			u8 dist_extra_bits =
+			    compress_distance_extra_bits(match_code);
+			u16 distance_extra_bits_value =
+			    match_array[i + 2] | match_array[i + 3] << 8;
 
 			bitstream_writer_push(&strm, code, length);
 			bitstream_writer_push(&strm, len_extra_bits_value,
@@ -401,6 +424,8 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 					      dist_extra_bits);
 			i += 4;
 		}
+
+		bitstream_writer_flush(&strm);
 	}
 
 	WRITE(&strm, codes[SYMBOL_TERM], lengths[SYMBOL_TERM]);

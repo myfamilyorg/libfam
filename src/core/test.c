@@ -1128,7 +1128,7 @@ Test(match_array_perf) {
 	u8 *in = fmap(fd, file_size, 0);
 
 	ASSERT(in, "in");
-	u32 block_len = 2 * U16_MAX;
+	u32 block_len = MAX_COMPRESS32_LEN;
 	u64 sum = 0;
 	u64 out_offset = 0;
 
@@ -1158,9 +1158,9 @@ Test(match_code_0) {
 
 Test(compress32) {
 	u64 bytes_consumed;
-	const u8 *path = "./resources/test_wikipedia.txt";
+	const u8 *path = "./resources/xxdir/akjv.txt";
 	i32 fd = file(path);
-	u64 file_size = fsize(fd);
+	u64 file_size = min(fsize(fd), MAX_COMPRESS32_LEN);
 	u8 *in = fmap(fd, file_size, 0);
 	u64 bound = compress_bound(file_size);
 	u8 *out = alloc(bound);
