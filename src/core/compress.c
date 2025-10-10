@@ -106,9 +106,10 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 	hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = (u16)cpos;
 }
 
-STATIC void compress_find_matches(const u8 *in, u32 len, u8 *match_array,
+STATIC void compress_find_matches(const u8 *in, u32 len,
+				  u8 match_array[4 * MAX_COMPRESS32_LEN + 1],
 				  u32 frequencies[SYMBOL_COUNT]) {
-	u32 i = 0, j, max, out_itt = 0;
+	u32 i = 0, max, out_itt = 0;
 	LzHash hash = {0};
 	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
 
@@ -123,22 +124,29 @@ STATIC void compress_find_matches(const u8 *in, u32 len, u8 *match_array,
 			    compress_length_extra_bits_value(mc, mi.len);
 			u16 dist_extra =
 			    compress_distance_extra_bits_value(mc, mi.dist);
-			match_array[out_itt++] = dist_extra & 0xFF;
-			match_array[out_itt++] = dist_extra >> 8;
+			((u16 *)match_array)[out_itt >> 1] = dist_extra;
+			out_itt += 2;
 			mlen = mi.len;
+			lz_hash_set(&hash, in, i);
+			lz_hash_set(&hash, in, i + 1);
+			lz_hash_set(&hash, in, i + 2);
+			lz_hash_set(&hash, in, i + 3);
 		} else {
 			frequencies[in[i]]++;
 			match_array[out_itt++] = 0;
 			match_array[out_itt++] = in[i];
+			out_itt += 2;
 			mlen = 1;
+			lz_hash_set(&hash, in, i);
 		}
 
-		for (j = i + mlen; i < j; i++) lz_hash_set(&hash, in, i);
+		i += mlen;
 	}
 	while (i < len) {
 		frequencies[in[i]]++;
 		match_array[out_itt++] = 0;
 		match_array[out_itt++] = in[i];
+		out_itt += 2;
 		i++;
 	}
 	match_array[out_itt++] = 1;
@@ -365,7 +373,7 @@ CLEANUP:
 
 STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			  const u8 lengths[SYMBOL_COUNT],
-			  const u8 match_array[2 * MAX_COMPRESS32_LEN + 1],
+			  const u8 match_array[4 * MAX_COMPRESS32_LEN + 1],
 			  u8 *out) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
@@ -376,7 +384,7 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			u16 code = codes[symbol];
 			u8 length = lengths[symbol];
 			bitstream_writer_push(&strm, code, length);
-			i += 2;
+			i += 4;
 		} else {
 			u8 match_code = match_array[i] - 2;
 			u16 symbol = (u16)match_code + MATCH_OFFSET;
@@ -403,7 +411,7 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			u16 code = codes[symbol];
 			u8 length = lengths[symbol];
 			bitstream_writer_push(&strm, code, length);
-			i += 2;
+			i += 4;
 		} else if (match_array[i] != 1) {
 			u8 match_code = match_array[i] - 2;
 			u16 symbol = (u16)match_code + MATCH_OFFSET;
@@ -568,7 +576,7 @@ PUBLIC i32 compress32(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
-	u8 match_array[2 * MAX_COMPRESS32_LEN + 1] = {0};
+	u8 match_array[4 * MAX_COMPRESS32_LEN + 1];
 
 	if (capacity < compress_bound(len) || len > MAX_COMPRESS32_LEN) {
 		errno = EINVAL;
