@@ -1084,7 +1084,7 @@ Test(bitstream_perf) {
 Test(match_array1) {
 	i32 i;
 	u8 in1[512] = {0};
-	u8 match_array[1025];
+	u8 match_array[2 * MAX_COMPRESS32_LEN + 1];
 	u32 frequencies[SYMBOL_COUNT];
 
 	strcpy(in1, "testtest123");
@@ -1144,7 +1144,7 @@ Test(match_array_perf) {
 	i64 diff = micros() - start;
 	(void)diff;
 	(void)sum;
-	println("diff={},len={}", diff, sum);
+	/*println("diff={},len={}", diff, sum);*/
 	munmap(in, file_size);
 	munmap(out, 4000000);
 	close(fd);
