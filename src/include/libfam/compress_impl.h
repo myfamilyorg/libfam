@@ -83,7 +83,8 @@ typedef struct {
 	u64 size;
 } HuffmanMinHeap;
 
-STATIC void compress_find_matches(const u8 *in, u32 len, u8 *match_array,
+STATIC void compress_find_matches(const u8 *in, u32 len,
+				  u8 match_array[4 * MAX_COMPRESS32_LEN + 1],
 				  u32 frequencies[SYMBOL_COUNT]);
 
 #endif /* _COMPRESS_IMPL_H */

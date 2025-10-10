@@ -1083,7 +1083,7 @@ Test(bitstream_perf) {
 
 Test(match_array1) {
 	u8 in1[512] = {0};
-	u8 match_array[1025];
+	u8 match_array[4 * MAX_COMPRESS32_LEN + 1];
 	u32 frequencies[SYMBOL_COUNT];
 
 	strcpy(in1, "testtest123");
