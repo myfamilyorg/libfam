@@ -1082,36 +1082,40 @@ Test(bitstream_perf) {
 }
 
 Test(match_array1) {
+	i32 i;
 	u8 in1[512] = {0};
-	u8 match_array[4 * MAX_COMPRESS32_LEN + 1];
+	u8 match_array[1025];
 	u32 frequencies[SYMBOL_COUNT];
 
 	strcpy(in1, "testtest123");
 	compress_find_matches(in1, 512, match_array, frequencies);
 	ASSERT_EQ(match_array[0], 0, "0");
 	ASSERT_EQ(match_array[1], 't', "t");
+	ASSERT_EQ(match_array[2], 0, "0");
+	ASSERT_EQ(match_array[3], 'e', "e");
 	ASSERT_EQ(match_array[4], 0, "0");
-	ASSERT_EQ(match_array[5], 'e', "e");
-	ASSERT_EQ(match_array[8], 0, "0");
-	ASSERT_EQ(match_array[9], 's', "s");
+	ASSERT_EQ(match_array[5], 's', "s");
+	ASSERT_EQ(match_array[6], 0, "0");
+	ASSERT_EQ(match_array[7], 't', "t");
+	ASSERT_EQ(match_array[8], 4, "match code = 2 + 2");
+	ASSERT_EQ(match_array[9], 0, "len extra=0");
+	ASSERT_EQ(match_array[10], 0, "dist extra1=0");
+	ASSERT_EQ(match_array[11], 0, "dist extra2=0");
 	ASSERT_EQ(match_array[12], 0, "0");
-	ASSERT_EQ(match_array[13], 't', "t");
-	ASSERT_EQ(match_array[16], 4, "match code = 2 + 2");
-	ASSERT_EQ(match_array[17], 0, "len extra=0");
-	ASSERT_EQ(match_array[18], 0, "dist extra1=0");
-	ASSERT_EQ(match_array[19], 0, "dist extra2=0");
-	ASSERT_EQ(match_array[20], 0, "0");
-	ASSERT_EQ(match_array[21], '1', "1a");
-	ASSERT_EQ(match_array[24], 0, "0");
-	ASSERT_EQ(match_array[25], '2', "2");
-	ASSERT_EQ(match_array[28], 0, "0");
-	ASSERT_EQ(match_array[29], '3', "3");
-	ASSERT_EQ(match_array[32], 0, "0");
-	ASSERT_EQ(match_array[33], 0, "0");
-	ASSERT_EQ(match_array[36], 114, "mc=112 + 2");
-	ASSERT_EQ(match_array[37], 125, "len extra bits=125");
-	ASSERT_EQ(match_array[38], 0, "dist extra bits1=0");
-	ASSERT_EQ(match_array[39], 0, "dist extra bits2=0");
+	ASSERT_EQ(match_array[13], '1', "1a");
+	ASSERT_EQ(match_array[14], 0, "0");
+	ASSERT_EQ(match_array[15], '2', "2");
+	ASSERT_EQ(match_array[16], 0, "0");
+	ASSERT_EQ(match_array[17], '3', "3");
+	ASSERT_EQ(match_array[18], 0, "0");
+	ASSERT_EQ(match_array[19], 0, "0");
+	ASSERT_EQ(match_array[20], 114, "mc=112 + 2");
+	ASSERT_EQ(match_array[21], 125, "len extra bits=125");
+	ASSERT_EQ(match_array[22], 0, "dist extra bits1=0");
+	ASSERT_EQ(match_array[23], 0, "dist extra bits2=0");
+	for (i = 24; i < 511; i++)
+		ASSERT_EQ(match_array[i], 0, "match_array[{}]", i);
+	ASSERT_EQ(match_array[512], 1, "term");
 }
 
 Test(match_array_perf) {
