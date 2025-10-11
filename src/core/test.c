@@ -32,6 +32,7 @@
 #include <libfam/compress_impl.h>
 #include <libfam/debug.h>
 #include <libfam/format.h>
+#include <libfam/huff.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/rng.h>
@@ -1179,4 +1180,86 @@ Test(compress32) {
 	ASSERT(!memcmp(verify, in, result), "verify");
 	release(out);
 	release(verify);
+}
+
+Test(huff1) {
+	u8 lengths[SYMBOL_COUNT] = {0};
+	u16 codes[SYMBOL_COUNT] = {0};
+	HuffSymbols lookup[LOOKUP_SIZE] = {0};
+	lengths['a'] = 3;
+	lengths['b'] = 3;
+	lengths['c'] = 3;
+	codes['a'] = 0x7;
+	codes['b'] = 0x6;
+	codes['c'] = 0x3;
+	huff_lookup(lookup, lengths, codes);
+	HuffSymbols res;
+	res = lookup[0x7];
+	ASSERT_EQ(res.bits_consumed, 3, "3 bits");
+	ASSERT_EQ(res.output.output_bytes[0], 'a', "a");
+	ASSERT_EQ(res.out_incr, 1, "out_incr");
+	ASSERT_EQ(res.match_flags, false, "match");
+
+	u64 bits = 0x7 << 3 | 0x6;
+	res = lookup[bits];
+	ASSERT_EQ(res.bits_consumed, 6, "6 bits");
+	ASSERT_EQ(res.output.output_bytes[0], 'b', "b");
+	ASSERT_EQ(res.output.output_bytes[1], 'a', "a");
+
+	bits = (0x7 << 6) | (0x3 << 3) | 0x7;
+	res = lookup[bits];
+	ASSERT_EQ(res.bits_consumed, 9, "9 bits");
+	ASSERT_EQ(res.output.output_bytes[0], 'a', "a");
+	ASSERT_EQ(res.output.output_bytes[1], 'c', "c");
+	ASSERT_EQ(res.output.output_bytes[2], 'a', "a");
+	ASSERT_EQ(res.out_incr, 3, "out_incr");
+}
+
+Test(huff2) {
+	u8 lengths[SYMBOL_COUNT] = {0};
+	u16 codes[SYMBOL_COUNT] = {0};
+	HuffSymbols lookup[LOOKUP_SIZE] = {0};
+	lengths['a'] = 3;
+	lengths['b'] = 3;
+	lengths['c'] = 3;
+	lengths[MATCH_OFFSET + 3] = 3;
+	lengths[SYMBOL_TERM] = 3;
+	codes['a'] = 0x7;
+	codes['b'] = 0x6;
+	codes['c'] = 0x3;
+	codes[MATCH_OFFSET + 3] = 0x1;
+	codes[SYMBOL_TERM] = 0x5;
+
+	huff_lookup(lookup, lengths, codes);
+	HuffSymbols res;
+	res = lookup[0x5];
+	ASSERT_EQ(res.bits_consumed, 3, "3 bits");
+	ASSERT_EQ(res.match_flags, 0x1, "symbol term match flag");
+	ASSERT_EQ(res.output.output_bytes[0], 0xFF, "term");
+
+	res = lookup[(0x6 << 6) | 0x1];
+	ASSERT_EQ(res.bits_consumed, 9, "9 bits");
+	ASSERT_EQ(res.output.output_bytes[0], 0x3, "match");
+	ASSERT_EQ(res.output.output_bytes[1], 'b', "b");
+	ASSERT_EQ(res.match_flags, 0x1, "match flag");
+
+	res = lookup[(0x1 << 3) | 0x6];
+	ASSERT_EQ(res.bits_consumed, 9, "9 bits - 2");
+	ASSERT_EQ(res.output.output_bytes[1], 0x3, "match");
+	ASSERT_EQ(res.output.output_bytes[0], 'b', "b");
+	ASSERT_EQ(res.match_flags, 0x2, "match flag");
+	ASSERT_EQ(res.out_incr, 2, "out_incr");
+
+	res = lookup[(0x1 << 9) | (0x1 << 3) | 0x6];
+	ASSERT_EQ(res.bits_consumed, 15, "15 bits");
+	ASSERT_EQ(res.match_flags, 0x6, "match flags");
+
+	res = lookup[(0x7 << 15) | (0x1 << 9) | (0x1 << 3) | (0x3)];
+	ASSERT_EQ(res.bits_consumed, 18, "18 bits");
+	ASSERT_EQ(res.out_incr, 4, "out_incr");
+	ASSERT_EQ(res.output.output_bytes[0], 'c', "c");
+	ASSERT_EQ(res.output.output_bytes[1], 0x3, "match1");
+	ASSERT_EQ(res.output.output_bytes[2], 0x3, "match2");
+	ASSERT_EQ(res.output.output_bytes[3], 'a', "a");
+	ASSERT_EQ(res.match_flags, 0x6, "match flag");
 }

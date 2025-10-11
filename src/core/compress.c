@@ -31,6 +31,7 @@
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/format.h>
+#include <libfam/huff.h>
 #include <libfam/utils.h>
 
 STATIC u16 compress_get_match_code(u16 len, u32 dist) {
@@ -39,11 +40,11 @@ STATIC u16 compress_get_match_code(u16 len, u32 dist) {
 	return ((len_bits << LEN_SHIFT) | dist_bits);
 }
 
-STATIC u8 compress_length_extra_bits(u16 match_code) {
+u8 compress_length_extra_bits(u16 match_code) {
 	return match_code >> LEN_SHIFT;
 }
 
-STATIC u8 compress_distance_extra_bits(u16 match_code) {
+u8 compress_distance_extra_bits(u16 match_code) {
 	return match_code & DIST_MASK;
 }
 
@@ -106,9 +107,9 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 	hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = (u16)cpos;
 }
 
-STATIC void compress_find_matches(const u8 *in, u32 len,
-				  u8 match_array[2 * MAX_COMPRESS32_LEN + 1],
-				  u32 frequencies[SYMBOL_COUNT]) {
+void compress_find_matches(const u8 *in, u32 len,
+			   u8 match_array[2 * MAX_COMPRESS32_LEN + 1],
+			   u32 frequencies[SYMBOL_COUNT]) {
 	u32 i = 0, max, out_itt = 0;
 	LzHash hash = {0};
 	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
@@ -537,11 +538,13 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 				 const u16 codes[SYMBOL_COUNT], u8 *out,
 				 u32 capacity, u64 *bytes_consumed) {
 	u16 lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
+	HuffSymbols lookup[LOOKUP_SIZE];
 	u32 itt = 0;
 	u16 symbol = 0;
 	u8 load_threshold = MAX_CODE_LENGTH + 7 + 15;
 
 	compress_build_lookup_table(lengths, codes, lookup_table);
+	huff_lookup(lookup, lengths, codes);
 
 	while (true) {
 		if (__builtin_expect(strm->bits_in_buffer < load_threshold, 0))
@@ -551,6 +554,18 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 		u16 entry = lookup_table[bits];
 		u8 length = entry >> 12;
 		symbol = entry & 0x1FF;
+
+		/*
+				HuffSymbols sym = lookup[bits];
+				u8 length = sym.bits_consumed;
+				symbol = sym.output.output_bytes[0];
+				if (sym.match_flags)
+					symbol =
+					    sym.output.output_bytes[0] == 0xFF
+						? SYMBOL_TERM
+						: sym.output.output_bytes[0] +
+		   MATCH_OFFSET;
+						*/
 
 		bitstream_reader_clear(strm, length);
 		if (symbol < SYMBOL_TERM) {
