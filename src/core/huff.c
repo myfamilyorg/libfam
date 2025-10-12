@@ -43,23 +43,40 @@ STATIC void huff_fill(HuffSymbols lookup_table[LOOKUP_SIZE],
 	u8 output_byte = symbol >= MATCH_OFFSET	 ? symbol - MATCH_OFFSET
 			 : symbol == SYMBOL_TERM ? 0xFF
 						 : symbol;
+
+	u8 cur_matches = 0;
+	for (u8 i = 0; i < 4; i++)
+		if (huff.match_flags & (1 << i)) cur_matches++;
 	u8 match_flags =
 	    huff.match_flags | ((symbol >= SYMBOL_TERM) << huff.out_incr);
-	u8 out_incr = huff.out_incr + 1;
 	u8 oindex = huff.out_incr;
 
-	if (oindex >= 4 || bits_consumed > 18) return;
+	if (oindex >= 4 || (bits_consumed - extra_bits) > 18 ||
+	    (cur_matches >= 2 && symbol >= SYMBOL_TERM))
+		return;
 
 	huff.bits_consumed = bits_consumed;
 	huff.match_flags = match_flags;
-	huff.out_incr = out_incr;
 	huff.output.output_bytes[oindex] = output_byte;
+	if (symbol > SYMBOL_TERM) {
+		if (cur_matches == 0)
+			huff.match_extra_offset1 = bits_consumed - extra_bits;
+		else if (cur_matches == 1)
+			huff.match_extra_offset2 = bits_consumed - extra_bits;
+	}
 
-	u32 fill_depth = 1U << ((MAX_CODE_LENGTH << 1) - bits_consumed);
+	u32 fill_depth =
+	    1U << ((MAX_CODE_LENGTH << 1) - (bits_consumed - extra_bits));
+
 	for (u32 i = 0; i < fill_depth; i++) {
-		u32 idx = index | (i << bits_consumed);
+		u32 idx = index | (i << (bits_consumed - extra_bits));
+		if (idx == 130562) println("target index={}", index);
 		lookup_table[idx] = huff;
 	}
+
+	if (symbol == SYMBOL_TERM || huff.out_incr == 3) return;
+
+	huff.out_incr++;
 
 	for (u16 i = 0; i < SYMBOL_COUNT; i++) {
 		if (!lengths[i]) continue;

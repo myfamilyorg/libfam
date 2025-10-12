@@ -32,9 +32,11 @@
 #define LOOKUP_SIZE (1 << (MAX_CODE_LENGTH << 1))
 
 typedef struct {
-	u8 bits_consumed;
-	u8 match_flags;
-	u8 out_incr;
+	u8 match_extra_offset1 : 5;
+	u8 match_extra_offset2 : 5;
+	u8 match_flags : 4;
+	u8 bits_consumed : 5;
+	u8 out_incr : 2;
 	union {
 		u32 output;
 		u8 output_bytes[4];

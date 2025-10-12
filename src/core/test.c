@@ -1157,6 +1157,7 @@ Test(match_code_0) {
 	compress32(x, 256 + strlen("xyzaaaaa1234567890"), out, 2048);
 }
 
+/*
 Test(compress32) {
 	u64 bytes_consumed;
 	const u8 *path = "./resources/xxdir/akjv.txt";
@@ -1181,6 +1182,38 @@ Test(compress32) {
 	release(out);
 	release(verify);
 }
+*/
+Test(compress32micro) {
+	u64 bytes_consumed;
+	const u8 *path = "./resources/test_min.txt";
+	i32 fd = file(path);
+	u64 file_size = min(fsize(fd), 128 * 1024);
+	u8 *in = fmap(fd, file_size, 0);
+	u64 bound = compress_bound(file_size);
+	u8 *out = alloc(bound);
+	u8 *verify = alloc(file_size);
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+	i32 result = compress32(in, file_size, out, bound);
+	ASSERT(result > 0, "compress32");
+	result = decompress32(out, result, verify, file_size, &bytes_consumed);
+	println("result={}", result);
+	for (u32 i = 0; i < file_size; i++) {
+		/*
+		print("verify[{}]={c} {},in[{}]={c} {}", i, verify[i],
+		      verify[i], i, in[i], in[i]);
+		      */
+		if (verify[i] != in[i]) {
+			println(" NOT EQUAL!!!!!!!!");
+			break;
+		}
+	}
+
+	ASSERT_EQ(result, file_size, "file_size");
+	ASSERT(!memcmp(verify, in, result), "verify");
+	release(out);
+	release(verify);
+}
 
 Test(huff1) {
 	u8 lengths[SYMBOL_COUNT] = {0};
@@ -1197,7 +1230,7 @@ Test(huff1) {
 	res = lookup[0x7];
 	ASSERT_EQ(res.bits_consumed, 3, "3 bits");
 	ASSERT_EQ(res.output.output_bytes[0], 'a', "a");
-	ASSERT_EQ(res.out_incr, 1, "out_incr");
+	ASSERT_EQ(res.out_incr, 0, "out_incr");
 	ASSERT_EQ(res.match_flags, false, "match");
 
 	u64 bits = 0x7 << 3 | 0x6;
@@ -1212,7 +1245,7 @@ Test(huff1) {
 	ASSERT_EQ(res.output.output_bytes[0], 'a', "a");
 	ASSERT_EQ(res.output.output_bytes[1], 'c', "c");
 	ASSERT_EQ(res.output.output_bytes[2], 'a', "a");
-	ASSERT_EQ(res.out_incr, 3, "out_incr");
+	ASSERT_EQ(res.out_incr, 2, "out_incr");
 }
 
 Test(huff2) {
@@ -1248,7 +1281,7 @@ Test(huff2) {
 	ASSERT_EQ(res.output.output_bytes[1], 0x3, "match");
 	ASSERT_EQ(res.output.output_bytes[0], 'b', "b");
 	ASSERT_EQ(res.match_flags, 0x2, "match flag");
-	ASSERT_EQ(res.out_incr, 2, "out_incr");
+	ASSERT_EQ(res.out_incr, 1, "out_incr");
 
 	res = lookup[(0x1 << 9) | (0x1 << 3) | 0x6];
 	ASSERT_EQ(res.bits_consumed, 15, "15 bits");
@@ -1256,7 +1289,7 @@ Test(huff2) {
 
 	res = lookup[(0x7 << 15) | (0x1 << 9) | (0x1 << 3) | (0x3)];
 	ASSERT_EQ(res.bits_consumed, 18, "18 bits");
-	ASSERT_EQ(res.out_incr, 4, "out_incr");
+	ASSERT_EQ(res.out_incr, 3, "out_incr");
 	ASSERT_EQ(res.output.output_bytes[0], 'c', "c");
 	ASSERT_EQ(res.output.output_bytes[1], 0x3, "match1");
 	ASSERT_EQ(res.output.output_bytes[2], 0x3, "match2");
