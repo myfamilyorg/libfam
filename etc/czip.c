@@ -33,6 +33,7 @@
 #include <libfam/sysext.h>
 #include <libfam/version.h>
 
+/*
 #define CZIP_VERSION 0
 #define CHUNK_SIZE (1 << 18)
 #define PAGE_SIZE 4096
@@ -398,3 +399,6 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 
 	return 0;
 }
+*/
+
+int main(int argc, u8 **argv, u8 **envp) { return 0; }
