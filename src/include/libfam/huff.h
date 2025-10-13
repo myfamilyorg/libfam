@@ -30,7 +30,7 @@
 #include <libfam/types.h>
 
 #define MAX_CODE_LENGTH 9
-#define LOOKUP_BITS (MAX_CODE_LENGTH << 1)
+#define LOOKUP_BITS 12
 #define LEN_SHIFT 4
 #define DIST_MASK 0xF
 #define LOOKUP_SIZE (1 << LOOKUP_BITS)
