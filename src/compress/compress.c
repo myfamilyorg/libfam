@@ -31,7 +31,6 @@
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/format.h>
-#include <libfam/huff.h>
 #include <libfam/utils.h>
 
 STATIC u16 compress_get_match_code(u16 len, u32 dist) {
@@ -48,7 +47,7 @@ u8 compress_distance_extra_bits(u16 match_code) {
 	return match_code & DIST_MASK;
 }
 
-STATIC u16 compress_length_base(u16 match_code) {
+u16 compress_length_base(u16 match_code) {
 	u32 len_bits = match_code >> LEN_SHIFT;
 	return (1 << len_bits) - 1;
 }
@@ -110,7 +109,7 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 void compress_find_matches(const u8 *in, u32 len,
 			   u8 match_array[2 * MAX_COMPRESS32_LEN + 1],
 			   u32 frequencies[SYMBOL_COUNT]) {
-	u32 i = 0, max, out_itt = 0;
+	u32 i = 0, j, max, out_itt = 0;
 	LzHash hash = {0};
 	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
 
@@ -125,28 +124,17 @@ void compress_find_matches(const u8 *in, u32 len,
 			    compress_length_extra_bits_value(mc, mi.len);
 			u16 dist_extra =
 			    compress_distance_extra_bits_value(mc, mi.dist);
-			((u16 *)match_array)[out_itt >> 1] = dist_extra;
-			out_itt += 2;
+			match_array[out_itt++] = dist_extra & 0xFF;
+			match_array[out_itt++] = dist_extra >> 8;
 			mlen = mi.len;
-			lz_hash_set(&hash, in, i);
-			lz_hash_set(&hash, in, i + 1);
-			lz_hash_set(&hash, in, i + 2);
-			lz_hash_set(&hash, in, i + 3);
-			println(
-			    "Match={},len={},dist={},i={},len_extra={},dist_"
-			    "extra={}",
-			    mc, mi.len, mi.dist, i,
-			    compress_length_extra_bits_value(mc, mi.len),
-			    dist_extra);
 		} else {
 			frequencies[in[i]]++;
 			match_array[out_itt++] = 0;
 			match_array[out_itt++] = in[i];
 			mlen = 1;
-			lz_hash_set(&hash, in, i);
 		}
 
-		i += mlen;
+		for (j = i + mlen; i < j; i++) lz_hash_set(&hash, in, i);
 	}
 	while (i < len) {
 		frequencies[in[i]]++;
@@ -344,20 +332,6 @@ STATIC void compress_calculate_codes(const u8 lengths[SYMBOL_COUNT],
 			codes[i] = reversed;
 		}
 	}
-
-	for (u32 i = 0; i < SYMBOL_COUNT; i++) {
-		if (i < SYMBOL_TERM) {
-			if (lengths[i]) {
-				println("length[{c}]={},code={X}", i,
-					lengths[i], codes[i]);
-			}
-		} else {
-			if (lengths[i]) {
-				println("length[{}]={},code={X}", i, lengths[i],
-					codes[i]);
-			}
-		}
-	}
 }
 
 STATIC i32 compress_write_lengths(BitStreamWriter *strm,
@@ -385,7 +359,6 @@ INIT:
 				WRITE(strm, 0, 4);
 		}
 	}
-	bitstream_writer_flush(strm);
 CLEANUP:
 	RETURN;
 }
@@ -402,7 +375,7 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			u8 symbol = match_array[i + 1];
 			u16 code = codes[symbol];
 			u8 length = lengths[symbol];
-			bitstream_writer_push(&strm, code, length);
+			WRITE(&strm, code, length);
 			i += 2;
 		} else {
 			u8 match_code = match_array[i] - 2;
@@ -417,32 +390,10 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			u16 distance_extra_bits_value =
 			    match_array[i + 2] | match_array[i + 3] << 8;
 
-			bitstream_writer_push(&strm, code, length);
-			bitstream_writer_push(&strm, len_extra_bits_value,
-					      len_extra_bits);
-			bitstream_writer_push(&strm, distance_extra_bits_value,
-					      dist_extra_bits);
-			i += 4;
-		}
-
-		if (match_array[i] == 0) {
-			u8 symbol = match_array[i + 1];
-			u16 code = codes[symbol];
-			u8 length = lengths[symbol];
-			bitstream_writer_push(&strm, code, length);
-			i += 2;
-		} else if (match_array[i] != 1) {
-			u8 match_code = match_array[i] - 2;
-			u16 symbol = (u16)match_code + MATCH_OFFSET;
-			u16 code = codes[symbol];
-			u8 length = lengths[symbol];
-			u16 len_extra_bits_value = match_array[i + 1];
-			u8 len_extra_bits =
-			    compress_length_extra_bits(match_code);
-			u8 dist_extra_bits =
-			    compress_distance_extra_bits(match_code);
-			u16 distance_extra_bits_value =
-			    match_array[i + 2] | match_array[i + 3] << 8;
+			if (strm.bits_in_buffer + length + len_extra_bits +
+				dist_extra_bits >
+			    64)
+				bitstream_writer_flush(&strm);
 
 			bitstream_writer_push(&strm, code, length);
 			bitstream_writer_push(&strm, len_extra_bits_value,
@@ -451,8 +402,6 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 					      dist_extra_bits);
 			i += 4;
 		}
-
-		bitstream_writer_flush(&strm);
 	}
 
 	WRITE(&strm, codes[SYMBOL_TERM], lengths[SYMBOL_TERM]);
@@ -484,211 +433,62 @@ CLEANUP:
 	RETURN;
 }
 
-STATIC void compress_build_lookup_table(
-    const u8 lengths[SYMBOL_COUNT], const u16 codes[SYMBOL_COUNT],
-    u16 lookup_table[(1U << MAX_CODE_LENGTH)]) {
-	i32 i, j;
-	for (i = 0; i < SYMBOL_COUNT; i++) {
-		if (lengths[i]) {
-			i32 index = codes[i] & ((1U << lengths[i]) - 1);
-			i32 fill_depth = 1U << (MAX_CODE_LENGTH - lengths[i]);
-			for (j = 0; j < fill_depth; j++) {
-				lookup_table[index | (j << lengths[i])] =
-				    (lengths[i] << 12) | i;
-			}
-		}
-	}
-}
-
-#ifdef __AVX2__
-INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
-				  u64 actual_length) {
-	if (out_src + 32 <= out_dest) {
-		u64 chunks = (actual_length + 31) >> 5;
-		while (chunks--) {
-			__m256i vec = _mm256_loadu_si256((__m256i *)out_src);
-			_mm256_storeu_si256((__m256i *)out_dest, vec);
-			out_src += 32;
-			out_dest += 32;
-		}
-	} else {
-		u64 remainder = actual_length;
-		while (remainder--) {
-			*out_dest++ = *out_src++;
-		}
-	}
-}
-#endif /* __AVX2__ */
-
-INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
-				      u8 *out, u32 capacity, u32 *itt) {
-	u16 match_code, base_length, len_extra, actual_length, base_dist,
-	    dist_extra, actual_distance;
-	match_code = symbol - MATCH_OFFSET;
-	u16 len_extra_bits = compress_length_extra_bits(match_code);
-	u16 dist_extra_bits = compress_distance_extra_bits(match_code);
-	base_length = compress_length_base(match_code);
-	base_dist = compress_distance_base(match_code);
-
-	len_extra = bitstream_reader_read(strm, len_extra_bits);
-	bitstream_reader_clear(strm, len_extra_bits);
-	dist_extra = bitstream_reader_read(strm, dist_extra_bits);
-	bitstream_reader_clear(strm, dist_extra_bits);
-
-	actual_length = 4 + base_length + len_extra;
-	actual_distance = base_dist + dist_extra;
-	if (actual_length + *itt > capacity) {
-		errno = EOVERFLOW;
-		return -1;
-	}
-
-	u8 *out_dest = out + *itt;
-	u8 *out_src = out + *itt - actual_distance;
-	*itt += actual_length;
-
-#ifdef __AVX2__
-	copy_with_avx2(out_dest, out_src, actual_length);
-#else
-	while (actual_length--) *out_dest++ = *out_src++;
-#endif /* !__AVX2__ */
-	return 0;
-}
-
 STATIC i32 compress_read_symbols(BitStreamReader *strm,
 				 const u8 lengths[SYMBOL_COUNT],
 				 const u16 codes[SYMBOL_COUNT], u8 *out,
 				 u32 capacity, u64 *bytes_consumed) {
-	u16 lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
 	HuffSymbols lookup[LOOKUP_SIZE] = {0};
 	u32 itt = 0;
 
-	compress_build_lookup_table(lengths, codes, lookup_table);
 	huff_lookup(lookup, lengths, codes);
 
 	while (true) {
 		bitstream_reader_load(strm);
 
 		u64 bits =
-		    bitstream_reader_read(strm, 15 + 7 + MAX_CODE_LENGTH * 2);
-		u64 mask = ((1UL << ((MAX_CODE_LENGTH * 2))) - 1);
+		    bitstream_reader_read(strm, 2 * MAX_CODE_LENGTH + 15 + 7);
+		HuffSymbols sym = lookup[bits & (LOOKUP_SIZE - 1)];
 
-		HuffSymbols sym = lookup[bits & mask];
 		bitstream_reader_clear(strm, sym.bits_consumed);
-		println("proc sym consume={},out_incr={},bits={X},index={}",
-			sym.bits_consumed, sym.out_incr, bits, bits & mask);
-		for (u32 i = 0; i <= sym.out_incr; i++) {
-			print("b[{}]={},", i, sym.output.output_bytes[i]);
-		}
-		println("");
+		for (u8 i = 0; i <= sym.out_bytes; i++) {
+			if (sym.match_flags & (0x1 << i)) {
+				if (!sym.output.output_bytes[i]) goto term;
+				u8 match_code = sym.output.output_bytes[i] - 1;
+				u8 len_extra_bits =
+				    compress_length_extra_bits(match_code);
+				u8 dist_extra_bits =
+				    compress_distance_extra_bits(match_code);
+				u8 len_offset = sym.eb_offset;
+				u8 dist_offset = sym.eb_offset + len_extra_bits;
+				u16 len_extra = (bits >> len_offset) &
+						((1UL << len_extra_bits) - 1);
+				u16 dist_extra = (bits >> dist_offset) &
+						 ((1UL << dist_extra_bits) - 1);
+				u16 base_length =
+				    compress_length_base(match_code);
+				u16 base_dist =
+				    compress_distance_base(match_code);
 
-		if (!sym.match_flags) {
-			for (u8 i = 0; i <= sym.out_incr; i++) {
+				u16 actual_length = 4 + base_length + len_extra;
+				u16 actual_distance = base_dist + dist_extra;
+				if (actual_length + itt > capacity) {
+					errno = EOVERFLOW;
+					return -1;
+				}
+
+				u8 *out_dest = out + itt;
+				u8 *out_src = out + itt - actual_distance;
+				itt += actual_length;
+
+				while (actual_length--)
+					*out_dest++ = *out_src++;
+
+			} else {
 				if (itt >= capacity) {
 					errno = EOVERFLOW;
 					return -1;
 				}
-				println("append byte={c} ({}) as itt={}",
-					sym.output.output_bytes[i],
-					sym.output.output_bytes[i], itt);
 				out[itt++] = sym.output.output_bytes[i];
-			}
-		} else {
-			println("MATCH_FLAGS {}", sym.match_flags);
-			bool saw_first_match = false;
-			for (u8 i = 0; i <= sym.out_incr; i++) {
-				println("itt={}", i);
-				if (sym.match_flags & (0x1 << i)) {
-					if (sym.output.output_bytes[i] == 0xFF)
-						goto term;
-					u16 base_length, base_dist;
-					u8 match_code =
-					    sym.output.output_bytes[i];
-					u16 len_extra_bits =
-					    compress_length_extra_bits(
-						match_code);
-					u16 dist_extra_bits =
-					    compress_distance_extra_bits(
-						match_code);
-					base_length =
-					    compress_length_base(match_code);
-					base_dist =
-					    compress_distance_base(match_code);
-
-					u64 len_extra, dist_extra;
-
-					if (!saw_first_match) {
-						len_extra =
-						    (bits >>
-						     sym.match_extra_offset1) &
-						    ((1UL << len_extra_bits) -
-						     1);
-						dist_extra =
-						    (bits >>
-						     (sym.match_extra_offset1 +
-						      len_extra_bits)) &
-						    ((1UL << dist_extra_bits) -
-						     1);
-						println("de={}", dist_extra);
-					} else {
-						len_extra =
-						    (bits >>
-						     sym.match_extra_offset2) &
-						    ((1UL << len_extra_bits) -
-						     1);
-						dist_extra =
-						    (bits >>
-						     (sym.match_extra_offset2 +
-						      len_extra_bits)) &
-						    ((1UL << dist_extra_bits) -
-						     1);
-						println("de2={}", dist_extra);
-					}
-					println(
-					    "match_code={}len_extra_bits={},"
-					    "dist_extra_bits="
-					    "{},base_length={},base_dist={},"
-					    "len_extra={},dist_extra={},saw_"
-					    "first={},bits={b},offset1={},"
-					    "offset2={}",
-					    match_code, len_extra_bits,
-					    dist_extra_bits, base_length,
-					    base_dist, len_extra, dist_extra,
-					    saw_first_match, bits,
-					    sym.match_extra_offset1,
-					    sym.match_extra_offset2);
-
-					u64 actual_length =
-					    4 + base_length + len_extra;
-					u64 actual_distance =
-					    base_dist + dist_extra;
-
-					println("actual_len={},actual_dist={}",
-						actual_length, actual_distance);
-					if (actual_length + itt > capacity) {
-						errno = EOVERFLOW;
-						return -1;
-					}
-
-					u8 *out_dest = out + itt;
-					u8 *out_src =
-					    out + itt - actual_distance;
-					itt += actual_length;
-
-					while (actual_length--)
-						*out_dest++ = *out_src++;
-
-					saw_first_match = true;
-				} else {
-					if (itt >= capacity) {
-						errno = EOVERFLOW;
-						return -1;
-					}
-					println("append byte={c} as itt={}",
-						sym.output.output_bytes[i],
-						itt);
-
-					out[itt++] = sym.output.output_bytes[i];
-				}
 			}
 		}
 	}
@@ -702,7 +502,7 @@ PUBLIC i32 compress32(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
-	u8 match_array[2 * MAX_COMPRESS32_LEN + 1];
+	u8 match_array[2 * MAX_COMPRESS32_LEN + 1] = {0};
 
 	if (capacity < compress_bound(len) || len > MAX_COMPRESS32_LEN) {
 		errno = EINVAL;

@@ -26,24 +26,42 @@
 #ifndef _HUFF_H
 #define _HUFF_H
 
-#include <libfam/compress_impl.h>
 #include <libfam/types.h>
 
-#define LOOKUP_SIZE (1 << (MAX_CODE_LENGTH << 1))
+#define MAX_CODE_LENGTH 9
+#define LOOKUP_BITS (MAX_CODE_LENGTH << 1)
+#define LEN_SHIFT 4
+#define DIST_MASK 0xF
+#define LOOKUP_SIZE (1 << LOOKUP_BITS)
+#define SYMBOL_TERM 256
+#define MATCH_OFFSET (SYMBOL_TERM + 1)
+#define MAX_MATCH_CODE 127
+#define SYMBOL_COUNT (MATCH_OFFSET + MAX_MATCH_CODE + 1)
 
 typedef struct {
-	u8 match_extra_offset1 : 5;
-	u8 match_extra_offset2 : 5;
-	u8 match_flags : 4;
-	u8 bits_consumed : 5;
-	u8 out_incr : 2;
+	u8 match_flags;
+	u8 bits_consumed;
+	u8 out_bytes;
+	u8 eb_offset;
 	union {
 		u32 output;
 		u8 output_bytes[4];
 	} output;
 } HuffSymbols;
 
-void huff_lookup(HuffSymbols lookup[LOOKUP_SIZE],
+static inline u8 length_extra_bits(u8 match_code) {
+	return match_code >> LEN_SHIFT;
+}
+
+static inline u8 distance_extra_bits(u8 match_code) {
+	return match_code & DIST_MASK;
+}
+
+static inline u8 extra_bits(u8 match_code) {
+	return (match_code >> LEN_SHIFT) + (match_code & DIST_MASK);
+}
+
+void huff_lookup(HuffSymbols lookup_table[LOOKUP_SIZE],
 		 const u8 lengths[SYMBOL_COUNT], const u16 codes[SYMBOL_COUNT]);
 
 #endif /* _HUFF_H */

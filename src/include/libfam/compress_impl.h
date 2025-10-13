@@ -26,6 +26,7 @@
 #ifndef _COMPRESS_IMPL_H
 #define _COMPRESS_IMPL_H
 
+#include <libfam/huff.h>
 #include <libfam/limits.h>
 #include <libfam/types.h>
 
@@ -36,13 +37,6 @@
 #define MIN_MATCH_LEN 4
 #define MAX_MATCH_DIST U16_MAX
 #define MIN_MATCH_DIST 1
-#define MAX_MATCH_CODE 127
-#define LEN_SHIFT 4
-#define DIST_MASK 0xF
-#define SYMBOL_TERM 256
-#define MATCH_OFFSET (SYMBOL_TERM + 1)
-#define SYMBOL_COUNT (MATCH_OFFSET + MAX_MATCH_CODE + 1)
-#define MAX_CODE_LENGTH 9
 #define MAX_COMPRESS32_LEN (1 << 18)
 
 #define WRITE(strm, value, bits)                              \
