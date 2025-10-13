@@ -53,18 +53,18 @@ static inline u8 distance_extra_bits(u8 match_code) {
 	return match_code & DIST_MASK;
 }
 
-static inline u16 length_base(u16 match_code) {
-	u32 len_bits = match_code >> LEN_SHIFT;
+static inline u8 length_base(u16 match_code) {
+	u8 len_bits = match_code >> LEN_SHIFT;
 	return (1 << len_bits) - 1;
 }
 
 static inline u16 distance_base(u16 match_code) {
-	u32 distance_bits = match_code & DIST_MASK;
+	u8 distance_bits = match_code & DIST_MASK;
 	return 1 << distance_bits;
 }
 
-static inline u16 length_extra_bits_value(u16 code, u16 actual_length) {
-	u16 base_length = length_base(code);
+static inline u8 length_extra_bits_value(u16 code, u16 actual_length) {
+	u8 base_length = length_base(code);
 	return actual_length - base_length - 4;
 }
 

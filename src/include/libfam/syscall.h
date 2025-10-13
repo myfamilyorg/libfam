@@ -36,6 +36,7 @@ struct epoll_event;
 struct sigset_t;
 struct rt_sigaction;
 struct stat;
+struct io_uring_params;
 
 i32 pipe2(i32 fds[2], i32 flags);
 i32 getpid(void);
@@ -79,5 +80,9 @@ void _exit(i32 status);
 i32 utimesat(i32 dirfd, const u8 *path, const struct timeval *times, i32 flags);
 i32 fstatat(i32 dirfd, const u8 *pathname, struct stat *buf, i32 flags);
 i32 fchmod(i32 fd, u32 mode);
+i32 io_uring_setup(u32 entries, struct io_uring_params *params);
+i32 io_uring_enter2(u32 fd, u32 to_submit, u32 min_complete, u32 flags,
+		    void *arg, u64 sz);
+i32 io_uring_register(u32 fd, u32 opcode, void *arg, u32 nr_args);
 
 #endif /* _SYSCALL_H */

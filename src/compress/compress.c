@@ -79,31 +79,28 @@ void compress_find_matches(const u8 *in, u32 len,
 	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
 
 	while (i < max) {
-		u16 mlen;
 		MatchInfo mi = lz_hash_get(&hash, in, i);
 		if (mi.len >= MIN_MATCH_LEN) {
 			u8 mc = get_match_code(mi.len, mi.dist);
 			frequencies[mc + MATCH_OFFSET]++;
-			match_array[out_itt++] = mc + 2;
-			match_array[out_itt++] =
+			match_array[out_itt] = mc + 2;
+			match_array[out_itt + 1] =
 			    length_extra_bits_value(mc, mi.len);
 			u16 dist_extra = distance_extra_bits_value(mc, mi.dist);
-			((u16 *)match_array)[out_itt >> 1] = dist_extra;
-			out_itt += 2;
-			mlen = mi.len;
+			((u16 *)match_array)[(out_itt + 2) >> 1] = dist_extra;
+			out_itt += 4;
 			lz_hash_set(&hash, in, i);
 			lz_hash_set(&hash, in, i + 1);
 			lz_hash_set(&hash, in, i + 2);
 			lz_hash_set(&hash, in, i + 3);
+			i += mi.len;
 		} else {
 			frequencies[in[i]]++;
 			match_array[out_itt++] = 0;
 			match_array[out_itt++] = in[i];
-			mlen = 1;
 			lz_hash_set(&hash, in, i);
+			i++;
 		}
-
-		i += mlen;
 	}
 	while (i < len) {
 		frequencies[in[i]]++;
@@ -422,11 +419,11 @@ INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 
 INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 				      u8 *out, u32 capacity, u32 *itt) {
-	u16 match_code, base_length, len_extra, actual_length, base_dist,
-	    dist_extra, actual_distance;
+	u8 match_code, len_extra;
+	u16 base_length, actual_length, base_dist, dist_extra, actual_distance;
 	match_code = symbol - MATCH_OFFSET;
-	u16 len_extra_bits = length_extra_bits(match_code);
-	u16 dist_extra_bits = distance_extra_bits(match_code);
+	u8 len_extra_bits = length_extra_bits(match_code);
+	u8 dist_extra_bits = distance_extra_bits(match_code);
 	base_length = length_base(match_code);
 	base_dist = distance_base(match_code);
 

@@ -284,6 +284,284 @@ struct stat {
 };
 #endif /* __aarch64__ */
 
+/* io_uring */
+
+struct io_sqring_offsets {
+	u32 head;
+	u32 tail;
+	u32 ring_mask;
+	u32 ring_entries;
+	u32 flags;
+	u32 dropped;
+	u32 array;
+	u32 resv1;
+	u64 user_addr;
+};
+
+struct io_cqring_offsets {
+	u32 head;
+	u32 tail;
+	u32 ring_mask;
+	u32 ring_entries;
+	u32 overflow;
+	u32 cqes;
+	u32 flags;
+	u32 resv1;
+	u64 user_addr;
+};
+
+/*
+ * IO submission data structure (Submission Queue Entry)
+ */
+struct io_uring_sqe {
+	u8 opcode;  /* type of operation for this sqe */
+	u8 flags;   /* IOSQE_ flags */
+	u16 ioprio; /* ioprio for the request */
+	i32 fd;	    /* file descriptor to do IO on */
+	union {
+		u64 off; /* offset into file */
+		u64 addr2;
+		struct {
+			u32 cmd_op;
+			u32 __pad1;
+		};
+	};
+	union {
+		u64 addr; /* pointer to buffer or iovecs */
+		u64 splice_off_in;
+		struct {
+			u32 level;
+			u32 optname;
+		};
+	};
+	u32 len; /* buffer size or number of iovecs */
+	union {
+		i32 rw_flags;
+		u32 fsync_flags;
+		u16 poll_events;   /* compatibility */
+		u32 poll32_events; /* word-reversed for BE */
+		u32 sync_range_flags;
+		u32 msg_flags;
+		u32 timeout_flags;
+		u32 accept_flags;
+		u32 cancel_flags;
+		u32 open_flags;
+		u32 statx_flags;
+		u32 fadvise_advice;
+		u32 splice_flags;
+		u32 rename_flags;
+		u32 unlink_flags;
+		u32 hardlink_flags;
+		u32 xattr_flags;
+		u32 msg_ring_flags;
+		u32 uring_cmd_flags;
+		u32 waitid_flags;
+		u32 futex_flags;
+		u32 install_fd_flags;
+	};
+	u64 user_data; /* data to be passed back at completion time */
+	/* pack this to avoid bogus arm OABI complaints */
+	union {
+		/* index into fixed buffers, if used */
+		u16 buf_index;
+		/* for grouped buffer selection */
+		u16 buf_group;
+	} __attribute__((packed));
+	/* personality to use, if used */
+	u16 personality;
+	union {
+		i32 splice_fd_in;
+		u32 file_index;
+		u32 optlen;
+		struct {
+			u16 addr_len;
+			u16 __pad3[1];
+		};
+	};
+	union {
+		struct {
+			u64 addr3;
+			u64 __pad2[1];
+		};
+		u64 optval;
+		/*
+		 * If the ring is initialized with IORING_SETUP_SQE128, then
+		 * this field is used for 80 bytes of arbitrary command data
+		 */
+		u8 cmd[0];
+	};
+};
+
+/*
+ * cq_ring->flags
+ */
+
+/* disable eventfd notifications */
+#define IORING_CQ_EVENTFD_DISABLED (1U << 0)
+
+/*
+ * io_uring_enter(2) flags
+ */
+#define IORING_ENTER_GETEVENTS (1U << 0)
+#define IORING_ENTER_SQ_WAKEUP (1U << 1)
+#define IORING_ENTER_SQ_WAIT (1U << 2)
+#define IORING_ENTER_EXT_ARG (1U << 3)
+#define IORING_ENTER_REGISTERED_RING (1U << 4)
+
+/*
+ * io_uring_register(2) opcodes and arguments
+ */
+enum {
+	IORING_REGISTER_BUFFERS = 0,
+	IORING_UNREGISTER_BUFFERS = 1,
+	IORING_REGISTER_FILES = 2,
+	IORING_UNREGISTER_FILES = 3,
+	IORING_REGISTER_EVENTFD = 4,
+	IORING_UNREGISTER_EVENTFD = 5,
+	IORING_REGISTER_FILES_UPDATE = 6,
+	IORING_REGISTER_EVENTFD_ASYNC = 7,
+	IORING_REGISTER_PROBE = 8,
+	IORING_REGISTER_PERSONALITY = 9,
+	IORING_UNREGISTER_PERSONALITY = 10,
+	IORING_REGISTER_RESTRICTIONS = 11,
+	IORING_REGISTER_ENABLE_RINGS = 12,
+
+	/* extended with tagging */
+	IORING_REGISTER_FILES2 = 13,
+	IORING_REGISTER_FILES_UPDATE2 = 14,
+	IORING_REGISTER_BUFFERS2 = 15,
+	IORING_REGISTER_BUFFERS_UPDATE = 16,
+
+	/* set/clear io-wq thread affinities */
+	IORING_REGISTER_IOWQ_AFF = 17,
+	IORING_UNREGISTER_IOWQ_AFF = 18,
+
+	/* set/get max number of io-wq workers */
+	IORING_REGISTER_IOWQ_MAX_WORKERS = 19,
+
+	/* register/unregister io_uring fd with the ring */
+	IORING_REGISTER_RING_FDS = 20,
+	IORING_UNREGISTER_RING_FDS = 21,
+
+	/* register ring based provide buffer group */
+	IORING_REGISTER_PBUF_RING = 22,
+	IORING_UNREGISTER_PBUF_RING = 23,
+
+	/* sync cancelation API */
+	IORING_REGISTER_SYNC_CANCEL = 24,
+
+	/* register a range of fixed file slots for automatic slot allocation */
+	IORING_REGISTER_FILE_ALLOC_RANGE = 25,
+
+	/* return status information for a buffer group */
+	IORING_REGISTER_PBUF_STATUS = 26,
+
+	/* this goes last */
+	IORING_REGISTER_LAST,
+
+	/* flag added to the opcode to use a registered ring fd */
+	IORING_REGISTER_USE_REGISTERED_RING = 1U << 31
+};
+
+#define IORING_OFF_SQ_RING 0ULL
+#define IORING_OFF_CQ_RING 0x8000000ULL
+#define IORING_OFF_SQES 0x10000000ULL
+#define IORING_OFF_PBUF_RING 0x80000000ULL
+#define IORING_OFF_PBUF_SHIFT 16
+#define IORING_OFF_MMAP_MASK 0xf8000000ULL
+
+/*
+ * IO completion data structure (Completion Queue Entry)
+ */
+struct io_uring_cqe {
+	u64 user_data; /* sqe->data submission passed back */
+	i32 res;       /* result code for this event */
+	u32 flags;
+
+	/*
+	 * If the ring is initialized with IORING_SETUP_CQE32, then this field
+	 * contains 16-bytes of padding, doubling the size of the CQE.
+	 */
+	u64 big_cqe[];
+};
+
+struct io_uring_params {
+	u32 sq_entries;
+	u32 cq_entries;
+	u32 flags;
+	u32 sq_thread_cpu;
+	u32 sq_thread_idle;
+	u32 features;
+	u32 wq_fd;
+	u32 resv[3];
+	struct io_sqring_offsets sq_off;
+	struct io_cqring_offsets cq_off;
+};
+
+enum io_uring_op {
+	IORING_OP_NOP,
+	IORING_OP_READV,
+	IORING_OP_WRITEV,
+	IORING_OP_FSYNC,
+	IORING_OP_READ_FIXED,
+	IORING_OP_WRITE_FIXED,
+	IORING_OP_POLL_ADD,
+	IORING_OP_POLL_REMOVE,
+	IORING_OP_SYNC_FILE_RANGE,
+	IORING_OP_SENDMSG,
+	IORING_OP_RECVMSG,
+	IORING_OP_TIMEOUT,
+	IORING_OP_TIMEOUT_REMOVE,
+	IORING_OP_ACCEPT,
+	IORING_OP_ASYNC_CANCEL,
+	IORING_OP_LINK_TIMEOUT,
+	IORING_OP_CONNECT,
+	IORING_OP_FALLOCATE,
+	IORING_OP_OPENAT,
+	IORING_OP_CLOSE,
+	IORING_OP_FILES_UPDATE,
+	IORING_OP_STATX,
+	IORING_OP_READ,
+	IORING_OP_WRITE,
+	IORING_OP_FADVISE,
+	IORING_OP_MADVISE,
+	IORING_OP_SEND,
+	IORING_OP_RECV,
+	IORING_OP_OPENAT2,
+	IORING_OP_EPOLL_CTL,
+	IORING_OP_SPLICE,
+	IORING_OP_PROVIDE_BUFFERS,
+	IORING_OP_REMOVE_BUFFERS,
+	IORING_OP_TEE,
+	IORING_OP_SHUTDOWN,
+	IORING_OP_RENAMEAT,
+	IORING_OP_UNLINKAT,
+	IORING_OP_MKDIRAT,
+	IORING_OP_SYMLINKAT,
+	IORING_OP_LINKAT,
+	IORING_OP_MSG_RING,
+	IORING_OP_FSETXATTR,
+	IORING_OP_SETXATTR,
+	IORING_OP_FGETXATTR,
+	IORING_OP_GETXATTR,
+	IORING_OP_SOCKET,
+	IORING_OP_URING_CMD,
+	IORING_OP_SEND_ZC,
+	IORING_OP_SENDMSG_ZC,
+	IORING_OP_READ_MULTISHOT,
+	IORING_OP_WAITID,
+	IORING_OP_FUTEX_WAIT,
+	IORING_OP_FUTEX_WAKE,
+	IORING_OP_FUTEX_WAITV,
+	IORING_OP_FIXED_FD_INSTALL,
+	IORING_OP_LAST,
+};
+
+struct iovec {
+	void *iov_base; /* Pointer to data.  */
+	u64 iov_len;	/* Length of data.  */
+};
+
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5);
 
 #endif /* _LINUX_H */

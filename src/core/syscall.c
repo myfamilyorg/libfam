@@ -63,6 +63,9 @@
 #define SYS_munmap 215
 #define SYS_mmap 222
 #define SYS_msync 227
+#define SYS_io_uring_setup 425
+#define SYS_io_uring_enter 426
+#define SYS_io_uring_register 427
 #define SYS_clone3 435
 #elif defined(__x86_64__)
 #define SYS_read 0
@@ -98,6 +101,9 @@
 #define SYS_epoll_pwait 281
 #define SYS_epoll_create1 291
 #define SYS_pipe2 293
+#define SYS_io_uring_setup 425
+#define SYS_io_uring_enter 426
+#define SYS_io_uring_register 427
 #define SYS_clone3 435
 #endif /* __x86_64__ */
 
@@ -508,6 +514,39 @@ PUBLIC i32 fstatat(i32 dirfd, const u8 *pathname, struct stat *buf, i32 flags) {
 INIT:
 	v = (i32)raw_syscall(SYS_fstatat, (i64)dirfd, (i64)pathname, (i64)buf,
 			     (i64)flags, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 io_uring_setup(u32 entries, struct io_uring_params *params) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_io_uring_setup, (i64)entries, (i64)params, 0,
+			     0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+i32 io_uring_enter2(u32 fd, u32 to_submit, u32 min_complete, u32 flags,
+		    void *arg, u64 sz) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_io_uring_enter, (i64)fd, (i64)to_submit,
+			     (i64)min_complete, (i64)flags, (i64)arg, (i64)sz);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 io_uring_register(u32 fd, u32 opcode, void *arg, u32 nr_args) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_io_uring_register, (i64)fd, (i64)opcode,
+			     (i64)arg, (i64)nr_args, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:

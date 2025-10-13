@@ -1008,3 +1008,135 @@ Test(fstatat) {
 	close(fd);
 	unlink(path);
 }
+
+Test(ioruring) {
+	struct io_uring_params params = {0};
+	i32 fd = io_uring_setup(2, &params);
+	ASSERT(fd > 0, "io_uring_setup failed");
+
+	u32 sq_ring_size =
+	    params.sq_off.array + params.sq_entries * sizeof(u32);
+	u32 cq_ring_size = params.cq_off.cqes +
+			   params.cq_entries * sizeof(struct io_uring_cqe);
+	u8 *sq_ring = mmap(NULL, sq_ring_size, PROT_READ | PROT_WRITE,
+			   MAP_SHARED, fd, IORING_OFF_SQ_RING);
+	ASSERT(sq_ring != MAP_FAILED, "sq_ring mmap failed");
+	u8 *cq_ring = mmap(NULL, cq_ring_size, PROT_READ | PROT_WRITE,
+			   MAP_SHARED, fd, IORING_OFF_CQ_RING);
+	ASSERT(cq_ring != MAP_FAILED, "cq_ring mmap failed");
+
+	struct io_uring_sqe *sqes =
+	    mmap(NULL, params.sq_entries * sizeof(struct io_uring_sqe),
+		 PROT_READ | PROT_WRITE, MAP_SHARED, fd, IORING_OFF_SQES);
+	ASSERT(sqes != MAP_FAILED, "sqes mmap failed");
+
+	u32 *sq_tail = (u32 *)(sq_ring + params.sq_off.tail);
+	u32 *sq_array = (u32 *)(sq_ring + params.sq_off.array);
+	u32 *cq_head = (u32 *)(cq_ring + params.cq_off.head);
+	u32 *cq_tail = (u32 *)(cq_ring + params.cq_off.tail);
+	u32 *ring_mask = (u32 *)(cq_ring + params.cq_off.ring_mask);
+	struct io_uring_cqe *cqes =
+	    (struct io_uring_cqe *)(cq_ring + params.cq_off.cqes);
+
+	(void)cq_head;
+	(void)cq_tail;
+	(void)ring_mask;
+	(void)cqes;
+
+	sqes[0].opcode = IORING_OP_NOP;
+	sqes[0].flags = 0;
+	sqes[0].user_data = 123;
+
+	sq_array[0] = 0;
+	__aadd32(sq_tail, 1);
+	i32 to_submit = 1;
+	i32 min_complete = 1;
+	i32 res = io_uring_enter2(fd, to_submit, min_complete,
+				  IORING_ENTER_GETEVENTS, NULL, 0);
+
+	ASSERT_EQ(res, 1, "io_uring_enter2 returned {}, expected 1", res);
+
+	munmap(sq_ring, sq_ring_size);
+	munmap(cq_ring, cq_ring_size);
+	munmap(sqes, params.sq_entries * sizeof(struct io_uring_sqe));
+	close(fd);
+}
+
+Test(ioruring_read_file) {
+	// Initialize io_uring
+	struct io_uring_params params = {0};
+	i32 fd = io_uring_setup(2, &params);
+	ASSERT(fd > 0, "io_uring_setup failed");
+
+	// Map submission and completion queues
+	u32 sq_ring_size =
+	    params.sq_off.array + params.sq_entries * sizeof(u32);
+	u32 cq_ring_size = params.cq_off.cqes +
+			   params.cq_entries * sizeof(struct io_uring_cqe);
+	u8 *sq_ring = mmap(NULL, sq_ring_size, PROT_READ | PROT_WRITE,
+			   MAP_SHARED, fd, IORING_OFF_SQ_RING);
+	ASSERT(sq_ring != MAP_FAILED, "sq_ring mmap failed");
+	u8 *cq_ring = mmap(NULL, cq_ring_size, PROT_READ | PROT_WRITE,
+			   MAP_SHARED, fd, IORING_OFF_CQ_RING);
+	ASSERT(cq_ring != MAP_FAILED, "cq_ring mmap failed");
+
+	struct io_uring_sqe *sqes =
+	    mmap(NULL, params.sq_entries * sizeof(struct io_uring_sqe),
+		 PROT_READ | PROT_WRITE, MAP_SHARED, fd, IORING_OFF_SQES);
+	ASSERT(sqes != MAP_FAILED, "sqes mmap failed");
+
+	// Setup queue pointers
+	u32 *sq_tail = (u32 *)(sq_ring + params.sq_off.tail);
+	u32 *sq_array = (u32 *)(sq_ring + params.sq_off.array);
+	u32 *cq_head = (u32 *)(cq_ring + params.cq_off.head);
+	u32 *cq_tail = (u32 *)(cq_ring + params.cq_off.tail);
+	u32 *ring_mask = (u32 *)(cq_ring + params.cq_off.ring_mask);
+	struct io_uring_cqe *cqes =
+	    (struct io_uring_cqe *)(cq_ring + params.cq_off.cqes);
+
+	// Open file to read
+	const char *filename = "resources/test_micro.txt";
+	i32 file_fd = file(filename);
+	ASSERT(file_fd >= 0, "Failed to open file: {}", strerror(errno));
+
+	// Allocate buffer for reading
+	const u64 read_size = 1024;
+	void *buffer = alloc(read_size);
+	ASSERT(buffer != NULL, "Failed to allocate buffer");
+
+	// Setup read operation
+	sqes[0].opcode = IORING_OP_READ;
+	sqes[0].flags = 0;
+	sqes[0].fd = file_fd;
+	sqes[0].addr = (u64)buffer;
+	sqes[0].len = read_size;
+	sqes[0].off = 0;  // Read from start of file
+	sqes[0].user_data = 123;
+
+	sq_array[0] = 0;
+	__aadd32(sq_tail, 1);
+
+	// Submit and wait for completion
+	i32 to_submit = 1;
+	i32 min_complete = 1;
+	i32 res = io_uring_enter2(fd, to_submit, min_complete,
+				  IORING_ENTER_GETEVENTS, NULL, 0);
+	ASSERT_EQ(res, 1, "io_uring_enter2 returned {}, expected 1", res);
+
+	// Check completion
+	ASSERT(*cq_head != *cq_tail, "No completion events");
+	i32 cqe_idx = *cq_head & *ring_mask;
+	ASSERT_EQ(cqes[cqe_idx].user_data, 123, "Unexpected user_data");
+	ASSERT(cqes[cqe_idx].res >= 0, "Read failed: {}",
+	       strerror(-cqes[cqe_idx].res));
+	ASSERT_EQ(cqes[cqe_idx].res, 128, "file_size");
+	ASSERT(!memcmp(buffer, "abc 123", 7), "start of file data");
+
+	// Cleanup
+	release(buffer);
+	close(file_fd);
+	munmap(sq_ring, sq_ring_size);
+	munmap(cq_ring, cq_ring_size);
+	munmap(sqes, params.sq_entries * sizeof(struct io_uring_sqe));
+	close(fd);
+}
