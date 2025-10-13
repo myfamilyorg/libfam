@@ -431,11 +431,9 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 
 	while (true) {
 		bitstream_reader_load(strm);
-
-		u64 bits =
-		    bitstream_reader_read(strm, 2 * MAX_CODE_LENGTH + 15 + 7);
+		u64 bits = bitstream_reader_read(
+		    strm, (MAX_CODE_LENGTH << 1) + 7 + 15);
 		HuffSymbols sym = lookup[bits & (LOOKUP_SIZE - 1)];
-
 		bitstream_reader_clear(strm, sym.bits_consumed);
 		for (u8 i = 0; i <= sym.out_bytes; i++) {
 			if (sym.match_flags & (0x1 << i)) {
