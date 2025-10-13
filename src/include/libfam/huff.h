@@ -26,6 +26,7 @@
 #ifndef _HUFF_H
 #define _HUFF_H
 
+#include <libfam/builtin.h>
 #include <libfam/types.h>
 
 #define MAX_CODE_LENGTH 9
@@ -49,12 +50,39 @@ typedef struct {
 	} output;
 } HuffSymbols;
 
+static inline u16 get_match_code(u16 len, u32 dist) {
+	u32 len_bits = 31 - clz_u32(len - 3);
+	u32 dist_bits = 31 - clz_u32(dist);
+	return ((len_bits << LEN_SHIFT) | dist_bits);
+}
+
 static inline u8 length_extra_bits(u8 match_code) {
 	return match_code >> LEN_SHIFT;
 }
 
 static inline u8 distance_extra_bits(u8 match_code) {
 	return match_code & DIST_MASK;
+}
+
+static inline u16 length_base(u16 match_code) {
+	u32 len_bits = match_code >> LEN_SHIFT;
+	return (1 << len_bits) - 1;
+}
+
+static inline u16 distance_base(u16 match_code) {
+	u32 distance_bits = match_code & DIST_MASK;
+	return 1 << distance_bits;
+}
+
+static inline u16 length_extra_bits_value(u16 code, u16 actual_length) {
+	u16 base_length = length_base(code);
+	return actual_length - base_length - 4;
+}
+
+static inline u16 distance_extra_bits_value(u16 code, u16 actual_distance) {
+	u32 distance_bits = code & DIST_MASK;
+	u16 base_distance = 1 << distance_bits;
+	return actual_distance - base_distance;
 }
 
 static inline u8 extra_bits(u8 match_code) {
