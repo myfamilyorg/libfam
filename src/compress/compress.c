@@ -420,67 +420,89 @@ INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 }
 #endif /* __AVX2__ */
 
+INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
+				      u8 *out, u32 capacity, u32 *itt) {
+	u16 match_code, base_length, len_extra, actual_length, base_dist,
+	    dist_extra, actual_distance;
+	match_code = symbol - MATCH_OFFSET;
+	u16 len_extra_bits = length_extra_bits(match_code);
+	u16 dist_extra_bits = distance_extra_bits(match_code);
+	base_length = length_base(match_code);
+	base_dist = distance_base(match_code);
+
+	len_extra = bitstream_reader_read(strm, len_extra_bits);
+	bitstream_reader_clear(strm, len_extra_bits);
+	dist_extra = bitstream_reader_read(strm, dist_extra_bits);
+	bitstream_reader_clear(strm, dist_extra_bits);
+
+	actual_length = 4 + base_length + len_extra;
+	actual_distance = base_dist + dist_extra;
+	if (actual_length + *itt > capacity) {
+		errno = EOVERFLOW;
+		return -1;
+	}
+
+	u8 *out_dest = out + *itt;
+	u8 *out_src = out + *itt - actual_distance;
+	*itt += actual_length;
+
+#ifdef __AVX2__
+	copy_with_avx2(out_dest, out_src, actual_length);
+#else
+	while (actual_length--) *out_dest++ = *out_src++;
+#endif /* !__AVX2__ */
+	return 0;
+}
+
+STATIC void compress_build_lookup_table(
+    const u8 lengths[SYMBOL_COUNT], const u16 codes[SYMBOL_COUNT],
+    u16 lookup_table[(1U << MAX_CODE_LENGTH)]) {
+	i32 i, j;
+	for (i = 0; i < SYMBOL_COUNT; i++) {
+		if (lengths[i]) {
+			i32 index = codes[i] & ((1U << lengths[i]) - 1);
+			i32 fill_depth = 1U << (MAX_CODE_LENGTH - lengths[i]);
+			for (j = 0; j < fill_depth; j++) {
+				lookup_table[index | (j << lengths[i])] =
+				    (lengths[i] << 12) | i;
+			}
+		}
+	}
+}
+
 STATIC i32 compress_read_symbols(BitStreamReader *strm,
 				 const u8 lengths[SYMBOL_COUNT],
 				 const u16 codes[SYMBOL_COUNT], u8 *out,
 				 u32 capacity, u64 *bytes_consumed) {
-	HuffSymbols lookup[LOOKUP_SIZE] = {0};
+	u16 lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
 	u32 itt = 0;
+	u16 symbol = 0;
+	u8 load_threshold = MAX_CODE_LENGTH + 7 + 15;
 
-	huff_lookup(lookup, lengths, codes);
+	compress_build_lookup_table(lengths, codes, lookup_table);
 
 	while (true) {
-		bitstream_reader_load(strm);
-		u64 bits = bitstream_reader_read(
-		    strm, (MAX_CODE_LENGTH << 1) + 7 + 15);
-		HuffSymbols sym = lookup[bits & (LOOKUP_SIZE - 1)];
-		bitstream_reader_clear(strm, sym.bits_consumed);
-		for (u8 i = 0; i <= sym.out_bytes; i++) {
-			if (sym.match_flags & (0x1 << i)) {
-				if (!sym.output.output_bytes[i]) goto term;
-				u8 match_code = sym.output.output_bytes[i] - 1;
-				u8 len_extra_bits =
-				    length_extra_bits(match_code);
-				u8 dist_extra_bits =
-				    distance_extra_bits(match_code);
-				u8 len_offset = sym.eb_offset;
-				u8 dist_offset = sym.eb_offset + len_extra_bits;
-				u16 len_extra = (bits >> len_offset) &
-						((1UL << len_extra_bits) - 1);
-				u16 dist_extra = (bits >> dist_offset) &
-						 ((1UL << dist_extra_bits) - 1);
-				u16 base_length = length_base(match_code);
-				u16 base_dist = distance_base(match_code);
+		if (__builtin_expect(strm->bits_in_buffer < load_threshold, 0))
+			bitstream_reader_load(strm);
 
-				u16 actual_length = 4 + base_length + len_extra;
-				u16 actual_distance = base_dist + dist_extra;
-				if (actual_length + itt > capacity) {
-					errno = EOVERFLOW;
-					return -1;
-				}
+		u16 bits = bitstream_reader_read(strm, MAX_CODE_LENGTH);
+		u16 entry = lookup_table[bits];
+		u8 length = entry >> 12;
+		symbol = entry & 0x1FF;
 
-				u8 *out_dest = out + itt;
-				u8 *out_src = out + itt - actual_distance;
-				itt += actual_length;
-
-#ifdef __AVX2__
-				copy_with_avx2(out_dest, out_src,
-					       actual_length);
-#else
-				while (actual_length--)
-					*out_dest++ = *out_src++;
-#endif /* !__AVX2__ */
-
-			} else {
-				if (itt >= capacity) {
-					errno = EOVERFLOW;
-					return -1;
-				}
-				out[itt++] = sym.output.output_bytes[i];
+		bitstream_reader_clear(strm, length);
+		if (symbol < SYMBOL_TERM) {
+			if (itt >= capacity) {
+				errno = EOVERFLOW;
+				return -1;
 			}
-		}
+			out[itt++] = symbol;
+		} else if (symbol == SYMBOL_TERM) {
+			break;
+		} else if (compress_proc_match(symbol, strm, out, capacity,
+					       &itt) < 0)
+			return -1;
 	}
-term:
 	*bytes_consumed =
 	    (strm->bit_offset - strm->bits_in_buffer + 64 + 7) / 8;
 	return itt;

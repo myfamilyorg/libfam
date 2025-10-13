@@ -39,17 +39,6 @@
 #define MAX_MATCH_CODE 127
 #define SYMBOL_COUNT (MATCH_OFFSET + MAX_MATCH_CODE + 1)
 
-typedef struct {
-	u8 match_flags;
-	u8 bits_consumed;
-	u8 out_bytes;
-	u8 eb_offset;
-	union {
-		u32 output;
-		u8 output_bytes[4];
-	} output;
-} HuffSymbols;
-
 static inline u16 get_match_code(u16 len, u32 dist) {
 	u32 len_bits = 31 - clz_u32(len - 3);
 	u32 dist_bits = 31 - clz_u32(dist);
@@ -88,8 +77,5 @@ static inline u16 distance_extra_bits_value(u16 code, u16 actual_distance) {
 static inline u8 extra_bits(u8 match_code) {
 	return (match_code >> LEN_SHIFT) + (match_code & DIST_MASK);
 }
-
-void huff_lookup(HuffSymbols lookup_table[LOOKUP_SIZE],
-		 const u8 lengths[SYMBOL_COUNT], const u16 codes[SYMBOL_COUNT]);
 
 #endif /* _HUFF_H */
