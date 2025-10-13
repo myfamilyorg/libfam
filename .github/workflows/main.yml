@@ -103,7 +103,7 @@ jobs:
         run: uname -a
       - name: end2end
         run: |
-          #./.ci/end2end
+          ./.ci/end2end
   linux_aarch64_end2end:
     runs-on: ubuntu-24.04-arm
     strategy: 
@@ -116,5 +116,5 @@ jobs:
         run: uname -a
       - name: end2end
         run: |
-          #./.ci/end2end
+          ./.ci/end2end
 

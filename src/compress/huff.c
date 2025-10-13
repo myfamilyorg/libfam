@@ -32,7 +32,7 @@ STATIC_ASSERT(sizeof(HuffSymbols) == 8, huffman_symbols_size);
 STATIC void huff_fill(HuffSymbols lookup_table[LOOKUP_SIZE],
 		      const u8 lengths[SYMBOL_COUNT],
 		      const u16 codes[SYMBOL_COUNT], u32 index,
-		      HuffSymbols huff, u8 eb) {
+		      HuffSymbols huff, u8 eb, u16 symbol) {
 	u8 bit_depth = huff.bits_consumed - eb;
 	u32 fill_depth = 1U << (LOOKUP_BITS - bit_depth);
 	for (u32 i = 0; i < fill_depth; i++) {
@@ -40,7 +40,7 @@ STATIC void huff_fill(HuffSymbols lookup_table[LOOKUP_SIZE],
 		lookup_table[idx] = huff;
 	}
 
-	if (huff.out_bytes == 3) return;
+	if (huff.out_bytes == 3 || symbol == SYMBOL_TERM) return;
 
 	for (u16 i = 0; i < SYMBOL_COUNT; i++) {
 		if (!lengths[i]) continue;
@@ -70,7 +70,7 @@ STATIC void huff_fill(HuffSymbols lookup_table[LOOKUP_SIZE],
 				new_huff.output
 				    .output_bytes[new_huff.out_bytes] = i;
 			huff_fill(lookup_table, lengths, codes, new_index,
-				  new_huff, eb);
+				  new_huff, eb, i);
 		}
 	}
 }
@@ -88,8 +88,8 @@ void huff_lookup(HuffSymbols lookup_table[LOOKUP_SIZE],
 			    i >= SYMBOL_TERM ? i - SYMBOL_TERM : i;
 			huff.bits_consumed = lengths[i] + eb;
 			huff.eb_offset = lengths[i];
-			huff_fill(lookup_table, lengths, codes, index, huff,
-				  eb);
+			huff_fill(lookup_table, lengths, codes, index, huff, eb,
+				  i);
 		}
 	}
 }
