@@ -29,10 +29,6 @@
 
 STATIC_ASSERT(sizeof(HuffSymbols) == 8, huffman_symbols_size);
 
-STATIC u8 huff_extra_bits(u8 match_code) {
-	return length_extra_bits(match_code) + distance_extra_bits(match_code);
-}
-
 STATIC void huff_fill(HuffSymbols lookup_table[LOOKUP_SIZE],
 		      const u8 lengths[SYMBOL_COUNT],
 		      const u16 codes[SYMBOL_COUNT], u32 index,

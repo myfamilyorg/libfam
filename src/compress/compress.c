@@ -39,15 +39,15 @@ STATIC u16 compress_get_match_code(u16 len, u32 dist) {
 	return ((len_bits << LEN_SHIFT) | dist_bits);
 }
 
-STATIC u8 compress_length_extra_bits(u16 match_code) {
+u8 compress_length_extra_bits(u16 match_code) {
 	return match_code >> LEN_SHIFT;
 }
 
-STATIC u8 compress_distance_extra_bits(u16 match_code) {
+u8 compress_distance_extra_bits(u16 match_code) {
 	return match_code & DIST_MASK;
 }
 
-STATIC u16 compress_length_base(u16 match_code) {
+u16 compress_length_base(u16 match_code) {
 	u32 len_bits = match_code >> LEN_SHIFT;
 	return (1 << len_bits) - 1;
 }
@@ -106,8 +106,9 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 	hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = (u16)cpos;
 }
 
-STATIC void compress_find_matches(const u8 *in, u32 len, u8 *match_array,
-				  u32 frequencies[SYMBOL_COUNT]) {
+void compress_find_matches(const u8 *in, u32 len,
+			   u8 match_array[2 * MAX_COMPRESS32_LEN + 1],
+			   u32 frequencies[SYMBOL_COUNT]) {
 	u32 i = 0, j, max, out_itt = 0;
 	LzHash hash = {0};
 	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
@@ -430,76 +431,6 @@ INIT:
 
 CLEANUP:
 	RETURN;
-}
-
-STATIC void compress_build_lookup_table(
-    const u8 lengths[SYMBOL_COUNT], const u16 codes[SYMBOL_COUNT],
-    u16 lookup_table[(1U << MAX_CODE_LENGTH)]) {
-	i32 i, j;
-	for (i = 0; i < SYMBOL_COUNT; i++) {
-		if (lengths[i]) {
-			i32 index = codes[i] & ((1U << lengths[i]) - 1);
-			i32 fill_depth = 1U << (MAX_CODE_LENGTH - lengths[i]);
-			for (j = 0; j < fill_depth; j++) {
-				lookup_table[index | (j << lengths[i])] =
-				    (lengths[i] << 12) | i;
-			}
-		}
-	}
-}
-
-#ifdef __AVX2__
-INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
-				  u64 actual_length) {
-	if (out_src + 32 <= out_dest) {
-		u64 chunks = (actual_length + 31) >> 5;
-		while (chunks--) {
-			__m256i vec = _mm256_loadu_si256((__m256i *)out_src);
-			_mm256_storeu_si256((__m256i *)out_dest, vec);
-			out_src += 32;
-			out_dest += 32;
-		}
-	} else {
-		u64 remainder = actual_length;
-		while (remainder--) {
-			*out_dest++ = *out_src++;
-		}
-	}
-}
-#endif /* __AVX2__ */
-
-INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
-				      u8 *out, u32 capacity, u32 *itt) {
-	u16 match_code, base_length, len_extra, actual_length, base_dist,
-	    dist_extra, actual_distance;
-	match_code = symbol - MATCH_OFFSET;
-	u16 len_extra_bits = compress_length_extra_bits(match_code);
-	u16 dist_extra_bits = compress_distance_extra_bits(match_code);
-	base_length = compress_length_base(match_code);
-	base_dist = compress_distance_base(match_code);
-
-	len_extra = bitstream_reader_read(strm, len_extra_bits);
-	bitstream_reader_clear(strm, len_extra_bits);
-	dist_extra = bitstream_reader_read(strm, dist_extra_bits);
-	bitstream_reader_clear(strm, dist_extra_bits);
-
-	actual_length = 4 + base_length + len_extra;
-	actual_distance = base_dist + dist_extra;
-	if (actual_length + *itt > capacity) {
-		errno = EOVERFLOW;
-		return -1;
-	}
-
-	u8 *out_dest = out + *itt;
-	u8 *out_src = out + *itt - actual_distance;
-	*itt += actual_length;
-
-#ifdef __AVX2__
-	copy_with_avx2(out_dest, out_src, actual_length);
-#else
-	while (actual_length--) *out_dest++ = *out_src++;
-#endif /* !__AVX2__ */
-	return 0;
 }
 
 STATIC i32 compress_read_symbols(BitStreamReader *strm,
