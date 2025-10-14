@@ -38,6 +38,7 @@
 #define MAX_MATCH_DIST U16_MAX
 #define MIN_MATCH_DIST 1
 #define MAX_COMPRESS32_LEN (1 << 18)
+#define PAGE_SIZE (16384)
 
 #define WRITE(strm, value, bits)                              \
 	do {                                                  \
@@ -76,6 +77,14 @@ typedef struct {
 	HuffmanNode *nodes[SYMBOL_COUNT * 2];
 	u64 size;
 } HuffmanMinHeap;
+
+typedef struct {
+	u64 file_size;
+	u64 mtime;
+	u64 atime;
+	u16 permissions;
+	u16 version;
+} CompressHeader;
 
 u8 compress_length_extra_bits(u16 match_code);
 u8 compress_distance_extra_bits(u16 match_code);
