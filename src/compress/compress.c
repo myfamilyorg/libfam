@@ -817,6 +817,7 @@ INIT:
 	if (iouring_init_write(iou, out_fd, (u8 *)&header,
 			       sizeof(CompressHeader), 0, 0) < 0)
 		ERROR();
+	if (iouring_submit(iou, 1) < 0) ERROR();
 	u64 id;
 	i32 res = iouring_spin(iou, &id);
 	if (res < 0) ERROR(-res);
@@ -833,6 +834,7 @@ INIT:
 		if (iouring_init_read(iou, in_fd, in_chunk, in_chunk_size,
 				      in_offset, 1) < 0)
 			ERROR();
+		if (iouring_submit(iou, 1) < 0) ERROR();
 
 		// Process read completion
 		res = iouring_spin(iou, &id);
@@ -850,6 +852,7 @@ INIT:
 		if (iouring_init_write(iou, out_fd, out_chunk, result,
 				       out_offset, 2) < 0)
 			ERROR();
+		if (iouring_submit(iou, 1) < 0) ERROR();
 
 		// Process write completion
 		res = iouring_spin(iou, &id);

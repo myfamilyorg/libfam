@@ -129,7 +129,6 @@ INIT:
 	sqe->off = foffset;
 	sqe->user_data = id;
 	__aadd32(iou->sq_tail, 1);
-	if (io_uring_enter2(iou->ring_fd, 1, 0, 0, NULL, 0) < 0) ERROR();
 CLEANUP:
 	RETURN;
 }
@@ -148,9 +147,12 @@ INIT:
 	sqe->off = foffset;
 	sqe->user_data = id;
 	__aadd32(iou->sq_tail, 1);
-	if (io_uring_enter2(iou->ring_fd, 1, 0, 0, NULL, 0) < 0) ERROR();
 CLEANUP:
 	RETURN;
+}
+
+i32 iouring_submit(IoUring *iou, u32 count) {
+	return io_uring_enter2(iou->ring_fd, count, 0, 0, NULL, 0);
 }
 
 i32 iouring_wait(IoUring *iou, u64 *id) {
@@ -185,6 +187,22 @@ INIT:
 	}
 CLEANUP:
 	RETURN;
+}
+
+bool iouring_pending(IoUring *iou, u64 id) {
+	u32 hval = *iou->cq_head;
+	u32 tval = *iou->sq_tail;
+	u32 mask = *iou->cq_mask;
+	u32 index = hval;
+	while (index != tval) {
+		u32 sqe_idx = iou->sq_array[index & mask];
+		if (iou->sqes[sqe_idx].user_data == id) {
+			return true;
+		}
+		index++;
+	}
+
+	return false;
 }
 
 void iouring_destroy(IoUring *iou) {

@@ -1160,12 +1160,22 @@ Test(iouring_module) {
 	i32 fd_out = file(OUT_FILE_1);
 
 	iouring_init_read(iou, fd_in, buf, 1024, 0, 123);
+	iouring_submit(iou, 1);
+
+	ASSERT(iouring_pending(iou, 123), "pending 456");
 	i32 res = iouring_spin(iou, &id);
+	ASSERT(!iouring_pending(iou, 123), "pending 456");
+
 	ASSERT_EQ(res, 1024, "1024");
 	ASSERT_EQ(id, 123, "123");
 
 	iouring_init_write(iou, fd_out, buf, 1024, 0, 456);
+	iouring_submit(iou, 1);
+
+	ASSERT(iouring_pending(iou, 456), "pending 456");
 	res = iouring_wait(iou, &id);
+	ASSERT(!iouring_pending(iou, 456), "pending 456");
+
 	ASSERT_EQ(id, 456, "456");
 
 	close(fd_in);
