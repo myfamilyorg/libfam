@@ -31,6 +31,7 @@
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/format.h>
+#include <libfam/linux.h>
 #include <libfam/utils.h>
 
 STATIC MatchInfo lz_hash_get(const LzHash *hash, const u8 *text, u32 cpos) {
@@ -536,8 +537,9 @@ PUBLIC i32 decompress128k(const u8 *in, u32 len, u8 *out, u32 capacity,
 PUBLIC u64 compress_bound(u64 len) { return len + (len >> 7) + 1024; }
 
 PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
+	struct stat st;
 INIT:
-
+	fstat(in_fd, &st);
 CLEANUP:
 	RETURN;
 }
