@@ -417,7 +417,7 @@ INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 }
 #endif /* __AVX2__ */
 
-INLINE STATIC i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
+INLINE static i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 				      u8 *out, u32 capacity, u32 *itt) {
 	u8 match_code, len_extra;
 	u16 base_length, actual_length, base_dist, dist_extra, actual_distance;
@@ -505,7 +505,7 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 	return itt;
 }
 
-PUBLIC i32 compress32(const u8 *in, u32 len, u8 *out, u32 capacity) {
+PUBLIC i32 compress128k(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
@@ -522,8 +522,8 @@ PUBLIC i32 compress32(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	return compress_write(codes, lengths, match_array, out);
 }
 
-PUBLIC i32 decompress32(const u8 *in, u32 len, u8 *out, u32 capacity,
-			u64 *bytes_consumed) {
+PUBLIC i32 decompress128k(const u8 *in, u32 len, u8 *out, u32 capacity,
+			  u64 *bytes_consumed) {
 	BitStreamReader strm = {in, len};
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
@@ -534,4 +534,12 @@ PUBLIC i32 decompress32(const u8 *in, u32 len, u8 *out, u32 capacity,
 }
 
 PUBLIC u64 compress_bound(u64 len) { return len + (len >> 7) + 1024; }
+
+PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
+INIT:
+
+CLEANUP:
+	RETURN;
+}
+PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd);
 

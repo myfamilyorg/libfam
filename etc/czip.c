@@ -167,7 +167,7 @@ void do_compress(const CzipFileHeader *header, i32 in_fd, i32 out_fd) {
 		}
 		u8 *compress_chunk = out_chunk + out_offset_diff;
 		i32 result =
-		    compress32(in_chunk, chunk_size, compress_chunk,
+		    compress128k(in_chunk, chunk_size, compress_chunk,
 			       compress_bound(CHUNK_SIZE) + out_offset_diff);
 		if (result < 0) {
 			println("Failed to compress block due to {}.",
@@ -216,10 +216,10 @@ void do_decompress(const CzipFileHeader *header, i32 in_fd, i32 out_fd,
 				     out_offset_aligned);
 		u8 *out_block = out_chunk + out_offset_diff;
 
-		i32 result = decompress32(in_block, chunk_size, out_block,
+		i32 result = decompress128k(in_block, chunk_size, out_block,
 					  CHUNK_SIZE, &bytes_consumed);
 		if (result < 0) {
-			println("decompress32 failed: {}", strerror(errno));
+			println("decompress128k failed: {}", strerror(errno));
 			_exit(-1);
 		}
 
