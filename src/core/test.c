@@ -1004,6 +1004,10 @@ Test(fstatat) {
 	ASSERT(!fstatat(AT_FDCWD, path, &st, 0), "fstatat");
 	ASSERT_EQ(st.st_mtime, 8, "set to 8");
 	ASSERT_EQ(st.st_atime, 7, "set to 7");
+	st.st_mtime = st.st_atime = 0;
+	ASSERT(!fstat(fd, &st), "fstat");
+	ASSERT_EQ(st.st_mtime, 8, "set to 8");
+	ASSERT_EQ(st.st_atime, 7, "set to 7");
 
 	close(fd);
 	unlink(path);

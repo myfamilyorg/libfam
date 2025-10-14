@@ -43,6 +43,7 @@
 #define SYS_lseek 62
 #define SYS_read 63
 #define SYS_fstatat 79
+#define SYS_fstat 80
 #define SYS_fdatasync 83
 #define SYS_utimesat 88
 #define SYS_futex 98
@@ -70,6 +71,7 @@
 #elif defined(__x86_64__)
 #define SYS_read 0
 #define SYS_close 3
+#define SYS_fstat 5
 #define SYS_lseek 8
 #define SYS_mmap 9
 #define SYS_munmap 11
@@ -547,6 +549,16 @@ i32 io_uring_register(u32 fd, u32 opcode, void *arg, u32 nr_args) {
 INIT:
 	v = (i32)raw_syscall(SYS_io_uring_register, (i64)fd, (i64)opcode,
 			     (i64)arg, (i64)nr_args, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 fstat(i32 fd, struct stat *buf) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_fstat, (i64)fd, (i64)buf, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:

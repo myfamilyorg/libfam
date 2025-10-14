@@ -84,5 +84,6 @@ i32 io_uring_setup(u32 entries, struct io_uring_params *params);
 i32 io_uring_enter2(u32 fd, u32 to_submit, u32 min_complete, u32 flags,
 		    void *arg, u64 sz);
 i32 io_uring_register(u32 fd, u32 opcode, void *arg, u32 nr_args);
+i32 fstat(i32 fd, struct stat *buf);
 
 #endif /* _SYSCALL_H */
