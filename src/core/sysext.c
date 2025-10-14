@@ -25,6 +25,7 @@
 
 #include <libfam/debug.h>
 #include <libfam/linux.h>
+#include <libfam/linux_time.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
 #include <libfam/utils.h>

@@ -26,6 +26,7 @@
 #include <libfam/debug.h>
 #include <libfam/errno.h>
 #include <libfam/linux.h>
+#include <libfam/linux_time.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>
 

@@ -187,11 +187,6 @@ struct clone_args {
 	u64 set_tid_size;
 };
 
-struct timeval {
-	u64 tv_sec;
-	u64 tv_usec;
-};
-
 struct rt_sigaction {
 	void (*k_sa_handler)(i32);
 	u64 k_sa_flags;
@@ -213,11 +208,6 @@ struct sockaddr_in {
 	u8 sin_zero[8];
 };
 
-struct timespec {
-	u64 tv_sec;
-	u64 tv_nsec;
-};
-
 typedef union epoll_data {
 	void *ptr;
 	i32 fd;
@@ -229,14 +219,6 @@ struct epoll_event {
 	u32 events;
 	epoll_data_t data;
 } __attribute__((packed));
-
-#ifndef _NSIG
-#define _NSIG 64
-#endif /* _NSIG */
-
-typedef struct {
-	u64 bits[_NSIG / (8 * sizeof(u64))];
-} sigset_t;
 
 #ifdef __x86_64__
 struct stat {

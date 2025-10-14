@@ -31,6 +31,7 @@
 #include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
+#include <libfam/linux_time.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>

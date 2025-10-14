@@ -23,14 +23,20 @@
  *
  *******************************************************************************/
 
-#include <libfam/linux.h>
-#include <libfam/linux_time.h>
-#include <libfam/syscall.h>
-#include <libfam/utils.h>
+#ifndef _LINUX_TIME_H
+#define _LINUX_TIME_H
 
-PUBLIC i64 micros(void) {
-	struct timeval tv;
-	if (gettimeofday(&tv, NULL) < 0) return -1;
-	return (i64)tv.tv_sec * 1000000L + (i64)tv.tv_usec;
-}
+#include <libfam/types.h>
+
+struct timeval {
+	u64 tv_sec;
+	u64 tv_usec;
+};
+
+struct timespec {
+	u64 tv_sec;
+	u64 tv_nsec;
+};
+
+#endif /* _LINUX_TIME_H */
 
