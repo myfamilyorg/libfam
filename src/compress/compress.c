@@ -795,75 +795,81 @@ PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header;
 	u64 in_offset = 0;
 	u64 out_offset = sizeof(CompressHeader);
-	u8 in_chunk[MAX_COMPRESS32_LEN],
+	u8 in_chunk[2][MAX_COMPRESS32_LEN],
 	    out_chunk[compress_bound(MAX_COMPRESS32_LEN)];
 	u64 in_chunk_size = MAX_COMPRESS32_LEN,
 	    out_chunk_size = compress_bound(MAX_COMPRESS32_LEN);
 	IoUring *iou = NULL;
-
+	u64 next_read = 0;
 INIT:
-	// Initialize io_uring
 	if (iouring_init(&iou, 4) < 0) ERROR();
-
-	// Gather input metadata
 	header.file_size = fsize(in_fd);
 	header.version = 0;
 
-	// Write header
+	if (header.file_size == 0) ERROR(EINVAL);
+
 	if (iouring_init_write(iou, out_fd, (u8 *)&header,
 			       sizeof(CompressHeader), 0, 0) < 0)
 		ERROR();
 	if (iouring_submit(iou, 1) < 0) ERROR();
 	u64 id;
 	i32 res = iouring_spin(iou, &id);
-	if (res < 0) ERROR(-res);
-	if (id != 0) ERROR(EINVAL);
+	if (res < 0) ERROR();
 	if (res != sizeof(CompressHeader)) ERROR(EIO);
 
-	// Compression loop
-	while (in_offset < header.file_size || header.file_size == 0) {
-		// Prepare read
-		in_chunk_size = header.file_size
-				    ? min(header.file_size - in_offset,
-					  (u64)MAX_COMPRESS32_LEN)
-				    : MAX_COMPRESS32_LEN;
-		if (iouring_init_read(iou, in_fd, in_chunk, in_chunk_size,
-				      in_offset, 1) < 0)
-			ERROR();
-		if (iouring_submit(iou, 1) < 0) ERROR();
+	in_chunk_size = min(header.file_size, MAX_COMPRESS32_LEN);
+	if (iouring_init_read(iou, in_fd, in_chunk[0], in_chunk_size, in_offset,
+			      next_read) < 0)
+		ERROR();
+	iouring_submit(iou, 1);
 
-		// Process read completion
-		res = iouring_spin(iou, &id);
-		if (res < 0) ERROR(-res);
-		if (id != 1) ERROR(EINVAL);
-		if (res == 0) break;  // EOF
-		in_chunk_size = res;
+	while (in_offset < header.file_size) {
+		if (iouring_pending(iou, next_read)) {
+			while (true) {
+				u64 id;
+				iouring_spin(iou, &id);
+				if (id == next_read) break;
+			}
+		}
+		next_read++;
 
-		// Compress data
-		i32 result = compress128k(in_chunk, in_chunk_size, out_chunk,
-					  out_chunk_size);
+		if (in_offset + MAX_COMPRESS32_LEN <= header.file_size) {
+			in_chunk_size = min(
+			    header.file_size - (in_offset + MAX_COMPRESS32_LEN),
+			    MAX_COMPRESS32_LEN);
+			if (iouring_init_read(
+				iou, in_fd, in_chunk[next_read % 2],
+				in_chunk_size, in_offset + MAX_COMPRESS32_LEN,
+				next_read) < 0)
+				ERROR();
+			iouring_submit(iou, 1);
+		}
+
+		in_chunk_size =
+		    min(header.file_size - in_offset, MAX_COMPRESS32_LEN);
+
+		i32 result =
+		    compress128k(in_chunk[(next_read - 1) % 2], in_chunk_size,
+				 out_chunk, out_chunk_size);
 		if (result < 0) ERROR(EINVAL);
 
-		// Prepare write
 		if (iouring_init_write(iou, out_fd, out_chunk, result,
-				       out_offset, 2) < 0)
+				       out_offset, U64_MAX) < 0)
 			ERROR();
 		if (iouring_submit(iou, 1) < 0) ERROR();
 
-		// Process write completion
-		res = iouring_spin(iou, &id);
-		if (res < 0) ERROR(-res);
-		if (id != 2) ERROR(EINVAL);
-		if (res != result) ERROR(EIO);
+		while (true) {
+			u64 id;
+			iouring_spin(iou, &id);
+			if (id == U64_MAX) break;
+		}
 
 		in_offset += in_chunk_size;
-		out_offset += res;
+		out_offset += result;
 	}
 
-	// Final resize to exact output size
 	if (fresize(out_fd, out_offset) < 0) ERROR();
 
 CLEANUP:
-	iouring_destroy(iou);
 	RETURN;
 }
