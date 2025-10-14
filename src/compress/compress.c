@@ -795,7 +795,8 @@ PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header;
 	u64 in_offset = 0;
 	u64 out_offset = sizeof(CompressHeader);
-	u8 *in_chunk = NULL, *out_chunk = NULL;
+	u8 in_chunk[MAX_COMPRESS32_LEN],
+	    out_chunk[compress_bound(MAX_COMPRESS32_LEN)];
 	u64 in_chunk_size = MAX_COMPRESS32_LEN,
 	    out_chunk_size = compress_bound(MAX_COMPRESS32_LEN);
 	IoUring *iou = NULL;
@@ -803,11 +804,6 @@ PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 INIT:
 	// Initialize io_uring
 	if (iouring_init(&iou, 4) < 0) ERROR();
-
-	// Allocate buffers
-	in_chunk = alloc(in_chunk_size);
-	out_chunk = alloc(out_chunk_size);
-	if (!in_chunk || !out_chunk) ERROR(ENOMEM);
 
 	// Gather input metadata
 	header.file_size = fsize(in_fd);
@@ -868,8 +864,6 @@ INIT:
 	if (fresize(out_fd, out_offset) < 0) ERROR();
 
 CLEANUP:
-	if (in_chunk) release(in_chunk);
-	if (out_chunk) release(out_chunk);
 	iouring_destroy(iou);
 	RETURN;
 }
