@@ -32,6 +32,7 @@
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/format.h>
+#include <libfam/iouring.h>
 #include <libfam/linux.h>
 #include <libfam/memory.h>
 #include <libfam/sysext.h>
@@ -795,45 +796,15 @@ PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 	u64 in_offset = 0;
 	u64 out_offset = sizeof(CompressHeader);
 	u8 *in_chunk = NULL, *out_chunk = NULL;
-	u64 in_chunk_size = 0, out_chunk_size = 0;
-	struct io_uring_params params = {0};
-	i32 ring_fd = -1;
-	u8 *sq_ring = NULL, *cq_ring = NULL;
-	struct io_uring_sqe *sqes = NULL;
-	u32 sq_ring_size, cq_ring_size;
+	u64 in_chunk_size = MAX_COMPRESS32_LEN,
+	    out_chunk_size = compress_bound(MAX_COMPRESS32_LEN);
+	IoUring *iou = NULL;
 
 INIT:
 	// Initialize io_uring
-	ring_fd = io_uring_setup(QUEUE_DEPTH, &params);
-	if (ring_fd < 0) ERROR(EIO);
-
-	// Map submission and completion queues
-	sq_ring_size = params.sq_off.array + params.sq_entries * sizeof(u32);
-	cq_ring_size = params.cq_off.cqes +
-		       params.cq_entries * sizeof(struct io_uring_cqe);
-	sq_ring = mmap(NULL, sq_ring_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-		       ring_fd, IORING_OFF_SQ_RING);
-	if (sq_ring == MAP_FAILED) ERROR(ENOMEM);
-	cq_ring = mmap(NULL, cq_ring_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-		       ring_fd, IORING_OFF_CQ_RING);
-	if (cq_ring == MAP_FAILED) ERROR(ENOMEM);
-	sqes =
-	    mmap(NULL, params.sq_entries * sizeof(struct io_uring_sqe),
-		 PROT_READ | PROT_WRITE, MAP_SHARED, ring_fd, IORING_OFF_SQES);
-	if (sqes == MAP_FAILED) ERROR(ENOMEM);
-
-	// Setup queue pointers
-	u32 *sq_tail = (u32 *)(sq_ring + params.sq_off.tail);
-	u32 *sq_array = (u32 *)(sq_ring + params.sq_off.array);
-	u32 *cq_head = (u32 *)(cq_ring + params.cq_off.head);
-	u32 *cq_tail = (u32 *)(cq_ring + params.cq_off.tail);
-	u32 *ring_mask = (u32 *)(cq_ring + params.cq_off.ring_mask);
-	struct io_uring_cqe *cqes =
-	    (struct io_uring_cqe *)(cq_ring + params.cq_off.cqes);
+	if (iouring_init(&iou, 4) < 0) ERROR();
 
 	// Allocate buffers
-	in_chunk_size = MAX_COMPRESS32_LEN;
-	out_chunk_size = compress_bound(MAX_COMPRESS32_LEN);
 	in_chunk = alloc(in_chunk_size);
 	out_chunk = alloc(out_chunk_size);
 	if (!in_chunk || !out_chunk) ERROR(ENOMEM);
@@ -843,25 +814,14 @@ INIT:
 	header.version = 0;
 
 	// Write header
-	sqes[0].opcode = IORING_OP_WRITE;
-	sqes[0].flags = 0;
-	sqes[0].fd = out_fd;
-	sqes[0].addr = (u64)&header;
-	sqes[0].len = sizeof(CompressHeader);
-	sqes[0].off = 0;
-	sqes[0].user_data = 2;
-	sq_array[0] = 0;
-	__aadd32(sq_tail, 1);
-	if (io_uring_enter2(ring_fd, 1, 1, IORING_ENTER_GETEVENTS, NULL, 0) < 0)
-		ERROR(EIO);
-	if (*cq_head == *cq_tail) ERROR(EIO);
-	i32 cqe_idx = *cq_head & *ring_mask;
-	if (cqes[cqe_idx].res < 0) {
-		errno = -cqes[cqe_idx].res;
-		ERROR(errno);
-	}
-	if (cqes[cqe_idx].res != sizeof(CompressHeader)) ERROR(EIO);
-	__aadd32(cq_head, 1);
+	if (iouring_init_write(iou, out_fd, (u8 *)&header,
+			       sizeof(CompressHeader), 0, 0) < 0)
+		ERROR();
+	u64 id;
+	i32 res = iouring_spin(iou, &id);
+	if (res < 0) ERROR(-res);
+	if (id != 0) ERROR(EINVAL);
+	if (res != sizeof(CompressHeader)) ERROR(EIO);
 
 	// Compression loop
 	while (in_offset < header.file_size || header.file_size == 0) {
@@ -870,32 +830,16 @@ INIT:
 				    ? min(header.file_size - in_offset,
 					  (u64)MAX_COMPRESS32_LEN)
 				    : MAX_COMPRESS32_LEN;
-		sqes[0].opcode = IORING_OP_READ;
-		sqes[0].flags = 0;
-		sqes[0].fd = in_fd;
-		sqes[0].addr = (u64)in_chunk;
-		sqes[0].len = in_chunk_size;
-		sqes[0].off = in_offset;
-		sqes[0].user_data = 1;
-		sq_array[0] = 0;
-		__aadd32(sq_tail, 1);
+		if (iouring_init_read(iou, in_fd, in_chunk, in_chunk_size,
+				      in_offset, 1) < 0)
+			ERROR();
 
-		// Submit read
-		if (io_uring_enter2(ring_fd, 1, 1, IORING_ENTER_GETEVENTS, NULL,
-				    0) < 0)
-			ERROR(EIO);
-		if (*cq_head == *cq_tail) ERROR(EIO);
-		cqe_idx = *cq_head & *ring_mask;
-		if (cqes[cqe_idx].res < 0) {
-			errno = -cqes[cqe_idx].res;
-			ERROR(errno);
-		}
-		if (cqes[cqe_idx].res == 0) {  // EOF
-			__aadd32(cq_head, 1);
-			break;
-		}
-		in_chunk_size = cqes[cqe_idx].res;
-		__aadd32(cq_head, 1);
+		// Process read completion
+		res = iouring_spin(iou, &id);
+		if (res < 0) ERROR(-res);
+		if (id != 1) ERROR(EINVAL);
+		if (res == 0) break;  // EOF
+		in_chunk_size = res;
 
 		// Compress data
 		i32 result = compress128k(in_chunk, in_chunk_size, out_chunk,
@@ -903,40 +847,26 @@ INIT:
 		if (result < 0) ERROR(EINVAL);
 
 		// Prepare write
-		sqes[0].opcode = IORING_OP_WRITE;
-		sqes[0].flags = 0;
-		sqes[0].fd = out_fd;
-		sqes[0].addr = (u64)out_chunk;
-		sqes[0].len = result;
-		sqes[0].off = out_offset;
-		sqes[0].user_data = 2;
-		sq_array[0] = 0;
-		__aadd32(sq_tail, 1);
+		if (iouring_init_write(iou, out_fd, out_chunk, result,
+				       out_offset, 2) < 0)
+			ERROR();
 
-		// Submit write
-		if (io_uring_enter2(ring_fd, 1, 1, IORING_ENTER_GETEVENTS, NULL,
-				    0) < 0)
-			ERROR(EIO);
-		if (*cq_head == *cq_tail) ERROR(EIO);
-		cqe_idx = *cq_head & *ring_mask;
-		if (cqes[cqe_idx].res < 0) {
-			errno = -cqes[cqe_idx].res;
-			ERROR(errno);
-		}
-		if (cqes[cqe_idx].res != result) ERROR(EIO);
+		// Process write completion
+		res = iouring_spin(iou, &id);
+		if (res < 0) ERROR(-res);
+		if (id != 2) ERROR(EINVAL);
+		if (res != result) ERROR(EIO);
+
 		in_offset += in_chunk_size;
-		out_offset += cqes[cqe_idx].res;
-		__aadd32(cq_head, 1);
+		out_offset += res;
 	}
 
+	// Final resize to exact output size
 	if (fresize(out_fd, out_offset) < 0) ERROR();
 
 CLEANUP:
 	if (in_chunk) release(in_chunk);
 	if (out_chunk) release(out_chunk);
-	if (sqes) munmap(sqes, params.sq_entries * sizeof(struct io_uring_sqe));
-	if (cq_ring) munmap(cq_ring, cq_ring_size);
-	if (sq_ring) munmap(sq_ring, sq_ring_size);
-	if (ring_fd >= 0) close(ring_fd);
+	iouring_destroy(iou);
 	RETURN;
 }
