@@ -29,6 +29,7 @@
 #include <libfam/bitmap.h>
 #include <libfam/debug.h>
 #include <libfam/format.h>
+#include <libfam/iouring.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/linux_time.h>
@@ -1144,4 +1145,33 @@ Test(ioruring_read_file) {
 	munmap(cq_ring, cq_ring_size);
 	munmap(sqes, params.sq_entries * sizeof(struct io_uring_sqe));
 	close(fd);
+}
+
+#define OUT_FILE_1 "/tmp/test_out1.txt"
+
+Test(iouring_module) {
+	unlink(OUT_FILE_1);
+	IoUring *iou = NULL;
+	ASSERT(!iouring_init(&iou, 4), "iouring_init");
+	u8 buf[1025] = {0};
+	u64 id;
+
+	i32 fd_in = file("resources/akjv5.txt");
+	i32 fd_out = file(OUT_FILE_1);
+
+	iouring_init_read(iou, fd_in, buf, 1024, 0, 123);
+	i32 res = iouring_spin(iou, &id);
+	ASSERT_EQ(res, 1024, "1024");
+	ASSERT_EQ(id, 123, "123");
+
+	iouring_init_write(iou, fd_out, buf, 1024, 0, 456);
+	res = iouring_wait(iou, &id);
+	ASSERT_EQ(id, 456, "456");
+
+	close(fd_in);
+	close(fd_out);
+	unlink(OUT_FILE_1);
+
+	iouring_destroy(iou);
+	ASSERT_BYTES(0);
 }

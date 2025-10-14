@@ -23,34 +23,19 @@
  *
  *******************************************************************************/
 
-#ifndef _ERRNO_H
-#define _ERRNO_H
+#ifndef _IO_URING_H
 
 #include <libfam/types.h>
 
-i32 *__error(void);
-#define errno (*__error())
+typedef struct IoUring IoUring;
 
-char *strerror(i32 err_code);
-void perror(const u8 *);
+i32 iouring_init(IoUring **iou, u32 queue_depth);
+i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
+		      u64 foffset, u64 id);
+i32 iouring_init_write(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
+		       u64 id);
+i32 iouring_wait(IoUring *iou, u64 *id);
+i32 iouring_spin(IoUring *iou, u64 *id);
+void iouring_destroy(IoUring *iou);
 
-#define SUCCESS 0
-#define EPERM 1
-#define ENOENT 2
-#define EINTR 4
-#define EIO 5
-#define EBADF 9
-#define ECHILD 10
-#define EAGAIN 11
-#define ENOMEM 12
-#define EFAULT 14
-#define EBUSY 16
-#define EINVAL 22
-#define ENOSPC 28
-#define EPIPE 32
-#define EPROTO 71
-#define EOVERFLOW 75
-#define EDUPLICATE 1001
-#define ETODO 1002
-
-#endif /* _ERRNO_H */
+#endif /* _IO_URING_H */
