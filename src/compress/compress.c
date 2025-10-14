@@ -638,7 +638,7 @@ CLEANUP:
 
 #define QUEUE_DEPTH 2
 
-i32 decompress_stream(i32 in_fd, i32 out_fd) {
+PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header;
 	u64 in_offset = sizeof(CompressHeader);
 	u64 out_offset = 0;

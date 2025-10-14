@@ -192,6 +192,8 @@ void do_compress(const CzipFileHeader *header, i32 in_fd, i32 out_fd) {
 
 void do_decompress(const CzipFileHeader *header, i32 in_fd, i32 out_fd,
 		   u64 in_file_size) {
+	decompress_stream(in_fd, out_fd);
+	/*
 	u8 output[1024 * 1024];
 	u64 in_offset = sizeof(CzipFileHeader);
 	u64 out_offset = 0;
@@ -233,6 +235,7 @@ void do_decompress(const CzipFileHeader *header, i32 in_fd, i32 out_fd,
 	}
 
 	fresize(out_fd, out_offset);
+	*/
 }
 
 void run_compressor(CzipConfig *config) {
