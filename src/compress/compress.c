@@ -796,11 +796,11 @@ PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 	u64 in_offset = 0;
 	u64 out_offset = sizeof(CompressHeader);
 	u8 in_chunk[2][MAX_COMPRESS32_LEN],
-	    out_chunk[compress_bound(MAX_COMPRESS32_LEN)];
+	    out_chunk[2][compress_bound(MAX_COMPRESS32_LEN)];
 	u64 in_chunk_size = MAX_COMPRESS32_LEN,
 	    out_chunk_size = compress_bound(MAX_COMPRESS32_LEN);
 	IoUring *iou = NULL;
-	u64 next_read = 0;
+	u64 next_read = 0, next_write = U64_MAX, id;
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
 	header.file_size = fsize(in_fd);
@@ -812,7 +812,6 @@ INIT:
 			       sizeof(CompressHeader), 0, 0) < 0)
 		ERROR();
 	if (iouring_submit(iou, 1) < 0) ERROR();
-	u64 id;
 	i32 res = iouring_spin(iou, &id);
 	if (res < 0) ERROR();
 	if (res != sizeof(CompressHeader)) ERROR(EIO);
@@ -826,7 +825,6 @@ INIT:
 	while (in_offset < header.file_size) {
 		if (iouring_pending(iou, next_read)) {
 			while (true) {
-				u64 id;
 				iouring_spin(iou, &id);
 				if (id == next_read) break;
 			}
@@ -850,26 +848,29 @@ INIT:
 
 		i32 result =
 		    compress128k(in_chunk[(next_read - 1) % 2], in_chunk_size,
-				 out_chunk, out_chunk_size);
+				 out_chunk[next_write % 2], out_chunk_size);
 		if (result < 0) ERROR(EINVAL);
 
-		if (iouring_init_write(iou, out_fd, out_chunk, result,
-				       out_offset, U64_MAX) < 0)
+		if (iouring_init_write(iou, out_fd, out_chunk[next_write % 2],
+				       result, out_offset, next_write) < 0)
 			ERROR();
 		if (iouring_submit(iou, 1) < 0) ERROR();
 
-		while (true) {
-			u64 id;
-			iouring_spin(iou, &id);
-			if (id == U64_MAX) break;
+		if (next_write != U64_MAX) {
+			if (iouring_pending(iou, next_write + 1)) {
+				while (true) {
+					iouring_spin(iou, &id);
+					if (id == next_write + 1) break;
+				}
+			}
 		}
 
+		next_write--;
 		in_offset += in_chunk_size;
 		out_offset += result;
 	}
-
+	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
 	if (fresize(out_fd, out_offset) < 0) ERROR();
-
 CLEANUP:
 	RETURN;
 }

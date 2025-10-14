@@ -189,10 +189,14 @@ CLEANUP:
 	RETURN;
 }
 
+bool iouring_pending_all(IoUring *iou) {
+	return *iou->cq_head != *iou->sq_tail;
+}
+
 bool iouring_pending(IoUring *iou, u64 id) {
 	u32 hval = *iou->cq_head;
 	u32 tval = *iou->sq_tail;
-	u32 mask = *iou->cq_mask;
+	u32 mask = *iou->sq_mask;
 	u32 index = hval;
 	while (index != tval) {
 		u32 sqe_idx = iou->sq_array[index & mask];
