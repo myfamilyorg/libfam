@@ -123,6 +123,8 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 }
 
 void do_compress(const CzipFileHeader *header, i32 in_fd, i32 out_fd) {
+	compress_stream(in_fd, out_fd);
+	/*
 	u64 out_offset = 0;
 	u64 in_offset = 0;
 
@@ -185,6 +187,7 @@ void do_compress(const CzipFileHeader *header, i32 in_fd, i32 out_fd) {
 		println("failed to resize output file");
 		_exit(-1);
 	}
+	*/
 }
 
 void do_decompress(const CzipFileHeader *header, i32 in_fd, i32 out_fd,
@@ -217,7 +220,7 @@ void do_decompress(const CzipFileHeader *header, i32 in_fd, i32 out_fd,
 		u8 *out_block = out_chunk + out_offset_diff;
 
 		i32 result = decompress128k(in_block, chunk_size, out_block,
-					  CHUNK_SIZE, &bytes_consumed);
+					    CHUNK_SIZE, &bytes_consumed);
 		if (result < 0) {
 			println("decompress128k failed: {}", strerror(errno));
 			_exit(-1);
