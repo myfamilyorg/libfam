@@ -649,6 +649,7 @@ PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	u8 *sq_ring = NULL, *cq_ring = NULL;
 	struct io_uring_sqe *sqes = NULL;
 	u32 sq_ring_size, cq_ring_size;
+	u64 in_file_size = fsize(in_fd);
 
 INIT:
 	// Initialize io_uring
@@ -710,8 +711,14 @@ INIT:
 	// Decompression loop
 	while (out_offset < header.file_size) {
 		// Prepare read
+		/*
 		in_chunk_size = min(compress_bound(MAX_COMPRESS32_LEN),
 				    header.file_size - out_offset);
+				    */
+		in_chunk_size =
+		    min(compress_bound(MAX_COMPRESS32_LEN),
+			in_file_size == (u64)-1 ? (u64)-1
+						: in_file_size - in_offset);
 		sqes[0].opcode = IORING_OP_READ;
 		sqes[0].flags = 0;
 		sqes[0].fd = in_fd;
