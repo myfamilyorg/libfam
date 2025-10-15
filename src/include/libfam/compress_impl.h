@@ -39,7 +39,7 @@
 #define MIN_MATCH_DIST 1
 #define MAX_COMPRESS32_LEN (1 << 18)
 #define MAX_COMPRESS32_BOUND_LEN \
-	(MAX_COMPRESS32_LEN + (MAX_COMPRESS32_LEN >> 7) + 1024)
+	(MAX_COMPRESS32_LEN + (MAX_COMPRESS32_LEN >> 5) + 1024)
 #define PAGE_SIZE (16384)
 
 #define WRITE(strm, value, bits)                              \

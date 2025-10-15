@@ -538,7 +538,7 @@ PUBLIC i32 decompress128k(const u8 *in, u32 len, u8 *out, u32 capacity,
 				     bytes_consumed);
 }
 
-PUBLIC u64 compress_bound(u64 len) { return len + (len >> 7) + 1024; }
+PUBLIC u64 compress_bound(u64 len) { return len + (len >> 5) + 1024; }
 
 PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header = {0};
