@@ -544,13 +544,11 @@ PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header;
 	u64 in_offset = sizeof(CompressHeader);
 	u64 out_offset = 0;
-	u8 in_chunk[2][2 * compress_bound(MAX_COMPRESS32_LEN)],
+	u8 in_chunk[compress_bound(MAX_COMPRESS32_LEN)],
 	    out_chunk[MAX_COMPRESS32_LEN];
 	u64 in_chunk_size = 0, out_chunk_size = 0, id;
 	IoUring *iou = NULL;
-	u64 in_file_size = fsize(in_fd), bytes_consumed = 0;
-	i32 result = 0;
-	u64 next_id = 0;
+	u64 in_file_size = fsize(in_fd);
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
 
@@ -564,53 +562,29 @@ INIT:
 	if (iouring_submit(iou, 1) < 0) ERROR();
 	iouring_spin(iou, &id);
 
-	in_chunk_size = min(header.file_size - in_offset,
-			    compress_bound(MAX_COMPRESS32_LEN));
-	if (iouring_init_read(iou, in_fd, in_chunk[0], in_chunk_size, in_offset,
-			      next_id) < 0)
-		ERROR();
-	iouring_submit(iou, 1);
-
 	while (out_offset < header.file_size) {
-		if (iouring_pending(iou, next_id)) {
-			while (true) {
-				iouring_spin(iou, &id);
-				if (id == next_id) break;
-			}
-		}
+		in_chunk_size = min(compress_bound(MAX_COMPRESS32_LEN),
+				    in_file_size - in_offset);
+		if (iouring_init_read(iou, in_fd, in_chunk, in_chunk_size,
+				      in_offset, 0) < 0)
+			ERROR();
 
-		if (in_offset + compress_bound(MAX_COMPRESS32_LEN) <=
-		    header.file_size) {
-			in_chunk_size =
-			    min(2 * compress_bound(MAX_COMPRESS32_LEN),
-				in_file_size - in_offset);
-			if (iouring_init_read(
-				iou, in_fd, in_chunk[(next_id + 1) % 2],
-				in_chunk_size, in_offset, next_id + 1) < 0)
-				ERROR();
-			if (iouring_submit(iou, 1) < 0) ERROR();
-		}
+		if (iouring_submit(iou, 1) < 0) ERROR();
+		iouring_spin(iou, &id);
 
-		in_chunk_size = min(header.file_size - in_offset,
-				    compress_bound(MAX_COMPRESS32_LEN));
-
-		result = decompress128k(in_chunk[next_id % 2] + bytes_consumed,
-					in_chunk_size, out_chunk,
-					out_chunk_size, &bytes_consumed);
+		u64 bytes_consumed;
+		i32 result = decompress128k(in_chunk, in_chunk_size, out_chunk,
+					    out_chunk_size, &bytes_consumed);
 		if (result < 0) ERROR(EINVAL);
 
 		if (iouring_init_write(iou, out_fd, out_chunk, result,
-				       out_offset, U64_MAX) < 0)
+				       out_offset, 0) < 0)
 			ERROR();
 		if (iouring_submit(iou, 1) < 0) ERROR();
-		while (true) {
-			iouring_spin(iou, &id);
-			if (id == U64_MAX) break;
-		}
+		iouring_spin(iou, &id);
 
 		in_offset += bytes_consumed;
 		out_offset += result;
-		next_id++;
 	}
 
 	if (fresize(out_fd, out_offset) < 0) ERROR();

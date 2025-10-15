@@ -4,6 +4,7 @@
 sudo ./build install
 
 head -c 5G /dev/urandom > ./5gb.txt
+ls -l ./5gb.txt
 INITIAL_CHECKSUM=`md5sum ./5gb.txt`
 echo "initial checksum=${INITIAL_CHECKSUM}"
 czip ./5gb.txt
