@@ -528,7 +528,7 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 }
 
 PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
-			  u64 *bytes_consumed) {
+			    u64 *bytes_consumed) {
 	BitStreamReader strm = {in, len};
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
@@ -580,8 +580,8 @@ INIT:
 
 		u64 bytes_consumed;
 		i32 result = decompress_block(in_chunk, in_chunk_size,
-					    out_chunk[next_write % 4],
-					    out_chunk_size, &bytes_consumed);
+					      out_chunk[next_write % 4],
+					      out_chunk_size, &bytes_consumed);
 		if (result < 0) ERROR(EINVAL);
 
 		if (iouring_init_write(iou, out_fd, out_chunk[next_write % 4],
@@ -605,8 +605,9 @@ INIT:
 
 	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
 	if (fresize(out_fd, out_offset) < 0) ERROR();
-
+	if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
 CLEANUP:
+	if (iou) iouring_destroy(iou);
 	RETURN;
 }
 
@@ -620,10 +621,16 @@ PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 	    out_chunk_size = compress_bound(MAX_COMPRESS_LEN);
 	IoUring *iou = NULL;
 	u64 next_read = 0, next_write = U64_MAX, id;
+	struct stat st;
 INIT:
-	if (iouring_init(&iou, 4) < 0) ERROR();
+	if (fstat(in_fd, &st) < 0) ERROR();
+	if (!S_ISREG(st.st_mode)) ERROR(EINVAL);
+
 	header.file_size = fsize(in_fd);
 	header.version = 0;
+	header.permissions = st.st_mode & 07777;
+
+	if (iouring_init(&iou, 4) < 0) ERROR();
 
 	if (header.file_size == 0) ERROR(EINVAL);
 
@@ -667,7 +674,7 @@ INIT:
 
 		i32 result =
 		    compress_block(in_chunk[(next_read - 1) % 2], in_chunk_size,
-				 out_chunk[next_write % 2], out_chunk_size);
+				   out_chunk[next_write % 2], out_chunk_size);
 		if (result < 0) ERROR(EINVAL);
 
 		if (iouring_init_write(iou, out_fd, out_chunk[next_write % 2],
@@ -690,6 +697,7 @@ INIT:
 	}
 	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
 	if (fresize(out_fd, out_offset) < 0) ERROR();
+	if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
 CLEANUP:
 	if (iou) iouring_destroy(iou);
 	RETURN;
