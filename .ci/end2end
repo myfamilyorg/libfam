@@ -14,6 +14,7 @@ if [ -e ./5gb.txt ]; then
 fi
 ls -l ./5gb.txt.cz
 czip -d ./5gb.txt.cz
+ls -l ./5gb.txt
 FINAL_CHECKSUM=`md5sum ./5gb.txt`
 echo "final checksum=${FINAL_CHECKSUM}"
 if [ "${FINAL_CHECKSUM}" != "${INITIAL_CHECKSUM}" ]; then

@@ -545,10 +545,11 @@ PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	u64 in_offset = sizeof(CompressHeader);
 	u64 out_offset = 0;
 	u8 in_chunk[compress_bound(MAX_COMPRESS32_LEN)],
-	    out_chunk[MAX_COMPRESS32_LEN];
+	    out_chunk[4][MAX_COMPRESS32_LEN];
 	u64 in_chunk_size = 0, out_chunk_size = 0, id;
 	IoUring *iou = NULL;
 	u64 in_file_size = fsize(in_fd);
+	u64 next_write = U32_MAX, next_read = 0;
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
 
@@ -556,37 +557,53 @@ INIT:
 	out_chunk_size = MAX_COMPRESS32_LEN;
 
 	if (iouring_init_read(iou, in_fd, &header, sizeof(CompressHeader), 0,
-			      0) < 0)
+			      next_read) < 0)
 		ERROR();
+	next_read++;
 
 	if (iouring_submit(iou, 1) < 0) ERROR();
-	iouring_spin(iou, &id);
+	iouring_wait(iou, &id);
 
 	while (out_offset < header.file_size) {
 		in_chunk_size = min(compress_bound(MAX_COMPRESS32_LEN),
 				    in_file_size - in_offset);
 		if (iouring_init_read(iou, in_fd, in_chunk, in_chunk_size,
-				      in_offset, 0) < 0)
+				      in_offset, next_read) < 0)
 			ERROR();
 
 		if (iouring_submit(iou, 1) < 0) ERROR();
-		iouring_spin(iou, &id);
+		while (true) {
+			iouring_wait(iou, &id);
+			if (id == next_read) break;
+		}
+		next_read++;
 
 		u64 bytes_consumed;
-		i32 result = decompress128k(in_chunk, in_chunk_size, out_chunk,
+		i32 result = decompress128k(in_chunk, in_chunk_size,
+					    out_chunk[next_write % 4],
 					    out_chunk_size, &bytes_consumed);
 		if (result < 0) ERROR(EINVAL);
 
-		if (iouring_init_write(iou, out_fd, out_chunk, result,
-				       out_offset, 0) < 0)
+		if (iouring_init_write(iou, out_fd, out_chunk[next_write % 4],
+				       result, out_offset, next_write) < 0)
 			ERROR();
 		if (iouring_submit(iou, 1) < 0) ERROR();
-		iouring_spin(iou, &id);
+
+		if (next_write != U64_MAX) {
+			if (iouring_pending(iou, next_write + 1)) {
+				while (true) {
+					iouring_wait(iou, &id);
+					if (id == next_write + 1) break;
+				}
+			}
+		}
 
 		in_offset += bytes_consumed;
 		out_offset += result;
+		next_write--;
 	}
 
+	while (iouring_pending_all(iou)) iouring_wait(iou, &id);
 	if (fresize(out_fd, out_offset) < 0) ERROR();
 
 CLEANUP:
