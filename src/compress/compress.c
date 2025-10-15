@@ -34,6 +34,7 @@
 #include <libfam/format.h>
 #include <libfam/iouring.h>
 #include <libfam/linux.h>
+#include <libfam/linux_time.h>
 #include <libfam/memory.h>
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
@@ -550,6 +551,7 @@ PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	IoUring *iou = NULL;
 	u64 in_file_size = fsize(in_fd);
 	u64 next_write = U32_MAX, next_read = 0;
+	struct timeval ts[2] = {0};
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
 
@@ -606,6 +608,10 @@ INIT:
 	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
 	if (fresize(out_fd, out_offset) < 0) ERROR();
 	if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
+
+	ts[0].tv_sec = header.atime;
+	ts[1].tv_sec = header.mtime;
+	if (utimesat(out_fd, NULL, ts, 0) < 0) ERROR();
 CLEANUP:
 	if (iou) iouring_destroy(iou);
 	RETURN;
@@ -629,6 +635,8 @@ INIT:
 	header.file_size = fsize(in_fd);
 	header.version = 0;
 	header.permissions = st.st_mode & 07777;
+	header.mtime = st.st_mtime;
+	header.atime = st.st_atime;
 
 	if (iouring_init(&iou, 4) < 0) ERROR();
 
