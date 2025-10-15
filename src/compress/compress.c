@@ -77,7 +77,7 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 }
 
 void compress_find_matches(const u8 *in, u32 len,
-			   u8 match_array[2 * MAX_COMPRESS32_LEN + 1],
+			   u8 match_array[2 * MAX_COMPRESS_LEN + 1],
 			   u32 frequencies[SYMBOL_COUNT]) {
 	u32 i = 0, max, out_itt = 0;
 	LzHash hash = {0};
@@ -336,7 +336,7 @@ CLEANUP:
 
 STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			  const u8 lengths[SYMBOL_COUNT],
-			  const u8 match_array[2 * MAX_COMPRESS32_LEN + 1],
+			  const u8 match_array[2 * MAX_COMPRESS_LEN + 1],
 			  u8 *out) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
@@ -510,13 +510,13 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 	return itt;
 }
 
-PUBLIC i32 compress128k(const u8 *in, u32 len, u8 *out, u32 capacity) {
+PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	u8 lengths[SYMBOL_COUNT] = {0};
 	u16 codes[SYMBOL_COUNT] = {0};
-	u8 match_array[2 * MAX_COMPRESS32_LEN + 1] = {0};
+	u8 match_array[2 * MAX_COMPRESS_LEN + 1] = {0};
 
-	if (capacity < compress_bound(len) || len > MAX_COMPRESS32_LEN) {
+	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -527,7 +527,7 @@ PUBLIC i32 compress128k(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	return compress_write(codes, lengths, match_array, out);
 }
 
-PUBLIC i32 decompress128k(const u8 *in, u32 len, u8 *out, u32 capacity,
+PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
 			  u64 *bytes_consumed) {
 	BitStreamReader strm = {in, len};
 	u8 lengths[SYMBOL_COUNT] = {0};
@@ -544,8 +544,8 @@ PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header = {0};
 	u64 in_offset = sizeof(CompressHeader);
 	u64 out_offset = 0;
-	u8 in_chunk[MAX_COMPRESS32_BOUND_LEN] = {0},
-	   out_chunk[4][MAX_COMPRESS32_LEN] = {0};
+	u8 in_chunk[MAX_COMPRESS_BOUND_LEN] = {0},
+	   out_chunk[4][MAX_COMPRESS_LEN] = {0};
 	u64 in_chunk_size = 0, out_chunk_size = 0, id;
 	IoUring *iou = NULL;
 	u64 in_file_size = fsize(in_fd);
@@ -553,8 +553,8 @@ PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
 
-	in_chunk_size = compress_bound(MAX_COMPRESS32_LEN);
-	out_chunk_size = MAX_COMPRESS32_LEN;
+	in_chunk_size = compress_bound(MAX_COMPRESS_LEN);
+	out_chunk_size = MAX_COMPRESS_LEN;
 
 	if (iouring_init_read(iou, in_fd, &header, sizeof(CompressHeader), 0,
 			      next_read) < 0)
@@ -565,7 +565,7 @@ INIT:
 	iouring_spin(iou, &id);
 
 	while (out_offset < header.file_size) {
-		in_chunk_size = min(compress_bound(MAX_COMPRESS32_LEN),
+		in_chunk_size = min(compress_bound(MAX_COMPRESS_LEN),
 				    in_file_size - in_offset);
 		if (iouring_init_read(iou, in_fd, in_chunk, in_chunk_size,
 				      in_offset, next_read) < 0)
@@ -579,7 +579,7 @@ INIT:
 		next_read++;
 
 		u64 bytes_consumed;
-		i32 result = decompress128k(in_chunk, in_chunk_size,
+		i32 result = decompress_block(in_chunk, in_chunk_size,
 					    out_chunk[next_write % 4],
 					    out_chunk_size, &bytes_consumed);
 		if (result < 0) ERROR(EINVAL);
@@ -614,10 +614,10 @@ PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header;
 	u64 in_offset = 0;
 	u64 out_offset = sizeof(CompressHeader);
-	u8 in_chunk[2][MAX_COMPRESS32_LEN] = {0},
-	   out_chunk[2][MAX_COMPRESS32_BOUND_LEN] = {0};
-	u64 in_chunk_size = MAX_COMPRESS32_LEN,
-	    out_chunk_size = compress_bound(MAX_COMPRESS32_LEN);
+	u8 in_chunk[2][MAX_COMPRESS_LEN] = {0},
+	   out_chunk[2][MAX_COMPRESS_BOUND_LEN] = {0};
+	u64 in_chunk_size = MAX_COMPRESS_LEN,
+	    out_chunk_size = compress_bound(MAX_COMPRESS_LEN);
 	IoUring *iou = NULL;
 	u64 next_read = 0, next_write = U64_MAX, id;
 INIT:
@@ -635,7 +635,7 @@ INIT:
 	if (res < 0) ERROR();
 	if (res != sizeof(CompressHeader)) ERROR(EIO);
 
-	in_chunk_size = min(header.file_size, MAX_COMPRESS32_LEN);
+	in_chunk_size = min(header.file_size, MAX_COMPRESS_LEN);
 	if (iouring_init_read(iou, in_fd, in_chunk[0], in_chunk_size, in_offset,
 			      next_read) < 0)
 		ERROR();
@@ -650,23 +650,23 @@ INIT:
 		}
 		next_read++;
 
-		if (in_offset + MAX_COMPRESS32_LEN <= header.file_size) {
+		if (in_offset + MAX_COMPRESS_LEN <= header.file_size) {
 			in_chunk_size = min(
-			    header.file_size - (in_offset + MAX_COMPRESS32_LEN),
-			    MAX_COMPRESS32_LEN);
+			    header.file_size - (in_offset + MAX_COMPRESS_LEN),
+			    MAX_COMPRESS_LEN);
 			if (iouring_init_read(
 				iou, in_fd, in_chunk[next_read % 2],
-				in_chunk_size, in_offset + MAX_COMPRESS32_LEN,
+				in_chunk_size, in_offset + MAX_COMPRESS_LEN,
 				next_read) < 0)
 				ERROR();
 			iouring_submit(iou, 1);
 		}
 
 		in_chunk_size =
-		    min(header.file_size - in_offset, MAX_COMPRESS32_LEN);
+		    min(header.file_size - in_offset, MAX_COMPRESS_LEN);
 
 		i32 result =
-		    compress128k(in_chunk[(next_read - 1) % 2], in_chunk_size,
+		    compress_block(in_chunk[(next_read - 1) % 2], in_chunk_size,
 				 out_chunk[next_write % 2], out_chunk_size);
 		if (result < 0) ERROR(EINVAL);
 

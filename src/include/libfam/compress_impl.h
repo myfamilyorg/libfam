@@ -37,9 +37,9 @@
 #define MIN_MATCH_LEN 4
 #define MAX_MATCH_DIST U16_MAX
 #define MIN_MATCH_DIST 1
-#define MAX_COMPRESS32_LEN (1 << 18)
-#define MAX_COMPRESS32_BOUND_LEN \
-	(MAX_COMPRESS32_LEN + (MAX_COMPRESS32_LEN >> 5) + 1024)
+#define MAX_COMPRESS_LEN (1 << 18)
+#define MAX_COMPRESS_BOUND_LEN \
+	(MAX_COMPRESS_LEN + (MAX_COMPRESS_LEN >> 5) + 1024)
 #define PAGE_SIZE (16384)
 
 #define WRITE(strm, value, bits)                              \
@@ -91,7 +91,7 @@ typedef struct {
 u8 compress_length_extra_bits(u16 match_code);
 u8 compress_distance_extra_bits(u16 match_code);
 void compress_find_matches(const u8 *in, u32 len,
-			   u8 match_array[2 * MAX_COMPRESS32_LEN + 1],
+			   u8 match_array[2 * MAX_COMPRESS_LEN + 1],
 			   u32 frequencies[SYMBOL_COUNT]);
 
 #endif /* _COMPRESS_IMPL_H */
