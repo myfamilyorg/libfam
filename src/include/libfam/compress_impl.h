@@ -74,7 +74,7 @@ typedef struct HuffmanNode {
 } HuffmanNode;
 
 typedef struct {
-	HuffmanNode *nodes[SYMBOL_COUNT * 2];
+	HuffmanNode *nodes[SYMBOL_COUNT * 2 + 1];
 	u64 size;
 } HuffmanMinHeap;
 

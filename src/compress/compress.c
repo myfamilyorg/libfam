@@ -178,11 +178,10 @@ STATIC void compress_compute_lengths(HuffmanNode *node, u8 length,
 }
 
 STATIC void compress_build_tree(const u32 frequencies[SYMBOL_COUNT],
-				u8 lengths[SYMBOL_COUNT],
-				HuffmanMinHeap *heap) {
+				u8 lengths[SYMBOL_COUNT], HuffmanMinHeap *heap,
+				HuffmanNode nodes[SYMBOL_COUNT * 2 + 1]) {
 	i32 i;
 	u16 node_counter = 0;
-	HuffmanNode nodes[SYMBOL_COUNT * 2 + 1];
 
 	heap->size = 0;
 
@@ -265,8 +264,9 @@ STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
 STATIC void compress_calculate_lengths(const u32 frequencies[SYMBOL_COUNT],
 				       u8 lengths[SYMBOL_COUNT]) {
 	HuffmanMinHeap heap;
+	HuffmanNode nodes[SYMBOL_COUNT * 2 + 1];
 	HuffmanNode *root;
-	compress_build_tree(frequencies, lengths, &heap);
+	compress_build_tree(frequencies, lengths, &heap, nodes);
 	if ((root = compress_extract_min(&heap)) != NULL) {
 		compress_compute_lengths(root, 0, lengths);
 		compress_limit_lengths(frequencies, lengths);
