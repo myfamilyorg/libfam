@@ -544,7 +544,8 @@ PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header;
 	u64 in_offset = sizeof(CompressHeader);
 	u64 out_offset = 0;
-	u8 *in_chunk = NULL, *out_chunk = NULL;
+	u8 in_chunk[compress_bound(MAX_COMPRESS32_LEN)],
+	    out_chunk[MAX_COMPRESS32_LEN];
 	u64 in_chunk_size = 0, out_chunk_size = 0, id;
 	IoUring *iou = NULL;
 	u64 in_file_size = fsize(in_fd);
@@ -553,9 +554,6 @@ INIT:
 
 	in_chunk_size = compress_bound(MAX_COMPRESS32_LEN);
 	out_chunk_size = MAX_COMPRESS32_LEN;
-	in_chunk = alloc(in_chunk_size);
-	out_chunk = alloc(out_chunk_size);
-	if (!in_chunk || !out_chunk) ERROR(ENOMEM);
 
 	if (iouring_init_read(iou, in_fd, &header, sizeof(CompressHeader), 0,
 			      0) < 0)
