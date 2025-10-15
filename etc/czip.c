@@ -124,118 +124,11 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 
 void do_compress(const CzipFileHeader *header, i32 in_fd, i32 out_fd) {
 	compress_stream(in_fd, out_fd);
-	/*
-	u64 out_offset = 0;
-	u64 in_offset = 0;
-
-	if (fresize(out_fd, sizeof(CzipFileHeader)) < 0) {
-		println("Failed to resize file!");
-		perror("fresize");
-		_exit(-1);
-	}
-
-	CzipFileHeader *out_header = fmap(out_fd, sizeof(CzipFileHeader), 0);
-	if (!out_header) {
-		println("mmap failed to map output file!");
-		perror("mmap");
-		_exit(-1);
-	}
-	*out_header = *header;
-	out_offset += sizeof(CzipFileHeader);
-	munmap(out_header, sizeof(CzipFileHeader));
-
-	while (in_offset < header->file_size) {
-		u64 chunk_size = min(header->file_size - in_offset, CHUNK_SIZE);
-
-		u8 *in_chunk = fmap(in_fd, chunk_size, in_offset);
-		if (!in_chunk) {
-			println("mmap failed to read next chunk!");
-			perror("mmap");
-			_exit(-1);
-		}
-		u64 out_offset_aligned = (out_offset / PAGE_SIZE) * PAGE_SIZE;
-		u64 out_offset_diff = out_offset - out_offset_aligned;
-		u64 out_max = compress_bound(CHUNK_SIZE) + out_offset_diff;
-		if (fresize(out_fd, out_offset + out_max) < 0) {
-			println("Failed to resize file!");
-			perror("fresize");
-			_exit(-1);
-		}
-		u8 *out_chunk = fmap(out_fd, out_max, out_offset_aligned);
-		if (!out_chunk) {
-			println("mmap failed to map write chunk!");
-			perror("mmap");
-			_exit(-1);
-		}
-		u8 *compress_chunk = out_chunk + out_offset_diff;
-		i32 result =
-		    compress128k(in_chunk, chunk_size, compress_chunk,
-			       compress_bound(CHUNK_SIZE) + out_offset_diff);
-		if (result < 0) {
-			println("Failed to compress block due to {}.",
-				strerror(errno));
-			_exit(-1);
-		}
-
-		munmap(out_chunk, out_max);
-		munmap(in_chunk, chunk_size);
-		in_offset += chunk_size;
-		out_offset += result;
-	}
-
-	if (fresize(out_fd, out_offset) < 0) {
-		println("failed to resize output file");
-		_exit(-1);
-	}
-	*/
 }
 
 void do_decompress(const CzipFileHeader *header, i32 in_fd, i32 out_fd,
 		   u64 in_file_size) {
 	decompress_stream(in_fd, out_fd);
-	/*
-	u8 output[1024 * 1024];
-	u64 in_offset = sizeof(CzipFileHeader);
-	u64 out_offset = 0;
-	while (in_offset < in_file_size) {
-		u64 bytes_consumed;
-		u64 in_offset_aligned = (in_offset / PAGE_SIZE) * PAGE_SIZE;
-		u64 in_offset_diff = in_offset - in_offset_aligned;
-		u64 chunk_size =
-		    min(in_offset_diff + compress_bound(CHUNK_SIZE),
-			in_file_size - in_offset_aligned);
-
-		u8 *in_chunk = fmap(in_fd, chunk_size, in_offset_aligned);
-		if (!in_chunk) {
-			println("mmap failed: {}", strerror(errno));
-			_exit(-1);
-		}
-		u8 *in_block = in_chunk + in_offset_diff;
-
-		u64 out_offset_aligned = (out_offset / PAGE_SIZE) * PAGE_SIZE;
-		u64 out_offset_diff = out_offset - out_offset_aligned;
-
-		fresize(out_fd, out_offset + CHUNK_SIZE + out_offset_diff);
-
-		u8 *out_chunk = fmap(out_fd, CHUNK_SIZE + out_offset_diff,
-				     out_offset_aligned);
-		u8 *out_block = out_chunk + out_offset_diff;
-
-		i32 result = decompress128k(in_block, chunk_size, out_block,
-					    CHUNK_SIZE, &bytes_consumed);
-		if (result < 0) {
-			println("decompress128k failed: {}", strerror(errno));
-			_exit(-1);
-		}
-
-		munmap(out_chunk, CHUNK_SIZE + out_offset_diff);
-		munmap(in_chunk, chunk_size);
-		in_offset += bytes_consumed;
-		out_offset += result;
-	}
-
-	fresize(out_fd, out_offset);
-	*/
 }
 
 void run_compressor(CzipConfig *config) {
