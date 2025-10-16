@@ -83,17 +83,6 @@ void compress_find_matches(const u8 *in, u32 len,
 	while (i < max) {
 		MatchInfo mi = lz_hash_get(&hash, in, i);
 		if (mi.len >= MIN_MATCH_LEN) {
-			/*
-			u8 mc = get_match_code(mi.len, mi.dist);
-			frequencies[mc + MATCH_OFFSET]++;
-			u8 len_extra = length_extra_bits_value(mc, mi.len);
-			((u16 *)match_array)[out_itt >> 1] =
-			    (len_extra << 8) | (mc + 2);
-			u16 dist_extra = distance_extra_bits_value(mc, mi.dist);
-			((u16 *)match_array)[(out_itt + 2) >> 1] = dist_extra;
-			out_itt += 4;
-			*/
-
 			u8 mc = get_match_code(mi.len, mi.dist);
 			frequencies[mc + MATCH_OFFSET]++;
 			u8 len_extra = length_extra_bits_value(mc, mi.len);
@@ -363,37 +352,12 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			WRITE(&strm, code, length);
 			i += 2;
 		} else {
-			/*
 			u8 match_code = match_array[i] - 2;
 			u16 symbol = (u16)match_code + MATCH_OFFSET;
 			u16 code = codes[symbol];
 			u8 length = lengths[symbol];
-			u16 len_extra_bits_value = match_array[i + 1];
-			u8 len_extra_bits = length_extra_bits(match_code);
-			u8 dist_extra_bits = distance_extra_bits(match_code);
-			u16 distance_extra_bits_value =
-			    match_array[i + 2] | match_array[i + 3] << 8;
-
-			if (strm.bits_in_buffer + length + len_extra_bits +
-				dist_extra_bits >
-			    64)
-				bitstream_writer_flush(&strm);
-
-			bitstream_writer_push(&strm, code, length);
-			bitstream_writer_push(&strm, len_extra_bits_value,
-					      len_extra_bits);
-			bitstream_writer_push(&strm, distance_extra_bits_value,
-					      dist_extra_bits);
-			i += 4;
-			*/
-
-			u8 match_code = match_array[i] - 2;
-			u16 symbol = (u16)match_code + MATCH_OFFSET;
-			u16 code = codes[symbol];
-			u8 length = lengths[symbol];
-			u32 combined_extra = ((u32)match_array[i + 3] << 16) |
-					     ((u32)match_array[i + 2] << 8) |
-					     match_array[i + 1];
+			u32 combined_extra =
+			    ((u32 *)(match_array + i + 1))[0] & 0xFFFFFF;
 			u8 len_extra_bits = length_extra_bits(match_code);
 			u8 dist_extra_bits = distance_extra_bits(match_code);
 			u8 total_extra_bits = len_extra_bits + dist_extra_bits;
