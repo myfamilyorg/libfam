@@ -511,7 +511,6 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 		bitstream_reader_clear(strm, length);
 		if (symbol < SYMBOL_TERM) {
 			if (itt >= capacity) {
-				println("cap");
 				errno = EOVERFLOW;
 				return -1;
 			}
