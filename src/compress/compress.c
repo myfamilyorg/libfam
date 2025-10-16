@@ -343,7 +343,15 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			  u8 *out) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
+	CodeLength code_lengths[SYMBOL_COUNT];
 	compress_write_lengths(&strm, lengths);
+
+	for (i = 0; i < SYMBOL_COUNT; i++) {
+		code_lengths[i].code = codes[i];
+		code_lengths[i].length = lengths[i];
+	}
+
+	i = 0;
 	while (match_array[i] != 1) {
 		if (strm.bits_in_buffer >= 32) {
 			bitstream_writer_flush(&strm);
@@ -356,8 +364,9 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			} else {
 				u8 match_code = match_array[i] - 2;
 				u16 symbol = (u16)match_code + MATCH_OFFSET;
-				u16 code = codes[symbol];
-				u8 length = lengths[symbol];
+				CodeLength cl = code_lengths[symbol];
+				u16 code = cl.code;
+				u8 length = cl.length;
 				u32 combined_extra =
 				    ((u32 *)(match_array + i + 1))[0] &
 				    0xFFFFFF;
@@ -374,7 +383,6 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 				i += 4;
 			}
 		}
-
 		if (match_array[i] == 1)
 			break;
 		else if (match_array[i] == 0) {
@@ -386,8 +394,9 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 		} else {
 			u8 match_code = match_array[i] - 2;
 			u16 symbol = (u16)match_code + MATCH_OFFSET;
-			u16 code = codes[symbol];
-			u8 length = lengths[symbol];
+			CodeLength cl = code_lengths[symbol];
+			u16 code = cl.code;
+			u8 length = cl.length;
 			u32 combined_extra =
 			    ((u32 *)(match_array + i + 1))[0] & 0xFFFFFF;
 			u8 len_extra_bits = length_extra_bits(match_code);

@@ -97,6 +97,11 @@ typedef struct {
 	u8 base_len;
 } HuffmanLookup;
 
+typedef struct {
+	u16 code;
+	u16 length;
+} CodeLength;
+
 u8 compress_length_extra_bits(u16 match_code);
 u8 compress_distance_extra_bits(u16 match_code);
 void compress_find_matches(const u8 *in, u32 len,
