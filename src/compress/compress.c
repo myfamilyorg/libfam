@@ -423,22 +423,22 @@ INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 }
 #endif /* __AVX2__ */
 
-INLINE static i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
-				      u8 *out, u32 capacity, u32 *itt) {
-	u8 match_code, len_extra;
+INLINE static i32 compress_proc_match(BitStreamReader *strm, u8 *out,
+				      u32 capacity, HuffmanLookup *entry,
+				      u32 *itt) {
+	u8 len_extra;
 	u16 base_length, actual_length, base_dist, dist_extra, actual_distance;
-	match_code = symbol - MATCH_OFFSET;
-	u8 len_extra_bits = length_extra_bits(match_code);
-	u8 dist_extra_bits = distance_extra_bits(match_code);
-	base_length = length_base(match_code);
-	base_dist = distance_base(match_code);
+	u8 len_extra_bits = entry->len_extra_bits;
+	u8 dist_extra_bits = entry->dist_extra_bits;
+	base_length = entry->base_len;
+	base_dist = entry->base_dist;
 
 	len_extra = bitstream_reader_read(strm, len_extra_bits);
 	bitstream_reader_clear(strm, len_extra_bits);
 	dist_extra = bitstream_reader_read(strm, dist_extra_bits);
 	bitstream_reader_clear(strm, dist_extra_bits);
 
-	actual_length = 4 + base_length + len_extra;
+	actual_length = base_length + len_extra;
 	actual_distance = base_dist + dist_extra;
 	if (actual_length + *itt > capacity) {
 		errno = EOVERFLOW;
@@ -459,15 +459,30 @@ INLINE static i32 compress_proc_match(u16 symbol, BitStreamReader *strm,
 
 STATIC void compress_build_lookup_table(
     const u8 lengths[SYMBOL_COUNT], const u16 codes[SYMBOL_COUNT],
-    u16 lookup_table[(1U << MAX_CODE_LENGTH)]) {
+    HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)]) {
 	i32 i, j;
 	for (i = 0; i < SYMBOL_COUNT; i++) {
 		if (lengths[i]) {
 			i32 index = codes[i] & ((1U << lengths[i]) - 1);
 			i32 fill_depth = 1U << (MAX_CODE_LENGTH - lengths[i]);
 			for (j = 0; j < fill_depth; j++) {
-				lookup_table[index | (j << lengths[i])] =
-				    (lengths[i] << 12) | i;
+				lookup_table[index | (j << lengths[i])].length =
+				    lengths[i];
+				lookup_table[index | (j << lengths[i])].symbol =
+				    i;
+				if (i >= MATCH_OFFSET) {
+					u8 mc = i - MATCH_OFFSET;
+					lookup_table[index | (j << lengths[i])]
+					    .dist_extra_bits =
+					    distance_extra_bits(mc);
+					lookup_table[index | (j << lengths[i])]
+					    .len_extra_bits =
+					    length_extra_bits(mc);
+					lookup_table[index | (j << lengths[i])]
+					    .base_dist = distance_base(mc);
+					lookup_table[index | (j << lengths[i])]
+					    .base_len = length_base(mc) + 4;
+				}
 			}
 		}
 	}
@@ -477,7 +492,7 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 				 const u8 lengths[SYMBOL_COUNT],
 				 const u16 codes[SYMBOL_COUNT], u8 *out,
 				 u32 capacity, u64 *bytes_consumed) {
-	u16 lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
+	HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
 	u32 itt = 0;
 	u16 symbol = 0;
 	u8 load_threshold = MAX_CODE_LENGTH + 7 + 15;
@@ -489,20 +504,21 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 			bitstream_reader_load(strm);
 
 		u16 bits = bitstream_reader_read(strm, MAX_CODE_LENGTH);
-		u16 entry = lookup_table[bits];
-		u8 length = entry >> 12;
-		symbol = entry & 0x1FF;
+		HuffmanLookup entry = lookup_table[bits];
+		u8 length = entry.length;
+		symbol = entry.symbol;
 
 		bitstream_reader_clear(strm, length);
 		if (symbol < SYMBOL_TERM) {
 			if (itt >= capacity) {
+				println("cap");
 				errno = EOVERFLOW;
 				return -1;
 			}
 			out[itt++] = symbol;
 		} else if (symbol == SYMBOL_TERM) {
 			break;
-		} else if (compress_proc_match(symbol, strm, out, capacity,
+		} else if (compress_proc_match(strm, out, capacity, &entry,
 					       &itt) < 0)
 			return -1;
 	}
@@ -546,7 +562,7 @@ PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	u64 in_offset = sizeof(CompressHeader);
 	u64 out_offset = 0;
 	u8 in_chunk[MAX_COMPRESS_BOUND_LEN] = {0},
-	   out_chunk[4][MAX_COMPRESS_LEN] = {0};
+	   out_chunk[4][MAX_COMPRESS_LEN + MAX_AVX_OVERWRITE] = {0};
 	u64 in_chunk_size = 0, out_chunk_size = 0, id;
 	IoUring *iou = NULL;
 	u64 in_file_size = fsize(in_fd);

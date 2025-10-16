@@ -40,7 +40,7 @@
 #define MAX_COMPRESS_LEN (1 << 18)
 #define MAX_COMPRESS_BOUND_LEN \
 	(MAX_COMPRESS_LEN + (MAX_COMPRESS_LEN >> 5) + 1024)
-#define PAGE_SIZE (16384)
+#define MAX_AVX_OVERWRITE 32
 
 #define WRITE(strm, value, bits)                              \
 	do {                                                  \
@@ -87,6 +87,15 @@ typedef struct {
 	u16 permissions;
 	u16 version;
 } CompressHeader;
+
+typedef struct {
+	u16 symbol;
+	u16 length;
+	u8 dist_extra_bits;
+	u8 len_extra_bits;
+	u16 base_dist;
+	u8 base_len;
+} HuffmanLookup;
 
 u8 compress_length_extra_bits(u16 match_code);
 u8 compress_distance_extra_bits(u16 match_code);
