@@ -719,7 +719,29 @@ INIT:
 			ERROR();
 		if (iouring_submit(iou, 1) < 0) ERROR();
 
-		if (next_write != U64_MAX) {
+		if (out_fd == STDOUT_FD) {
+			u64 written = 0;
+			while (written < result) {
+				i32 res = iouring_spin(iou, &id);
+				if (res < 0) ERROR();
+				if (id == next_write) {
+					written += res;
+					if (written < result) {
+						if (iouring_init_write(
+							iou, out_fd,
+							out_chunk[next_write %
+								  2] +
+							    written,
+							result - written,
+							out_offset,
+							next_write) < 0)
+							ERROR();
+						if (iouring_submit(iou, 1) < 0)
+							ERROR();
+					}
+				}
+			}
+		} else if (next_write != U64_MAX) {
 			if (iouring_pending(iou, next_write + 1)) {
 				while (true) {
 					iouring_spin(iou, &id);
