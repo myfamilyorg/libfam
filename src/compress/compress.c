@@ -41,29 +41,24 @@
 
 STATIC MatchInfo lz_hash_get(const LzHash *hash, const u8 *text, u32 cpos) {
 	u16 pos, dist, len = 0;
-	u32 mpos, key = *(u32 *)(text + cpos);
+	u32 mask, mpos, key = *(u32 *)(text + cpos);
 	pos = hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT];
 	dist = (u16)cpos - pos;
 	if (!dist) return (MatchInfo){.len = 0, .dist = 0};
 	mpos = cpos - dist;
 
 #ifdef __AVX2__
-	while (len + 32 <= MAX_MATCH_LEN) {
+	do {
 		__m256i vec1 =
 		    _mm256_loadu_si256((__m256i *)(text + mpos + len));
 		__m256i vec2 =
 		    _mm256_loadu_si256((__m256i *)(text + cpos + len));
 		__m256i cmp = _mm256_cmpeq_epi8(vec1, vec2);
-		u32 mask = _mm256_movemask_epi8(cmp);
+		mask = _mm256_movemask_epi8(cmp);
 
-		if (mask != 0xFFFFFFFF) {
-			u32 mismatch_pos = __builtin_ctz(~mask);
-			len += mismatch_pos;
-			break;
-		}
-
-		len += 32;
-	}
+		len += (mask != 0xFFFFFFFF) * __builtin_ctz(~mask) +
+		       (mask == 0xFFFFFFFF) * 32;
+	} while (mask == 0xFFFFFFFF && len < MAX_MATCH_LEN);
 #else
 	while (len < MAX_MATCH_LEN && text[mpos + len] == text[cpos + len])
 		len++;
@@ -89,9 +84,9 @@ void compress_find_matches(const u8 *in, u32 len,
 		if (mi.len >= MIN_MATCH_LEN) {
 			u8 mc = get_match_code(mi.len, mi.dist);
 			frequencies[mc + MATCH_OFFSET]++;
-			match_array[out_itt] = mc + 2;
-			match_array[out_itt + 1] =
-			    length_extra_bits_value(mc, mi.len);
+			u8 len_extra = length_extra_bits_value(mc, mi.len);
+			((u16 *)match_array)[out_itt >> 1] =
+			    (len_extra << 8) | (mc + 2);
 			u16 dist_extra = distance_extra_bits_value(mc, mi.dist);
 			((u16 *)match_array)[(out_itt + 2) >> 1] = dist_extra;
 			out_itt += 4;
@@ -101,17 +96,17 @@ void compress_find_matches(const u8 *in, u32 len,
 			lz_hash_set(&hash, in, i + 3);
 			i += mi.len;
 		} else {
-			frequencies[in[i]]++;
-			match_array[out_itt++] = 0;
-			match_array[out_itt++] = in[i];
 			lz_hash_set(&hash, in, i);
-			i++;
+			u8 ch = in[i++];
+			frequencies[ch]++;
+			((u16 *)match_array)[out_itt >> 1] = ch << 8;
+			out_itt += 2;
 		}
 	}
 	while (i < len) {
 		frequencies[in[i]]++;
-		match_array[out_itt++] = 0;
-		match_array[out_itt++] = in[i];
+		((u16 *)match_array)[(out_itt) >> 1] = in[i] << 8;
+		out_itt += 2;
 		i++;
 	}
 	match_array[out_itt++] = 1;
@@ -636,8 +631,7 @@ PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header;
 	u64 in_offset = 0;
 	u64 out_offset = sizeof(CompressHeader);
-	u8 in_chunk[2][MAX_COMPRESS_LEN] = {0},
-	   out_chunk[2][MAX_COMPRESS_BOUND_LEN] = {0};
+	u8 in_chunk[2][MAX_COMPRESS_LEN], out_chunk[2][MAX_COMPRESS_BOUND_LEN];
 	u64 in_chunk_size = MAX_COMPRESS_LEN,
 	    out_chunk_size = compress_bound(MAX_COMPRESS_LEN);
 	IoUring *iou = NULL;

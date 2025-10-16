@@ -43,7 +43,6 @@ typedef struct {
 	bool console;
 	bool version;
 	bool help;
-	bool stack_only;
 	const u8 *file;
 	i32 return_value;
 } CzipConfig;
@@ -69,8 +68,6 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 					ret.decompress = true;
 				} else if (!strcmp(arg, "console")) {
 					ret.console = true;
-				} else if (!strcmp(arg, "stack_only")) {
-					ret.stack_only = true;
 				} else if (!strcmp(arg, "version")) {
 					ret.version = true;
 					return ret;
@@ -97,8 +94,6 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 						ret.help = true;
 					else if (ch == 'v')
 						ret.version = true;
-					else if (ch == 's')
-						ret.stack_only = true;
 					else {
 						println("Illegal option: {c}",
 							ch);
@@ -287,9 +282,6 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 		println("-d, --decompress    decompress");
 		println("-h, --help          print this message");
 		println("-v, --version       print version");
-		println(
-		    "-s, --stack_only    use only the stack (no heap "
-		    "allocations)");
 		println(
 		    "\nNote: if '-' is specified stdin will be used as "
 		    "the "
