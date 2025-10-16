@@ -247,7 +247,7 @@ void run_decompressor(CzipConfig *config) {
 	}
 
 	if (config->console) {
-		outfd = 2;
+		outfd = STDOUT_FD;
 		do_decompress(header, infd, outfd, file_size);
 	} else {
 		strncpy(output_file, config->file, strlen_config_file - 3);

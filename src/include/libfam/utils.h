@@ -29,6 +29,7 @@
 #include <libfam/errno.h>
 
 #define STDERR_FD 2
+#define STDOUT_FD 1
 
 #ifndef COVERAGE
 #define INLINE __attribute__((always_inline)) __inline

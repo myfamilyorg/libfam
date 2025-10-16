@@ -616,7 +616,7 @@ INIT:
 	}
 
 	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
-	if (out_fd != 2) {
+	if (out_fd != STDOUT_FD) {
 		if (fresize(out_fd, out_offset) < 0) ERROR();
 		if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
 
