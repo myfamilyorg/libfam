@@ -28,12 +28,12 @@
 
 #include <libfam/types.h>
 
-struct timeval {
+struct timevalfam {
 	u64 tv_sec;
 	u64 tv_usec;
 };
 
-struct timespec {
+struct timespecfam {
 	u64 tv_sec;
 	u64 tv_nsec;
 };

@@ -128,7 +128,7 @@ PUBLIC i32 flush(i32 fd) {
 }
 
 PUBLIC i32 msleep(u64 millis) {
-	struct timespec req;
+	struct timespecfam req;
 	i32 ret;
 	req.tv_sec = millis / 1000;
 	req.tv_nsec = (millis % 1000) * 1000000;

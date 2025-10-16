@@ -447,7 +447,7 @@ CLEANUP:
 	RETURN;
 }
 
-i64 futex(u32 *uaddr, i32 futex_op, u32 val, const struct timespec *timeout,
+i64 futex(u32 *uaddr, i32 futex_op, u32 val, const struct timespecfam *timeout,
 	  u32 *uaddr2, u32 val3) {
 	i64 v;
 INIT:
@@ -470,7 +470,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 nanosleep(const struct timespec *req, struct timespec *rem) {
+i32 nanosleep(const struct timespecfam *req, struct timespecfam *rem) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_nanosleep, (i64)req, (i64)rem, 0, 0, 0, 0);
@@ -501,7 +501,7 @@ CLEANUP:
 	RETURN;
 }
 
-PUBLIC i32 utimesat(i32 dirfd, const u8 *pathname, const struct timeval *times,
+PUBLIC i32 utimesat(i32 dirfd, const u8 *pathname, const struct timevalfam *times,
 		    i32 flags) {
 	i32 v;
 INIT:

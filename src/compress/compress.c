@@ -551,7 +551,7 @@ PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	IoUring *iou = NULL;
 	u64 in_file_size = fsize(in_fd);
 	u64 next_write = U32_MAX, next_read = 0;
-	struct timeval ts[2] = {0};
+	struct timevalfam ts[2] = {0};
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
 

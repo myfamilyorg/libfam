@@ -29,7 +29,7 @@
 #include <libfam/utils.h>
 
 PUBLIC i64 micros(void) {
-	struct timeval tv;
+	struct timevalfam tv;
 	if (gettimeofday(&tv, NULL) < 0) return -1;
 	return (i64)tv.tv_sec * 1000000L + (i64)tv.tv_usec;
 }

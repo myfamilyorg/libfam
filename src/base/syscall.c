@@ -127,7 +127,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 gettimeofday(struct timeval *tv, void *tz) {
+i32 gettimeofday(struct timevalfam *tv, void *tz) {
 	i32 v;
 INIT:
 	if (!tv) ERROR(EINVAL);

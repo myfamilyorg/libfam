@@ -28,10 +28,10 @@
 
 #include <libfam/types.h>
 
-struct timeval;
+struct timevalfam;
 struct clone_args;
 struct sockaddr;
-struct timespec;
+struct timespecfam;
 struct epoll_event;
 struct sigset_t;
 struct rt_sigaction;
@@ -41,7 +41,7 @@ struct io_uring_params;
 i32 pipe2(i32 fds[2], i32 flags);
 i32 getpid(void);
 i64 write(i32 fd, const void *buf, u64 len);
-i32 gettimeofday(struct timeval *tv, void *tz);
+i32 gettimeofday(struct timevalfam *tv, void *tz);
 i32 kill(i32 pid, i32 signal);
 i32 unlinkat(i32 dfd, const u8 *path, i32 flags);
 i64 read(i32 fd, void *buf, u64 count);
@@ -64,7 +64,7 @@ i32 getsockname(i32 sockfd, struct sockaddr *addr, u32 *addrlen);
 i32 accept(i32 sockfd, struct sockaddr *addr, u32 *addrlen);
 i32 shutdown(i32 sockfd, i32 how);
 i32 socket(i32 domain, i32 type, i32 protocol);
-i32 nanosleep(const struct timespec *req, struct timespec *rem);
+i32 nanosleep(const struct timespecfam *req, struct timespecfam *rem);
 i32 epoll_create1(i32 flags);
 i32 epoll_pwait(i32 epfd, struct epoll_event *events, i32 maxevents,
 		i32 timeout, const struct sigset_t *sigmask, u64 size);
@@ -73,11 +73,11 @@ i32 openat(i32 dfd, const u8 *pathname, i32 flags, u32 mode);
 i64 lseek(i32 fd, i64 offset, i32 whence);
 i32 rt_sigaction(i32 signum, const struct rt_sigaction *act,
 		 struct rt_sigaction *oldact, u64 sigsetsize);
-i64 futex(u32 *uaddr, i32 futex_op, u32 val, const struct timespec *timeout,
+i64 futex(u32 *uaddr, i32 futex_op, u32 val, const struct timespecfam *timeout,
 	  u32 *uaddr2, u32 val3);
 i32 msync(void *addr, u64 length, i32 flags);
 void _exit(i32 status);
-i32 utimesat(i32 dirfd, const u8 *path, const struct timeval *times, i32 flags);
+i32 utimesat(i32 dirfd, const u8 *path, const struct timevalfam *times, i32 flags);
 i32 fstatat(i32 dirfd, const u8 *pathname, struct stat *buf, i32 flags);
 i32 fchmod(i32 fd, u32 mode);
 i32 io_uring_setup(u32 entries, struct io_uring_params *params);

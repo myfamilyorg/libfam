@@ -989,7 +989,7 @@ Test(fstatat) {
 	ASSERT(st.st_mtime, "non 0");
 	ASSERT_EQ(st.st_mode, 33152, "default permissions");
 	ASSERT(!fchmod(fd, 755), "chmod");
-	struct timeval times[2] = {0};
+	struct timevalfam times[2] = {0};
 	ASSERT(!utimesat(AT_FDCWD, path, times, 0), "utime");
 	errno = 0;
 	ASSERT(!(res = fstatat(AT_FDCWD, path, &st, 0)), "fstatat 2");
