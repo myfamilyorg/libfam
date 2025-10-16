@@ -715,8 +715,10 @@ INIT:
 		out_offset += result;
 	}
 	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
-	if (fresize(out_fd, out_offset) < 0) ERROR();
-	if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
+	if (out_fd != STDOUT_FD) {
+		if (fresize(out_fd, out_offset) < 0) ERROR();
+		if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
+	}
 CLEANUP:
 	if (iou) iouring_destroy(iou);
 	RETURN;

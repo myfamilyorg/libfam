@@ -145,12 +145,6 @@ void run_compressor(CzipConfig *config) {
 		_exit(-1);
 	}
 
-	strncpy(output_file, config->file, strlen_in_file);
-	output_file[strlen_in_file] = '.';
-	output_file[strlen_in_file + 1] = 'c';
-	output_file[strlen_in_file + 2] = 'z';
-	output_file[strlen_in_file + 3] = 0;
-
 	if (!exists(config->file)) {
 		println("Specified file '{}' does not exist.", config->file);
 		_exit(-1);
@@ -179,10 +173,20 @@ void run_compressor(CzipConfig *config) {
 		_exit(-1);
 	}
 
-	outfd = file(output_file);
-	if (outfd < 0) {
-		println("Could not open file '{}'.", output_file);
-		_exit(-1);
+	if (config->console) {
+		outfd = STDOUT_FD;
+	} else {
+		strncpy(output_file, config->file, strlen_in_file);
+		output_file[strlen_in_file] = '.';
+		output_file[strlen_in_file + 1] = 'c';
+		output_file[strlen_in_file + 2] = 'z';
+		output_file[strlen_in_file + 3] = 0;
+
+		outfd = file(output_file);
+		if (outfd < 0) {
+			println("Could not open file '{}'.", output_file);
+			_exit(-1);
+		}
 	}
 
 	header.file_size = file_size;
@@ -194,9 +198,10 @@ void run_compressor(CzipConfig *config) {
 	do_compress(&header, infd, outfd);
 
 	close(infd);
-	close(outfd);
-
-	unlink(config->file);
+	if (!config->console) {
+		close(outfd);
+		unlink(config->file);
+	}
 }
 
 void run_decompressor(CzipConfig *config) {
