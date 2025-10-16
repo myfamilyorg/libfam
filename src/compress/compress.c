@@ -41,13 +41,14 @@
 
 STATIC MatchInfo lz_hash_get(const LzHash *hash, const u8 *text, u32 cpos) {
 	u16 pos, dist, len = 0;
-	u32 mask, mpos, key = *(u32 *)(text + cpos);
+	u32 mpos, key = *(u32 *)(text + cpos);
 	pos = hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT];
 	dist = (u16)cpos - pos;
 	if (!dist) return (MatchInfo){.len = 0, .dist = 0};
 	mpos = cpos - dist;
 
 #ifdef __AVX2__
+	u32 mask;
 	do {
 		__m256i vec1 =
 		    _mm256_loadu_si256((__m256i *)(text + mpos + len));
