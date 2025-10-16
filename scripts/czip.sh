@@ -20,7 +20,7 @@ if [ ! -e ${OUT_BIN} ] || [ ${CZIP_SRC} -nt ${OUT_BIN} ]; then
 	#	${CFLAGS} \
 	#	-o ${OUT_BIN} \
 	#	-lfam -L${LIB_DIR}"
-COMMAND="${CC} -flto=auto -O3 -Wno-pointer-sign -ffreestanding -nostdlib -Ltarget/lib -Isrc/include -o target/bin/czip etc/czip.c -lfam"
+COMMAND="${CC} -O3 -Wno-pointer-sign -ffreestanding -nostdlib -Ltarget/lib -Isrc/include -o target/bin/czip etc/czip.c -lfam"
 
 	echo ${COMMAND}
 	${COMMAND} || exit $?;
