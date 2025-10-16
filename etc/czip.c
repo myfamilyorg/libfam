@@ -227,13 +227,6 @@ void run_decompressor(CzipConfig *config) {
 		_exit(-1);
 	}
 
-	strncpy(output_file, config->file, strlen_config_file - 3);
-	output_file[strlen_config_file - 3] = 0;
-	if (exists(output_file)) {
-		println("Specified filename '{}' already exists.", output_file);
-		_exit(-1);
-	}
-
 	infd = file(config->file);
 	if (infd < 0) {
 		println("Could not open file '{}'.", config->file);
@@ -253,18 +246,30 @@ void run_decompressor(CzipConfig *config) {
 		_exit(-1);
 	}
 
-	outfd = file(output_file);
-	if (outfd < 0) {
-		println("Could not open filename '{}'.", output_file);
-		_exit(-1);
-	}
+	if (config->console) {
+		outfd = 2;
+		do_decompress(header, infd, outfd, file_size);
+	} else {
+		strncpy(output_file, config->file, strlen_config_file - 3);
+		output_file[strlen_config_file - 3] = 0;
+		if (exists(output_file)) {
+			println("Specified filename '{}' already exists.",
+				output_file);
+			_exit(-1);
+		}
 
-	do_decompress(header, infd, outfd, file_size);
+		outfd = file(output_file);
+		if (outfd < 0) {
+			println("Could not open filename '{}'.", output_file);
+			_exit(-1);
+		}
+
+		do_decompress(header, infd, outfd, file_size);
+		close(outfd);
+	}
 	munmap(header, sizeof(CzipFileHeader));
 	close(infd);
-	close(outfd);
-
-	unlink(config->file);
+	if (!config->console) unlink(config->file);
 }
 
 i32 main(i32 argc, u8 **argv, u8 **envp) {
@@ -273,7 +278,8 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	if (config.version) {
 		println("czip {}", LIBFAM_VERSION);
 	} else if (config.help || !config.file) {
-		if (!config.file) println("Error: No file was specified!");
+		if (!config.file && !config.help)
+			println("Error: No file was specified!");
 		println("Usage: czip [OPTION]... [FILE]...");
 		println(
 		    "-c, --console       write to standard output, "

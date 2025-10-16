@@ -616,12 +616,14 @@ INIT:
 	}
 
 	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
-	if (fresize(out_fd, out_offset) < 0) ERROR();
-	if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
+	if (out_fd != 2) {
+		if (fresize(out_fd, out_offset) < 0) ERROR();
+		if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
 
-	ts[0].tv_sec = header.atime;
-	ts[1].tv_sec = header.mtime;
-	if (utimesat(out_fd, NULL, ts, 0) < 0) ERROR();
+		ts[0].tv_sec = header.atime;
+		ts[1].tv_sec = header.mtime;
+		if (utimesat(out_fd, NULL, ts, 0) < 0) ERROR();
+	}
 CLEANUP:
 	if (iou) iouring_destroy(iou);
 	RETURN;
