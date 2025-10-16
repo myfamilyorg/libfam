@@ -83,6 +83,7 @@ void compress_find_matches(const u8 *in, u32 len,
 	while (i < max) {
 		MatchInfo mi = lz_hash_get(&hash, in, i);
 		if (mi.len >= MIN_MATCH_LEN) {
+			/*
 			u8 mc = get_match_code(mi.len, mi.dist);
 			frequencies[mc + MATCH_OFFSET]++;
 			u8 len_extra = length_extra_bits_value(mc, mi.len);
@@ -91,6 +92,22 @@ void compress_find_matches(const u8 *in, u32 len,
 			u16 dist_extra = distance_extra_bits_value(mc, mi.dist);
 			((u16 *)match_array)[(out_itt + 2) >> 1] = dist_extra;
 			out_itt += 4;
+			*/
+
+			u8 mc = get_match_code(mi.len, mi.dist);
+			frequencies[mc + MATCH_OFFSET]++;
+			u8 len_extra = length_extra_bits_value(mc, mi.len);
+			u16 dist_extra = distance_extra_bits_value(mc, mi.dist);
+			u8 len_extra_bits_count = length_extra_bits(mc);
+			u32 combined_extra =
+			    ((u32)dist_extra << len_extra_bits_count) |
+			    len_extra;
+
+			match_array[out_itt] = mc + 2;
+			((u32 *)(match_array + out_itt + 1))[0] =
+			    combined_extra;
+			out_itt += 4;
+
 			lz_hash_set(&hash, in, i);
 			lz_hash_set(&hash, in, i + 1);
 			lz_hash_set(&hash, in, i + 2);
@@ -346,6 +363,7 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 			WRITE(&strm, code, length);
 			i += 2;
 		} else {
+			/*
 			u8 match_code = match_array[i] - 2;
 			u16 symbol = (u16)match_code + MATCH_OFFSET;
 			u16 code = codes[symbol];
@@ -366,6 +384,27 @@ STATIC i32 compress_write(const u16 codes[SYMBOL_COUNT],
 					      len_extra_bits);
 			bitstream_writer_push(&strm, distance_extra_bits_value,
 					      dist_extra_bits);
+			i += 4;
+			*/
+
+			u8 match_code = match_array[i] - 2;
+			u16 symbol = (u16)match_code + MATCH_OFFSET;
+			u16 code = codes[symbol];
+			u8 length = lengths[symbol];
+			u32 combined_extra = ((u32)match_array[i + 3] << 16) |
+					     ((u32)match_array[i + 2] << 8) |
+					     match_array[i + 1];
+			u8 len_extra_bits = length_extra_bits(match_code);
+			u8 dist_extra_bits = distance_extra_bits(match_code);
+			u8 total_extra_bits = len_extra_bits + dist_extra_bits;
+
+			if (strm.bits_in_buffer + length + total_extra_bits >
+			    64)
+				bitstream_writer_flush(&strm);
+
+			bitstream_writer_push(&strm, code, length);
+			bitstream_writer_push(&strm, combined_extra,
+					      total_extra_bits);
 			i += 4;
 		}
 	}
