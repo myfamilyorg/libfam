@@ -24,6 +24,7 @@
  *******************************************************************************/
 
 #include <libfam/bitstream.h>
+#include <libfam/compress_impl.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
@@ -32,7 +33,6 @@
 #define PERF_ITER (128)
 
 Test(bitstream_perf) {
-	u64 len_sum = 0;
 	u8 lengths[PERF_SIZE];
 	u8 codes[PERF_SIZE];
 	u8 data[PERF_SIZE * 4000];
@@ -40,9 +40,6 @@ Test(bitstream_perf) {
 	i32 i, c;
 
 	ASSERT(!rng_init(&rng), "rng init");
-	i64 write_micros = 0, read_micros = 0;
-	(void)write_micros;
-	(void)read_micros;
 
 	for (c = 0; c < PERF_ITER; c++) {
 		BitStreamWriter writer = {data};
@@ -53,46 +50,31 @@ Test(bitstream_perf) {
 			lengths[i] = lengths[i] < 16 ? 1 : lengths[i] >> 4,
 			codes[i] &= (lengths[i] - 1);
 
-		i64 start = micros();
 		for (i = 0; i < PERF_SIZE; i++) {
 			if (writer.bits_in_buffer + lengths[i] > 64)
 				bitstream_writer_flush(&writer);
 			bitstream_writer_push(&writer, codes[i], lengths[i]);
 		}
 		bitstream_writer_flush(&writer);
-		write_micros += micros() - start;
 
-		start = micros();
 		for (i = 0; i < PERF_SIZE; i++) {
 			u32 value;
-			(void)value;
 			if (reader.bits_in_buffer < lengths[i]) {
 				bitstream_reader_load(&reader);
 				value =
 				    bitstream_reader_read(&reader, lengths[i]);
 				bitstream_reader_clear(&reader, lengths[i]);
 				ASSERT_EQ(value, codes[i], "codes equal1");
-				len_sum += lengths[i];
 			} else {
 				value =
 				    bitstream_reader_read(&reader, lengths[i]);
 				bitstream_reader_clear(&reader, lengths[i]);
 				ASSERT_EQ(value, codes[i], "codes equal2");
-				len_sum += lengths[i];
 			}
 		}
-		read_micros += micros() - start;
 	}
+}
 
-	u64 read_mbps = 1000000 * ((len_sum / 8) / read_micros) / (1024 * 1024);
-	u64 write_mbps =
-	    1000000 * ((len_sum / 8) / write_micros) / (1024 * 1024);
-	(void)read_mbps;
-	(void)write_mbps;
-	/*
-	println("");
-	println(
-	    "read_micros={},write_micros={},len={},read={} MBps,write={} MBps",
-	    read_micros, write_micros, len_sum, read_mbps, write_mbps);
-	    */
+Test(compress_match_codes) {
+	ASSERT_EQ(get_match_code(4, 1), 0, "match code 0");
 }

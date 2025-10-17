@@ -1,0 +1,397 @@
+/********************************************************************************
+ * MIT License
+ *
+ * Copyright (c) 2025 Christopher Gilliard
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+
+#ifdef __AVX2__
+#include <immintrin.h>
+#endif /* __AVX2__ */
+#include <libfam/bitstream.h>
+#include <libfam/compress_impl.h>
+
+STATIC MatchInfo lz_hash_get(const LzHash *hash, const u8 *text, u32 cpos) {
+	u16 pos, dist, len = 0;
+	u32 mpos, key = *(u32 *)(text + cpos);
+	pos = hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT];
+	dist = (u16)cpos - pos;
+	if (!dist) return (MatchInfo){.len = 0, .dist = 0};
+	mpos = cpos - dist;
+
+#ifdef __AVX2__
+	u32 mask;
+	do {
+		__m256i vec1 =
+		    _mm256_loadu_si256((__m256i *)(text + mpos + len));
+		__m256i vec2 =
+		    _mm256_loadu_si256((__m256i *)(text + cpos + len));
+		__m256i cmp = _mm256_cmpeq_epi8(vec1, vec2);
+		mask = _mm256_movemask_epi8(cmp);
+
+		len += (mask != 0xFFFFFFFF) * ctz_u32(~mask) +
+		       (mask == 0xFFFFFFFF) * 32;
+	} while (mask == 0xFFFFFFFF && len < MAX_MATCH_LEN);
+#else
+	while (len < MAX_MATCH_LEN && text[mpos + len] == text[cpos + len])
+		len++;
+#endif /* !__AVX2__ */
+
+	return (MatchInfo){.len = len, .dist = dist};
+}
+
+STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
+	u32 key = *(u32 *)(text + cpos);
+	hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = (u16)cpos;
+}
+
+STATIC void compress_find_matches(const u8 *in, u32 len,
+				  u8 match_array[4 * MAX_COMPRESS_LEN + 32],
+				  u32 frequencies[SYMBOL_COUNT]) {
+	u32 i = 0, max, out_itt = 0;
+	LzHash hash = {0};
+	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
+
+	while (i < max) {
+		MatchInfo mi = lz_hash_get(&hash, in, i);
+		if (mi.len >= MIN_MATCH_LEN) {
+			u8 mc = get_match_code(mi.len, mi.dist);
+			frequencies[mc + MATCH_OFFSET]++;
+			u8 len_extra = length_extra_bits_value(mc, mi.len);
+			u16 dist_extra = distance_extra_bits_value(mc, mi.dist);
+			u8 len_extra_bits_count = length_extra_bits(mc);
+			u32 combined_extra =
+			    ((u32)dist_extra << len_extra_bits_count) |
+			    len_extra;
+
+			match_array[out_itt] = mc + 2;
+			((u32 *)(match_array + out_itt + 1))[0] =
+			    combined_extra;
+			out_itt += 4;
+
+			lz_hash_set(&hash, in, i);
+			lz_hash_set(&hash, in, i + 1);
+			lz_hash_set(&hash, in, i + 2);
+			lz_hash_set(&hash, in, i + 3);
+			i += mi.len;
+		} else {
+			lz_hash_set(&hash, in, i);
+			u8 ch = in[i++];
+			frequencies[ch]++;
+			((u16 *)match_array)[out_itt >> 1] = ch << 8;
+			out_itt += 4;
+		}
+	}
+	while (i < len) {
+		frequencies[in[i]]++;
+		((u16 *)match_array)[(out_itt) >> 1] = in[i] << 8;
+		out_itt += 2;
+		i++;
+	}
+	match_array[out_itt++] = 1;
+	frequencies[SYMBOL_TERM]++;
+}
+
+STATIC void compress_init_node(HuffmanNode *node, u16 symbol, u64 freq) {
+	node->symbol = symbol;
+	node->freq = freq;
+	node->left = node->right = NULL;
+}
+
+STATIC void compress_swap_nodes(HuffmanNode **a, HuffmanNode **b) {
+	HuffmanNode *temp = *a;
+	*a = *b;
+	*b = temp;
+}
+
+STATIC void compress_heapify(HuffmanMinHeap *heap, u64 idx) {
+	u64 smallest = idx;
+	u64 left = 2 * idx + 1;
+	u64 right = 2 * idx + 2;
+
+	if (left < heap->size &&
+	    heap->nodes[left]->freq < heap->nodes[smallest]->freq)
+		smallest = left;
+	if (right < heap->size &&
+	    heap->nodes[right]->freq < heap->nodes[smallest]->freq)
+		smallest = right;
+
+	if (smallest != idx) {
+		compress_swap_nodes(&heap->nodes[idx], &heap->nodes[smallest]);
+		compress_heapify(heap, smallest);
+	}
+}
+
+STATIC void compress_insert_heap(HuffmanMinHeap *heap, HuffmanNode *node) {
+	u64 i = ++heap->size - 1;
+	heap->nodes[i] = node;
+
+	while (i && heap->nodes[(i - 1) / 2]->freq > heap->nodes[i]->freq) {
+		compress_swap_nodes(&heap->nodes[i], &heap->nodes[(i - 1) / 2]);
+		i = (i - 1) / 2;
+	}
+}
+
+STATIC HuffmanNode *compress_extract_min(HuffmanMinHeap *heap) {
+	HuffmanNode *min;
+	if (heap->size == 0) return NULL;
+
+	min = heap->nodes[0];
+	heap->nodes[0] = heap->nodes[heap->size - 1];
+	heap->size--;
+	compress_heapify(heap, 0);
+
+	return min;
+}
+
+STATIC void compress_compute_lengths(HuffmanNode *node, u8 length,
+				     CodeLength code_lengths[SYMBOL_COUNT]) {
+	if (!node) return;
+	if (!node->left && !node->right)
+		code_lengths[node->symbol].length = length;
+	compress_compute_lengths(node->left, length + 1, code_lengths);
+	compress_compute_lengths(node->right, length + 1, code_lengths);
+}
+
+STATIC void compress_build_tree(const u32 frequencies[SYMBOL_COUNT],
+				CodeLength code_lengths[SYMBOL_COUNT],
+				HuffmanMinHeap *heap,
+				HuffmanNode nodes[SYMBOL_COUNT * 2 + 1]) {
+	i32 i;
+	u16 node_counter = 0;
+
+	heap->size = 0;
+
+	for (i = 0; i < SYMBOL_COUNT; i++) {
+		if (frequencies[i]) {
+			HuffmanNode *next = &nodes[node_counter++];
+			compress_init_node(next, i, frequencies[i]);
+			compress_insert_heap(heap, next);
+		}
+	}
+
+	if (heap->size == 1) {
+		HuffmanNode *node = compress_extract_min(heap);
+		code_lengths[node->symbol].length = 1;
+	} else {
+		while (heap->size > 1) {
+			HuffmanNode *left = compress_extract_min(heap);
+			HuffmanNode *right = compress_extract_min(heap);
+			HuffmanNode *parent = &nodes[node_counter++];
+			compress_init_node(parent, 0xFFFF,
+					   left->freq + right->freq);
+			parent->left = left;
+			parent->right = right;
+			compress_insert_heap(heap, parent);
+		}
+	}
+}
+
+STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
+				   CodeLength code_lengths[SYMBOL_COUNT]) {
+	i32 i;
+	u32 excess = 0;
+	u32 needed = 0;
+
+	for (i = 0; i < SYMBOL_COUNT; i++) {
+		if (code_lengths[i].length > MAX_CODE_LENGTH) {
+			excess += (code_lengths[i].length - MAX_CODE_LENGTH) *
+				  frequencies[i];
+			code_lengths[i].length = MAX_CODE_LENGTH;
+			needed += frequencies[i];
+		}
+	}
+
+	while (excess > 0 && needed > 0) {
+		for (i = 0; i < SYMBOL_COUNT && excess > 0; i++) {
+			if (code_lengths[i].length > 0 &&
+			    code_lengths[i].length < MAX_CODE_LENGTH &&
+			    frequencies[i] > 0) {
+				u32 delta = (excess < frequencies[i])
+						? excess
+						: frequencies[i];
+				code_lengths[i].length++;
+				excess -= delta;
+				needed -= delta;
+			}
+		}
+	}
+
+	u64 sum = 0;
+	for (i = 0; i < SYMBOL_COUNT; i++) {
+		if (code_lengths[i].length > 0) {
+			sum += 1ULL
+			       << (MAX_CODE_LENGTH - code_lengths[i].length);
+		}
+	}
+
+	while (sum > (1ULL << MAX_CODE_LENGTH)) {
+		for (i = SYMBOL_COUNT - 1; i >= 0; i--)
+			if (code_lengths[i].length > 1 &&
+			    code_lengths[i].length < MAX_CODE_LENGTH) {
+				code_lengths[i].length++;
+				break;
+			}
+		sum = 0;
+		for (i = 0; i < SYMBOL_COUNT; i++) {
+			if (code_lengths[i].length > 0) {
+				sum += 1ULL << (MAX_CODE_LENGTH -
+						code_lengths[i].length);
+			}
+		}
+	}
+}
+
+STATIC void compress_calculate_lengths(const u32 frequencies[SYMBOL_COUNT],
+				       CodeLength code_lengths[SYMBOL_COUNT]) {
+	HuffmanMinHeap heap;
+	HuffmanNode nodes[SYMBOL_COUNT * 2 + 1];
+	HuffmanNode *root;
+	compress_build_tree(frequencies, code_lengths, &heap, nodes);
+	if ((root = compress_extract_min(&heap)) != NULL) {
+		compress_compute_lengths(root, 0, code_lengths);
+		compress_limit_lengths(frequencies, code_lengths);
+	}
+}
+
+STATIC void compress_calculate_codes(CodeLength code_lengths[SYMBOL_COUNT]) {
+	u32 i, j, code = 0;
+	u32 length_count[MAX_CODE_LENGTH + 1] = {0};
+	u32 length_start[MAX_CODE_LENGTH + 1] = {0};
+	u32 length_pos[MAX_CODE_LENGTH + 1] = {0};
+
+	for (i = 0; i < SYMBOL_COUNT; i++)
+		length_count[code_lengths[i].length]++;
+
+	for (i = 1; i <= MAX_CODE_LENGTH; i++) {
+		code <<= 1;
+		length_start[i] = code;
+		code += length_count[i];
+	}
+
+	for (i = 0; i < SYMBOL_COUNT; i++) {
+		if (code_lengths[i].length != 0) {
+			u8 len = code_lengths[i].length;
+			code_lengths[i].code =
+			    length_start[len] + length_pos[len]++;
+			code_lengths[i].code &= (1U << len) - 1;
+
+			u16 reversed = 0;
+			u16 temp = code_lengths[i].code;
+			for (j = 0; j < len; j++) {
+				reversed = (reversed << 1) | (temp & 1);
+				temp >>= 1;
+			}
+			code_lengths[i].code = reversed;
+		}
+	}
+}
+
+STATIC i32 compress_write_lengths(BitStreamWriter *strm,
+				  const CodeLength code_lengths[SYMBOL_COUNT]) {
+	i32 i;
+INIT:
+	for (i = 0; i < SYMBOL_COUNT; i++) {
+		if (code_lengths[i].length) {
+			WRITE(strm, code_lengths[i].length, 4);
+		} else {
+			u16 run = i + 1;
+			while (run < SYMBOL_COUNT &&
+			       code_lengths[run].length == 0)
+				run++;
+			run -= i;
+			if (run >= 11) {
+				run = run > 138 ? 127 : run - 11;
+				WRITE(strm, 14, 4);
+				WRITE(strm, run, 7);
+				i += run + 10;
+			} else if (run >= 3) {
+				run = run - 3;
+				WRITE(strm, 15, 4);
+				WRITE(strm, run, 3);
+				i += run + 2;
+			} else
+				WRITE(strm, 0, 4);
+		}
+	}
+CLEANUP:
+	RETURN;
+}
+
+STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
+			  const u8 match_array[2 * MAX_COMPRESS_LEN + 1],
+			  u8 *out) {
+	u32 i = 0;
+	BitStreamWriter strm = {out};
+	compress_write_lengths(&strm, code_lengths);
+
+	i = 0;
+	while (match_array[i] != 1) {
+		if (strm.bits_in_buffer >= 32) bitstream_writer_flush(&strm);
+		if (match_array[i] == 0) {
+			u8 symbol = match_array[i + 1];
+			CodeLength cl = code_lengths[symbol];
+			u16 code = cl.code;
+			u8 length = cl.length;
+			bitstream_writer_push(&strm, code, length);
+		} else {
+			u8 match_code = match_array[i] - 2;
+			u16 symbol = (u16)match_code + MATCH_OFFSET;
+			CodeLength cl = code_lengths[symbol];
+			u16 code = cl.code;
+			u8 length = cl.length;
+			u32 combined_extra =
+			    ((u32 *)(match_array + i + 1))[0] & 0xFFFFFF;
+			u8 len_extra_bits = length_extra_bits(match_code);
+			u8 dist_extra_bits = distance_extra_bits(match_code);
+			u8 total_extra_bits = len_extra_bits + dist_extra_bits;
+
+			bitstream_writer_push(&strm, code, length);
+			bitstream_writer_push(&strm, combined_extra,
+					      total_extra_bits);
+		}
+		i += 4;
+	}
+
+	WRITE(&strm, code_lengths[SYMBOL_TERM].code,
+	      code_lengths[SYMBOL_TERM].length);
+	WRITE(&strm, 0, 64);
+	bitstream_writer_flush(&strm);
+	return (strm.bit_offset + 7) / 8;
+}
+
+PUBLIC u64 compress_bound(u64 len) { return len + (len >> 5) + 1024; }
+
+PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
+	u32 frequencies[SYMBOL_COUNT] = {0};
+	CodeLength code_lengths[SYMBOL_COUNT] = {0};
+	u8 match_array[2 * MAX_COMPRESS_LEN + 1] = {0};
+
+	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	compress_find_matches(in, len, match_array, frequencies);
+	compress_calculate_lengths(frequencies, code_lengths);
+	compress_calculate_codes(code_lengths);
+	return compress_write(code_lengths, match_array, out);
+}
