@@ -339,6 +339,7 @@ CLEANUP:
 	RETURN;
 }
 
+#ifdef __AVX2__
 STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
 			  const u8 match_array[4 * MAX_COMPRESS_LEN + 33],
 			  u8 *out, u32 term_index) {
@@ -445,6 +446,49 @@ STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
 	bitstream_writer_flush(&strm);
 	return (strm.bit_offset + 7) / 8;
 }
+#else
+STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
+			  const u8 match_array[4 * MAX_COMPRESS_LEN + 33],
+			  u8 *out, u64 term_index) {
+	u32 i = 0;
+	BitStreamWriter strm = {out};
+	compress_write_lengths(&strm, code_lengths);
+
+	i = 0;
+	while (match_array[i] != 1) {
+		if (strm.bits_in_buffer >= 32) bitstream_writer_flush(&strm);
+		if (match_array[i] == 0) {
+			u8 symbol = match_array[i + 1];
+			CodeLength cl = code_lengths[symbol];
+			u16 code = cl.code;
+			u8 length = cl.length;
+			bitstream_writer_push(&strm, code, length);
+		} else {
+			u8 match_code = match_array[i] - 2;
+			u16 symbol = (u16)match_code + MATCH_OFFSET;
+			CodeLength cl = code_lengths[symbol];
+			u16 code = cl.code;
+			u8 length = cl.length;
+			u32 combined_extra =
+			    ((u32 *)(match_array + i + 1))[0] & 0xFFFFFF;
+			u8 len_extra_bits = length_extra_bits(match_code);
+			u8 dist_extra_bits = distance_extra_bits(match_code);
+			u8 total_extra_bits = len_extra_bits + dist_extra_bits;
+
+			bitstream_writer_push(&strm, code, length);
+			bitstream_writer_push(&strm, combined_extra,
+					      total_extra_bits);
+		}
+		i += 4;
+	}
+
+	WRITE(&strm, code_lengths[SYMBOL_TERM].code,
+	      code_lengths[SYMBOL_TERM].length);
+	WRITE(&strm, 0, 64);
+	bitstream_writer_flush(&strm);
+	return (strm.bit_offset + 7) / 8;
+}
+#endif /* !__AVX2__ */
 
 STATIC i32 compress_read_lengths(BitStreamReader *strm,
 				 CodeLength code_lengths[SYMBOL_COUNT]) {
