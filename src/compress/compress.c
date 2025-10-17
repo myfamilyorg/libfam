@@ -66,7 +66,8 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 
 STATIC void compress_find_matches(const u8 *in, u32 len,
 				  u8 match_array[4 * MAX_COMPRESS_LEN + 33],
-				  u32 frequencies[SYMBOL_COUNT]) {
+				  u32 frequencies[SYMBOL_COUNT],
+				  u32 *term_index) {
 	u32 i = 0, max, out_itt = 0;
 	LzHash hash = {0};
 	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
@@ -107,6 +108,7 @@ STATIC void compress_find_matches(const u8 *in, u32 len,
 		out_itt += 4;
 		i++;
 	}
+	*term_index = out_itt;
 	match_array[out_itt++] = 1;
 	frequencies[SYMBOL_TERM]++;
 }
@@ -339,7 +341,7 @@ CLEANUP:
 
 STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
 			  const u8 match_array[4 * MAX_COMPRESS_LEN + 33],
-			  u8 *out) {
+			  u8 *out, u32 term_index) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
 	compress_write_lengths(&strm, code_lengths);
@@ -348,8 +350,9 @@ STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
 	__m256i one = _mm256_set1_epi32(1);
 	__m256i two = _mm256_set1_epi32(2);
 	__m256i match_offset_vec = _mm256_set1_epi32(MATCH_OFFSET);
+	u32 max = term_index >= 32 ? term_index - 32 : 0;
 
-	while (true) {
+	while (i < max) {
 		__m256i mreg = _mm256_load_si256((__m256i *)(match_array + i));
 		__m256i types =
 		    _mm256_and_si256(mreg, _mm256_set1_epi32(0x000000FF));
@@ -360,7 +363,6 @@ STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
 		__m256i mcs = _mm256_sub_epi32(types, two);
 		__m256i true_val = _mm256_add_epi32(mcs, match_offset_vec);
 		sym = _mm256_blendv_epi8(sym, true_val, mask);
-
 		__m256i cl_vec =
 		    _mm256_i32gather_epi32((const i32 *)code_lengths, sym, 4);
 		__m256i code_vec =
@@ -371,32 +373,71 @@ STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
 		    _mm256_and_si256(mreg, _mm256_set1_epi32(0xFFFFFF00));
 		combined_extra_vec = _mm256_srli_epi32(combined_extra_vec, 8);
 
-		for (u8 j = 0; j < 8; j++) {
-			if (((const u32 *)&types)[j] == 1) goto term;
-			if (((const u32 *)&types)[j] == 0) {
-				u16 code = ((const u32 *)&code_vec)[j];
-				u8 length = ((const u32 *)&length_vec)[j];
-				WRITE(&strm, code, length);
-			} else {
-				u8 match_code = ((const u32 *)&mcs)[j];
-				u16 code = ((const u32 *)&code_vec)[j];
-				u8 length = ((const u32 *)&length_vec)[j];
-				u32 combined_extra =
-				    ((const u32 *)&combined_extra_vec)[j];
-				u8 len_extra_bits =
-				    length_extra_bits(match_code);
-				u8 dist_extra_bits =
-				    distance_extra_bits(match_code);
-				u8 total_extra_bits =
-				    len_extra_bits + dist_extra_bits;
+		__m256i len_extra_vec = _mm256_srli_epi32(mcs, 4);
+		__m256i dist_extra_vec =
+		    _mm256_and_si256(mcs, _mm256_set1_epi32(0xF));
+		__m256i total_extra_vec =
+		    _mm256_add_epi8(len_extra_vec, dist_extra_vec);
 
-				WRITE(&strm, code, length);
-				WRITE(&strm, combined_extra, total_extra_bits);
+		__m256i bits_vec = _mm256_or_si256(
+		    code_vec,
+		    _mm256_sllv_epi32(combined_extra_vec, length_vec));
+		__m256i bits_length_vec =
+		    _mm256_add_epi8(total_extra_vec, length_vec);
+
+		__m256i literal_mask =
+		    _mm256_cmpeq_epi32(mask, _mm256_set1_epi32(0));
+		__m256i final_bits_vec =
+		    _mm256_blendv_epi8(bits_vec, code_vec, literal_mask);
+		__m256i final_bits_length_vec = _mm256_blendv_epi8(
+		    bits_length_vec, length_vec, literal_mask);
+		const u32 *codes = (const u32 *)&final_bits_vec;
+		const u32 *lengths = (const u32 *)&final_bits_length_vec;
+		u8 j;
+		for (j = 0; j < 7; j++) {
+			if (strm.bits_in_buffer + lengths[j] > 64) {
+				bitstream_writer_flush(&strm);
+				bitstream_writer_push(&strm, codes[j],
+						      lengths[j]);
+				j++;
 			}
+			bitstream_writer_push(&strm, codes[j], lengths[j]);
+		}
+		if (j < 8) {
+			if (strm.bits_in_buffer + lengths[j] > 64)
+				bitstream_writer_flush(&strm);
+			bitstream_writer_push(&strm, codes[j], lengths[j]);
 		}
 		i += 32;
 	}
-term:
+
+	while (i < term_index && match_array[i] != 1) {
+		bitstream_writer_flush(&strm);
+		if (match_array[i] == 0) {
+			u8 symbol = match_array[i + 1];
+			CodeLength cl = code_lengths[symbol];
+			u16 code = cl.code;
+			u8 length = cl.length;
+			bitstream_writer_push(&strm, code, length);
+			i += 4;
+		} else {
+			u8 match_code = match_array[i] - 2;
+			u16 symbol = (u16)match_code + MATCH_OFFSET;
+			CodeLength cl = code_lengths[symbol];
+			u16 code = cl.code;
+			u8 length = cl.length;
+			u32 combined_extra =
+			    ((u32 *)(match_array + i + 1))[0] & 0xFFFFFF;
+			u8 len_extra_bits = length_extra_bits(match_code);
+			u8 dist_extra_bits = distance_extra_bits(match_code);
+			u8 total_extra_bits = len_extra_bits + dist_extra_bits;
+
+			bitstream_writer_push(&strm, code, length);
+			bitstream_writer_push(&strm, combined_extra,
+					      total_extra_bits);
+			i += 4;
+		}
+	}
 
 	WRITE(&strm, code_lengths[SYMBOL_TERM].code,
 	      code_lengths[SYMBOL_TERM].length);
@@ -567,6 +608,7 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 PUBLIC u64 compress_bound(u64 len) { return len + (len >> 5) + 1024; }
 
 PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
+	u32 term_index;
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	CodeLength code_lengths[SYMBOL_COUNT] = {0};
 	u8 __attribute__((
@@ -577,10 +619,10 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 		return -1;
 	}
 
-	compress_find_matches(in, len, match_array, frequencies);
+	compress_find_matches(in, len, match_array, frequencies, &term_index);
 	compress_calculate_lengths(frequencies, code_lengths);
 	compress_calculate_codes(code_lengths);
-	return compress_write(code_lengths, match_array, out);
+	return compress_write(code_lengths, match_array, out, term_index);
 }
 
 PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
