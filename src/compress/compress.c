@@ -311,8 +311,6 @@ STATIC void compress_calculate_codes(CodeLength code_lengths[SYMBOL_COUNT]) {
 	}
 }
 
-u64 avg = 0, count = 0;
-
 STATIC i32 compress_write_lengths(BitStreamWriter *strm,
 				  const CodeLength code_lengths[SYMBOL_COUNT]) {
 	i32 i;
