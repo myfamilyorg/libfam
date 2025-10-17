@@ -74,7 +74,7 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 }
 
 void compress_find_matches(const u8 *in, u32 len,
-			   u8 match_array[2 * MAX_COMPRESS_LEN + 1],
+			   u8 match_array[4 * MAX_COMPRESS_LEN + 1],
 			   u32 frequencies[SYMBOL_COUNT]) {
 	u32 i = 0, max, out_itt = 0;
 	LzHash hash = {0};
@@ -82,38 +82,34 @@ void compress_find_matches(const u8 *in, u32 len,
 
 	while (i < max) {
 		MatchInfo mi = lz_hash_get(&hash, in, i);
+		lz_hash_set(&hash, in, i);
 		if (mi.len >= MIN_MATCH_LEN) {
 			u8 mc = get_match_code(mi.len, mi.dist);
-			frequencies[mc + MATCH_OFFSET]++;
 			u8 len_extra = length_extra_bits_value(mc, mi.len);
 			u16 dist_extra = distance_extra_bits_value(mc, mi.dist);
 			u8 len_extra_bits_count = length_extra_bits(mc);
 			u32 combined_extra =
 			    ((u32)dist_extra << len_extra_bits_count) |
 			    len_extra;
-
-			match_array[out_itt] = mc + 2;
-			((u32 *)(match_array + out_itt + 1))[0] =
-			    combined_extra;
-			out_itt += 4;
-
-			lz_hash_set(&hash, in, i);
+			u16 match_symbol = mc + MATCH_OFFSET;
+			frequencies[match_symbol]++;
+			((u32 *)match_array)[out_itt >> 2] =
+			    (combined_extra << 8) | (mc + 2);
 			lz_hash_set(&hash, in, i + 1);
 			lz_hash_set(&hash, in, i + 2);
 			lz_hash_set(&hash, in, i + 3);
 			i += mi.len;
 		} else {
-			lz_hash_set(&hash, in, i);
-			u8 ch = in[i++];
-			frequencies[ch]++;
-			((u16 *)match_array)[out_itt >> 1] = ch << 8;
-			out_itt += 2;
+			frequencies[in[i]]++;
+			((u32 *)match_array)[out_itt >> 2] = in[i] << 8;
+			i++;
 		}
+		out_itt += 4;
 	}
 	while (i < len) {
 		frequencies[in[i]]++;
 		((u16 *)match_array)[(out_itt) >> 1] = in[i] << 8;
-		out_itt += 2;
+		out_itt += 4;
 		i++;
 	}
 	match_array[out_itt++] = 1;
@@ -347,7 +343,7 @@ CLEANUP:
 }
 
 STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
-			  const u8 match_array[2 * MAX_COMPRESS_LEN + 1],
+			  const u8 match_array[4 * MAX_COMPRESS_LEN + 1],
 			  u8 *out) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
@@ -363,7 +359,7 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 				u16 code = cl.code;
 				u8 length = cl.length;
 				bitstream_writer_push(&strm, code, length);
-				i += 2;
+				i += 4;
 			} else {
 				u8 match_code = match_array[i] - 2;
 				u16 symbol = (u16)match_code + MATCH_OFFSET;
@@ -394,7 +390,7 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 			u16 code = cl.code;
 			u8 length = cl.length;
 			bitstream_writer_push(&strm, code, length);
-			i += 2;
+			i += 4;
 		} else {
 			u8 match_code = match_array[i] - 2;
 			u16 symbol = (u16)match_code + MATCH_OFFSET;
@@ -583,7 +579,7 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	CodeLength code_lengths[SYMBOL_COUNT] = {0};
-	u8 match_array[2 * MAX_COMPRESS_LEN + 1] = {0};
+	u8 match_array[4 * MAX_COMPRESS_LEN + 1] = {0};
 
 	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
 		errno = EINVAL;
