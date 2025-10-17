@@ -102,10 +102,4 @@ typedef struct {
 	u16 length;
 } CodeLength;
 
-u8 compress_length_extra_bits(u16 match_code);
-u8 compress_distance_extra_bits(u16 match_code);
-void compress_find_matches(const u8 *in, u32 len,
-			   u8 match_array[2 * MAX_COMPRESS_LEN + 1],
-			   u32 frequencies[SYMBOL_COUNT]);
-
 #endif /* _COMPRESS_IMPL_H */
