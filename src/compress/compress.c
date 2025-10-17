@@ -329,7 +329,7 @@ INIT:
 					repeat++;
 				}
 				if (repeat >= 3) {
-					WRITE(strm, 13, 4);
+					WRITE(strm, 10, 4);
 					WRITE(strm, repeat - 3, 2);
 					i += repeat - 1;
 					last_length = 0;
@@ -346,12 +346,12 @@ INIT:
 			run -= i;
 			if (run >= 11) {
 				run = run > 138 ? 127 : run - 11;
-				WRITE(strm, 14, 4);
+				WRITE(strm, 11, 4);
 				WRITE(strm, run, 7);
 				i += run + 10;
 			} else if (run >= 3) {
 				run = run - 3;
-				WRITE(strm, 15, 4);
+				WRITE(strm, 12, 4);
 				WRITE(strm, run, 3);
 				i += run + 2;
 			} else
@@ -369,21 +369,21 @@ STATIC i32 compress_read_lengths(BitStreamReader *strm,
 INIT:
 	while (i < SYMBOL_COUNT) {
 		u8 code = TRY_READ(strm, 4);
-		if (code < 13) {
+		if (code < 10) {
 			code_lengths[i++].length = code;
 			last_length = code;
-		} else if (code == 13) {
+		} else if (code == 10) {
 			if (i == 0 || last_length == 0) ERROR(EPROTO);
 			u8 repeat = TRY_READ(strm, 2) + 3;
 			if (i + repeat > SYMBOL_COUNT) ERROR(EPROTO);
 			for (j = 0; j < repeat; j++)
 				code_lengths[i++].length = last_length;
-		} else if (code == 14) {
+		} else if (code == 11) {
 			u8 zeros = TRY_READ(strm, 7) + 11;
 			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
 			for (j = 0; j < zeros; j++)
 				code_lengths[i++].length = 0;
-		} else if (code == 15) {
+		} else if (code == 12) {
 			u8 zeros = TRY_READ(strm, 3) + 3;
 			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
 			for (j = 0; j < zeros; j++)

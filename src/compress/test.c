@@ -112,6 +112,8 @@ Test(compress1) {
 		ASSERT(!memcmp(verify, in, file_size), "verify");
 	}
 
+	(void)decomp_sum;
+	(void)comp_sum;
 	/*println("avg comp={},decomp={}", comp_sum / ITER, decomp_sum /
 	 * ITER);*/
 
