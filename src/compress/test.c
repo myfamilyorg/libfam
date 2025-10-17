@@ -96,9 +96,12 @@ Test(compress1) {
 	timer = micros() - timer;
 
 	ASSERT(result > 0, "compress_block");
-	println("result={},micros={}", result, timer);
+	println("result={},micros(comp)={}", result, timer);
+	timer = micros();
 	result =
 	    decompress_block(out, result, verify, file_size, &bytes_consumed);
+	timer = micros() - timer;
+	println("micros(decomp)={}", timer);
 
 	ASSERT_EQ(result, file_size, "file_size");
 	ASSERT(!memcmp(verify, in, file_size), "verify");
