@@ -343,34 +343,60 @@ STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
 	u32 i = 0;
 	BitStreamWriter strm = {out};
 	compress_write_lengths(&strm, code_lengths);
+	bitstream_writer_flush(&strm);
 
-	i = 0;
-	while (match_array[i] != 1) {
-		if (strm.bits_in_buffer >= 32) bitstream_writer_flush(&strm);
-		if (match_array[i] == 0) {
-			u8 symbol = match_array[i + 1];
-			CodeLength cl = code_lengths[symbol];
-			u16 code = cl.code;
-			u8 length = cl.length;
-			bitstream_writer_push(&strm, code, length);
-		} else {
-			u8 match_code = match_array[i] - 2;
-			u16 symbol = (u16)match_code + MATCH_OFFSET;
-			CodeLength cl = code_lengths[symbol];
-			u16 code = cl.code;
-			u8 length = cl.length;
-			u32 combined_extra =
-			    ((u32 *)(match_array + i + 1))[0] & 0xFFFFFF;
-			u8 len_extra_bits = length_extra_bits(match_code);
-			u8 dist_extra_bits = distance_extra_bits(match_code);
-			u8 total_extra_bits = len_extra_bits + dist_extra_bits;
+	__m256i one = _mm256_set1_epi32(1);
+	__m256i two = _mm256_set1_epi32(2);
+	__m256i match_offset_vec = _mm256_set1_epi32(MATCH_OFFSET);
 
-			bitstream_writer_push(&strm, code, length);
-			bitstream_writer_push(&strm, combined_extra,
-					      total_extra_bits);
+	while (true) {
+		__m256i mreg = _mm256_load_si256((__m256i *)(match_array + i));
+		__m256i types =
+		    _mm256_and_si256(mreg, _mm256_set1_epi32(0x000000FF));
+		__m256i sym =
+		    _mm256_and_si256(mreg, _mm256_set1_epi32(0x0000FF00));
+		sym = _mm256_srli_epi32(sym, 8);
+		__m256i mask = _mm256_cmpgt_epi32(types, one);
+		__m256i mcs = _mm256_sub_epi32(types, two);
+		__m256i true_val = _mm256_add_epi32(mcs, match_offset_vec);
+		sym = _mm256_blendv_epi8(sym, true_val, mask);
+
+		__m256i cl_vec =
+		    _mm256_i32gather_epi32((const i32 *)code_lengths, sym, 4);
+		__m256i code_vec =
+		    _mm256_and_si256(cl_vec, _mm256_set1_epi32(0xFFFF));
+		__m256i length_vec = _mm256_srli_epi32(cl_vec, 16);
+
+		__m256i combined_extra_vec =
+		    _mm256_and_si256(mreg, _mm256_set1_epi32(0xFFFFFF00));
+		combined_extra_vec = _mm256_srli_epi32(combined_extra_vec, 8);
+
+		for (u8 j = 0; j < 8; j++) {
+			if (((const u32 *)&types)[j] == 1) goto term;
+			if (((const u32 *)&types)[j] == 0) {
+				u16 code = ((const u32 *)&code_vec)[j];
+				u8 length = ((const u32 *)&length_vec)[j];
+				WRITE(&strm, code, length);
+			} else {
+				u8 match_code = ((const u32 *)&mcs)[j];
+				u16 code = ((const u32 *)&code_vec)[j];
+				u8 length = ((const u32 *)&length_vec)[j];
+				u32 combined_extra =
+				    ((const u32 *)&combined_extra_vec)[j];
+				u8 len_extra_bits =
+				    length_extra_bits(match_code);
+				u8 dist_extra_bits =
+				    distance_extra_bits(match_code);
+				u8 total_extra_bits =
+				    len_extra_bits + dist_extra_bits;
+
+				WRITE(&strm, code, length);
+				WRITE(&strm, combined_extra, total_extra_bits);
+			}
 		}
-		i += 4;
+		i += 32;
 	}
+term:
 
 	WRITE(&strm, code_lengths[SYMBOL_TERM].code,
 	      code_lengths[SYMBOL_TERM].length);
@@ -543,7 +569,8 @@ PUBLIC u64 compress_bound(u64 len) { return len + (len >> 5) + 1024; }
 PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	CodeLength code_lengths[SYMBOL_COUNT] = {0};
-	u8 match_array[4 * MAX_COMPRESS_LEN + 33] = {0};
+	u8 __attribute__((
+	    aligned(32))) match_array[4 * MAX_COMPRESS_LEN + 33] = {0};
 
 	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
 		errno = EINVAL;
