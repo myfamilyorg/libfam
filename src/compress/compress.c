@@ -311,12 +311,33 @@ STATIC void compress_calculate_codes(CodeLength code_lengths[SYMBOL_COUNT]) {
 	}
 }
 
+u64 avg = 0, count = 0;
+
 STATIC i32 compress_write_lengths(BitStreamWriter *strm,
 				  const CodeLength code_lengths[SYMBOL_COUNT]) {
 	i32 i;
+	u64 bit_offset = strm->bit_offset;
+	u8 last_length = 0;
 INIT:
 	for (i = 0; i < SYMBOL_COUNT; i++) {
 		if (code_lengths[i].length) {
+			if (last_length == code_lengths[i].length && i > 0) {
+				u16 repeat = 1;
+				while (i + repeat < SYMBOL_COUNT &&
+				       code_lengths[i + repeat].length ==
+					   last_length &&
+				       repeat < 6) {
+					repeat++;
+				}
+				if (repeat >= 3) {
+					WRITE(strm, 13, 4);
+					WRITE(strm, repeat - 3, 2);
+					i += repeat - 1;
+					last_length = 0;
+					continue;
+				}
+			}
+
 			WRITE(strm, code_lengths[i].length, 4);
 		} else {
 			u16 run = i + 1;
@@ -338,6 +359,44 @@ INIT:
 				WRITE(strm, 0, 4);
 		}
 	}
+	bit_offset =
+	    (strm->bit_offset - (bit_offset + strm->bits_in_buffer)) / 8;
+	count++;
+	avg += bit_offset;
+	println("byte_offset={},avg={}", bit_offset, avg / count);
+CLEANUP:
+	RETURN;
+}
+
+STATIC i32 compress_read_lengths(BitStreamReader *strm,
+				 CodeLength code_lengths[SYMBOL_COUNT]) {
+	i32 i = 0, j;
+	u16 last_length = 0;
+INIT:
+	while (i < SYMBOL_COUNT) {
+		u8 code = TRY_READ(strm, 4);
+		if (code < 13) {
+			code_lengths[i++].length = code;
+			last_length = code;
+		} else if (code == 13) {
+			if (i == 0 || last_length == 0) ERROR(EPROTO);
+			u8 repeat = TRY_READ(strm, 2) + 3;
+			if (i + repeat > SYMBOL_COUNT) ERROR(EPROTO);
+			for (j = 0; j < repeat; j++)
+				code_lengths[i++].length = last_length;
+		} else if (code == 14) {
+			u8 zeros = TRY_READ(strm, 7) + 11;
+			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
+			for (j = 0; j < zeros; j++)
+				code_lengths[i++].length = 0;
+		} else if (code == 15) {
+			u8 zeros = TRY_READ(strm, 3) + 3;
+			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
+			for (j = 0; j < zeros; j++)
+				code_lengths[i++].length = 0;
+		}
+	}
+
 CLEANUP:
 	RETURN;
 }
@@ -415,31 +474,6 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 	WRITE(&strm, 0, 64);
 	bitstream_writer_flush(&strm);
 	return (strm.bit_offset + 7) / 8;
-}
-
-STATIC i32 compress_read_lengths(BitStreamReader *strm,
-				 CodeLength code_lengths[SYMBOL_COUNT]) {
-	i32 i = 0, j;
-INIT:
-	while (i < SYMBOL_COUNT) {
-		u8 code = TRY_READ(strm, 4);
-		if (code < 14) {
-			code_lengths[i++].length = code;
-		} else if (code == 14) {
-			u8 zeros = TRY_READ(strm, 7) + 11;
-			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
-			for (j = 0; j < zeros; j++)
-				code_lengths[i++].length = 0;
-		} else if (code == 15) {
-			u8 zeros = TRY_READ(strm, 3) + 3;
-			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
-			for (j = 0; j < zeros; j++)
-				code_lengths[i++].length = 0;
-		}
-	}
-
-CLEANUP:
-	RETURN;
 }
 
 #ifdef __AVX2__
