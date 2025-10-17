@@ -45,7 +45,11 @@
 #define MIN_MATCH_LEN 4
 #define MAX_MATCH_DIST U16_MAX
 #define MIN_MATCH_DIST 1
-#define MAX_COMPRESS_LEN (1 << 17)
+
+#define MAX_COMPRESS_LEN (1 << 18)
+#define MAX_COMPRESS_BOUND_LEN \
+	(MAX_COMPRESS_LEN + (MAX_COMPRESS_LEN >> 5) + 1024)
+#define MAX_AVX_OVERWRITE 32
 
 #define TRY_READ(strm, bits)                                                   \
 	({                                                                     \
@@ -98,6 +102,14 @@ typedef struct {
 	u16 base_dist;
 	u8 base_len;
 } HuffmanLookup;
+
+typedef struct {
+	u64 file_size;
+	u64 mtime;
+	u64 atime;
+	u16 permissions;
+	u16 version;
+} CompressHeader;
 
 static inline u16 get_match_code(u16 len, u32 dist) {
 	u32 len_bits = 31 - clz_u32(len - 3);

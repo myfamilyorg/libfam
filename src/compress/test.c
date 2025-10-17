@@ -80,6 +80,8 @@ Test(compress_match_codes) {
 	ASSERT_EQ(get_match_code(4, 1), 0, "match code 0");
 }
 
+#define ITER (16 * 1024)
+
 Test(compress1) {
 	u64 bytes_consumed;
 	const u8 *path = "./resources/test_wikipedia.txt";
@@ -91,20 +93,26 @@ Test(compress1) {
 	u8 *verify = alloc(file_size);
 	ASSERT(out, "out");
 	ASSERT(verify, "verify");
-	i64 timer = micros();
-	i32 result = compress_block(in, file_size, out, bound);
-	timer = micros() - timer;
+	i64 comp_sum = 0, decomp_sum = 0;
 
-	ASSERT(result > 0, "compress_block");
-	println("result={},micros(comp)={}", result, timer);
-	timer = micros();
-	result =
-	    decompress_block(out, result, verify, file_size, &bytes_consumed);
-	timer = micros() - timer;
-	println("micros(decomp)={}", timer);
+	for (u32 i = 0; i < ITER; i++) {
+		i64 timer = micros();
+		i32 result = compress_block(in, file_size, out, bound);
+		timer = micros() - timer;
+		comp_sum += timer;
 
-	ASSERT_EQ(result, file_size, "file_size");
-	ASSERT(!memcmp(verify, in, file_size), "verify");
+		ASSERT(result > 0, "compress_block");
+		timer = micros();
+		result = decompress_block(out, result, verify, file_size,
+					  &bytes_consumed);
+		timer = micros() - timer;
+		decomp_sum += timer;
+
+		ASSERT_EQ(result, file_size, "file_size");
+		ASSERT(!memcmp(verify, in, file_size), "verify");
+	}
+
+	println("avg comp={},decomp={}", comp_sum / ITER, decomp_sum / ITER);
 
 	munmap(in, file_size);
 	release(verify);
