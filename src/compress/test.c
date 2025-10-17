@@ -24,6 +24,7 @@
  *******************************************************************************/
 
 #include <libfam/bitstream.h>
+#include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
@@ -77,4 +78,33 @@ Test(bitstream_perf) {
 
 Test(compress_match_codes) {
 	ASSERT_EQ(get_match_code(4, 1), 0, "match code 0");
+}
+
+Test(compress1) {
+	u64 bytes_consumed;
+	const u8 *path = "./resources/test_wikipedia.txt";
+	i32 fd = file(path);
+	u64 file_size = min(fsize(fd), 128 * 1024);
+	u8 *in = fmap(fd, file_size, 0);
+	u64 bound = compress_bound(file_size);
+	u8 *out = alloc(bound);
+	u8 *verify = alloc(file_size);
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+	i64 timer = micros();
+	i32 result = compress_block(in, file_size, out, bound);
+	timer = micros() - timer;
+
+	ASSERT(result > 0, "compress_block");
+	println("result={},micros={}", result, timer);
+	result =
+	    decompress_block(out, result, verify, file_size, &bytes_consumed);
+
+	ASSERT_EQ(result, file_size, "file_size");
+	ASSERT(!memcmp(verify, in, file_size), "verify");
+
+	munmap(in, file_size);
+	release(verify);
+	release(out);
+	close(fd);
 }

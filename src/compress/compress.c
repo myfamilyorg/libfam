@@ -28,6 +28,7 @@
 #endif /* __AVX2__ */
 #include <libfam/bitstream.h>
 #include <libfam/compress_impl.h>
+#include <libfam/format.h>
 
 STATIC MatchInfo lz_hash_get(const LzHash *hash, const u8 *text, u32 cpos) {
 	u16 pos, dist, len = 0;
@@ -64,7 +65,7 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 }
 
 STATIC void compress_find_matches(const u8 *in, u32 len,
-				  u8 match_array[4 * MAX_COMPRESS_LEN + 32],
+				  u8 match_array[4 * MAX_COMPRESS_LEN + 33],
 				  u32 frequencies[SYMBOL_COUNT]) {
 	u32 i = 0, max, out_itt = 0;
 	LzHash hash = {0};
@@ -103,7 +104,7 @@ STATIC void compress_find_matches(const u8 *in, u32 len,
 	while (i < len) {
 		frequencies[in[i]]++;
 		((u16 *)match_array)[(out_itt) >> 1] = in[i] << 8;
-		out_itt += 2;
+		out_itt += 4;
 		i++;
 	}
 	match_array[out_itt++] = 1;
@@ -337,7 +338,7 @@ CLEANUP:
 }
 
 STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
-			  const u8 match_array[2 * MAX_COMPRESS_LEN + 1],
+			  const u8 match_array[4 * MAX_COMPRESS_LEN + 33],
 			  u8 *out) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
@@ -378,12 +379,171 @@ STATIC i32 compress_write(CodeLength code_lengths[SYMBOL_COUNT],
 	return (strm.bit_offset + 7) / 8;
 }
 
+STATIC i32 compress_read_lengths(BitStreamReader *strm,
+				 CodeLength code_lengths[SYMBOL_COUNT]) {
+	i32 i = 0, j;
+INIT:
+	while (i < SYMBOL_COUNT) {
+		u8 code = TRY_READ(strm, 4);
+		if (code < 14) {
+			code_lengths[i++].length = code;
+		} else if (code == 14) {
+			u8 zeros = TRY_READ(strm, 7) + 11;
+			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
+			for (j = 0; j < zeros; j++)
+				code_lengths[i++].length = 0;
+		} else if (code == 15) {
+			u8 zeros = TRY_READ(strm, 3) + 3;
+			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
+			for (j = 0; j < zeros; j++)
+				code_lengths[i++].length = 0;
+		}
+	}
+
+CLEANUP:
+	RETURN;
+}
+
+#ifdef __AVX2__
+INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
+				  u64 actual_length) {
+	if (out_src + 32 <= out_dest) {
+		u64 chunks = (actual_length + 31) >> 5;
+		while (chunks--) {
+			__m256i vec = _mm256_loadu_si256((__m256i *)out_src);
+			_mm256_storeu_si256((__m256i *)out_dest, vec);
+			out_src += 32;
+			out_dest += 32;
+		}
+	} else {
+		u64 remainder = actual_length;
+		while (remainder--) {
+			*out_dest++ = *out_src++;
+		}
+	}
+}
+#endif /* __AVX2__ */
+
+INLINE static i32 compress_proc_match(BitStreamReader *strm, u8 *out,
+				      u32 capacity, HuffmanLookup *entry,
+				      u32 *itt) {
+	u8 len_extra;
+	u16 base_length, actual_length, base_dist, dist_extra, actual_distance;
+	u8 len_extra_bits = entry->len_extra_bits;
+	u8 dist_extra_bits = entry->dist_extra_bits;
+	base_length = entry->base_len;
+	base_dist = entry->base_dist;
+
+	len_extra = bitstream_reader_read(strm, len_extra_bits);
+	bitstream_reader_clear(strm, len_extra_bits);
+	dist_extra = bitstream_reader_read(strm, dist_extra_bits);
+	bitstream_reader_clear(strm, dist_extra_bits);
+
+	actual_length = base_length + len_extra;
+	actual_distance = base_dist + dist_extra;
+	if (actual_length + *itt > capacity) {
+		errno = EOVERFLOW;
+		return -1;
+	}
+
+	u8 *out_dest = out + *itt;
+	u8 *out_src = out + *itt - actual_distance;
+	*itt += actual_length;
+
+#ifdef __AVX2__
+	copy_with_avx2(out_dest, out_src, actual_length);
+#else
+	while (actual_length--) *out_dest++ = *out_src++;
+#endif /* !__AVX2__ */
+	return 0;
+}
+
+STATIC void compress_build_lookup_table(
+    const CodeLength code_lengths[SYMBOL_COUNT],
+    HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)]) {
+	i32 i, j;
+	for (i = 0; i < SYMBOL_COUNT; i++) {
+		if (code_lengths[i].length) {
+			i32 index = code_lengths[i].code &
+				    ((1U << code_lengths[i].length) - 1);
+			i32 fill_depth =
+			    1U << (MAX_CODE_LENGTH - code_lengths[i].length);
+			for (j = 0; j < fill_depth; j++) {
+				lookup_table[index |
+					     (j << code_lengths[i].length)]
+				    .length = code_lengths[i].length;
+				lookup_table[index |
+					     (j << code_lengths[i].length)]
+				    .symbol = i;
+				if (i >= MATCH_OFFSET) {
+					u8 mc = i - MATCH_OFFSET;
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .dist_extra_bits =
+					    distance_extra_bits(mc);
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .len_extra_bits =
+					    length_extra_bits(mc);
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .base_dist = distance_base(mc);
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .base_len = length_base(mc) + 4;
+				}
+			}
+		}
+	}
+}
+
+STATIC i32 compress_read_symbols(BitStreamReader *strm,
+				 const CodeLength code_lengths[SYMBOL_COUNT],
+				 u8 *out, u32 capacity, u64 *bytes_consumed) {
+	HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
+	u32 itt = 0;
+	u16 symbol = 0;
+	u8 load_threshold = MAX_CODE_LENGTH + 7 + 15;
+
+	compress_build_lookup_table(code_lengths, lookup_table);
+
+	while (true) {
+		if (__builtin_expect(strm->bits_in_buffer < load_threshold, 0))
+			bitstream_reader_load(strm);
+
+		u16 bits = bitstream_reader_read(strm, MAX_CODE_LENGTH);
+		HuffmanLookup entry = lookup_table[bits];
+		u8 length = entry.length;
+		symbol = entry.symbol;
+
+		bitstream_reader_clear(strm, length);
+		if (symbol < SYMBOL_TERM) {
+			if (itt >= capacity) {
+				errno = EOVERFLOW;
+				return -1;
+			}
+			out[itt++] = symbol;
+		} else if (symbol == SYMBOL_TERM) {
+			break;
+		} else if (compress_proc_match(strm, out, capacity, &entry,
+					       &itt) < 0)
+			return -1;
+	}
+	*bytes_consumed =
+	    (strm->bit_offset - strm->bits_in_buffer + 64 + 7) / 8;
+	return itt;
+}
+
 PUBLIC u64 compress_bound(u64 len) { return len + (len >> 5) + 1024; }
 
 PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	CodeLength code_lengths[SYMBOL_COUNT] = {0};
-	u8 match_array[2 * MAX_COMPRESS_LEN + 1] = {0};
+	u8 match_array[4 * MAX_COMPRESS_LEN + 33] = {0};
 
 	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
 		errno = EINVAL;
@@ -394,4 +554,14 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	compress_calculate_lengths(frequencies, code_lengths);
 	compress_calculate_codes(code_lengths);
 	return compress_write(code_lengths, match_array, out);
+}
+
+PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
+			    u64 *bytes_consumed) {
+	BitStreamReader strm = {in, len};
+	CodeLength code_lengths[SYMBOL_COUNT] = {0};
+	compress_read_lengths(&strm, code_lengths);
+	compress_calculate_codes(code_lengths);
+	return compress_read_symbols(&strm, code_lengths, out, capacity,
+				     bytes_consumed);
 }

@@ -47,6 +47,17 @@
 #define MIN_MATCH_DIST 1
 #define MAX_COMPRESS_LEN (1 << 17)
 
+#define TRY_READ(strm, bits)                                                   \
+	({                                                                     \
+		if ((strm)->bits_in_buffer < (bits)) {                         \
+			bitstream_reader_load(strm);                           \
+			if ((strm)->bits_in_buffer < (bits)) ERROR(EOVERFLOW); \
+		}                                                              \
+		i32 _ret__ = bitstream_reader_read((strm), (bits));            \
+		bitstream_reader_clear((strm), (bits));                        \
+		_ret__;                                                        \
+	})
+
 #define WRITE(strm, value, bits)                              \
 	do {                                                  \
 		if ((strm)->bits_in_buffer + (bits) > 64)     \
@@ -78,6 +89,15 @@ typedef struct {
 	u16 code;
 	u16 length;
 } CodeLength;
+
+typedef struct {
+	u16 symbol;
+	u16 length;
+	u8 dist_extra_bits;
+	u8 len_extra_bits;
+	u16 base_dist;
+	u8 base_len;
+} HuffmanLookup;
 
 static inline u16 get_match_code(u16 len, u32 dist) {
 	u32 len_bits = 31 - clz_u32(len - 3);
