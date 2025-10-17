@@ -316,7 +316,6 @@ u64 avg = 0, count = 0;
 STATIC i32 compress_write_lengths(BitStreamWriter *strm,
 				  const CodeLength code_lengths[SYMBOL_COUNT]) {
 	i32 i;
-	u64 bit_offset = strm->bit_offset;
 	u8 last_length = 0;
 INIT:
 	for (i = 0; i < SYMBOL_COUNT; i++) {
@@ -359,11 +358,6 @@ INIT:
 				WRITE(strm, 0, 4);
 		}
 	}
-	bit_offset =
-	    (strm->bit_offset - (bit_offset + strm->bits_in_buffer)) / 8;
-	count++;
-	avg += bit_offset;
-	println("byte_offset={},avg={}", bit_offset, avg / count);
 CLEANUP:
 	RETURN;
 }

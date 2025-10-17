@@ -112,7 +112,8 @@ Test(compress1) {
 		ASSERT(!memcmp(verify, in, file_size), "verify");
 	}
 
-	println("avg comp={},decomp={}", comp_sum / ITER, decomp_sum / ITER);
+	/*println("avg comp={},decomp={}", comp_sum / ITER, decomp_sum /
+	 * ITER);*/
 
 	munmap(in, file_size);
 	release(verify);
