@@ -617,7 +617,7 @@ INLINE static i32 compress_proc_match(BitStreamReader *strm, u8 *out,
 
 	actual_length = base_length + len_extra;
 	actual_distance = base_dist + dist_extra;
-	if (((actual_length + 28) * 32) / 32 + *itt > capacity) {
+	if (((actual_length + 31) * 32) / 32 + *itt > capacity) {
 		errno = EOVERFLOW;
 		return -1;
 	}
