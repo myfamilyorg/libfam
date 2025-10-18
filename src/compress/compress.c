@@ -608,27 +608,20 @@ INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
 INLINE static i32 compress_proc_match(BitStreamReader *strm, u8 *out,
 				      u32 capacity, HuffmanLookup *entry,
 				      u32 *itt) {
-	u8 len_extra;
-	u16 base_length, actual_length, base_dist, dist_extra, actual_distance;
-	u8 len_extra_bits = entry->len_extra_bits;
-	u8 dist_extra_bits = entry->dist_extra_bits;
-	base_length = entry->base_len;
-	base_dist = entry->base_dist;
+	u16 len_extra = bitstream_reader_read(strm, entry->len_extra_bits);
+	bitstream_reader_clear(strm, entry->len_extra_bits);
+	u16 dist_extra = bitstream_reader_read(strm, entry->dist_extra_bits);
+	bitstream_reader_clear(strm, entry->dist_extra_bits);
 
-	len_extra = bitstream_reader_read(strm, len_extra_bits);
-	bitstream_reader_clear(strm, len_extra_bits);
-	dist_extra = bitstream_reader_read(strm, dist_extra_bits);
-	bitstream_reader_clear(strm, dist_extra_bits);
-
-	actual_length = base_length + len_extra;
-	actual_distance = base_dist + dist_extra;
+	u16 actual_length = entry->base_len + len_extra;
+	u16 actual_distance = entry->base_dist + dist_extra;
 	if (actual_length + 31 + *itt > capacity) {
 		errno = EOVERFLOW;
 		return -1;
 	}
 
 	u8 *out_dest = out + *itt;
-	u8 *out_src = out + *itt - actual_distance;
+	u8 *out_src = out_dest - actual_distance;
 	*itt += actual_length;
 
 #ifdef __AVX2__
@@ -651,7 +644,7 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 
 	while (true) {
 		if (__builtin_expect(strm->bits_in_buffer < load_threshold, 0))
-			bitstream_reader_load(strm);
+			if (bitstream_reader_load(strm) < 0) return -1;
 
 		u16 bits = bitstream_reader_read(strm, MAX_CODE_LENGTH);
 		HuffmanLookup entry = lookup_table[bits];
