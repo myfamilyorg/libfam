@@ -25,6 +25,7 @@
 
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
+#include <libfam/format.h>
 #include <libfam/iouring.h>
 #include <libfam/linux.h>
 #include <libfam/linux_time.h>

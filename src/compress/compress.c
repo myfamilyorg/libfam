@@ -694,17 +694,20 @@ STATIC i32 compress_calculate_block_type(u32 frequencies[SYMBOL_COUNT],
 
 STATIC i32 compress_copy(const u8 *in, u32 len, u8 *out) {
 	out[0] = 1;
-	memcpy(out + 1, in, len);
-	return len + 1;
+	memcpy(out + 1, &len, sizeof(u32));
+	memcpy(out + 5, in, len);
+	return len + 5;
 }
 
 STATIC i32 compress_raw_copy(const u8 *in, u32 len, u8 *out, u32 capacity,
 			     u64 *bytes_consumed) {
+	u32 block_len;
 INIT:
-	if (len > capacity) ERROR(EOVERFLOW);
-	memcpy(out, in, len);
-	*bytes_consumed = len;
-	OK(len);
+	memcpy(&block_len, in, sizeof(u32));
+	if (block_len > capacity) ERROR(EOVERFLOW);
+	memcpy(out, in + 4, block_len);
+	*bytes_consumed = block_len + 5;
+	OK(block_len);
 CLEANUP:
 	RETURN;
 }
