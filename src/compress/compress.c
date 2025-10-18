@@ -96,7 +96,7 @@ void compress_find_matches(const u8 *in, u32 len,
 			i += mi.len;
 		} else {
 			frequencies[in[i]]++;
-			((u32 *)match_array)[out_itt >> 2] = in[i] << 8;
+			((u16 *)match_array)[out_itt >> 1] = in[i] << 8;
 			i++;
 		}
 		out_itt += 4;
