@@ -96,10 +96,10 @@ typedef struct {
 
 typedef struct {
 	u16 symbol;
-	u16 length;
+	u16 base_dist;
+	u8 length;
 	u8 dist_extra_bits;
 	u8 len_extra_bits;
-	u16 base_dist;
 	u8 base_len;
 } HuffmanLookup;
 
