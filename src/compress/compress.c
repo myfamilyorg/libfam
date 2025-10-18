@@ -88,7 +88,7 @@ void compress_find_matches(const u8 *in, u32 len,
 			    len_extra;
 			u16 match_symbol = mc + MATCH_OFFSET;
 			frequencies[match_symbol]++;
-			((u32 *)match_array)[out_itt >> 2] =
+			((u32 *)(match_array + out_itt))[0] =
 			    (combined_extra << 8) | (mc + 2);
 			lz_hash_set(&hash, in, i + 1);
 			lz_hash_set(&hash, in, i + 2);
@@ -96,14 +96,14 @@ void compress_find_matches(const u8 *in, u32 len,
 			i += mi.len;
 		} else {
 			frequencies[in[i]]++;
-			((u16 *)match_array)[out_itt >> 1] = in[i] << 8;
+			((u16 *)(match_array + out_itt))[0] = in[i] << 8;
 			i++;
 		}
 		out_itt += 4;
 	}
 	while (i < len) {
 		frequencies[in[i]]++;
-		((u16 *)match_array)[(out_itt) >> 1] = in[i] << 8;
+		((u16 *)(match_array + out_itt))[0] = in[i] << 8;
 		out_itt += 4;
 		i++;
 	}
