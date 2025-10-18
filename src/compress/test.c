@@ -90,7 +90,7 @@ Test(compress1) {
 	u8 *in = fmap(fd, file_size, 0);
 	u64 bound = compress_bound(file_size);
 	u8 *out = alloc(bound);
-	u8 *verify = alloc(file_size);
+	u8 *verify = alloc(file_size + 32);
 	ASSERT(out, "out");
 	ASSERT(verify, "verify");
 	i64 comp_sum = 0, decomp_sum = 0;
@@ -103,7 +103,7 @@ Test(compress1) {
 
 		ASSERT(result > 0, "compress_block");
 		timer = micros();
-		result = decompress_block(out, result, verify, file_size,
+		result = decompress_block(out, result, verify, file_size + 32,
 					  &bytes_consumed);
 		timer = micros() - timer;
 		decomp_sum += timer;
