@@ -108,7 +108,8 @@ Test(compress1) {
 		timer = micros() - timer;
 		decomp_sum += timer;
 
-		ASSERT_EQ(result, file_size, "file_size");
+		ASSERT_EQ(result, file_size, "file_size {} != {}", result,
+			  file_size);
 		ASSERT(!memcmp(verify, in, file_size), "verify");
 	}
 
@@ -122,3 +123,46 @@ Test(compress1) {
 	release(out);
 	close(fd);
 }
+
+Test(compress2) {
+	u64 bytes_consumed;
+	const u8 *path = "./resources/rand.txt";
+	i32 fd = file(path);
+	u64 file_size = min(fsize(fd), 128 * 1024);
+	u8 *in = fmap(fd, file_size, 0);
+	u64 bound = compress_bound(file_size);
+	u8 *out = alloc(bound);
+	u8 *verify = alloc(file_size + 32);
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+	i64 comp_sum = 0, decomp_sum = 0;
+
+	for (u32 i = 0; i < ITER; i++) {
+		i64 timer = micros();
+		i32 result = compress_block(in, file_size, out, bound);
+		timer = micros() - timer;
+		comp_sum += timer;
+
+		ASSERT(result > 0, "compress_block");
+		timer = micros();
+		result = decompress_block(out, result, verify, file_size + 32,
+					  &bytes_consumed);
+		timer = micros() - timer;
+		decomp_sum += timer;
+
+		ASSERT_EQ(result, file_size, "file_size, {} != {}", result,
+			  file_size);
+		ASSERT(!memcmp(verify, in, file_size), "verify");
+	}
+
+	(void)decomp_sum;
+	(void)comp_sum;
+	/*println("avg comp={},decomp={}", comp_sum / ITER, decomp_sum /
+	 * ITER);*/
+
+	munmap(in, file_size);
+	release(verify);
+	release(out);
+	close(fd);
+}
+
