@@ -26,9 +26,7 @@
 #ifdef __AVX2__
 #include <immintrin.h>
 #endif /* __AVX2__ */
-#include <libfam/atomic.h>
 #include <libfam/bitstream.h>
-#include <libfam/builtin.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/format.h>
@@ -146,9 +144,10 @@ STATIC void compress_insert_heap(HuffmanMinHeap *heap, HuffmanNode *node) {
 	u64 i = ++heap->size - 1;
 	heap->nodes[i] = node;
 
-	while (i && heap->nodes[(i - 1) / 2]->freq > heap->nodes[i]->freq) {
-		compress_swap_nodes(&heap->nodes[i], &heap->nodes[(i - 1) / 2]);
-		i = (i - 1) / 2;
+	while (i && heap->nodes[(i - 1) >> 1]->freq > heap->nodes[i]->freq) {
+		compress_swap_nodes(&heap->nodes[i],
+				    &heap->nodes[(i - 1) >> 1]);
+		i = (i - 1) >> 1;
 	}
 }
 
@@ -157,8 +156,7 @@ STATIC HuffmanNode *compress_extract_min(HuffmanMinHeap *heap) {
 	if (heap->size == 0) return NULL;
 
 	min = heap->nodes[0];
-	heap->nodes[0] = heap->nodes[heap->size - 1];
-	heap->size--;
+	heap->nodes[0] = heap->nodes[--heap->size];
 	compress_heapify(heap, 0);
 
 	return min;
@@ -210,9 +208,7 @@ STATIC void compress_build_tree(const u32 frequencies[SYMBOL_COUNT],
 STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
 				   CodeLength code_lengths[SYMBOL_COUNT],
 				   u8 limit) {
-	i32 i;
-	u32 excess = 0;
-	u32 needed = 0;
+	i32 i, excess = 0, needed = 0, sum = 0;
 
 	for (i = 0; i < SYMBOL_COUNT; i++) {
 		if (code_lengths[i].length > limit) {
@@ -238,12 +234,9 @@ STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
 		}
 	}
 
-	u64 sum = 0;
-	for (i = 0; i < SYMBOL_COUNT; i++) {
-		if (code_lengths[i].length > 0) {
+	for (i = 0; i < SYMBOL_COUNT; i++)
+		if (code_lengths[i].length > 0)
 			sum += 1ULL << (limit - code_lengths[i].length);
-		}
-	}
 
 	while (sum > (1ULL << limit)) {
 		for (i = SYMBOL_COUNT - 1; i >= 0; i--)
@@ -253,11 +246,9 @@ STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
 				break;
 			}
 		sum = 0;
-		for (i = 0; i < SYMBOL_COUNT; i++) {
-			if (code_lengths[i].length > 0) {
+		for (i = 0; i < SYMBOL_COUNT; i++)
+			if (code_lengths[i].length > 0)
 				sum += 1ULL << (limit - code_lengths[i].length);
-			}
-		}
 	}
 }
 
@@ -283,27 +274,21 @@ STATIC void compress_calculate_codes(CodeLength code_lengths[SYMBOL_COUNT]) {
 	for (i = 0; i < SYMBOL_COUNT; i++)
 		length_count[code_lengths[i].length]++;
 
-	for (i = 1; i <= MAX_CODE_LENGTH; i++) {
-		code <<= 1;
+	for (i = 1; i <= MAX_CODE_LENGTH; i++, code <<= 1) {
 		length_start[i] = code;
 		code += length_count[i];
 	}
 
 	for (i = 0; i < SYMBOL_COUNT; i++) {
-		if (code_lengths[i].length != 0) {
-			u8 len = code_lengths[i].length;
-			code_lengths[i].code =
-			    length_start[len] + length_pos[len]++;
-			code_lengths[i].code &= (1U << len) - 1;
-
-			u16 reversed = 0;
-			u16 temp = code_lengths[i].code;
-			for (j = 0; j < len; j++) {
-				reversed = (reversed << 1) | (temp & 1);
-				temp >>= 1;
-			}
-			code_lengths[i].code = reversed;
-		}
+		u8 len = code_lengths[i].length;
+		u16 temp, reversed = 0;
+		if (len == 0) continue;
+		code_lengths[i].code = length_start[len] + length_pos[len]++;
+		code_lengths[i].code &= (1U << len) - 1;
+		temp = code_lengths[i].code;
+		for (j = 0; j < len; j++, temp >>= 1)
+			reversed = (reversed << 1) | (temp & 1);
+		code_lengths[i].code = reversed;
 	}
 }
 
@@ -312,52 +297,36 @@ STATIC void compress_build_lookup_table(
     HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)]) {
 	i32 i, j;
 	for (i = 0; i < SYMBOL_COUNT; i++) {
-		if (code_lengths[i].length) {
-			i32 index = code_lengths[i].code &
-				    ((1U << code_lengths[i].length) - 1);
-			i32 fill_depth =
-			    1U << (MAX_CODE_LENGTH - code_lengths[i].length);
-			for (j = 0; j < fill_depth; j++) {
-				lookup_table[index |
-					     (j << code_lengths[i].length)]
-				    .length = code_lengths[i].length;
-				lookup_table[index |
-					     (j << code_lengths[i].length)]
-				    .symbol = i;
-				if (i >= MATCH_OFFSET) {
-					u8 mc = i - MATCH_OFFSET;
-					lookup_table[index |
-						     (j << code_lengths[i]
-							       .length)]
-					    .dist_extra_bits =
-					    distance_extra_bits(mc);
-					lookup_table[index |
-						     (j << code_lengths[i]
-							       .length)]
-					    .len_extra_bits =
-					    length_extra_bits(mc);
-					lookup_table[index |
-						     (j << code_lengths[i]
-							       .length)]
-					    .base_dist = distance_base(mc);
-					lookup_table[index |
-						     (j << code_lengths[i]
-							       .length)]
-					    .base_len = length_base(mc) + 4;
-				}
+		u8 length = code_lengths[i].length;
+		u16 code = code_lengths[i].code;
+		if (!length) continue;
+		i32 index = code & ((1U << length) - 1);
+		i32 fill_depth = 1U << (MAX_CODE_LENGTH - length);
+		for (j = 0; j < fill_depth; j++) {
+			i32 fill_index = index | (j << length);
+			lookup_table[fill_index].length = length;
+			lookup_table[fill_index].symbol = i;
+			if (i >= MATCH_OFFSET) {
+				u8 mc = i - MATCH_OFFSET;
+				u8 deb = distance_extra_bits(mc);
+				u8 leb = length_extra_bits(mc);
+				u16 db = distance_base(mc);
+				u8 lb = length_base(mc) + 4;
+				lookup_table[fill_index].dist_extra_bits = deb;
+				lookup_table[fill_index].len_extra_bits = leb;
+				lookup_table[fill_index].base_dist = db;
+				lookup_table[fill_index].base_len = lb;
 			}
 		}
 	}
 }
 
-STATIC i32 compress_write_lengths(BitStreamWriter *strm,
-				  const CodeLength code_lengths[SYMBOL_COUNT]) {
-	i32 i;
+STATIC i32 compress_build_code_book(const CodeLength code_lengths[SYMBOL_COUNT],
+				    CodeLength book[SYMBOL_COUNT]) {
 	u8 last_length = 0;
 	u32 frequencies[SYMBOL_COUNT] = {0};
-	CodeLength book[SYMBOL_COUNT] = {0};
 INIT:
-	for (i = 0; i < SYMBOL_COUNT; i++) {
+	for (u16 i = 0; i < SYMBOL_COUNT; i++) {
 		if (code_lengths[i].length) {
 			if (last_length == code_lengths[i].length && i > 0) {
 				u16 repeat = 1;
@@ -391,9 +360,8 @@ INIT:
 				run = run - 3;
 				i += run + 2;
 				frequencies[12]++;
-			} else {
+			} else
 				frequencies[0]++;
-			}
 			last_length = 0;
 		}
 	}
@@ -401,12 +369,18 @@ INIT:
 	compress_calculate_lengths(frequencies, book, 7);
 	compress_calculate_codes(book);
 
-	for (i = 0; i < 13; i++) {
-		WRITE(strm, book[i].length, 3);
-	}
+CLEANUP:
+	RETURN;
+}
 
-	last_length = 0;
-
+STATIC i32 compress_write_lengths(BitStreamWriter *strm,
+				  const CodeLength code_lengths[SYMBOL_COUNT]) {
+	i32 i;
+	u8 last_length = 0;
+	CodeLength book[SYMBOL_COUNT] = {0};
+INIT:
+	compress_build_code_book(code_lengths, book);
+	for (i = 0; i < 13; i++) WRITE(strm, book[i].length, 3);
 	for (i = 0; i < SYMBOL_COUNT; i++) {
 		if (code_lengths[i].length) {
 			if (last_length == code_lengths[i].length) {
@@ -446,9 +420,9 @@ INIT:
 				WRITE(strm, book[12].code, book[12].length);
 				WRITE(strm, run, 3);
 				i += run + 2;
-			} else {
+			} else
 				WRITE(strm, book[0].code, book[0].length);
-			}
+
 			last_length = 0;
 		}
 	}
