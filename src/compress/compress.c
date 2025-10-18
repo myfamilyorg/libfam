@@ -359,7 +359,7 @@ STATIC i32 compress_write_lengths(BitStreamWriter *strm,
 	i32 i;
 	u8 last_length = 0;
 	u32 frequencies[SYMBOL_COUNT] = {0};
-	CodeLength book_code_lengths[SYMBOL_COUNT] = {0};
+	CodeLength book[SYMBOL_COUNT] = {0};
 INIT:
 	for (i = 0; i < SYMBOL_COUNT; i++) {
 		if (code_lengths[i].length) {
@@ -402,22 +402,12 @@ INIT:
 		}
 	}
 
-	compress_calculate_lengths(frequencies, book_code_lengths, 7);
-	compress_calculate_codes(book_code_lengths);
+	compress_calculate_lengths(frequencies, book, 7);
+	compress_calculate_codes(book);
 
 	for (i = 0; i < 13; i++) {
-		WRITE(strm, book_code_lengths[i].length, 3);
+		WRITE(strm, book[i].length, 3);
 	}
-
-	/*
-	for (i = 0; i < SYMBOL_COUNT; i++)
-		if (frequencies[i]) println("freq[{}]={}", i, frequencies[i]);
-	for (i = 0; i < SYMBOL_COUNT; i++)
-		if (book_code_lengths[i].length)
-			println("i={},code={X},len={}", i,
-				book_code_lengths[i].code,
-				book_code_lengths[i].length);
-				*/
 
 	last_length = 0;
 
@@ -432,7 +422,8 @@ INIT:
 					repeat++;
 				}
 				if (repeat >= 3) {
-					WRITE(strm, 10, 4);
+					WRITE(strm, book[10].code,
+					      book[10].length);
 					WRITE(strm, repeat - 3, 2);
 					i += repeat - 1;
 					last_length = 0;
@@ -440,7 +431,8 @@ INIT:
 				}
 			}
 
-			WRITE(strm, code_lengths[i].length, 4);
+			WRITE(strm, book[code_lengths[i].length].code,
+			      book[code_lengths[i].length].length);
 			last_length = code_lengths[i].length;
 		} else {
 			u16 run = i + 1;
@@ -450,34 +442,24 @@ INIT:
 			run -= i;
 			if (run >= 11) {
 				run = run > 138 ? 127 : run - 11;
-				WRITE(strm, 11, 4);
+				WRITE(strm, book[11].code, book[11].length);
 				WRITE(strm, run, 7);
 				i += run + 10;
 			} else if (run >= 3) {
 				run = run - 3;
-				WRITE(strm, 12, 4);
+				WRITE(strm, book[12].code, book[12].length);
 				WRITE(strm, run, 3);
 				i += run + 2;
 			} else {
-				WRITE(strm, 0, 4);
+				WRITE(strm, book[0].code, book[0].length);
 			}
 			last_length = 0;
 		}
 	}
 
-	/*
-	for (i = 0; i < SYMBOL_COUNT; i++) {
-		if (code_lengths[i].length)
-			println("i={},code={},length={}", i,
-				code_lengths[i].code, code_lengths[i].length);
-	}
-	*/
 CLEANUP:
 	RETURN;
 }
-
-u64 book_len_sum = 0;
-u64 book_len_count;
 
 STATIC i32 compress_read_lengths(BitStreamReader *strm,
 				 CodeLength code_lengths[SYMBOL_COUNT]) {
@@ -491,21 +473,16 @@ INIT:
 		book_code_lengths[i].length = TRY_READ(strm, 3);
 
 	compress_calculate_codes(book_code_lengths);
-	compress_build_lookup_table(code_lengths, lookup_table);
-
-	/*
-	println("recontructed table");
-	for (i = 0; i < SYMBOL_COUNT; i++)
-		if (book_code_lengths[i].length)
-			println("i={},code={X},len={}", i,
-				book_code_lengths[i].code,
-				book_code_lengths[i].length);
-				*/
+	compress_build_lookup_table(book_code_lengths, lookup_table);
 
 	i = 0;
 
 	while (i < SYMBOL_COUNT) {
-		u8 code = TRY_READ(strm, 4);
+		if (strm->bits_in_buffer < 7) bitstream_reader_load(strm);
+		u8 bits = bitstream_reader_read(strm, 7);
+		HuffmanLookup entry = lookup_table[bits];
+		u16 code = entry.symbol;
+		bitstream_reader_clear(strm, entry.length);
 		if (code < 10) {
 			code_lengths[i++].length = code;
 			last_length = code;
@@ -528,21 +505,6 @@ INIT:
 				code_lengths[i++].length = 0;
 		}
 	}
-
-	/*
-	u64 len = (strm->bit_offset - strm->bits_in_buffer) / 8;
-	book_len_sum += len;
-	book_len_count++;
-	println("booklen={},avg={}", len, book_len_sum / book_len_count);
-	*/
-
-	/*
-	for (i = 0; i < SYMBOL_COUNT; i++) {
-		if (code_lengths[i].length)
-			println("i={},code={},length={}", i,
-				code_lengths[i].code, code_lengths[i].length);
-	}
-	*/
 
 CLEANUP:
 	RETURN;
