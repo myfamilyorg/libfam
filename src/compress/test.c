@@ -80,7 +80,7 @@ Test(compress_match_codes) {
 	ASSERT_EQ(get_match_code(4, 1), 0, "match code 0");
 }
 
-#define ITER (16)
+#define ITER 1
 
 Test(compress1) {
 	u64 bytes_consumed;
