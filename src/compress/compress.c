@@ -69,7 +69,7 @@ STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
 }
 
 void compress_find_matches(const u8 *in, u32 len,
-			   u8 match_array[4 * MAX_COMPRESS_LEN + 1],
+			   u8 match_array[2 * MAX_COMPRESS_LEN + 1],
 			   u32 frequencies[SYMBOL_COUNT]) {
 	u32 i = 0, max, out_itt = 0;
 	LzHash hash = {0};
@@ -507,7 +507,7 @@ CLEANUP:
 }
 
 STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
-			  const u8 match_array[4 * MAX_COMPRESS_LEN + 1],
+			  const u8 match_array[2 * MAX_COMPRESS_LEN + 1],
 			  u8 *out) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
@@ -675,7 +675,7 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	CodeLength code_lengths[SYMBOL_COUNT] = {0};
-	u8 match_array[4 * MAX_COMPRESS_LEN + 1] = {0};
+	u8 match_array[2 * MAX_COMPRESS_LEN + 1] = {0};
 
 	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
 		errno = EINVAL;
