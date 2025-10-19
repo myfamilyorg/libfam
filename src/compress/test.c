@@ -184,6 +184,11 @@ Test(lz_hashtable1) {
 		u32 i;
 		for (i = 0; i < file_size - MAX_MATCH_LEN;) {
 			LzMatch lm = lz_find_matches2(&lz1, in, i);
+			/*
+			println("match at {}. len={},dist={},codes={}",
+				i + lm.index, lm.len, lm.dist,
+				lm.len == 0 ? 8 : 1 + lm.index);
+				*/
 			if (lm.len >= MIN_MATCH_LEN) {
 				i += lm.len + lm.index;
 				code_count += 1 + lm.index;

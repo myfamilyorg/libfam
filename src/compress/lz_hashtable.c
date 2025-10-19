@@ -78,6 +78,7 @@ LzMatch lz_find_matches(LzHashtable *hash, const u8 *text, u32 cpos) {
 
 #ifdef __AVX2__
 LzMatch lz_find_matches2(LzHashtable *hash, const u8 *text, u32 cpos) {
+	LzMatch best = {0};
 	__m256i keys = _mm256_set_epi32(
 	    *(u32 *)(text + cpos + 7), *(u32 *)(text + cpos + 6),
 	    *(u32 *)(text + cpos + 5), *(u32 *)(text + cpos + 4),
@@ -93,6 +94,7 @@ LzMatch lz_find_matches2(LzHashtable *hash, const u8 *text, u32 cpos) {
 		u16 u16pos = cpos + i;
 		u16 pos = hash->table[((u32 *)&indices)[i]];
 		hash->table[((u32 *)&indices)[i]] = u16pos;
+
 		u16 dist = u16pos - pos;
 		if (!dist) continue;
 		u32 mpos = cpos + i - dist;
@@ -112,13 +114,14 @@ LzMatch lz_find_matches2(LzHashtable *hash, const u8 *text, u32 cpos) {
 		} while (mask == 0xFFFFFFFF && len < MAX_MATCH_LEN);
 
 		if (len >= MIN_MATCH_LEN) {
-			for (u8 j = 1; j < 4 && (i + j < 8); j++)
-				hash->table[((u32 *)&indices)[i + j]] =
-				    cmpos + j;
-			return (LzMatch){.len = len, .index = i, .dist = dist};
+			for (u8 j = i + 1; j < 8 && j < i + 4; j++)
+				hash->table[((u32 *)&indices)[j]] = cpos + j;
+			best = (LzMatch){.len = len, .index = i, .dist = dist};
+			break;
 		}
 	}
 
-	return (LzMatch){.len = 0, .dist = 0};
+	return best;
 }
 #endif
+
