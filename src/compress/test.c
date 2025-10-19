@@ -26,6 +26,7 @@
 #include <libfam/bitstream.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
+#include <libfam/lz_hashtable.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
@@ -166,3 +167,82 @@ Test(compress2) {
 	close(fd);
 }
 
+#define LZ_ITER 128
+
+Test(lz_hashtable1) {
+	const u8 *path = "./resources/akjv5.txt";
+	i32 fd = file(path);
+	u64 file_size = min(fsize(fd), 128 * 1024);
+	u8 *in = fmap(fd, file_size, 0);
+	LzHashtable lz1 = {0};
+	u32 code_count = 0;
+	i64 timer;
+
+	timer = micros();
+	for (u32 iter = 0; iter < LZ_ITER; iter++) {
+		for (u32 i = 0; i < file_size;) {
+			LzMatch lm = lz_find_matches(&lz1, in, i);
+			if (lm.len >= MIN_MATCH_LEN) {
+				i += lm.len;
+			} else
+				i++;
+			code_count++;
+		}
+		memset(&lz1, 0, sizeof(lz1));
+	}
+	timer = micros() - timer;
+	println("cc={},timer={}", code_count, timer);
+
+	code_count = 0;
+	memset(&lz1, 0, sizeof(lz1));
+
+	timer = micros();
+	for (u32 iter = 0; iter < LZ_ITER; iter++) {
+		for (u32 i = 0; i < file_size;) {
+			LzMatch lm = lz_find_matches2(&lz1, in, i);
+			if (lm.len >= MIN_MATCH_LEN) {
+				i += lm.len;
+			} else
+				i++;
+			code_count++;
+		}
+		memset(&lz1, 0, sizeof(lz1));
+	}
+	timer = micros() - timer;
+	println("cc={},timer={}", code_count, timer);
+	memset(&lz1, 0, sizeof(lz1));
+
+	timer = micros();
+	for (u32 iter = 0; iter < LZ_ITER; iter++) {
+		for (u32 i = 0; i < file_size;) {
+			LzMatch lm = lz_find_matches2(&lz1, in, i);
+			if (lm.len >= MIN_MATCH_LEN) {
+				i += lm.len;
+			} else
+				i++;
+			code_count++;
+		}
+		memset(&lz1, 0, sizeof(lz1));
+	}
+	timer = micros() - timer;
+	println("cc={},timer={}", code_count, timer);
+	memset(&lz1, 0, sizeof(lz1));
+
+	timer = micros();
+	for (u32 iter = 0; iter < LZ_ITER; iter++) {
+		for (u32 i = 0; i < file_size;) {
+			LzMatch lm = lz_find_matches(&lz1, in, i);
+			if (lm.len >= MIN_MATCH_LEN) {
+				i += lm.len;
+			} else
+				i++;
+			code_count++;
+		}
+		memset(&lz1, 0, sizeof(lz1));
+	}
+	timer = micros() - timer;
+	println("cc={},timer={}", code_count, timer);
+
+	munmap(in, file_size);
+	close(fd);
+}

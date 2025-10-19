@@ -32,11 +32,13 @@
 #include <libfam/format.h>
 #include <libfam/utils.h>
 
-STATIC MatchInfo lz_hash_get(const LzHash *hash, const u8 *text, u32 cpos) {
-	u16 pos, dist, len = 0;
+STATIC MatchInfo lz_hash_get(LzHash *hash, const u8 *text, u32 cpos) {
+	u16 pos, dist, len = 0, ucpos = cpos;
 	u32 mpos, key = *(u32 *)(text + cpos);
-	pos = hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT];
-	dist = (u16)cpos - pos;
+	u32 index = (key * HASH_CONSTANT) >> HASH_SHIFT;
+	pos = hash->table[index];
+	hash->table[index] = ucpos;
+	dist = ucpos - pos;
 	if (!dist) return (MatchInfo){.len = 0, .dist = 0};
 	mpos = cpos - dist;
 
@@ -54,16 +56,22 @@ STATIC MatchInfo lz_hash_get(const LzHash *hash, const u8 *text, u32 cpos) {
 		       (mask == 0xFFFFFFFF) * 32;
 	} while (mask == 0xFFFFFFFF && len < MAX_MATCH_LEN);
 #else
+
 	while (len < MAX_MATCH_LEN && text[mpos + len] == text[cpos + len])
 		len++;
 #endif /* !__AVX2__ */
 
-	return (MatchInfo){.len = len, .dist = dist};
-}
+	if (len >= MIN_MATCH_LEN) {
+		u32 key;
+		key = *(u32 *)(text + cpos + 1);
+		hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = ucpos + 1;
+		key = *(u32 *)(text + cpos + 2);
+		hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = ucpos + 2;
+		key = *(u32 *)(text + cpos + 3);
+		hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = ucpos + 3;
+	}
 
-STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
-	u32 key = *(u32 *)(text + cpos);
-	hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = (u16)cpos;
+	return (MatchInfo){.len = len, .dist = dist};
 }
 
 STATIC void compress_find_matches(const u8 *in, u32 len,
@@ -75,7 +83,6 @@ STATIC void compress_find_matches(const u8 *in, u32 len,
 
 	while (i < max) {
 		MatchInfo mi = lz_hash_get(&hash, in, i);
-		lz_hash_set(&hash, in, i);
 		if (mi.len >= MIN_MATCH_LEN) {
 			u8 mc = get_match_code(mi.len, mi.dist);
 			u8 len_extra = length_extra_bits_value(mc, mi.len);
@@ -88,9 +95,6 @@ STATIC void compress_find_matches(const u8 *in, u32 len,
 			frequencies[match_symbol]++;
 			((u32 *)(match_array + out_itt))[0] =
 			    (combined_extra << 8) | (mc + 2);
-			lz_hash_set(&hash, in, i + 1);
-			lz_hash_set(&hash, in, i + 2);
-			lz_hash_set(&hash, in, i + 3);
 			i += mi.len;
 			out_itt += 4;
 		} else {
@@ -484,7 +488,7 @@ CLEANUP:
 	RETURN;
 }
 
-static inline void compress_write_match(
+static inline __attribute__((always_inline)) void compress_write_match(
     BitStreamWriter *strm, const CodeLength code_lengths[SYMBOL_COUNT],
     const u8 match_array[2 * MAX_COMPRESS_LEN + 1], u32 *index) {
 	u32 i = *index;
