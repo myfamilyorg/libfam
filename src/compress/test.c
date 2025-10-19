@@ -26,7 +26,6 @@
 #include <libfam/bitstream.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
-#include <libfam/lz_hashtable.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
@@ -165,77 +164,4 @@ Test(compress2) {
 	release(verify);
 	release(out);
 	close(fd);
-}
-
-#define LZ_ITER 1
-
-#ifdef __AVX2__
-Test(lz_hashtable1) {
-	const u8 *path = "./resources/akjv5.txt";
-	i32 fd = file(path);
-	u64 file_size = min(fsize(fd), 128 * 1024);
-	u8 *in = fmap(fd, file_size, 0);
-	LzHashtable lz1 = {0};
-	u32 code_count = 0;
-	i64 timer;
-
-	timer = micros();
-	for (u32 iter = 0; iter < LZ_ITER; iter++) {
-		u32 i;
-		for (i = 0; i < file_size - MAX_MATCH_LEN;) {
-			LzMatch lm = lz_find_matches2(&lz1, in, i);
-			/*
-			println("match at {}. len={},dist={},codes={}",
-				i + lm.index, lm.len, lm.dist,
-				lm.len == 0 ? 8 : 1 + lm.index);
-				*/
-			if (lm.len >= MIN_MATCH_LEN) {
-				i += lm.len + lm.index;
-				code_count += 1 + lm.index;
-			} else {
-				i += 8;
-				code_count += 8;
-			}
-		}
-		while (i < file_size) {
-			i++;
-			code_count++;
-		}
-		memset(&lz1, 0, sizeof(lz1));
-	}
-	timer = micros() - timer;
-	println("cc={},timer={}", code_count / LZ_ITER, timer);
-}
-#endif
-
-Test(lz_hashtable2) {
-	const u8 *path = "./resources/akjv5.txt";
-	i32 fd = file(path);
-	u64 file_size = min(fsize(fd), 128 * 1024);
-	u8 *in = fmap(fd, file_size, 0);
-	LzHashtable lz1 = {0};
-	u32 code_count = 0;
-	i64 timer;
-
-	timer = micros();
-	for (u32 iter = 0; iter < LZ_ITER; iter++) {
-		u32 i;
-		for (i = 0; i < file_size - MAX_MATCH_LEN;) {
-			LzMatch lm = lz_find_matches(&lz1, in, i);
-			if (lm.len >= MIN_MATCH_LEN) {
-				i += lm.len + lm.index;
-				code_count += 1 + lm.index;
-			} else {
-				i++;
-				code_count++;
-			}
-		}
-		while (i < file_size) {
-			i++;
-			code_count++;
-		}
-		memset(&lz1, 0, sizeof(lz1));
-	}
-	timer = micros() - timer;
-	println("cc={},timer={}", code_count / LZ_ITER, timer);
 }
