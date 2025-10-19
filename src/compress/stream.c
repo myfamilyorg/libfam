@@ -131,7 +131,8 @@ PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 	CompressHeader header;
 	u64 in_offset = 0;
 	u64 out_offset = sizeof(CompressHeader);
-	u8 in_chunk[2][MAX_COMPRESS_LEN], out_chunk[2][MAX_COMPRESS_BOUND_LEN];
+	u8 in_chunk[2][MAX_COMPRESS_LEN] = {0},
+	   out_chunk[2][MAX_COMPRESS_BOUND_LEN] = {0};
 	u64 in_chunk_size = MAX_COMPRESS_LEN,
 	    out_chunk_size = compress_bound(MAX_COMPRESS_LEN);
 	IoUring *iou = NULL;
