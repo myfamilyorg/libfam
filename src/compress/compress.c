@@ -709,5 +709,5 @@ CLEANUP:
 	RETURN;
 }
 
-PUBLIC u64 compress_bound(u64 len) { return len + (len >> 5) + 1024; }
+PUBLIC u64 compress_bound(u64 len) { return len + (len >> 9) + 13; }
 
