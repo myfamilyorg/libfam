@@ -484,7 +484,7 @@ CLEANUP:
 	RETURN;
 }
 
-INLINE STATIC void compress_write_match(
+static inline void compress_write_match(
     BitStreamWriter *strm, const CodeLength code_lengths[SYMBOL_COUNT],
     const u8 match_array[2 * MAX_COMPRESS_LEN + 1], u32 *index) {
 	u32 i = *index;
