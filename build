@@ -28,6 +28,7 @@ FLTO=1;
 COV=0;
 INSTALL=0;
 SILENT=0;
+VALGRIND=1;
 SPEC=0;
 CC=clang;
 CFLAGS="-O3 \
@@ -78,6 +79,9 @@ for var in "$@"; do
 		;;
 	--quick)
 		FLTO=0;
+		;;
+	--novalgrind)
+		VALGRIND=0;
 		;;
 	*)
 		echo "Unepxected value specified: '$var'";

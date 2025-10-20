@@ -1,11 +1,11 @@
 #!/bin/bash
 
-./build clean test --cc=clang || exit $?;
+./build clean test --cc=clang $1 || exit $?;
 
-./build clean test --cc=gcc || exit $?;
+./build clean test --cc=gcc $1 || exit $?;
 
-./build clean test --cc=clang --quick --cflags="-O0" || exit $?;
+./build clean test --cc=clang $1 --quick --cflags="-O0" || exit $?;
 
-./build clean test --cc=gcc --quick --cflags="-O0" || exit $?;
+./build clean test --cc=gcc $1 --quick --cflags="-O0" || exit $?;
 
 echo "All tests successfully completed!";

@@ -49,12 +49,15 @@ if [ ! -e target/bin/runtests ] || [ src/test/main.c -nt target/bin/runtests ]; 
         ${COMMAND} || exit $?;
 fi
 
-export TEST_PATTERN=${FILTER};
-LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} \
-	valgrind \
-	--soname-synonyms=somalloc=libfamtest.so,ld-linux-aarch64.so.1=libfamtest.so \
-	--tool=memcheck \
-	--track-origins=yes \
-	--error-exitcode=1 \
-	${TEST_BIN} || exit $?;
+if [ "${VALGRIND}" = "1" ]; then
+	export TEST_PATTERN=${FILTER};
+	LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} \
+		valgrind \
+		--tool=memcheck \
+		--track-origins=yes \
+		--error-exitcode=1 \
+		${TEST_BIN} || exit $?;
+else
+	LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} ${TEST_BIN} || exit $?;
+fi
 
