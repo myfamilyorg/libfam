@@ -76,7 +76,7 @@ STATIC i32 env_rbtree_search(RbTreeNode *cur, const RbTreeNode *value,
 	return 0;
 }
 
-PUBLIC u8 *getenv(const u8 *name) {
+PUBLIC char *getenv(const char *name) {
 	u8 *ret = NULL;
 	RbTreeNodePair pair = {0};
 	EnvNode node;

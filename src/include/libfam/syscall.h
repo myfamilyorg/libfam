@@ -43,7 +43,7 @@ i32 getpid(void);
 i64 write(i32 fd, const void *buf, u64 len);
 i32 gettimeofday(struct timevalfam *tv, void *tz);
 i32 kill(i32 pid, i32 signal);
-i32 unlinkat(i32 dfd, const u8 *path, i32 flags);
+i32 unlinkat(i32 dfd, const char *path, i32 flags);
 i64 read(i32 fd, void *buf, u64 count);
 i32 sched_yield(void);
 void *mmap(void *addr, u64 length, i32 prot, i32 flags, i32 fd, i64 offset);
@@ -76,8 +76,9 @@ i32 rt_sigaction(i32 signum, const struct rt_sigaction *act,
 i64 futex(u32 *uaddr, i32 futex_op, u32 val, const struct timespecfam *timeout,
 	  u32 *uaddr2, u32 val3);
 i32 msync(void *addr, u64 length, i32 flags);
-void _exit(i32 status);
-i32 utimesat(i32 dirfd, const u8 *path, const struct timevalfam *times, i32 flags);
+void _famexit(i32 status);
+i32 utimesat(i32 dirfd, const u8 *path, const struct timevalfam *times,
+	     i32 flags);
 i32 fstatat(i32 dirfd, const u8 *pathname, struct stat *buf, i32 flags);
 i32 fchmod(i32 fd, u32 mode);
 i32 io_uring_setup(u32 entries, struct io_uring_params *params);

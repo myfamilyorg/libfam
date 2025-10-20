@@ -79,8 +79,9 @@ void init_bible(void) {
 		     ? true
 		     : bible_check_hash(xxdir_file_0, xxdir_file_size_0) != 0;
 	if (v) {
-		write(2, msg, strlen(msg));
-		_exit(-1);
+		i32 __attribute__((unused)) _v;
+		_v = write(2, msg, strlen(msg));
+		_famexit(-1);
 		return;
 	}
 	__bible.length = xxdir_file_size_0;

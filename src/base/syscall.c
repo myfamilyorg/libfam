@@ -71,11 +71,11 @@ i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
 	return result;
 }
 
-extern bool _debug_no_exit;
+extern bool _debug_no_famexit;
 
 #ifdef __aarch64__
 #define SYSCALL_EXIT                 \
-	if (_debug_no_exit) return;  \
+	if (_debug_no_famexit) return;  \
 	__asm__ volatile(            \
 	    "mov x8, #93\n"          \
 	    "mov x0, %0\n"           \
@@ -87,7 +87,7 @@ extern bool _debug_no_exit;
 	}
 #elif defined(__x86_64__)
 #define SYSCALL_EXIT                                     \
-	if (_debug_no_exit) return;                      \
+	if (_debug_no_famexit) return;                      \
 	__asm__ volatile(                                \
 	    "movq $60, %%rax\n"                          \
 	    "movq %0, %%rdi\n"                           \
@@ -102,11 +102,11 @@ extern bool _debug_no_exit;
 #ifdef COVERAGE
 void __gcov_dump(void);
 #define SYSCALL_EXIT_COV                    \
-	if (!_debug_no_exit) __gcov_dump(); \
+	if (!_debug_no_famexit) __gcov_dump(); \
 	SYSCALL_EXIT
 #endif /* COVERAGE */
 
-PUBLIC void _exit(i32 status){
+PUBLIC void _famexit(i32 status){
 #ifdef COVERAGE
     SYSCALL_EXIT_COV
 #else

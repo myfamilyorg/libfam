@@ -49,13 +49,13 @@ void __init_bible(void);
 
 Test(bible2) {
 	ASSERT_EQ(bible_check_hash("testtest", 8), -1, "invalid hash");
-	_debug_no_exit = true;
+	_debug_no_famexit = true;
 	_debug_no_write = true;
 	_debug_bible_invalid_hash = true;
 
 	__init_bible();
 
 	_debug_bible_invalid_hash = false;
-	_debug_no_exit = false;
+	_debug_no_famexit = false;
 	_debug_no_write = false;
 }

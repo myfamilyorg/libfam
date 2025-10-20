@@ -28,7 +28,7 @@
 
 #include <libfam/types.h>
 
-u8 *getenv(const u8 *name);
+char *getenv(const char *name);
 i32 init_environ(u8 **envp);
 
 #endif /* _ENV_H */

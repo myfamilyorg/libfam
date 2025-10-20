@@ -32,16 +32,17 @@ i32 __err_value = 0;
 PUBLIC i32 *__error(void) { return &__err_value; }
 i32 *__err_location(void) { return &__err_value; }
 
-PUBLIC void perror(const u8 *s) {
+PUBLIC void perror(const char *s) {
 	const u8 *err_msg;
+	i32 __attribute__((unused)) _v;
 	if (s) {
 		u64 len = strlen(s);
 		if (write(STDERR_FD, s, len) < len) return;
 		if (write(STDERR_FD, ": ", 2) < 2) return;
 	}
 	err_msg = strerror(errno);
-	write(STDERR_FD, err_msg, strlen(err_msg));
-	write(STDERR_FD, "\n", 1);
+	_v = write(STDERR_FD, err_msg, strlen(err_msg));
+	_v = write(STDERR_FD, "\n", 1);
 }
 
 PUBLIC char *strerror(i32 err_code) {

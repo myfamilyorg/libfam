@@ -90,7 +90,7 @@ CLEANUP:
 			println("{}{}{}: [{}]. '{}'", BRIGHT_RED,             \
 				__assertion_msg, RESET, tests[exe_test].name, \
 				format_to_string(&fmt));                      \
-			_exit(-1);                                            \
+			_famexit(-1);                                            \
 		}                                                             \
 	})
 
@@ -102,7 +102,7 @@ CLEANUP:
 			println("{}{}{}: [{}]. '{}'", BRIGHT_RED,             \
 				__assertion_msg, RESET, tests[exe_test].name, \
 				format_to_string(&fmt));                      \
-			_exit(-1);                                            \
+			_famexit(-1);                                            \
 		}                                                             \
 	})
 

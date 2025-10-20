@@ -23,8 +23,8 @@
  *
  *******************************************************************************/
 
-#ifndef _STRING_H
-#define _STRING_H
+#ifndef _LFAM_STRING_H
+#define _LFAM_STRING_H
 
 #include <libfam/types.h>
 
@@ -58,4 +58,4 @@ i32 string_to_u128(const u8 *buf, u64 len, u128 *result);
 u8 i128_to_string(u8 buf[MAX_I128_STRING_LEN], i128 value, Int128DisplayType t);
 u8 u128_to_string(u8 buf[MAX_U128_STRING_LEN], u128 value, Int128DisplayType t);
 
-#endif /* _STRING_H */
+#endif /* _LFAM_STRING_H */

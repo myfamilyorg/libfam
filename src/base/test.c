@@ -28,6 +28,8 @@
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/rbtree.h>
+#include <libfam/string.h>
+#include <libfam/syscall.h>
 #include <libfam/sysext.h>
 #include <libfam/test_base.h>
 
@@ -364,11 +366,12 @@ Test(string_chr_cat) {
 }
 
 Test(colors) {
+	i32 __attribute__((unused)) _v;
 	_debug_no_write = true;
-	write(STDERR_FD, RED, strlen(RED));
-	write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED));
-	write(STDERR_FD, MAGENTA, strlen(MAGENTA));
-	write(STDERR_FD, BLUE, strlen(BLUE));
+	_v = write(STDERR_FD, RED, strlen(RED));
+	_v = write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED));
+	_v = write(STDERR_FD, MAGENTA, strlen(MAGENTA));
+	_v = write(STDERR_FD, BLUE, strlen(BLUE));
 	_debug_no_write = false;
 }
 
@@ -424,13 +427,13 @@ void __stack_chk_guard(void);
 
 Test(stack_fails) {
 	_debug_no_write = true;
-	_debug_no_exit = true;
+	_debug_no_famexit = true;
 
 	__stack_chk_fail();
 	__stack_chk_guard();
 
 	_debug_no_write = false;
-	_debug_no_exit = false;
+	_debug_no_famexit = false;
 }
 
 Test(rand1) {

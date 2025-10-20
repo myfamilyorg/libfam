@@ -45,12 +45,12 @@ void add_test_fn(void (*test_fn)(void), const u8 *name) {
 	if (strlen(name) > MAX_TEST_NAME) {
 		const u8 *msg = "test name too long!\n";
 		write(STDERR_FD, msg, strlen(msg));
-		_exit(-1);
+		_famexit(-1);
 	}
 	if (cur_tests >= MAX_TESTS) {
 		const u8 *msg = "too many tests!";
 		write(STDERR_FD, msg, strlen(msg));
-		_exit(-1);
+		_famexit(-1);
 	}
 	tests[cur_tests].test_fn = test_fn;
 	memset(tests[cur_tests].name, 0, MAX_TEST_NAME);
@@ -109,7 +109,7 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 		perror("init_environ");
 		const u8 *msg = "Too many environment variables!\n";
 		write(STDERR_FD, msg, strlen(msg));
-		_exit(-1);
+		_famexit(-1);
 	}
 
 	pattern = getenv("TEST_PATTERN");
@@ -183,6 +183,6 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	write(STDERR_FD, " ms]\n", 5);
 	write(STDERR_FD, RESET, strlen(RESET));
 
-	_exit(0);
+	_famexit(0);
 	return 0;
 }

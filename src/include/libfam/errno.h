@@ -32,7 +32,7 @@ i32 *__error(void);
 #define errno (*__error())
 
 char *strerror(i32 err_code);
-void perror(const u8 *);
+void perror(const char *);
 
 #define SUCCESS 0
 #define EPERM 1

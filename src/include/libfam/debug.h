@@ -30,7 +30,7 @@
 
 #if TEST == 1
 extern bool _debug_no_write;
-extern bool _debug_no_exit;
+extern bool _debug_no_famexit;
 extern bool _debug_fail_getsockbyname;
 extern bool _debug_fail_pipe2;
 extern bool _debug_fail_listen;

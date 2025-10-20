@@ -80,63 +80,66 @@ CLEANUP:
 	}                                                                  \
 	void __test_##name(void)
 
-#define ASSERT_EQ(x, y, msg)                                              \
-	do {                                                              \
-		if ((x) != (y)) {                                         \
-			write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED)); \
-			write(STDERR_FD, __assertion_msg,                 \
-			      strlen(__assertion_msg));                   \
-			write(STDERR_FD, RESET, strlen(RESET));           \
-			write(STDERR_FD, ": [", 3);                       \
-			write(STDERR_FD, tests[exe_test].name,            \
-			      strlen(tests[exe_test].name));              \
-			write(STDERR_FD, "]. '", 4);                      \
-			write(STDERR_FD, msg, strlen(msg));               \
-			write(STDERR_FD, "'\n", 2);                       \
-			_exit(-1);                                        \
-		}                                                         \
+#define ASSERT_EQ(x, y, msg)                                                   \
+	do {                                                                   \
+		if ((x) != (y)) {                                              \
+			i32 __attribute((unused)) _v;                          \
+			_v = write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED)); \
+			_v = write(STDERR_FD, __assertion_msg,                 \
+				   strlen(__assertion_msg));                   \
+			_v = write(STDERR_FD, RESET, strlen(RESET));           \
+			_v = write(STDERR_FD, ": [", 3);                       \
+			_v = write(STDERR_FD, tests[exe_test].name,            \
+				   strlen(tests[exe_test].name));              \
+			_v = write(STDERR_FD, "]. '", 4);                      \
+			_v = write(STDERR_FD, msg, strlen(msg));               \
+			_v = write(STDERR_FD, "'\n", 2);                       \
+			_famexit(-1);                                             \
+		}                                                              \
 	} while (0);
 
 #ifdef __clang__
-#define ASSERT(x, msg)                                                       \
-	do {                                                                 \
-		_Pragma("GCC diagnostic push");                              \
-		_Pragma(                                                     \
-		    "GCC diagnostic ignored \"-Wsometimes-uninitialized\""); \
-		if (!(x)) {                                                  \
-			write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED));    \
-			write(STDERR_FD, __assertion_msg,                    \
-			      strlen(__assertion_msg));                      \
-			write(STDERR_FD, RESET, strlen(RESET));              \
-			write(STDERR_FD, ": [", 3);                          \
-			write(STDERR_FD, tests[exe_test].name,               \
-			      strlen(tests[exe_test].name));                 \
-			write(STDERR_FD, "]. '", 4);                         \
-			write(STDERR_FD, msg, strlen(msg));                  \
-			write(STDERR_FD, "'\n", 2);                          \
-			_exit(-1);                                           \
-		}                                                            \
-		_Pragma("GCC diagnostic pop");                               \
+#define ASSERT(x, msg)                                                         \
+	do {                                                                   \
+		_Pragma("GCC diagnostic push");                                \
+		_Pragma(                                                       \
+		    "GCC diagnostic ignored \"-Wsometimes-uninitialized\"");   \
+		if (!(x)) {                                                    \
+			i32 __attribute((unused)) _v;                          \
+			_v = write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED)); \
+			_v = write(STDERR_FD, __assertion_msg,                 \
+				   strlen(__assertion_msg));                   \
+			_v = write(STDERR_FD, RESET, strlen(RESET));           \
+			_v = write(STDERR_FD, ": [", 3);                       \
+			_v = write(STDERR_FD, tests[exe_test].name,            \
+				   strlen(tests[exe_test].name));              \
+			_v = write(STDERR_FD, "]. '", 4);                      \
+			_v = write(STDERR_FD, msg, strlen(msg));               \
+			_v = write(STDERR_FD, "'\n", 2);                       \
+			_famexit(-1);                                             \
+		}                                                              \
+		_Pragma("GCC diagnostic pop");                                 \
 	} while (0);
 #else
-#define ASSERT(x, msg)                                                       \
-	do {                                                                 \
-		_Pragma("GCC diagnostic push");                              \
-		_Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\""); \
-		if (!(x)) {                                                  \
-			write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED));    \
-			write(STDERR_FD, __assertion_msg,                    \
-			      strlen(__assertion_msg));                      \
-			write(STDERR_FD, RESET, strlen(RESET));              \
-			write(STDERR_FD, ": [", 3);                          \
-			write(STDERR_FD, tests[exe_test].name,               \
-			      strlen(tests[exe_test].name));                 \
-			write(STDERR_FD, "]. '", 4);                         \
-			write(STDERR_FD, msg, strlen(msg));                  \
-			write(STDERR_FD, "'\n", 2);                          \
-			_exit(-1);                                           \
-		}                                                            \
-		_Pragma("GCC diagnostic pop");                               \
+#define ASSERT(x, msg)                                                         \
+	do {                                                                   \
+		_Pragma("GCC diagnostic push");                                \
+		_Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"");   \
+		if (!(x)) {                                                    \
+			i32 __attribute((unused)) _v;                          \
+			_v = write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED)); \
+			_v = write(STDERR_FD, __assertion_msg,                 \
+				   strlen(__assertion_msg));                   \
+			_v = write(STDERR_FD, RESET, strlen(RESET));           \
+			_v = write(STDERR_FD, ": [", 3);                       \
+			_v = write(STDERR_FD, tests[exe_test].name,            \
+				   strlen(tests[exe_test].name));              \
+			_v = write(STDERR_FD, "]. '", 4);                      \
+			_v = write(STDERR_FD, msg, strlen(msg));               \
+			_v = write(STDERR_FD, "'\n", 2);                       \
+			_famexit(-1);                                             \
+		}                                                              \
+		_Pragma("GCC diagnostic pop");                                 \
 	} while (0);
 #endif /* ASSERT */
 

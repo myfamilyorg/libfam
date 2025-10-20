@@ -28,13 +28,16 @@
 #include <libfam/utils.h>
 
 PUBLIC void __stack_chk_fail(void) {
+	i32 __attribute__((unused)) _v;
 	const u8 *msg = "STACK_CHK_FAIL\n";
-	write(STDERR_FD, msg, strlen(msg));
-	_exit(-1);
+	_v = write(STDERR_FD, msg, strlen(msg));
+	_famexit(-1);
 }
 
 PUBLIC void __stack_chk_guard(void) {
+	i32 __attribute__((unused)) _v;
 	const u8 *msg = "STACK_CHK_GUARD\n";
-	write(STDERR_FD, msg, strlen(msg));
-	_exit(-1);
+	_v = write(STDERR_FD, msg, strlen(msg));
+	_famexit(-1);
 }
+
