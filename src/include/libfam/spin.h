@@ -23,41 +23,16 @@
  *
  *******************************************************************************/
 
-#ifndef _COMPRESS_STREAM_H
-#define _COMPRESS_STREAM_H
+#ifndef _SPIN_LOCK_H
+#define _SPIN_LOCK_H
 
-#include <libfam/compress_impl.h>
 #include <libfam/types.h>
 
-#define MAGIC 0xC3161337
-#define VERSION 1
-#define CHUNK_SIZE MAX_COMPRESS_LEN
-#define COMPRESSED_CHUNK_SIZE \
-	(CHUNK_SIZE + (CHUNK_SIZE >> 9) + 24 + sizeof(ChunkHeader))
-#define CTHREADS 4
-#define CR_BUFS 2
-#define CW_BUFS 2
-#define DR_BUFS 4
-#define DW_BUFS 4
-
 typedef struct {
-	u32 magic;
-	u8 version;
-	u8 reserved;
-	u16 permissions;
-	u64 mtime;
-	u64 atime;
-} __attribute__((packed)) StreamHeader;
+	u32 value;
+} SpinLock;
 
-typedef struct {
-	bool fin;
-	u32 size;
-} __attribute__((packed)) ChunkHeader;
+void spin_lock(SpinLock *lock);
+void spin_unlock(SpinLock *lock);
 
-typedef struct {
-	u32 tid;
-	u32 io_lock;
-	u32 is_ready[CTHREADS];
-} StreamState;
-
-#endif /* _COMPRESS_STREAM_H */
+#endif /* _SPIN_LOCK_H */

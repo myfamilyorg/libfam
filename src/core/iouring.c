@@ -28,7 +28,9 @@
 #include <libfam/iouring.h>
 #include <libfam/linux.h>
 #include <libfam/memory.h>
+#include <libfam/spin.h>
 #include <libfam/syscall.h>
+#include <libfam/sysext.h>
 #include <libfam/utils.h>
 
 struct IoUring {
@@ -48,6 +50,7 @@ struct IoUring {
 	u32 *cq_tail;
 	u32 *sq_mask;
 	u32 *cq_mask;
+	SpinLock lock;
 };
 
 i32 iouring_init(IoUring **iou, u32 queue_depth) {
@@ -93,6 +96,7 @@ INIT:
 					       (*iou)->params.cq_off.cqes);
 
 	(*iou)->queue_depth = queue_depth;
+	(*iou)->lock.value = 0;
 CLEANUP:
 	if (!IS_OK) {
 		iouring_destroy(*iou);
@@ -104,23 +108,23 @@ CLEANUP:
 struct io_uring_sqe *iouring_get_sqe(IoUring *iou) {
 	u32 tail = __aload32(iou->sq_tail);
 	u32 head = __aload32(iou->cq_head);
-
-	if (tail - head >= iou->queue_depth) {
-		return NULL;  // Queue is full
-	}
-
+	if (tail - head >= iou->queue_depth) return NULL;
 	u32 index = tail & *iou->sq_mask;
 	iou->sq_array[index] = index;
-
 	return &iou->sqes[index];
 }
 
 i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
 		      u64 foffset, u64 id) {
-	struct io_uring_sqe *sqe = iouring_get_sqe(iou);
-INIT:
-	if (!sqe) ERROR(EBUSY);
+	struct io_uring_sqe *sqe;
 
+	spin_lock(&iou->lock);
+	sqe = iouring_get_sqe(iou);
+	if (!sqe) {
+		spin_unlock(&iou->lock);
+		errno = EBUSY;
+		return -1;
+	}
 	sqe->opcode = IORING_OP_READ;
 	sqe->flags = 0;
 	sqe->fd = fd;
@@ -128,17 +132,21 @@ INIT:
 	sqe->len = len;
 	sqe->off = foffset;
 	sqe->user_data = id;
+	spin_unlock(&iou->lock);
 	__aadd32(iou->sq_tail, 1);
-CLEANUP:
-	RETURN;
+	return 0;
 }
 
 i32 iouring_init_write(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 		       u64 id) {
-	struct io_uring_sqe *sqe = iouring_get_sqe(iou);
-INIT:
-	if (!sqe) ERROR(EBUSY);
-
+	struct io_uring_sqe *sqe;
+	spin_lock(&iou->lock);
+	sqe = iouring_get_sqe(iou);
+	if (!sqe) {
+		spin_unlock(&iou->lock);
+		errno = EBUSY;
+		return -1;
+	}
 	sqe->opcode = IORING_OP_WRITE;
 	sqe->flags = 0;
 	sqe->fd = fd;
@@ -146,9 +154,9 @@ INIT:
 	sqe->len = len;
 	sqe->off = foffset;
 	sqe->user_data = id;
+	spin_unlock(&iou->lock);
 	__aadd32(iou->sq_tail, 1);
-CLEANUP:
-	RETURN;
+	return 0;
 }
 
 i32 iouring_submit(IoUring *iou, u32 count) {
@@ -156,53 +164,63 @@ i32 iouring_submit(IoUring *iou, u32 count) {
 }
 
 i32 iouring_wait(IoUring *iou, u64 *id) {
-	i32 cqe_idx;
-	i32 r;
-	i32 fd = iou->ring_fd;
-INIT:
-	r = io_uring_enter2(fd, 0, 1, IORING_ENTER_GETEVENTS, NULL, 0);
-	if (r < 0) ERROR();
-	r = __aload32(iou->cq_tail);
-	if (*(iou->cq_head) == r) ERROR(EIO);
-	cqe_idx = *(iou->cq_head) & *(iou->cq_mask);
-	__aadd32(iou->cq_head, 1);
-	*id = iou->cqes[cqe_idx].user_data;
-	OK(iou->cqes[cqe_idx].res);
-CLEANUP:
-	RETURN;
+	u32 mask = *iou->cq_mask;
+	u32 hval, tval;
+	i32 res;
+	u64 user_data;
+	do {
+		i32 r;
+	begin_loop:
+		r = io_uring_enter2(iou->ring_fd, 0, 1, IORING_ENTER_GETEVENTS,
+				    NULL, 0);
+		if (r < 0) return -1;
+		hval = __aload32(iou->cq_head);
+		tval = __aload32(iou->cq_tail);
+		if (hval == tval) goto begin_loop;
+		i32 cqe_idx = hval & mask;
+		res = iou->cqes[cqe_idx].res;
+		user_data = iou->cqes[cqe_idx].user_data;
+	} while (!__cas32(iou->cq_head, &hval, hval + 1));
+
+	*id = user_data;
+	return res;
 }
 
 i32 iouring_spin(IoUring *iou, u64 *id) {
 	u32 mask = *iou->cq_mask;
-	u32 hval = *iou->cq_head;
-INIT:
-	while (true) {
+	i32 res;
+	u32 hval;
+	u64 user_data;
+	do {
+	begin_loop:
+		hval = __aload32(iou->cq_head);
 		u32 tval = __aload32(iou->cq_tail);
-		if (hval != tval) {
-			i32 cqe_idx = hval & mask;
-			__aadd32(iou->cq_head, 1);
-			*id = iou->cqes[cqe_idx].user_data;
-			OK(iou->cqes[cqe_idx].res);
+
+		if (hval == tval) {
+			yield();
+			goto begin_loop;
 		}
-	}
-CLEANUP:
-	RETURN;
+
+		i32 cqe_idx = hval & mask;
+		res = iou->cqes[cqe_idx].res;
+		user_data = iou->cqes[cqe_idx].user_data;
+	} while (!__cas32(iou->cq_head, &hval, hval + 1));
+	*id = user_data;
+	return res;
 }
 
 bool iouring_pending_all(IoUring *iou) {
-	return *iou->cq_head != *iou->sq_tail;
+	return __aload32(iou->cq_head) != __aload32(iou->sq_tail);
 }
 
 bool iouring_pending(IoUring *iou, u64 id) {
-	u32 hval = *iou->cq_head;
-	u32 tval = *iou->sq_tail;
+	u32 hval = __aload32(iou->cq_head);
+	u32 tval = __aload32(iou->sq_tail);
 	u32 mask = *iou->sq_mask;
 	u32 index = hval;
-	while (index != tval) {
+	while (index < tval) {
 		u32 sqe_idx = iou->sq_array[index & mask];
-		if (iou->sqes[sqe_idx].user_data == id) {
-			return true;
-		}
+		if (iou->sqes[sqe_idx].user_data == id) return true;
 		index++;
 	}
 

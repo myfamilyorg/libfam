@@ -23,41 +23,19 @@
  *
  *******************************************************************************/
 
-#ifndef _COMPRESS_STREAM_H
-#define _COMPRESS_STREAM_H
+#include <libfam/atomic.h>
+#include <libfam/spin.h>
+#include <libfam/sysext.h>
 
-#include <libfam/compress_impl.h>
-#include <libfam/types.h>
+void spin_lock(SpinLock *lock) {
+	u32 cur;
+	do
+	begin_loop:
+		if ((cur = __aload32(&lock->value))) {
+			yield();
+			goto begin_loop;
+		}
+	while (!__cas32(&lock->value, &cur, 1));
+}
 
-#define MAGIC 0xC3161337
-#define VERSION 1
-#define CHUNK_SIZE MAX_COMPRESS_LEN
-#define COMPRESSED_CHUNK_SIZE \
-	(CHUNK_SIZE + (CHUNK_SIZE >> 9) + 24 + sizeof(ChunkHeader))
-#define CTHREADS 4
-#define CR_BUFS 2
-#define CW_BUFS 2
-#define DR_BUFS 4
-#define DW_BUFS 4
-
-typedef struct {
-	u32 magic;
-	u8 version;
-	u8 reserved;
-	u16 permissions;
-	u64 mtime;
-	u64 atime;
-} __attribute__((packed)) StreamHeader;
-
-typedef struct {
-	bool fin;
-	u32 size;
-} __attribute__((packed)) ChunkHeader;
-
-typedef struct {
-	u32 tid;
-	u32 io_lock;
-	u32 is_ready[CTHREADS];
-} StreamState;
-
-#endif /* _COMPRESS_STREAM_H */
+void spin_unlock(SpinLock *lock) { __astore32(&lock->value, 0); }

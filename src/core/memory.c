@@ -49,7 +49,7 @@ STATIC u64 chunks_to_allocate(void) {
 	return chunks;
 }
 
-void __attribute__((constructor)) init_global_allocator(void) {
+PUBLIC void init_global_allocator(void) {
 	u64 size = chunks_to_allocate();
 	global_allocator = alloc_init(AllocSmap, size);
 	const u8 *msg = "Global allocator init failure!\n";

@@ -34,6 +34,7 @@
 #include <libfam/linux.h>
 #include <libfam/linux_time.h>
 #include <libfam/rng.h>
+#include <libfam/spin.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
 
@@ -1184,4 +1185,13 @@ Test(iouring_module) {
 
 	iouring_destroy(iou);
 	ASSERT_BYTES(0);
+}
+
+Test(spin_lock) {
+	SpinLock lock1 = {0};
+	ASSERT_EQ(lock1.value, 0, "0a");
+	spin_lock(&lock1);
+	ASSERT_EQ(lock1.value, 1, "1");
+	spin_unlock(&lock1);
+	ASSERT_EQ(lock1.value, 0, "0b");
 }

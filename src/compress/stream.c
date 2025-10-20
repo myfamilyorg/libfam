@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <libfam/atomic.h>
 #include <libfam/compress.h>
 #include <libfam/compress_stream.h>
 #include <libfam/format.h>
@@ -30,7 +31,7 @@
 #include <libfam/linux.h>
 #include <libfam/sysext.h>
 
-STATIC i32 write_stream_header(IoUring *iou, i32 out_fd, struct stat *st) {
+STATIC i32 stream_write_header(IoUring *iou, i32 out_fd, struct stat *st) {
 	u16 permissions = 0644;
 	u64 id, mtime, atime;
 	i32 res, wsum = 0;
@@ -65,7 +66,7 @@ CLEANUP:
 	RETURN;
 }
 
-STATIC i32 read_stream_header(IoUring *iou, i32 in_fd, StreamHeader *header) {
+STATIC i32 stream_read_header(IoUring *iou, i32 in_fd, StreamHeader *header) {
 	u8 buf[sizeof(StreamHeader)];
 	u64 id, wsum = 0;
 	i32 res;
@@ -85,12 +86,72 @@ CLEANUP:
 	RETURN;
 }
 
+STATIC i32 stream_sched_read(i32 in_fd, IoUring *iou, StreamState *state,
+			     u32 tid, u64 id, u8 *in_chunk, u64 offset) {
+INIT:
+	if (iouring_init_read(iou, in_fd, in_chunk, CHUNK_SIZE, offset, id) < 0)
+		ERROR();
+	if (iouring_submit(iou, 1) < 0) ERROR();
+CLEANUP:
+	RETURN;
+}
+
+STATIC i32 stream_spin_read(i32 in_fd, IoUring *iou, StreamState *state,
+			    u64 id) {
+	i32 res;
+INIT:
+	if (iouring_pending(iou, id)) {
+		while (true) {
+			res = iouring_spin(iou, &id);
+			if (res < 0) ERROR();
+			break;
+		}
+	}
+CLEANUP:
+	RETURN;
+}
+
+STATIC i32 stream_compress_thread(i32 in_fd, IoUring *iou, StreamState *state) {
+	u8 in_chunks[CR_BUFS][CHUNK_SIZE],
+	    out_chunks[CW_BUFS][COMPRESSED_CHUNK_SIZE];
+	u32 tid;
+	u64 next_read;
+	u8 buf_id = 0;
+INIT:
+	tid = __aadd32(&state->tid, 1);
+	next_read = tid;
+	println("compress {}", tid);
+
+	if (stream_sched_read(in_fd, iou, state, tid, next_read,
+			      in_chunks[buf_id], tid * CHUNK_SIZE) < 0)
+		ERROR();
+
+	while (true) {
+		if (stream_spin_read(in_fd, iou, state, next_read) < 0) ERROR();
+		msleep(5);
+		println("next_read={},buf_id={}", next_read, buf_id % CR_BUFS);
+		if (next_read > 20) break;
+		buf_id++;
+		next_read += CTHREADS;
+	}
+
+	(void)in_chunks;
+	(void)out_chunks;
+CLEANUP:
+	RETURN;
+}
+
+STATIC void stream_init_state(StreamState *state) {
+	state->tid = 0;
+	state->io_lock = U32_MAX;
+}
+
 PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
 	StreamHeader header;
 	IoUring *iou = NULL;
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
-	if (read_stream_header(iou, in_fd, &header) < 0) ERROR();
+	if (stream_read_header(iou, in_fd, &header) < 0) ERROR();
 	println("magic={X},v={},mt={},at={},perm={x}", header.magic,
 		header.version, header.mtime, header.atime, header.permissions);
 
@@ -101,106 +162,26 @@ CLEANUP:
 
 PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
 	IoUring *iou = NULL;
-	u8 in_chunks[CR_BUFS][CHUNK_SIZE],
-	    out_chunks[CW_BUFS][COMPRESSED_CHUNK_SIZE];
-	u64 id, in_offset = 0, next_read = 0;
-	i32 res, bytes_read[CR_BUFS];
+	i32 pids[CTHREADS - 1];
 	struct stat st;
-	bool fin = false;
+	StreamState *state = NULL;
 INIT:
 	if (fstat(in_fd, &st) < 0) ERROR();
-	if (iouring_init(&iou, CR_BUFS + CW_BUFS) < 0) ERROR();
-	if (write_stream_header(iou, out_fd, &st) < 0) ERROR();
+	if (iouring_init(&iou, CTHREADS * (CR_BUFS + CW_BUFS)) < 0) ERROR();
+	if (stream_write_header(iou, out_fd, &st) < 0) ERROR();
+	if (!(state = smap(sizeof(StreamState)))) ERROR();
+	stream_init_state(state);
 
-	if (iouring_init_read(iou, in_fd, in_chunks[next_read % CR_BUFS],
-			      CHUNK_SIZE, in_offset, next_read) < 0)
-		ERROR();
-	if (iouring_submit(iou, 1) < 0) ERROR();
-	u64 proc_sum = 0, wsum = 0, tsum = 0;
+	for (u8 i = 0; i < CTHREADS - 1; i++)
+		if (!(pids[i] = two()))
+			stream_compress_thread(in_fd, iou, state), _exit(0);
+	stream_compress_thread(in_fd, iou, state);
 
-	while (!fin) {
-		bytes_read[next_read % CR_BUFS] = 0;
-		if (iouring_pending(iou, next_read)) {
-			while (true) {
-				res = iouring_spin(iou, &id);
-				/*
-				println("next_read={},res={}",
-					next_read, res);
-					*/
-				if (res == 0) {
-					fin = true;
-					break;
-				}
-				bytes_read[next_read % CR_BUFS] += res;
-				if (bytes_read[next_read % CR_BUFS] >=
-				    CHUNK_SIZE)
-					break;
-				if (bytes_read[id % CR_BUFS] < CHUNK_SIZE) {
-					/*
-					println(
-					    "(cont)sched read len={},offset={}",
-					    CHUNK_SIZE - bytes_read[id %
-					CR_BUFS], in_offset + bytes_read[id %
-					CR_BUFS]);
-					    */
-					if (iouring_init_read(
-						iou, in_fd,
-						in_chunks[id % CR_BUFS],
-						CHUNK_SIZE -
-						    bytes_read[id % CR_BUFS],
-						in_offset +
-						    bytes_read[id % CR_BUFS],
-						id) < 0)
-						ERROR();
-					if (iouring_submit(iou, 1) < 0) ERROR();
-				}
-			}
-		}
+	for (u8 i = 0; i < CTHREADS - 1; i++) await(pids[i]);
+	println("complete");
 
-		if (!fin) {
-			/*
-			println("(reg)sched read len={},offset={}", CHUNK_SIZE,
-				in_offset + CHUNK_SIZE);
-				*/
-
-			res = iouring_init_read(
-			    iou, in_fd, in_chunks[(next_read + 1) % CR_BUFS],
-			    CHUNK_SIZE, in_offset + CHUNK_SIZE, next_read + 1);
-			if (res < 0) ERROR();
-			if (iouring_submit(iou, 1) < 0) ERROR();
-		}
-
-		proc_sum += bytes_read[next_read % CR_BUFS];
-		/*println("proc {} bytes ({})", bytes_read[next_read % CR_BUFS],
-			proc_sum);*/
-		res = compress_block(
-		    in_chunks[next_read % CR_BUFS],
-		    bytes_read[next_read % CR_BUFS],
-		    out_chunks[next_read % CR_BUFS] + sizeof(ChunkHeader),
-		    COMPRESSED_CHUNK_SIZE);
-		if (res < 0) ERROR();
-		ChunkHeader *cheader = (void *)out_chunks[next_read % CR_BUFS];
-		cheader->fin = fin;
-		cheader->size = res;
-
-		wsum += res + sizeof(ChunkHeader);
-		i64 timer = micros();
-		if (write(out_fd, out_chunks[next_read % CR_BUFS],
-			  res + sizeof(ChunkHeader)) < 0)
-			ERROR();
-		timer = micros() - timer;
-		tsum += timer;
-		/*println("timer={},tsum={}", timer, tsum);*/
-		next_read++;
-		in_offset += CHUNK_SIZE;
-	}
-	/*println("wsum={}", wsum);*/
-
-	(void)out_chunks;
-	(void)proc_sum;
-	(void)wsum;
-	(void)tsum;
 CLEANUP:
+	if (state) munmap(state, sizeof(StreamState));
 	iouring_destroy(iou);
 	RETURN;
 }

@@ -73,7 +73,7 @@ static __inline u32 __aand32(volatile u32 *ptr, u32 value) {
 	    : "w4", "memory");
 	return old;
 #elif defined(__x86_64__)
-	return __atomic_and_fetch(ptr, value, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_and(ptr, value, __ATOMIC_SEQ_CST);
 #endif /* __x86_64__ */
 }
 
@@ -91,7 +91,7 @@ static __inline u32 __aadd32(volatile u32 *ptr, u32 value) {
 	    : "w4", "memory");
 	return old;
 #elif defined(__x86_64__)
-	return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
 #endif /* __x86_64__ */
 }
 
@@ -113,7 +113,7 @@ static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
 	    : "w4", "memory");
 	return old;
 #elif defined(__x86_64__)
-	return __atomic_or_fetch(ptr, value, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_or(ptr, value, __ATOMIC_SEQ_CST);
 #endif /* __x86_64__ */
 }
 
@@ -162,7 +162,7 @@ static __inline u64 __aand64(volatile u64 *ptr, u64 value) {
 	    : "w4", "memory");
 	return old;
 #elif defined(__x86_64__)
-	return __atomic_and_fetch(ptr, value, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_and(ptr, value, __ATOMIC_SEQ_CST);
 #endif /* __x86_64__ */
 }
 
@@ -180,7 +180,7 @@ static __inline u64 __aadd64(volatile u64 *ptr, u64 value) {
 	    : "w4", "memory");
 	return old;
 #elif defined(__x86_64__)
-	return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
 #endif /* __x86_64__ */
 }
 
@@ -202,7 +202,7 @@ static __inline u64 __aor64(volatile u64 *ptr, u64 value) {
 	    : "w4", "memory");
 	return old;
 #elif defined(__x86_64__)
-	return __atomic_or_fetch(ptr, value, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_or(ptr, value, __ATOMIC_SEQ_CST);
 #endif /* __x86_64__ */
 }
 
