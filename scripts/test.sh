@@ -58,6 +58,7 @@ if [ "${VALGRIND}" = "1" ]; then
 		--error-exitcode=1 \
 		${TEST_BIN} || exit $?;
 else
+	cp ./target/lib/libfamtest.so ./target/lib/ld-linux-aarch64.so.1
 	LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} ${TEST_BIN} || exit $?;
 fi
 
