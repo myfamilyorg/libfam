@@ -6,7 +6,7 @@ CDEFS="-DSTATIC= -DTEST=1";
 LIB_NAME="${LIB_OUTPUT_DIR}/libfamtest.so";
 TEST_BIN="target/bin/runtests";
 TEST_SRC="src/test/main.c";
-TEST_CFLAGS="-Wno-pointer-sign -ffreestanding -nostdlib -Ltarget/lib";
+TEST_CFLAGS="-Wno-pointer-sign -ffreestanding -nostdlib -nostdinc -Ltarget/lib";
 OBJECTS="";
 
 mkdir -p ${LIB_OUTPUT_DIR};
