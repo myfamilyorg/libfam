@@ -25,7 +25,7 @@
 
 #include <libfam/bible.h>
 #include <libfam/debug.h>
-#include <libfam/test.h>
+#include <libfam/test_base.h>
 
 void __attribute__((constructor)) __init_bible(void) { init_bible(); }
 

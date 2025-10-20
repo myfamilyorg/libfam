@@ -25,7 +25,6 @@
 
 #include <libfam/env.h>
 #include <libfam/errno.h>
-#include <libfam/memory.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
@@ -105,8 +104,6 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 
 	(void)argc;
 	(void)argv;
-
-	init_global_allocator();
 
 	if (init_environ(envp) < 0) {
 		perror("init_environ");

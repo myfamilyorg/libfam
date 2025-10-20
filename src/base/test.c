@@ -188,6 +188,15 @@ Test(strcmp) {
 	ASSERT(!strcmp("abc", "abc"), "abc=abc");
 }
 
+Test(strncpy) {
+	u8 x[1024] = {0};
+	strncpy(x, "abcd", 3);
+	ASSERT_EQ(x[0], 'a', "a");
+	ASSERT_EQ(x[1], 'b', "b");
+	ASSERT_EQ(x[2], 'c', "c");
+	ASSERT_EQ(x[3], 0, "\0");
+}
+
 Test(f64_to_string) {
 	u8 buf[64] = {0};
 	u64 len;
