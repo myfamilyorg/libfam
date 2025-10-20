@@ -51,6 +51,8 @@ jobs:
         run: uname -a
       - name: test
         run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
           ./.ci/test
   linux_aarch64_test:
     runs-on: ubuntu-24.04-arm
