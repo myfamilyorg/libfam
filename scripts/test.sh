@@ -52,6 +52,7 @@ fi
 export TEST_PATTERN=${FILTER};
 LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} \
 	valgrind \
+	--soname-synonyms=somalloc=libfamtest.so,ld-linux-aarch64.so.1=libfamtest.so \
 	--tool=memcheck \
 	--track-origins=yes \
 	--error-exitcode=1 \
