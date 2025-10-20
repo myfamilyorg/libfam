@@ -50,5 +50,10 @@ if [ ! -e target/bin/runtests ] || [ src/test/main.c -nt target/bin/runtests ]; 
 fi
 
 export TEST_PATTERN=${FILTER};
-LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} ${TEST_BIN} || exit $?;
+LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} \
+	valgrind \
+	--tool=memcheck \
+	--track-origins=yes \
+	--error-exitcode=1 \
+	${TEST_BIN} || exit $?;
 
