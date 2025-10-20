@@ -41,7 +41,6 @@ if [ ! -e target/bin/runtests ] || [ src/test/main.c -nt target/bin/runtests ]; 
                 ${TEST_CFLAGS} \
                 -I${INCDIR} \
                 -o ${TEST_BIN} \
-		-lgcc \
                 ${TEST_SRC} \
                 -lfamtest";
         if [ "$SILENT" != "1" ]; then
