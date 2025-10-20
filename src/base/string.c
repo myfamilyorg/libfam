@@ -102,7 +102,6 @@ PUBLIC void *memmove(void *dest, const void *src, u64 n) {
 	return dest;
 }
 
-/*
 PUBLIC u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
 			bool commas) {
 	u64 pos = 0;
@@ -155,115 +154,9 @@ PUBLIC u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
 		frac_part = v - (f64)int_part;
 	}
 
-	if (int_part == 0) {
+	if (int_part == 0)
 		buf[pos++] = '0';
-	} else {
-		u64 int_start = pos;
-		i = 0;
-		while (int_part > 0) {
-			temp[i++] = '0' + (int_part % 10);
-			int_part /= 10;
-		}
-		if (commas) {
-			u64 digit_count = i;
-			u64 comma_count =
-			    digit_count > 3 ? (digit_count - 1) / 3 : 0;
-			u64 total_int_bytes = digit_count + comma_count;
-			pos = int_start + total_int_bytes;
-			i--;
-			u64 digits_until_comma =
-			    digit_count % 3 ? digit_count % 3 : 3;
-			while (i >= 0) {
-				buf[pos--] = temp[i--];
-				digits_until_comma--;
-				if (digits_until_comma == 0 && i >= 0) {
-					buf[pos--] = ',';
-					digits_until_comma = 3;
-				}
-			}
-			pos = int_start + total_int_bytes;
-		} else {
-			while (i > 0) {
-				buf[pos++] = temp[--i];
-			}
-		}
-	}
-
-	if (frac_part > 0 && max_decimals > 0) {
-		buf[pos++] = '.';
-		u64 frac_start = pos;
-		i32 digits = 0;
-		while (digits < max_decimals) {
-			frac_part *= 10;
-			i32 digit = (i32)frac_part;
-			buf[pos++] = '0' + digit;
-			frac_part -= digit;
-			digits++;
-		}
-		while (pos > frac_start && buf[pos - 1] == '0') pos--;
-		if (pos == frac_start) pos--;
-	}
-
-	buf[pos] = '\0';
-	return pos;
-}
-*/
-
-PUBLIC u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
-			bool commas) {
-	u64 pos = 0;
-	i32 is_negative;
-	u64 int_part;
-	f64 frac_part;
-	i32 i;
-	u8 temp[MAX_F64_STRING_LEN];
-
-	if (v != v) {
-		buf[0] = 'n';
-		buf[1] = 'a';
-		buf[2] = 'n';
-		buf[3] = '\0';
-		return 3;
-	}
-
-	if (v > 1.7976931348623157e308 || v < -1.7976931348623157e308) {
-		if (v < 0) buf[pos++] = '-';
-		buf[pos++] = 'i';
-		buf[pos++] = 'n';
-		buf[pos++] = 'f';
-		buf[pos] = '\0';
-		return pos;
-	}
-
-	is_negative = v < 0;
-	if (is_negative) {
-		buf[pos++] = '-';
-		v = -v;
-	}
-
-	if (v == 0.0) {
-		buf[pos++] = '0';
-		buf[pos] = '\0';
-		return pos;
-	}
-
-	if (max_decimals < 0) max_decimals = 0;
-	if (max_decimals > 17) max_decimals = 17;
-
-	int_part = (u64)v;
-	frac_part = v - (f64)int_part;
-
-	if (max_decimals > 0) {
-		f64 rounding = 0.5;
-		for (i = 0; i < max_decimals; i++) rounding /= 10.0;
-		v += rounding;
-		int_part = (u64)v;
-		frac_part = v - (f64)int_part;
-	}
-
-	if (int_part == 0) {
-		buf[pos++] = '0';
-	} else {
+	else {
 		i = 0;
 		while (int_part > 0) {
 			temp[i++] = '0' + (int_part % 10);
@@ -282,11 +175,8 @@ PUBLIC u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
 					digits_until_comma = 3;
 				}
 			}
-		} else {
-			while (i > 0) {
-				buf[pos++] = temp[--i];
-			}
-		}
+		} else
+			while (i > 0) buf[pos++] = temp[--i];
 	}
 
 	if (frac_part > 0 && max_decimals > 0) {

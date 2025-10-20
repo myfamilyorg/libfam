@@ -387,6 +387,7 @@ Test(errors) {
 	       "eagain");
 	ASSERT(!strcmp("Invalid argument", strerror(EINVAL)), "einval");
 	ASSERT(!strcmp("Bad address", strerror(EFAULT)), "efault");
+	ASSERT(!strcmp("Resource busy or locked", strerror(EBUSY)), "ebusy");
 	ASSERT(!strcmp("No such file or directory", strerror(ENOENT)),
 	       "enoent");
 	ASSERT(!strcmp("No space left on device", strerror(ENOSPC)), "enospc");

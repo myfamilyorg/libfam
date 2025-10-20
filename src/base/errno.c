@@ -67,6 +67,8 @@ PUBLIC char *strerror(i32 err_code) {
 			return "Out of memory";
 		case EFAULT:
 			return "Bad address";
+		case EBUSY:
+			return "Resource busy or locked";
 		case EINVAL:
 			return "Invalid argument";
 		case ENOSPC:
