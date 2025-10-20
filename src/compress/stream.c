@@ -24,224 +24,183 @@
  *******************************************************************************/
 
 #include <libfam/compress.h>
-#include <libfam/compress_impl.h>
+#include <libfam/compress_stream.h>
 #include <libfam/format.h>
 #include <libfam/iouring.h>
 #include <libfam/linux.h>
-#include <libfam/linux_time.h>
-#include <libfam/syscall.h>
 #include <libfam/sysext.h>
-#include <libfam/utils.h>
 
-PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
-	CompressHeader header = {0};
-	u64 in_offset = sizeof(CompressHeader);
-	u64 out_offset = 0;
-	u8 in_chunk[MAX_COMPRESS_BOUND_LEN] = {0},
-	   out_chunk[4][MAX_COMPRESS_LEN + MAX_AVX_OVERWRITE] = {0};
-	u64 in_chunk_size = 0, out_chunk_size = 0, id;
-	IoUring *iou = NULL;
-	u64 in_file_size = fsize(in_fd);
-	u64 next_write = U32_MAX, next_read = 0;
-	struct timevalfam ts[2] = {0};
+STATIC i32 write_stream_header(IoUring *iou, i32 out_fd, struct stat *st) {
+	u16 permissions = 0644;
+	u64 id, mtime, atime;
+	i32 res, wsum = 0;
 INIT:
-	if (iouring_init(&iou, 4) < 0) ERROR();
-
-	in_chunk_size = compress_bound(MAX_COMPRESS_LEN);
-	out_chunk_size = MAX_COMPRESS_LEN;
-
-	if (iouring_init_read(iou, in_fd, &header, sizeof(CompressHeader), 0,
-			      next_read) < 0)
-		ERROR();
-	next_read++;
-
-	if (iouring_submit(iou, 1) < 0) ERROR();
-	iouring_spin(iou, &id);
-
-	while (out_offset < header.file_size) {
-		in_chunk_size = min(compress_bound(MAX_COMPRESS_LEN),
-				    in_file_size - in_offset);
-		if (iouring_init_read(iou, in_fd, in_chunk, in_chunk_size,
-				      in_offset, next_read) < 0)
-			ERROR();
-
-		if (iouring_submit(iou, 1) < 0) ERROR();
-		while (true) {
-			iouring_spin(iou, &id);
-			if (id == next_read) break;
-		}
-		next_read++;
-
-		u64 bytes_consumed;
-		i32 result = decompress_block(in_chunk, in_chunk_size,
-					      out_chunk[next_write % 4],
-					      out_chunk_size, &bytes_consumed);
-		if (result < 0) ERROR(EINVAL);
-
-		if (iouring_init_write(iou, out_fd, out_chunk[next_write % 4],
-				       result, out_offset, next_write) < 0)
-			ERROR();
-		if (iouring_submit(iou, 1) < 0) ERROR();
-
-		if (out_fd == STDOUT_FD) {
-			u64 written = 0;
-			while (written < result) {
-				i32 res = iouring_spin(iou, &id);
-				if (res < 0) ERROR();
-				written += res;
-				if (written < result) {
-					if (iouring_init_write(
-						iou, out_fd,
-						out_chunk[next_write % 4] +
-						    written,
-						result - written, out_offset,
-						next_write) < 0)
-						ERROR();
-					if (iouring_submit(iou, 1) < 0) ERROR();
-				}
-			}
-		} else if (next_write != U64_MAX) {
-			if (iouring_pending(iou, next_write + 1)) {
-				while (true) {
-					iouring_spin(iou, &id);
-					if (id == next_write + 1) break;
-				}
-			}
-		}
-
-		in_offset += bytes_consumed;
-		out_offset += result;
-		next_write--;
+	if (S_ISLNK(st->st_mode) || S_ISDIR(st->st_mode) ||
+	    S_ISBLK(st->st_mode)) {
+		ERROR(EINVAL);
+	}
+	if (S_ISREG(st->st_mode)) {
+		permissions = st->st_mode & 0777;
+		mtime = st->st_mtime;
+		atime = st->st_atime;
+	} else {
+		mtime = atime = micros() / 1000000;
 	}
 
-	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
-	if (out_fd != STDOUT_FD) {
-		if (fresize(out_fd, out_offset) < 0) ERROR();
-		if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
-		ts[0].tv_sec = header.atime;
-		ts[1].tv_sec = header.mtime;
-		if (utimesat(out_fd, NULL, ts, 0) < 0) ERROR();
+	StreamHeader header = {.magic = MAGIC,
+			       .version = VERSION,
+			       .permissions = permissions,
+			       .mtime = mtime,
+			       .atime = atime};
+	while (wsum < sizeof(StreamHeader)) {
+		res = iouring_init_write(iou, out_fd, (u8 *)&header,
+					 sizeof(StreamHeader) - wsum, wsum, 0);
+		if (res < 0) ERROR();
+		if (iouring_submit(iou, 1) < 0) ERROR();
+		res = iouring_spin(iou, &id);
+		if (res < 0 || id != 0) ERROR();
+		wsum += res;
 	}
 CLEANUP:
-	if (iou) iouring_destroy(iou);
+	RETURN;
+}
+
+STATIC i32 read_stream_header(IoUring *iou, i32 in_fd, StreamHeader *header) {
+	u8 buf[sizeof(StreamHeader)];
+	u64 id, wsum = 0;
+	i32 res;
+INIT:
+	while (wsum < sizeof(StreamHeader)) {
+		res = iouring_init_read(iou, in_fd, buf,
+					sizeof(StreamHeader) - wsum, wsum, 0);
+		if (res < 0) ERROR();
+		if (iouring_submit(iou, 1) < 0) ERROR();
+		res = iouring_spin(iou, &id);
+		if (res < 0 || id != 0) ERROR();
+		wsum += res;
+	}
+
+	*header = *(StreamHeader *)buf;
+CLEANUP:
+	RETURN;
+}
+
+PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
+	StreamHeader header;
+	IoUring *iou = NULL;
+INIT:
+	if (iouring_init(&iou, 4) < 0) ERROR();
+	if (read_stream_header(iou, in_fd, &header) < 0) ERROR();
+	println("magic={X},v={},mt={},at={},perm={x}", header.magic,
+		header.version, header.mtime, header.atime, header.permissions);
+
+CLEANUP:
+	iouring_destroy(iou);
 	RETURN;
 }
 
 PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
-	CompressHeader header;
-	u64 in_offset = 0;
-	u64 out_offset = sizeof(CompressHeader);
-	u8 in_chunk[2][MAX_COMPRESS_LEN] = {0},
-	   out_chunk[2][MAX_COMPRESS_BOUND_LEN] = {0};
-	u64 in_chunk_size = MAX_COMPRESS_LEN,
-	    out_chunk_size = compress_bound(MAX_COMPRESS_LEN);
 	IoUring *iou = NULL;
-	u64 next_read = 0, next_write = U64_MAX, id;
+	u8 in_chunks[CR_BUFS][CHUNK_SIZE],
+	    out_chunks[CW_BUFS][COMPRESSED_CHUNK_SIZE];
+	u64 id, in_offset = 0, next_read = 0;
+	i32 res, bytes_read[CR_BUFS];
 	struct stat st;
+	bool fin = false;
 INIT:
 	if (fstat(in_fd, &st) < 0) ERROR();
-	if (!S_ISREG(st.st_mode)) ERROR(EINVAL);
+	if (iouring_init(&iou, CR_BUFS + CW_BUFS) < 0) ERROR();
+	if (write_stream_header(iou, out_fd, &st) < 0) ERROR();
 
-	header.file_size = fsize(in_fd);
-	header.version = 0;
-	header.permissions = st.st_mode & 07777;
-	header.mtime = st.st_mtime;
-	header.atime = st.st_atime;
-
-	if (iouring_init(&iou, 4) < 0) ERROR();
-
-	if (header.file_size == 0) ERROR(EINVAL);
-
-	if (iouring_init_write(iou, out_fd, (u8 *)&header,
-			       sizeof(CompressHeader), 0, 0) < 0)
+	if (iouring_init_read(iou, in_fd, in_chunks[next_read % CR_BUFS],
+			      CHUNK_SIZE, in_offset, next_read) < 0)
 		ERROR();
 	if (iouring_submit(iou, 1) < 0) ERROR();
-	i32 res = iouring_spin(iou, &id);
-	if (res < 0) ERROR();
-	if (res != sizeof(CompressHeader)) ERROR(EIO);
+	u64 proc_sum = 0, wsum = 0, tsum = 0;
 
-	in_chunk_size = min(header.file_size, MAX_COMPRESS_LEN);
-	if (iouring_init_read(iou, in_fd, in_chunk[0], in_chunk_size, in_offset,
-			      next_read) < 0)
-		ERROR();
-	iouring_submit(iou, 1);
-
-	while (in_offset < header.file_size) {
+	while (!fin) {
+		bytes_read[next_read % CR_BUFS] = 0;
 		if (iouring_pending(iou, next_read)) {
 			while (true) {
-				iouring_spin(iou, &id);
-				if (id == next_read) break;
+				res = iouring_spin(iou, &id);
+				/*
+				println("next_read={},res={}",
+					next_read, res);
+					*/
+				if (res == 0) {
+					fin = true;
+					break;
+				}
+				bytes_read[next_read % CR_BUFS] += res;
+				if (bytes_read[next_read % CR_BUFS] >=
+				    CHUNK_SIZE)
+					break;
+				if (bytes_read[id % CR_BUFS] < CHUNK_SIZE) {
+					/*
+					println(
+					    "(cont)sched read len={},offset={}",
+					    CHUNK_SIZE - bytes_read[id %
+					CR_BUFS], in_offset + bytes_read[id %
+					CR_BUFS]);
+					    */
+					if (iouring_init_read(
+						iou, in_fd,
+						in_chunks[id % CR_BUFS],
+						CHUNK_SIZE -
+						    bytes_read[id % CR_BUFS],
+						in_offset +
+						    bytes_read[id % CR_BUFS],
+						id) < 0)
+						ERROR();
+					if (iouring_submit(iou, 1) < 0) ERROR();
+				}
 			}
 		}
-		next_read++;
 
-		if (in_offset + MAX_COMPRESS_LEN <= header.file_size) {
-			in_chunk_size = min(
-			    header.file_size - (in_offset + MAX_COMPRESS_LEN),
-			    MAX_COMPRESS_LEN);
-			if (iouring_init_read(
-				iou, in_fd, in_chunk[next_read % 2],
-				in_chunk_size, in_offset + MAX_COMPRESS_LEN,
-				next_read) < 0)
-				ERROR();
-			iouring_submit(iou, 1);
+		if (!fin) {
+			/*
+			println("(reg)sched read len={},offset={}", CHUNK_SIZE,
+				in_offset + CHUNK_SIZE);
+				*/
+
+			res = iouring_init_read(
+			    iou, in_fd, in_chunks[(next_read + 1) % CR_BUFS],
+			    CHUNK_SIZE, in_offset + CHUNK_SIZE, next_read + 1);
+			if (res < 0) ERROR();
+			if (iouring_submit(iou, 1) < 0) ERROR();
 		}
 
-		in_chunk_size =
-		    min(header.file_size - in_offset, MAX_COMPRESS_LEN);
+		proc_sum += bytes_read[next_read % CR_BUFS];
+		/*println("proc {} bytes ({})", bytes_read[next_read % CR_BUFS],
+			proc_sum);*/
+		res = compress_block(
+		    in_chunks[next_read % CR_BUFS],
+		    bytes_read[next_read % CR_BUFS],
+		    out_chunks[next_read % CR_BUFS] + sizeof(ChunkHeader),
+		    COMPRESSED_CHUNK_SIZE);
+		if (res < 0) ERROR();
+		ChunkHeader *cheader = (void *)out_chunks[next_read % CR_BUFS];
+		cheader->fin = fin;
+		cheader->size = res;
 
-		i32 result =
-		    compress_block(in_chunk[(next_read - 1) % 2], in_chunk_size,
-				   out_chunk[next_write % 2], out_chunk_size);
-		if (result < 0) ERROR(EINVAL);
-
-		if (iouring_init_write(iou, out_fd, out_chunk[next_write % 2],
-				       result, out_offset, next_write) < 0)
+		wsum += res + sizeof(ChunkHeader);
+		i64 timer = micros();
+		if (write(out_fd, out_chunks[next_read % CR_BUFS],
+			  res + sizeof(ChunkHeader)) < 0)
 			ERROR();
-		if (iouring_submit(iou, 1) < 0) ERROR();
-
-		if (out_fd == STDOUT_FD) {
-			u64 written = 0;
-			while (written < result) {
-				i32 res = iouring_spin(iou, &id);
-				if (res < 0) ERROR();
-				if (id == next_write) {
-					written += res;
-					if (written < result) {
-						if (iouring_init_write(
-							iou, out_fd,
-							out_chunk[next_write %
-								  2] +
-							    written,
-							result - written,
-							out_offset,
-							next_write) < 0)
-							ERROR();
-						if (iouring_submit(iou, 1) < 0)
-							ERROR();
-					}
-				}
-			}
-		} else if (next_write != U64_MAX) {
-			if (iouring_pending(iou, next_write + 1)) {
-				while (true) {
-					iouring_spin(iou, &id);
-					if (id == next_write + 1) break;
-				}
-			}
-		}
-
-		next_write--;
-		in_offset += in_chunk_size;
-		out_offset += result;
+		timer = micros() - timer;
+		tsum += timer;
+		/*println("timer={},tsum={}", timer, tsum);*/
+		next_read++;
+		in_offset += CHUNK_SIZE;
 	}
-	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
-	if (out_fd != STDOUT_FD) {
-		if (fresize(out_fd, out_offset) < 0) ERROR();
-		if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
-	}
+	/*println("wsum={}", wsum);*/
+
+	(void)out_chunks;
+	(void)proc_sum;
+	(void)wsum;
+	(void)tsum;
 CLEANUP:
-	if (iou) iouring_destroy(iou);
+	iouring_destroy(iou);
 	RETURN;
 }
-
