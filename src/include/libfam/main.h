@@ -64,6 +64,8 @@
 	    "    syscall\n");
 #endif /* __x86_64__ */
 
+#ifndef COVERAGE
 CALL_MAIN
+#endif /* COVERAGE */
 
 #endif /* _MAIN_H */
