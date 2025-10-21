@@ -338,7 +338,7 @@ Test(alloc2) {
 	ASSERT(ptrs, "ptrs");
 	for (i = 0; i < ALLOC_ITER; i++) {
 		for (j = 0; j < ALLOC_COUNT; j++) {
-			u16 size;
+			u16 size = 0;
 			rng_gen(&rng, &size, sizeof(u16));
 			size = 2 + (size % 1024);
 			ptrs[j] = balloc(a, size);
@@ -347,7 +347,7 @@ Test(alloc2) {
 		}
 
 		for (j = 0; j < ALLOC_COUNT; j++) {
-			u16 size;
+			u16 size = 0;
 			memcpy(&size, ptrs[j], sizeof(u16));
 			for (k = 2; k < size; k++)
 				ASSERT_EQ(ptrs[j][k], 'a' + (k % 26), "k");
