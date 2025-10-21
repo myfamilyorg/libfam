@@ -35,18 +35,21 @@
 
 Alloc *global_allocator = NULL;
 
-PUBLIC i32 init_global_allocator(u64 chunks) {
+STATIC i32 try_set_global_allocator(Alloc *allocator) {
 	u64 *expected = NULL;
+	i32 cas_res = __cas64((void *)&global_allocator, (void *)&expected,
+			      (u64)allocator);
+	return cas_res ? 0 : -1;
+}
+
+PUBLIC i32 init_global_allocator(u64 chunks) {
 	if (__aload64((u64 *)&global_allocator)) return -1;
 	Alloc *allocator = alloc_init(AllocSmap, chunks);
 	if (!allocator) return -1;
 
-	if (!__cas64((void *)&global_allocator, (void *)&expected,
-		     (u64)allocator)) {
-		alloc_destroy(allocator);
-		return -1;
-	}
-	return 0;
+	i32 cas_res = try_set_global_allocator(allocator);
+	if (cas_res < 0) alloc_destroy(allocator);
+	return cas_res;
 }
 
 PUBLIC void *alloc(u64 size) { return balloc(global_allocator, size); }
