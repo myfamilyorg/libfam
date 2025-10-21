@@ -30,6 +30,7 @@
 #include <libfam/debug.h>
 #include <libfam/env.h>
 #include <libfam/format.h>
+#include <libfam/iouring.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/linux_time.h>
@@ -1035,8 +1036,6 @@ Test(fstatat) {
 	unlink(path);
 }
 
-/*
-
 Test(ioruring) {
 	struct io_uring_params params = {0};
 	i32 fd = io_uring_setup(2, &params);
@@ -1207,7 +1206,6 @@ Test(iouring_module) {
 	iouring_destroy(iou);
 	ASSERT_BYTES(0);
 }
-*/
 
 Test(spin_lock) {
 	SpinLock lock1 = {0};
