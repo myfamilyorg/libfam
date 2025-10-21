@@ -28,6 +28,8 @@
 
 #include <libfam/types.h>
 
+#define SPINLOCK_INIT *(&(SpinLock){.value = 0})
+
 typedef struct {
 	u32 value;
 } SpinLock;

@@ -267,6 +267,10 @@ Test(string_u128_fns) {
 	ASSERT_EQ(i128_to_string(buf, 0xF, Int128DisplayTypeBinary), 4,
 		  "binary 0xF");
 	ASSERT(!strcmp(buf, "1111"), "string 1111");
+
+	ASSERT(u128_to_string(buf, 9993, Int128DisplayTypeCommas) > 0,
+	       "commas");
+	ASSERT(!strcmp(buf, "9,993"), "comma verify");
 }
 
 u128 __umodti3(u128 a, u128 b);
@@ -1209,4 +1213,36 @@ Test(spin_lock) {
 	ASSERT_EQ(lock1.value, 1, "1");
 	spin_unlock(&lock1);
 	ASSERT_EQ(lock1.value, 0, "0b");
+}
+
+#define SPIN_PROCS 256
+#define SPIN_ITER 4096
+
+Test(spin_threads) {
+	if (getenv("VALGRIND")) return;
+
+	i32 i;
+	i32 pids[SPIN_PROCS] = {0};
+	u64 *count = smap(sizeof(u64));
+	SpinLock *sl = smap(sizeof(SpinLock));
+	*count = 0;
+	*sl = SPINLOCK_INIT;
+
+	for (i = 0; i < SPIN_PROCS; i++) {
+		pids[i] = two();
+		if (!pids[i]) {
+			for (i = 0; i < SPIN_ITER; i++) {
+				spin_lock(sl);
+				*count = *count + 1;
+				spin_unlock(sl);
+			}
+			_famexit(0);
+		}
+	}
+
+	for (i = 0; i < SPIN_PROCS; i++) await(pids[i]);
+	ASSERT_EQ(*count, SPIN_ITER * SPIN_PROCS,
+		  "count==SPIN_ITER * SPIN_PROCS");
+	munmap(count, sizeof(u64));
+	munmap(sl, sizeof(SpinLock));
 }
