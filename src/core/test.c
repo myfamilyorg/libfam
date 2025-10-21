@@ -1192,6 +1192,7 @@ Test(iouring_module) {
 	iouring_submit(iou, 1);
 
 	ASSERT(iouring_pending(iou, 123), "pending 456");
+	ASSERT(!iouring_pending(iou, 999), "not pending");
 	i32 res = iouring_spin(iou, &id);
 	ASSERT(!iouring_pending(iou, 123), "pending 456");
 
@@ -1204,6 +1205,7 @@ Test(iouring_module) {
 	ASSERT(iouring_pending(iou, 456), "pending 456");
 	res = iouring_wait(iou, &id);
 	ASSERT(!iouring_pending(iou, 456), "pending 456");
+	ASSERT(!iouring_pending_all(iou), "pending all");
 
 	ASSERT_EQ(id, 456, "456");
 
@@ -1215,8 +1217,66 @@ Test(iouring_module) {
 	ASSERT_BYTES(0);
 }
 
+Test(iouring_other) {
+	u8 buf1[1024], buf2[1024], buf3[1024], buf4[1024], buf5[1024];
+	i32 fd_in = file("resources/akjv5.txt");
+	IoUring *iou = NULL;
+	_debug_alloc_failure = true;
+	ASSERT(iouring_init(&iou, 4) < 0, "alloc err");
+	_debug_alloc_failure = false;
+
+	iou = NULL;
+	ASSERT(!iouring_init(&iou, 4), "iouring init");
+	ASSERT(!iouring_init_read(iou, fd_in, buf1, 1024, 0, 0), "read1");
+	ASSERT(!iouring_init_read(iou, fd_in, buf2, 1024, 0, 1), "read2");
+	ASSERT(!iouring_init_read(iou, fd_in, buf3, 1024, 0, 2), "read3");
+	ASSERT(!iouring_init_read(iou, fd_in, buf4, 1024, 0, 3), "read4");
+	ASSERT(iouring_init_read(iou, fd_in, buf5, 1024, 0, 4) < 0,
+	       "read fail");
+	ASSERT(iouring_init_write(iou, fd_in, buf5, 1024, 0, 5) < 0,
+	       "write fail");
+
+	iouring_destroy(iou);
+	close(fd_in);
+}
+
+Test(iouring_spin_wait) {
+	if (getenv("VALGRIND")) return;
+	u64 *value = smap(sizeof(u64));
+	i32 pid;
+	IoUring *iou = NULL;
+	u8 buf[1024];
+	i32 fd_in = file("resources/akjv5.txt");
+
+	*value = 0;
+
+	ASSERT(!iouring_init(&iou, 4), "iouring init");
+
+	if ((pid = two()) == 0) {
+		u64 id;
+		iouring_spin(iou, &id);
+		ASSERT_EQ(id, 99, "99");
+		__astore64(value, id);
+		_famexit(0);
+	}
+
+	msleep(300);
+	ASSERT(!iouring_init_read(iou, fd_in, buf, 1024, 0, 99), "read");
+	i32 res = iouring_submit(iou, 1);
+	ASSERT_EQ(res, 1, "submit");
+
+	await(pid);
+	mfence();
+	u64 v = __aload64(value);
+	ASSERT_EQ(v, 99, "value=99");
+
+	iouring_destroy(iou);
+	close(fd_in);
+	(void)value;
+}
+
 Test(spin_lock) {
-	SpinLock lock1 = {0};
+	SpinLock lock1 = SPINLOCK_INIT;
 	ASSERT_EQ(lock1.value, 0, "0a");
 	spin_lock(&lock1);
 	ASSERT_EQ(lock1.value, 1, "1");
