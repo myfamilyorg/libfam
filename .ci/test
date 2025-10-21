@@ -1,6 +1,8 @@
 #!/bin/bash
 
-./build clean test --cflags=-g --cc=clang $1 || exit $?;
+./build clean test --cflags=-g $1 || exit $?;
+
+./build clean test --cc=clang $1 || exit $?;
 
 ./build clean test --cc=gcc $1 || exit $?;
 
