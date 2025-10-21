@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Check linux version
         run: uname -a
       - name: build
@@ -34,6 +36,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Check linux version
         run: uname -a
       - name: build
@@ -47,6 +51,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Check linux version
         run: uname -a
       - name: test
@@ -62,6 +68,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Check linux version
         run: uname -a
       - name: test
@@ -75,6 +83,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Check linux version
         run: uname -a
       - name: coverage
@@ -88,6 +98,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Check linux version
         run: uname -a
       - name: coverage
@@ -101,6 +113,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Check linux version
         run: uname -a
       - name: end2end
@@ -114,6 +128,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Check linux version
         run: uname -a
       - name: end2end
