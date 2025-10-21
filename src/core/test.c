@@ -23,6 +23,8 @@
  *
  *******************************************************************************/
 
+#include <libfam/alloc.h>
+#include <libfam/alloc_impl.h>
 #include <libfam/atomic.h>
 #include <libfam/bitmap.h>
 #include <libfam/debug.h>
@@ -30,10 +32,13 @@
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/linux_time.h>
+#include <libfam/memory.h>
 #include <libfam/rng.h>
 #include <libfam/spin.h>
 #include <libfam/sysext.h>
 #include <libfam/test_base.h>
+
+INIT_GLOBAL_ALLOCATOR(64);
 
 Test(atomic) {
 	u32 x32 = 2;
@@ -284,7 +289,6 @@ Test(stubs) {
 	v2 = (u128)U64_MAX + 1;
 	ASSERT_EQ(__umodti3(v2, v1), 0, "umod1");
 }
-/*
 Test(memory) {
 	void *a = alloc(1);
 	ASSERT(allocated_bytes(), "alloc");
@@ -294,6 +298,8 @@ Test(memory) {
 	ASSERT(allocated_bytes(), "alloc");
 	reset_allocated_bytes();
 	ASSERT(!allocated_bytes(), "release");
+	a = resize(a, 1024);
+	ASSERT(a, "a alloc");
 	release(a);
 	reset_allocated_bytes();
 }
@@ -313,9 +319,9 @@ Test(alloc1) {
 	ASSERT_EQ(tmp5, tmp2, "re allocate freed ptr");
 	void *tmp6 = balloc(a, 8);
 	ASSERT_EQ(tmp6, tmp4 + 8, "next from tmp4");
-	ASSERT_EQ(alloc_allocated_bytes(a), 32);
+	ASSERT_EQ(alloc_allocated_bytes(a), 32, "32 b");
 	alloc_reset_allocated_bytes(a);
-	ASSERT_EQ(alloc_allocated_bytes(a), 0);
+	ASSERT_EQ(alloc_allocated_bytes(a), 0, "alloc b 0");
 	alloc_destroy(a);
 }
 
@@ -546,8 +552,6 @@ Test(alloc_all_slabs) {
 
 	alloc_destroy(a);
 }
-
-*/
 
 Test(sysext) {
 	const u8 *path = "/tmp/01234567789abc.txt";
