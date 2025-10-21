@@ -29,6 +29,7 @@
 #include <libfam/bitmap.h>
 #include <libfam/debug.h>
 #include <libfam/env.h>
+#include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/linux_time.h>
@@ -36,7 +37,7 @@
 #include <libfam/rng.h>
 #include <libfam/spin.h>
 #include <libfam/sysext.h>
-#include <libfam/test_base.h>
+#include <libfam/test.h>
 
 INIT_GLOBAL_ALLOCATOR(64);
 
@@ -901,7 +902,6 @@ Test(msync) {
 	unlink(path);
 }
 
-/*
 Test(format1) {
 	Formatter f = FORMATTER_INIT;
 	FORMAT(&f, "{}", 1);
@@ -989,8 +989,6 @@ Test(format2) {
 	format_clear(&f);
 	_debug_alloc_failure = false;
 }
-
-*/
 
 Test(strstr) {
 	const char *s = "abcdefghi";
