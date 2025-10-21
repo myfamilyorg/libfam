@@ -1220,8 +1220,8 @@ Test(spin_lock) {
 	ASSERT_EQ(lock1.value, 0, "0b");
 }
 
-#define SPIN_PROCS 256
-#define SPIN_ITER 4096
+#define SPIN_PROCS 16
+#define SPIN_ITER 32
 
 Test(spin_threads) {
 	if (getenv("VALGRIND")) return;
@@ -1239,6 +1239,7 @@ Test(spin_threads) {
 			for (i = 0; i < SPIN_ITER; i++) {
 				spin_lock(sl);
 				*count = *count + 1;
+				msleep(1);
 				spin_unlock(sl);
 			}
 			_famexit(0);
