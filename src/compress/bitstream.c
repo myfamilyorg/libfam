@@ -53,7 +53,7 @@ void bitstream_writer_flush(BitStreamWriter *strm) {
 
 i32 bitstream_reader_load(BitStreamReader *strm) {
 	u64 bit_offset = strm->bit_offset;
-	u64 bits_to_load = 64 - strm->bits_in_buffer;
+	u64 bits_to_load = 128 - strm->bits_in_buffer;
 	u64 end_byte = (bit_offset + bits_to_load + 7) >> 3;
 	u64 byte_pos = bit_offset >> 3;
 	__builtin_prefetch(strm->data + byte_pos, 1, 3);
@@ -64,9 +64,10 @@ i32 bitstream_reader_load(BitStreamReader *strm) {
 		return -1;
 	}
 
-	u64 new_bits = *(u64 *)(strm->data + byte_pos);
-	u64 high = bytes_needed == 9 ? (u64)strm->data[byte_pos + 8] : 0;
-	new_bits = (new_bits >> bit_remainder) | (high << (64 - bit_remainder));
+	u128 new_bits = *(u128 *)(strm->data + byte_pos);
+	u128 high = bytes_needed == 17 ? (u64)strm->data[byte_pos + 16] : 0;
+	new_bits =
+	    (new_bits >> bit_remainder) | (high << (128 - bit_remainder));
 	new_bits &= bitstream_masks[bits_to_load];
 
 	strm->buffer |= (new_bits << strm->bits_in_buffer);

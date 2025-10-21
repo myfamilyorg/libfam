@@ -229,7 +229,7 @@ typedef struct {
 	const u8 *data;
 	u64 max_size;
 	u64 bit_offset;
-	u64 buffer;
+	u128 buffer;
 	u8 bits_in_buffer;
 } BitStreamReader;
 

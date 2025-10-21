@@ -36,9 +36,9 @@ Test(bitstream_perf) {
 	i64 write_micros = 0, read_micros = 0;
 	u8 lengths[PERF_SIZE] = {0};
 	u16 codes[PERF_SIZE] = {0};
-	u8 data[PERF_SIZE * 4];
+	u8 data[PERF_SIZE * 4] = {0};
 	Rng rng;
-	i32 i, c;
+	i32 i, j, c;
 
 	ASSERT(!rng_init(&rng), "rng init");
 
@@ -61,26 +61,35 @@ Test(bitstream_perf) {
 		write_micros += micros() - start;
 
 		start = micros();
-		for (i = 0; i < PERF_SIZE; i++) {
-			u32 value;
+		for (i = 0; i < PERF_SIZE;) {
+			u32 value = 0;
 			if (reader.bits_in_buffer < lengths[i]) {
 				bitstream_reader_load(&reader);
-				value =
-				    bitstream_reader_read(&reader, lengths[i]);
-				bitstream_reader_clear(&reader, lengths[i]);
-				ASSERT_EQ(value, codes[i], "codes equal1");
-				len_sum += lengths[i];
+
+				for (j = 0; j < 8 && i < PERF_SIZE; j++) {
+					value = bitstream_reader_read(
+					    &reader, lengths[i]);
+					bitstream_reader_clear(&reader,
+							       lengths[i]);
+					ASSERT_EQ(value, codes[i],
+						  "codes equal1");
+					len_sum += lengths[i];
+					i++;
+				}
 			} else {
 				value =
 				    bitstream_reader_read(&reader, lengths[i]);
 				bitstream_reader_clear(&reader, lengths[i]);
 				ASSERT_EQ(value, codes[i], "codes equal2");
 				len_sum += lengths[i];
+				i++;
 			}
+			(void)value;
 		}
 		read_micros += micros() - start;
 	}
 
+	/*
 	u64 read_mbps = 1000000 * ((len_sum / 8) / read_micros) / (1024 * 1024);
 	u64 write_mbps =
 	    1000000 * ((len_sum / 8) / write_micros) / (1024 * 1024);
@@ -90,6 +99,7 @@ Test(bitstream_perf) {
 	println(
 	    "read_micros={},write_micros={},len={},read={} MBps,write={} MBps",
 	    read_micros, write_micros, len_sum, read_mbps, write_mbps);
+	    */
 	(void)len_sum;
 	(void)write_micros;
 	(void)read_micros;
