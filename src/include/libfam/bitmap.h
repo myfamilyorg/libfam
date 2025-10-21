@@ -23,32 +23,19 @@
  *
  *******************************************************************************/
 
-#ifndef _SYSEXT_H
-#define _SYSEXT_H
+#ifndef _BITMAP_H
+#define _BITMAP_H
 
 #include <libfam/types.h>
 
-i32 pipe(i32 fds[2]);
-i32 await(i32 pid);
-i32 reap(i32 pid);
-i32 open(const u8 *pathname, i32 flags, u32 mode);
-i32 getentropy(void *buffer, u64 length);
-i32 yield(void);
-void *map(u64 length);
-void *fmap(i32 fd, i64 size, i64 offset);
-void *smap(u64 length);
-i32 exists(const u8 *path);
-i32 file(const u8 *path);
-i64 fsize(i32 fd);
-i32 fresize(i32 fd, i64 length);
-i32 flush(i32 fd);
-i64 micros(void);
-i32 msleep(u64 millis);
-i32 two(void);
-i32 fork(void);
-i32 thread(u64 stack_size, void (*thread_fn)(void *arg), void *arg);
-void abort(void);
-void restorer(void);
-i32 unlink(const char *path);
+#define PAGE_SIZE 4096
 
-#endif /* _SYSEXT_H */
+typedef struct BitMap BitMap;
+
+u64 bitmap_bound(u64 bits);
+u64 bitmap_size(BitMap *bmp);
+i32 bitmap_init(BitMap *bmap, u64 bits);
+i64 bitmap_find_free_bit(BitMap *bmap);
+void bitmap_release_bit(BitMap *bmap, u64 bit);
+
+#endif /* _BITMAP_H */

@@ -77,11 +77,11 @@ for var in "$@"; do
 	--cflags=*)
 		CFLAGS="${var#*=}";
 		;;
-	--quick)
-		FLTO=0;
-		;;
 	--novalgrind)
 		VALGRIND=0;
+		;;
+	--quick)
+		FLTO=0;
 		;;
 	*)
 		echo "Unepxected value specified: '$var'";

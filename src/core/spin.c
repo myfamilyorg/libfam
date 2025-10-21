@@ -23,32 +23,19 @@
  *
  *******************************************************************************/
 
-#ifndef _SYSEXT_H
-#define _SYSEXT_H
+#include <libfam/atomic.h>
+#include <libfam/spin.h>
+#include <libfam/sysext.h>
 
-#include <libfam/types.h>
+void spin_lock(SpinLock *lock) {
+	u32 cur;
+	do
+	begin_loop:
+		if ((cur = __aload32(&lock->value))) {
+			yield();
+			goto begin_loop;
+		}
+	while (!__cas32(&lock->value, &cur, 1));
+}
 
-i32 pipe(i32 fds[2]);
-i32 await(i32 pid);
-i32 reap(i32 pid);
-i32 open(const u8 *pathname, i32 flags, u32 mode);
-i32 getentropy(void *buffer, u64 length);
-i32 yield(void);
-void *map(u64 length);
-void *fmap(i32 fd, i64 size, i64 offset);
-void *smap(u64 length);
-i32 exists(const u8 *path);
-i32 file(const u8 *path);
-i64 fsize(i32 fd);
-i32 fresize(i32 fd, i64 length);
-i32 flush(i32 fd);
-i64 micros(void);
-i32 msleep(u64 millis);
-i32 two(void);
-i32 fork(void);
-i32 thread(u64 stack_size, void (*thread_fn)(void *arg), void *arg);
-void abort(void);
-void restorer(void);
-i32 unlink(const char *path);
-
-#endif /* _SYSEXT_H */
+void spin_unlock(SpinLock *lock) { __astore32(&lock->value, 0); }

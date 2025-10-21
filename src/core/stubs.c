@@ -23,32 +23,61 @@
  *
  *******************************************************************************/
 
-#ifndef _SYSEXT_H
-#define _SYSEXT_H
-
+#include <libfam/builtin.h>
 #include <libfam/types.h>
+#include <libfam/utils.h>
 
-i32 pipe(i32 fds[2]);
-i32 await(i32 pid);
-i32 reap(i32 pid);
-i32 open(const u8 *pathname, i32 flags, u32 mode);
-i32 getentropy(void *buffer, u64 length);
-i32 yield(void);
-void *map(u64 length);
-void *fmap(i32 fd, i64 size, i64 offset);
-void *smap(u64 length);
-i32 exists(const u8 *path);
-i32 file(const u8 *path);
-i64 fsize(i32 fd);
-i32 fresize(i32 fd, i64 length);
-i32 flush(i32 fd);
-i64 micros(void);
-i32 msleep(u64 millis);
-i32 two(void);
-i32 fork(void);
-i32 thread(u64 stack_size, void (*thread_fn)(void *arg), void *arg);
-void abort(void);
-void restorer(void);
-i32 unlink(const char *path);
+PUBLIC u128 __umodti3(u128 a, u128 b) {
+	u64 a_hi, a_lo, b_lo;
+	u128 rem;
+	i32 shift;
 
-#endif /* _SYSEXT_H */
+	if (!b) trap();
+	if (a < b) return a;
+	if (!(b >> 64)) {
+		b_lo = (u64)b;
+		a_hi = (u64)(a >> 64);
+		a_lo = (u64)a;
+		if (!a_hi) return a_lo % b_lo;
+		rem = a_hi % b_lo;
+		rem = (rem << 32) | (a_lo >> 32);
+		rem = rem % b_lo;
+		rem = (rem << 32) | (a_lo & 0xffffffff);
+		rem = (u64)rem % b_lo;
+		return rem;
+	}
+
+	rem = a;
+	shift = (i32)clz_u128(b) - (i32)clz_u128(rem);
+	if (shift < 0) shift = 0;
+	b <<= shift;
+	while (shift >= 0) {
+		if (rem >= b) rem -= b;
+		b >>= 1;
+		shift--;
+	}
+	return rem;
+}
+
+PUBLIC u128 __udivti3(u128 a, u128 b) {
+	i32 shift;
+	u128 quot, rem;
+	if (!b) trap();
+	if (a < b) return 0;
+	quot = 0;
+	rem = a;
+	shift = (i32)clz_u128(b) - (i32)clz_u128(rem);
+	if (shift < 0) shift = 0;
+
+	b <<= shift;
+
+	while (shift >= 0) {
+		if (rem >= b) {
+			rem -= b;
+			quot |= ((u128)1 << shift);
+		}
+		b >>= 1;
+		shift--;
+	}
+	return quot;
+}

@@ -23,32 +23,16 @@
  *
  *******************************************************************************/
 
-#ifndef _SYSEXT_H
-#define _SYSEXT_H
+#include <libfam/debug.h>
 
-#include <libfam/types.h>
+bool _debug_fail_getsockbyname = false;
+bool _debug_fail_pipe2 = false;
+bool _debug_fail_listen = false;
+bool _debug_fail_setsockopt = false;
+bool _debug_fail_fcntl = false;
+bool _debug_fail_epoll_create1 = false;
+bool _debug_fail_clone3 = false;
+bool _debug_alloc_init_failure = false;
+bool _debug_alloc_failure = false;
+u64 _debug_alloc_cas_loop = 0;
 
-i32 pipe(i32 fds[2]);
-i32 await(i32 pid);
-i32 reap(i32 pid);
-i32 open(const u8 *pathname, i32 flags, u32 mode);
-i32 getentropy(void *buffer, u64 length);
-i32 yield(void);
-void *map(u64 length);
-void *fmap(i32 fd, i64 size, i64 offset);
-void *smap(u64 length);
-i32 exists(const u8 *path);
-i32 file(const u8 *path);
-i64 fsize(i32 fd);
-i32 fresize(i32 fd, i64 length);
-i32 flush(i32 fd);
-i64 micros(void);
-i32 msleep(u64 millis);
-i32 two(void);
-i32 fork(void);
-i32 thread(u64 stack_size, void (*thread_fn)(void *arg), void *arg);
-void abort(void);
-void restorer(void);
-i32 unlink(const char *path);
-
-#endif /* _SYSEXT_H */

@@ -49,8 +49,9 @@ if [ ! -e target/bin/runtests ] || [ src/test/main.c -nt target/bin/runtests ]; 
         ${COMMAND} || exit $?;
 fi
 
+export TEST_PATTERN=${FILTER};
 if [ "${VALGRIND}" = "1" ]; then
-	export TEST_PATTERN=${FILTER};
+	export VALGRIND=1;
 	LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} \
 		valgrind \
 		--tool=memcheck \
