@@ -1041,6 +1041,12 @@ Test(ioruring) {
 	i32 fd = io_uring_setup(2, &params);
 	ASSERT(fd > 0, "io_uring_setup failed");
 
+	u8 *buf = map(16384);
+	struct iovec v1 = {.iov_base = buf, .iov_len = 16384};
+	ASSERT(!io_uring_register(fd, IORING_REGISTER_BUFFERS, &v1, 1),
+	       "io_uring_register");
+	munmap(buf, 16384);
+
 	u32 sq_ring_size =
 	    params.sq_off.array + params.sq_entries * sizeof(u32);
 	u32 cq_ring_size = params.cq_off.cqes +
@@ -1094,6 +1100,8 @@ Test(ioruring_read_file) {
 	struct io_uring_params params = {0};
 	i32 fd = io_uring_setup(2, &params);
 	ASSERT(fd > 0, "io_uring_setup failed");
+
+	ASSERT(io_uring_register(-1, 0, NULL, 0), "register");
 
 	// Map submission and completion queues
 	u32 sq_ring_size =

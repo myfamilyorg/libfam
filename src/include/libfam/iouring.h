@@ -23,43 +23,22 @@
  *
  *******************************************************************************/
 
-#include <libfam/alloc.h>
-#include <libfam/atomic.h>
-#include <libfam/debug.h>
-#include <libfam/env.h>
-#include <libfam/errno.h>
-#include <libfam/memory.h>
-#include <libfam/string.h>
-#include <libfam/syscall.h>
-#include <libfam/utils.h>
+#ifndef _IO_URING_H
 
-Alloc *global_allocator = NULL;
+#include <libfam/types.h>
 
-PUBLIC i32 init_global_allocator(u64 chunks) {
-	u64 *expected = NULL;
-	if (__aload64((u64 *)&global_allocator)) return -1;
-	Alloc *allocator = alloc_init(AllocSmap, chunks);
-	if (!allocator) return -1;
+typedef struct IoUring IoUring;
 
-	if (!__cas64((void *)&global_allocator, (void *)&expected,
-		     (u64)allocator)) {
-		alloc_destroy(allocator);
-		return -1;
-	}
-	return 0;
-}
+i32 iouring_init(IoUring **iou, u32 queue_depth);
+i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
+		      u64 foffset, u64 id);
+i32 iouring_init_write(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
+		       u64 id);
+i32 iouring_submit(IoUring *iou, u32 count);
+bool iouring_pending(IoUring *iou, u64 id);
+bool iouring_pending_all(IoUring *iou);
+i32 iouring_wait(IoUring *iou, u64 *id);
+i32 iouring_spin(IoUring *iou, u64 *id);
+void iouring_destroy(IoUring *iou);
 
-PUBLIC void *alloc(u64 size) { return balloc(global_allocator, size); }
-PUBLIC void *resize(void *ptr, u64 new_size) {
-	return bresize(global_allocator, ptr, new_size);
-}
-PUBLIC void release(void *ptr) { brelease(global_allocator, ptr); }
-
-PUBLIC u64 allocated_bytes(void) {
-	return alloc_allocated_bytes(global_allocator);
-}
-
-PUBLIC void reset_allocated_bytes(void) {
-	alloc_reset_allocated_bytes(global_allocator);
-}
-
+#endif /* _IO_URING_H */
