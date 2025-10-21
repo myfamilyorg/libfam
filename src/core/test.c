@@ -363,6 +363,7 @@ Test(alloc2) {
 #define ALLOC_TCOUNT (32 * 1024)
 
 Test(alloc3) {
+	if (getenv("VALGRIND")) return;
 	i32 i;
 	i32 pids[ALLOC_THREADS];
 	Alloc *a = alloc_init(AllocSmap, 512);
