@@ -23,32 +23,41 @@
  *
  *******************************************************************************/
 
-#ifndef _BITSTREAM_H
-#define _BITSTREAM_H
+#ifndef _COMPRESS_STREAM_H
+#define _COMPRESS_STREAM_H
 
+#include <libfam/compress_impl.h>
 #include <libfam/types.h>
-#include <libfam/utils.h>
+
+#define MAGIC 0xC3161337
+#define VERSION 1
+#define CHUNK_SIZE MAX_COMPRESS_LEN
+#define COMPRESSED_CHUNK_SIZE \
+	(CHUNK_SIZE + (CHUNK_SIZE >> 9) + 24 + sizeof(ChunkHeader))
+#define CTHREADS 4
+#define CR_BUFS 2
+#define CW_BUFS 2
+#define DR_BUFS 4
+#define DW_BUFS 4
 
 typedef struct {
-	const u8 *data;
-	u64 max_size;
-	u64 bit_offset;
-	u64 buffer;
-	u8 bits_in_buffer;
-} BitStreamReader;
+	u32 magic;
+	u8 version;
+	u8 reserved;
+	u16 permissions;
+	u64 mtime;
+	u64 atime;
+} __attribute__((packed)) StreamHeader;
 
 typedef struct {
-	u8 *data;
-	u64 bit_offset;
-	u64 buffer;
-	u8 bits_in_buffer;
-} BitStreamWriter;
+	bool fin;
+	u32 size;
+} __attribute__((packed)) ChunkHeader;
 
-void bitstream_writer_push(BitStreamWriter *strm, u64 bits, u8 num_bits);
-void bitstream_writer_flush(BitStreamWriter *strm);
+typedef struct {
+	u32 tid;
+	u32 io_lock;
+	u32 is_ready[CTHREADS];
+} StreamState;
 
-void bitstream_reader_load(BitStreamReader *strm);
-u64 bitstream_reader_read(const BitStreamReader *strm, u8 num_bits);
-void bitstream_reader_clear(BitStreamReader *strm, u8 num_bits);
-
-#endif /* _BITSTREAM_H */
+#endif /* _COMPRESS_STREAM_H */

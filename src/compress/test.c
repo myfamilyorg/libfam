@@ -25,23 +25,27 @@
 
 #include <libfam/bitstream.h>
 #include <libfam/compress.h>
+#include <libfam/compress_impl.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
 
+/*
 #define PERF_SIZE 2000
-#define PERF_ITER 128
+#define PERF_ITER (128)
 
 Test(bitstream_perf) {
 	u64 len_sum = 0;
-	i64 write_micros = 0, read_micros = 0;
-	u8 lengths[PERF_SIZE] = {0};
-	u16 codes[PERF_SIZE] = {0};
-	u8 data[PERF_SIZE * 4] = {0};
+	u8 lengths[PERF_SIZE];
+	u8 codes[PERF_SIZE];
+	u8 data[PERF_SIZE * 4000];
 	Rng rng;
-	i32 i, j, c;
+	i32 i, c;
 
 	ASSERT(!rng_init(&rng), "rng init");
+	i64 write_micros = 0, read_micros = 0;
+	(void)write_micros;
+	(void)read_micros;
 
 	for (c = 0; c < PERF_ITER; c++) {
 		BitStreamWriter writer = {data};
@@ -50,11 +54,11 @@ Test(bitstream_perf) {
 		rng_gen(&rng, codes, sizeof(codes));
 		for (i = 0; i < PERF_SIZE; i++)
 			lengths[i] = lengths[i] < 16 ? 1 : lengths[i] >> 4,
-			codes[i] &= (1 << lengths[i]) - 1;
+			codes[i] &= (lengths[i] - 1);
 
 		i64 start = micros();
 		for (i = 0; i < PERF_SIZE; i++) {
-			if (writer.bits_in_buffer + lengths[i] > 60)
+			if (writer.bits_in_buffer + lengths[i] > 64)
 				bitstream_writer_flush(&writer);
 			bitstream_writer_push(&writer, codes[i], lengths[i]);
 		}
@@ -62,114 +66,47 @@ Test(bitstream_perf) {
 		write_micros += micros() - start;
 
 		start = micros();
-		for (i = 0; i < PERF_SIZE;) {
-			u32 value = 0;
+		for (i = 0; i < PERF_SIZE; i++) {
+			u32 value;
+			(void)value;
 			if (reader.bits_in_buffer < lengths[i]) {
 				bitstream_reader_load(&reader);
-
-				for (j = 0; j < 4 && i < PERF_SIZE; j++) {
-					value = bitstream_reader_read(
-					    &reader, lengths[i]);
-					bitstream_reader_clear(&reader,
-							       lengths[i]);
-					ASSERT_EQ(value, codes[i],
-						  "codes equal1");
-					len_sum += lengths[i];
-					i++;
-				}
+				value =
+				    bitstream_reader_read(&reader, lengths[i]);
+				bitstream_reader_clear(&reader, lengths[i]);
+				ASSERT_EQ(value, codes[i], "codes equal1");
+				len_sum += lengths[i];
 			} else {
 				value =
 				    bitstream_reader_read(&reader, lengths[i]);
 				bitstream_reader_clear(&reader, lengths[i]);
 				ASSERT_EQ(value, codes[i], "codes equal2");
 				len_sum += lengths[i];
-				i++;
 			}
-			(void)value;
 		}
 		read_micros += micros() - start;
 	}
 
-	/*
 	u64 read_mbps = 1000000 * ((len_sum / 8) / read_micros) / (1024 * 1024);
 	u64 write_mbps =
 	    1000000 * ((len_sum / 8) / write_micros) / (1024 * 1024);
 	(void)read_mbps;
 	(void)write_mbps;
-	println("");
-	println(
-	    "read_micros={},write_micros={},len={},read={} MBps,write={} MBps",
-	    read_micros, write_micros, len_sum, read_mbps, write_mbps);
-	    */
-	(void)len_sum;
-	(void)write_micros;
-	(void)read_micros;
 }
 
-#define COMPRESS1_ITER 1
-
-Test(compress1) {
-	u64 bytes_consumed;
-	const u8 *path = "./resources/test_wikipedia.txt";
-	i32 fd = file(path);
-	u64 file_size = min(fsize(fd), 128 * 1024);
-	u8 *in = fmap(fd, file_size, 0);
-	u64 bound = compress_bound(file_size);
-	u8 *out = alloc(bound);
-	u8 *verify = alloc(file_size + 32);
-	ASSERT(out, "out");
-	ASSERT(verify, "verify");
-	i64 comp_sum = 0, decomp_sum = 0;
-
-	for (u32 i = 0; i < COMPRESS1_ITER; i++) {
-		i64 timer = micros();
-		i32 result = compress_block(in, file_size, out, bound);
-		timer = micros() - timer;
-		comp_sum += timer;
-
-		ASSERT(result > 0, "compress_block");
-		timer = micros();
-		result = decompress_block(out, result, verify, file_size + 32,
-					  &bytes_consumed);
-		timer = micros() - timer;
-		decomp_sum += timer;
-
-		ASSERT_EQ(result, file_size, "file_size {} != {}", result,
-			  file_size);
-		ASSERT(!memcmp(verify, in, file_size), "verify");
-	}
-
-	(void)decomp_sum;
-	(void)comp_sum;
-	/*println("avg comp={},decomp={}", comp_sum / COMPRESS1_ITER, decomp_sum
-	 * / COMPRESS1_ITER);*/
-
-	munmap(in, file_size);
-	release(verify);
-	release(out);
-	close(fd);
-}
-
-/*
 Test(compress_stream1) {
 	unlink("/tmp/1.cz");
 	unlink("/tmp/1cmp.txt");
 	const u8 *fname = "resources/akjv5.txt";
 	i32 in_fd = file(fname);
 	i32 out_fd = file("/tmp/1.cz");
-	i64 timer = micros();
 	ASSERT(!compress_stream(in_fd, out_fd), "compress_stream");
-	timer = micros() - timer;
-	println("compress={}", timer);
 	close(in_fd);
 	close(out_fd);
 
 	in_fd = file("/tmp/1.cz");
 	out_fd = file("/tmp/1cmp.txt");
-	timer = micros();
 	ASSERT(!decompress_stream(in_fd, out_fd), "decompress_stream");
-	timer = micros() - timer;
-	println("decompress={}", timer);
 	close(in_fd);
 	close(out_fd);
 
@@ -194,3 +131,47 @@ Test(compress_stream1) {
 	unlink("/tmp/1cmp.txt");
 }
 */
+
+#define ITER (16)
+
+Test(compress1) {
+	u64 bytes_consumed;
+	const u8 *path = "./resources/test_wikipedia.txt";
+	i32 fd = file(path);
+	u64 file_size = min(fsize(fd), 128 * 1024);
+	u8 *in = fmap(fd, file_size, 0);
+	u64 bound = compress_bound(file_size);
+	u8 *out = alloc(bound);
+	u8 *verify = alloc(file_size);
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+	i64 comp_sum = 0, decomp_sum = 0;
+
+	for (u32 i = 0; i < ITER; i++) {
+		i64 timer = micros();
+		i32 result = compress_block(in, file_size, out, bound);
+		timer = micros() - timer;
+		comp_sum += timer;
+
+		ASSERT(result > 0, "compress_block");
+		timer = micros();
+		result = decompress_block(out, result, verify, file_size,
+					  &bytes_consumed);
+		timer = micros() - timer;
+		decomp_sum += timer;
+
+		ASSERT_EQ(result, file_size, "file_size");
+		ASSERT(!memcmp(verify, in, file_size), "verify");
+	}
+
+	/*println("avg comp={},decomp={}", comp_sum / ITER, decomp_sum /
+	 * ITER);*/
+	(void)comp_sum;
+	(void)decomp_sum;
+
+	munmap(in, file_size);
+	release(verify);
+	release(out);
+	close(fd);
+}
+
