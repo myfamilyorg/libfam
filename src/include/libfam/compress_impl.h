@@ -42,6 +42,29 @@
 	(MAX_COMPRESS_LEN + (MAX_COMPRESS_LEN >> 5) + 1024)
 #define MAX_AVX_OVERWRITE 32
 
+#define PROC_MATCH_ARRAY()                                               \
+	if (match_array[i] == 1)                                         \
+		break;                                                   \
+	else if (match_array[i] == 0) {                                  \
+		u8 symbol = match_array[i + 1];                          \
+		u16 code = codes[symbol];                                \
+		u8 length = lengths[symbol];                             \
+		bitstream_writer_push(&strm, code, length);              \
+		i += 2;                                                  \
+	} else {                                                         \
+		u8 match_code = match_array[i] - 2;                      \
+		u16 symbol = (u16)match_code + MATCH_OFFSET;             \
+		CodeLength cl = code_lengths[symbol];                    \
+		u32 combined_extra = ((u32 *)(match_array + i))[0] >> 8; \
+		u8 len_extra_bits = length_extra_bits(match_code);       \
+		u8 dist_extra_bits = distance_extra_bits(match_code);    \
+		u8 total_extra_bits = len_extra_bits + dist_extra_bits;  \
+		bitstream_writer_push(&strm, cl.code, cl.length);        \
+		bitstream_writer_push(&strm, combined_extra,             \
+				      total_extra_bits);                 \
+		i += 4;                                                  \
+	}
+
 #define WRITE(strm, value, bits)                              \
 	do {                                                  \
 		if ((strm)->bits_in_buffer + (bits) > 64)     \
