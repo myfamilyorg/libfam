@@ -355,7 +355,8 @@ INIT:
 		}
 	}
 
-	compress_calculate_lengths(frequencies, book, MAX_BOOK_CODES, 7);
+	compress_calculate_lengths(frequencies, book, MAX_BOOK_CODES,
+				   MAX_BOOK_CODE_LENGTH);
 	compress_calculate_codes(book, MAX_BOOK_CODES);
 
 CLEANUP:
@@ -491,7 +492,7 @@ STATIC i32 compress_read_lengths(BitStreamReader *strm,
 	i32 i = 0, j;
 	u16 last_length = 0;
 	CodeLength book_code_lengths[SYMBOL_COUNT] = {0};
-	HuffmanLookup lookup_table[(1U << 7)] = {0};
+	HuffmanLookup lookup_table[(1U << MAX_BOOK_CODE_LENGTH)] = {0};
 INIT:
 	TRY_READ(strm, 8); /* Skip over block type */
 	for (i = 0; i < MAX_BOOK_CODES; i++)
@@ -499,14 +500,14 @@ INIT:
 
 	compress_calculate_codes(book_code_lengths, MAX_BOOK_CODES);
 	compress_build_lookup_table(book_code_lengths, MAX_BOOK_CODES,
-				    lookup_table, 7);
+				    lookup_table, MAX_BOOK_CODE_LENGTH);
 
 	i = 0;
 
 	while (i < SYMBOL_COUNT) {
 		if (strm->bits_in_buffer < 7)
 			if (bitstream_reader_load(strm) < 0) ERROR(EOVERFLOW);
-		u8 bits = bitstream_reader_read(strm, 7);
+		u8 bits = bitstream_reader_read(strm, MAX_BOOK_CODE_LENGTH);
 		HuffmanLookup entry = lookup_table[bits];
 		u16 code = entry.symbol;
 		bitstream_reader_clear(strm, entry.length);

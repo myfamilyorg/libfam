@@ -30,6 +30,7 @@
 #include <libfam/types.h>
 
 #define MAX_CODE_LENGTH 9
+#define MAX_BOOK_CODE_LENGTH 7
 #define MAX_BOOK_CODES (MAX_CODE_LENGTH + 4)
 #define LOOKUP_BITS 12
 #define LEN_SHIFT 4
