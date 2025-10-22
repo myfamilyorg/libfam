@@ -89,7 +89,7 @@ CFLAGS="${CFLAGS} \
         -fPIC \
 	-fno-builtin \
         -Wno-pointer-sign \
-        -march=native \
+        -march=haswell \
 	-mtune=native";
 if [ "$FLTO" = "1" ]; then
         CFLAGS="${CFLAGS} -flto=auto";
