@@ -278,14 +278,13 @@ STATIC void compress_calculate_lengths(const u32 frequencies[SYMBOL_COUNT],
 	}
 }
 
-STATIC void compress_calculate_codes(CodeLength code_lengths[SYMBOL_COUNT]) {
+STATIC void compress_calculate_codes(CodeLength *code_lengths, u16 count) {
 	u32 i, j, code = 0;
 	u32 length_count[MAX_CODE_LENGTH + 1] = {0};
 	u32 length_start[MAX_CODE_LENGTH + 1] = {0};
 	u32 length_pos[MAX_CODE_LENGTH + 1] = {0};
 
-	for (i = 0; i < SYMBOL_COUNT; i++)
-		length_count[code_lengths[i].length]++;
+	for (i = 0; i < count; i++) length_count[code_lengths[i].length]++;
 
 	for (i = 1; i <= MAX_CODE_LENGTH; i++) {
 		code <<= 1;
@@ -293,7 +292,7 @@ STATIC void compress_calculate_codes(CodeLength code_lengths[SYMBOL_COUNT]) {
 		code += length_count[i];
 	}
 
-	for (i = 0; i < SYMBOL_COUNT; i++) {
+	for (i = 0; i < count; i++) {
 		if (code_lengths[i].length != 0) {
 			u8 len = code_lengths[i].length;
 			code_lengths[i].code =
@@ -357,7 +356,7 @@ INIT:
 	}
 
 	compress_calculate_lengths(frequencies, book, 7);
-	compress_calculate_codes(book);
+	compress_calculate_codes(book, 13);
 
 CLEANUP:
 	RETURN;
@@ -498,7 +497,7 @@ INIT:
 	for (i = 0; i < 13; i++)
 		book_code_lengths[i].length = TRY_READ(strm, 3);
 
-	compress_calculate_codes(book_code_lengths);
+	compress_calculate_codes(book_code_lengths, 13);
 	compress_build_lookup_table(book_code_lengths, lookup_table);
 
 	i = 0;
@@ -709,7 +708,7 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 
 	compress_find_matches(in, len, match_array, frequencies);
 	compress_calculate_lengths(frequencies, code_lengths, MAX_CODE_LENGTH);
-	compress_calculate_codes(code_lengths);
+	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
 	compress_build_code_book(code_lengths, book, book_frequencies);
 	i32 bt = compress_calculate_block_type(frequencies, book_frequencies,
 					       code_lengths, book, len);
@@ -732,7 +731,7 @@ PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
 					 bytes_consumed);
 	} else {
 		compress_read_lengths(&strm, code_lengths);
-		compress_calculate_codes(code_lengths);
+		compress_calculate_codes(code_lengths, SYMBOL_COUNT);
 		return compress_read_symbols(&strm, code_lengths, out, capacity,
 					     bytes_consumed);
 	}
