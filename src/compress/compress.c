@@ -355,8 +355,8 @@ INIT:
 		}
 	}
 
-	compress_calculate_lengths(frequencies, book, 13, 7);
-	compress_calculate_codes(book, 13);
+	compress_calculate_lengths(frequencies, book, MAX_BOOK_CODES, 7);
+	compress_calculate_codes(book, MAX_BOOK_CODES);
 
 CLEANUP:
 	RETURN;
@@ -368,7 +368,7 @@ STATIC i32 compress_write_lengths(BitStreamWriter *strm,
 	i32 i;
 	u8 last_length = 0;
 INIT:
-	for (i = 0; i < 13; i++) WRITE(strm, book[i].length, 3);
+	for (i = 0; i < MAX_BOOK_CODES; i++) WRITE(strm, book[i].length, 3);
 	for (i = 0; i < SYMBOL_COUNT; i++) {
 		if (code_lengths[i].length) {
 			if (last_length == code_lengths[i].length) {
@@ -494,10 +494,10 @@ STATIC i32 compress_read_lengths(BitStreamReader *strm,
 	HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
 INIT:
 	TRY_READ(strm, 8); /* Skip over block type */
-	for (i = 0; i < 13; i++)
+	for (i = 0; i < MAX_BOOK_CODES; i++)
 		book_code_lengths[i].length = TRY_READ(strm, 3);
 
-	compress_calculate_codes(book_code_lengths, 13);
+	compress_calculate_codes(book_code_lengths, MAX_BOOK_CODES);
 	compress_build_lookup_table(book_code_lengths, lookup_table);
 
 	i = 0;
@@ -645,7 +645,7 @@ compress_calculate_block_type(const u32 frequencies[SYMBOL_COUNT],
 			       (distance_extra_bits(i - MATCH_OFFSET) +
 				length_extra_bits(i - MATCH_OFFSET));
 	}
-	sum += 13 * 3;
+	sum += MAX_BOOK_CODES * 3;
 	for (u32 i = 0; i < MAX_BOOK_CODES; i++) {
 		sum += book_frequencies[i] * book[i].length;
 		if (i == 10) sum += book_frequencies[i] * 2;
