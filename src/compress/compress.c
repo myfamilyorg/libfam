@@ -27,11 +27,9 @@
 #include <immintrin.h>
 #endif /* __AVX2__ */
 #include <libfam/bitstream.h>
-#include <libfam/builtin.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/format.h>
-#include <libfam/memory.h>
 #include <libfam/utils.h>
 
 STATIC MatchInfo lz_hash_get(LzHash *restrict hash, const u8 *restrict text,
