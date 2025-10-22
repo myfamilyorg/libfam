@@ -35,7 +35,6 @@ CFLAGS="-O3 \
 	-Werror \
 	-Wall \
 	-funroll-loops \
-	-nostdinc \
 	-fstack-protector \
 	-D_FORTIFY_SOURCE=2 \
 	-std=c11";

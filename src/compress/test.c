@@ -24,6 +24,7 @@
  *******************************************************************************/
 
 #include <libfam/bitstream.h>
+#include <libfam/compress.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
@@ -53,7 +54,7 @@ Test(bitstream_perf) {
 
 		i64 start = micros();
 		for (i = 0; i < PERF_SIZE; i++) {
-			if (writer.bits_in_buffer + lengths[i] > 128)
+			if (writer.bits_in_buffer + lengths[i] > 60)
 				bitstream_writer_flush(&writer);
 			bitstream_writer_push(&writer, codes[i], lengths[i]);
 		}
@@ -66,7 +67,7 @@ Test(bitstream_perf) {
 			if (reader.bits_in_buffer < lengths[i]) {
 				bitstream_reader_load(&reader);
 
-				for (j = 0; j < 8 && i < PERF_SIZE; j++) {
+				for (j = 0; j < 4 && i < PERF_SIZE; j++) {
 					value = bitstream_reader_read(
 					    &reader, lengths[i]);
 					bitstream_reader_clear(&reader,
@@ -103,5 +104,50 @@ Test(bitstream_perf) {
 	(void)len_sum;
 	(void)write_micros;
 	(void)read_micros;
+}
+
+#define COMPRESS1_ITER 1
+
+Test(compress1) {
+	u64 bytes_consumed;
+	const u8 *path = "./resources/test_wikipedia.txt";
+	i32 fd = file(path);
+	u64 file_size = min(fsize(fd), 128 * 1024);
+	u8 *in = fmap(fd, file_size, 0);
+	u64 bound = compress_bound(file_size);
+	u8 *out = alloc(bound);
+	u8 *verify = alloc(file_size + 32);
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+	i64 comp_sum = 0, decomp_sum = 0;
+
+	for (u32 i = 0; i < COMPRESS1_ITER; i++) {
+		i64 timer = micros();
+		i32 result = compress_block(in, file_size, out, bound);
+		timer = micros() - timer;
+		comp_sum += timer;
+
+		println("comp result={}", result);
+		ASSERT(result > 0, "compress_block");
+		timer = micros();
+		result = decompress_block(out, result, verify, file_size + 32,
+					  &bytes_consumed);
+		timer = micros() - timer;
+		decomp_sum += timer;
+
+		ASSERT_EQ(result, file_size, "file_size {} != {}", result,
+			  file_size);
+		ASSERT(!memcmp(verify, in, file_size), "verify");
+	}
+
+	(void)decomp_sum;
+	(void)comp_sum;
+	/*println("avg comp={},decomp={}", comp_sum / COMPRESS1_ITER, decomp_sum
+	 * / COMPRESS1_ITER);*/
+
+	munmap(in, file_size);
+	release(verify);
+	release(out);
+	close(fd);
 }
 

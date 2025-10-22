@@ -27,6 +27,21 @@
 #include <libfam/limits.h>
 #include <libfam/utils.h>
 
+static const u8 bitstream_partial_masks[8][9] = {
+    {0, 254, 252, 248, 240, 224, 192, 128, 0},
+    {0, 253, 249, 241, 225, 193, 129, 1, 1},
+    {0, 251, 243, 227, 195, 131, 3, 3, 3},
+    {0, 247, 231, 199, 135, 7, 7, 7, 7},
+    {0, 239, 207, 143, 15, 15, 15, 15, 15},
+    {0, 223, 159, 31, 31, 31, 31, 31, 31},
+    {0, 191, 63, 63, 63, 63, 63, 63, 63},
+    {0, 127, 127, 127, 127, 127, 127, 127, 127}};
+
+void bitstream_writer_push(BitStreamWriter *strm, u64 bits, u8 num_bits) {
+	strm->buffer |= bits << strm->bits_in_buffer;
+	strm->bits_in_buffer += num_bits;
+}
+
 void bitstream_writer_flush(BitStreamWriter *strm) {
 	u64 bit_offset = strm->bit_offset & 0x7;
 	u64 byte_pos = strm->bit_offset >> 3;
@@ -37,23 +52,23 @@ void bitstream_writer_flush(BitStreamWriter *strm) {
 	bits_to_write = min(bits_to_write, strm->bits_in_buffer);
 	u8 new_bits = (u8)(strm->buffer & bitstream_masks[bits_to_write]);
 	new_bits <<= bit_offset;
-	u8 mask = (u8)(~(((1ULL << bits_to_write) - 1) << bit_offset) & 0xFF);
+	u8 mask = bitstream_partial_masks[bit_offset][bits_to_write];
 	u8 current_byte = strm->data[byte_pos];
 	strm->data[byte_pos] = (current_byte & mask) | new_bits;
 	strm->buffer >>= bits_to_write;
 	strm->bits_in_buffer -= bits_to_write;
 	byte_pos += bit_offset != 8;
 
-	u128 bits_mask = bitstream_masks[strm->bits_in_buffer];
-	u128 *data128 = (u128 *)(strm->data + byte_pos);
-	u128 existing = *data128;
-	*data128 = (existing & ~bits_mask) | (strm->buffer & bits_mask);
+	u64 bits_mask = bitstream_masks[strm->bits_in_buffer];
+	u64 *data64 = (u64 *)(strm->data + byte_pos);
+	u64 existing = *data64;
+	*data64 = (existing & ~bits_mask) | (strm->buffer & bits_mask);
 	strm->buffer = strm->bits_in_buffer = 0;
 }
 
 i32 bitstream_reader_load(BitStreamReader *strm) {
 	u64 bit_offset = strm->bit_offset;
-	u64 bits_to_load = 128 - strm->bits_in_buffer;
+	u64 bits_to_load = 64 - strm->bits_in_buffer;
 	u64 end_byte = (bit_offset + bits_to_load + 7) >> 3;
 	u64 byte_pos = bit_offset >> 3;
 	__builtin_prefetch(strm->data + byte_pos, 1, 3);
@@ -64,10 +79,9 @@ i32 bitstream_reader_load(BitStreamReader *strm) {
 		return -1;
 	}
 
-	u128 new_bits = *(u128 *)(strm->data + byte_pos);
-	u128 high = bytes_needed == 17 ? (u64)strm->data[byte_pos + 16] : 0;
-	new_bits =
-	    (new_bits >> bit_remainder) | (high << (128 - bit_remainder));
+	u64 new_bits = *(u64 *)(strm->data + byte_pos);
+	u64 high = bytes_needed == 9 ? (u64)strm->data[byte_pos + 8] : 0;
+	new_bits = (new_bits >> bit_remainder) | (high << (64 - bit_remainder));
 	new_bits &= bitstream_masks[bits_to_load];
 
 	strm->buffer |= (new_bits << strm->bits_in_buffer);
