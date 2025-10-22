@@ -25,6 +25,7 @@
 
 #include <libfam/bitstream.h>
 #include <libfam/limits.h>
+#include <libfam/string.h>
 #include <libfam/utils.h>
 
 void bitstream_writer_flush(BitStreamWriter *strm) {
