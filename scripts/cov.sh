@@ -22,7 +22,7 @@ CFLAGS="-O0 \
 	-fPIC \
 	-fno-builtin \
 	-Wno-pointer-sign \
-	-march=haswell \
+	-march=${MARCH} \
 	--coverage"
 
 # Always build clean for coverage

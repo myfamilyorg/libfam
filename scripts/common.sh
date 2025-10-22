@@ -83,13 +83,20 @@ if [ "${CC}" = "" ]; then
 	CC=clang
 fi
 
+ARCH=`uname -i`;
+if [ "${ARCH}" = "x86_64" ]; then
+	MARCH="haswell";
+else
+	MARCH="native";
+fi
+
 CFLAGS="${CFLAGS} \
         -fvisibility=hidden \
         -fno-pie \
         -fPIC \
 	-fno-builtin \
         -Wno-pointer-sign \
-        -march=haswell \
+        -march=${MARCH} \
 	-mtune=native";
 if [ "$FLTO" = "1" ]; then
         CFLAGS="${CFLAGS} -flto=auto";
