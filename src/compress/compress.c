@@ -443,16 +443,16 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 	return (strm.bit_offset + 7) / 8;
 }
 
-STATIC void compress_build_lookup_table(
-    const CodeLength *code_lengths, u16 count,
-    HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)]) {
+STATIC void compress_build_lookup_table(const CodeLength *code_lengths,
+					u16 count, HuffmanLookup *lookup_table,
+					u8 max_length) {
 	i32 i, j;
 	for (i = 0; i < count; i++) {
 		if (code_lengths[i].length) {
 			i32 index = code_lengths[i].code &
 				    ((1U << code_lengths[i].length) - 1);
 			i32 fill_depth =
-			    1U << (MAX_CODE_LENGTH - code_lengths[i].length);
+			    1U << (max_length - code_lengths[i].length);
 			for (j = 0; j < fill_depth; j++) {
 				lookup_table[index |
 					     (j << code_lengths[i].length)]
@@ -491,7 +491,7 @@ STATIC i32 compress_read_lengths(BitStreamReader *strm,
 	i32 i = 0, j;
 	u16 last_length = 0;
 	CodeLength book_code_lengths[SYMBOL_COUNT] = {0};
-	HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
+	HuffmanLookup lookup_table[(1U << 7)] = {0};
 INIT:
 	TRY_READ(strm, 8); /* Skip over block type */
 	for (i = 0; i < MAX_BOOK_CODES; i++)
@@ -499,7 +499,7 @@ INIT:
 
 	compress_calculate_codes(book_code_lengths, MAX_BOOK_CODES);
 	compress_build_lookup_table(book_code_lengths, MAX_BOOK_CODES,
-				    lookup_table);
+				    lookup_table, 7);
 
 	i = 0;
 
@@ -604,7 +604,8 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 	u16 symbol = 0;
 	u8 load_threshold = MAX_CODE_LENGTH + 7 + 15;
 
-	compress_build_lookup_table(code_lengths, SYMBOL_COUNT, lookup_table);
+	compress_build_lookup_table(code_lengths, SYMBOL_COUNT, lookup_table,
+				    MAX_CODE_LENGTH);
 
 	while (true) {
 		if (__builtin_expect(strm->bits_in_buffer < load_threshold, 0))
