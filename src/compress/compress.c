@@ -312,9 +312,9 @@ STATIC void compress_calculate_codes(CodeLength code_lengths[SYMBOL_COUNT]) {
 }
 
 STATIC i32 compress_build_code_book(const CodeLength code_lengths[SYMBOL_COUNT],
-				    CodeLength book[SYMBOL_COUNT]) {
+				    CodeLength book[MAX_BOOK_CODES],
+				    u32 frequencies[MAX_BOOK_CODES]) {
 	u8 last_length = 0;
-	u32 frequencies[SYMBOL_COUNT] = {0};
 INIT:
 	for (u16 i = 0; i < SYMBOL_COUNT; i++) {
 		if (code_lengths[i].length) {
@@ -364,12 +364,11 @@ CLEANUP:
 }
 
 STATIC i32 compress_write_lengths(BitStreamWriter *strm,
-				  const CodeLength code_lengths[SYMBOL_COUNT]) {
+				  const CodeLength code_lengths[SYMBOL_COUNT],
+				  const CodeLength book[MAX_BOOK_CODES]) {
 	i32 i;
 	u8 last_length = 0;
-	CodeLength book[SYMBOL_COUNT] = {0};
 INIT:
-	compress_build_code_book(code_lengths, book);
 	for (i = 0; i < 13; i++) WRITE(strm, book[i].length, 3);
 	for (i = 0; i < SYMBOL_COUNT; i++) {
 		if (code_lengths[i].length) {
@@ -422,12 +421,12 @@ CLEANUP:
 }
 
 STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
+			  const CodeLength book[SYMBOL_COUNT],
 			  const u8 match_array[2 * MAX_COMPRESS_LEN + 1],
 			  u8 *out) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
-	compress_write_lengths(&strm, code_lengths);
-
+	compress_write_lengths(&strm, code_lengths, book);
 	i = 0;
 	while (true) {
 		if (strm.bits_in_buffer >= 32) {
@@ -633,9 +632,36 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 	return itt;
 }
 
+STATIC i32
+compress_calculate_block_type(const u32 frequencies[SYMBOL_COUNT],
+			      const u32 book_frequencies[MAX_BOOK_CODES],
+			      const CodeLength code_lengths[SYMBOL_COUNT],
+			      const CodeLength book[MAX_BOOK_CODES], u32 len) {
+	u32 sum = 0;
+	for (u32 i = 0; i < SYMBOL_COUNT; i++) {
+		sum += frequencies[i] * code_lengths[i].length;
+		if (i >= MATCH_OFFSET)
+			sum += frequencies[i] *
+			       (distance_extra_bits(i - MATCH_OFFSET) +
+				length_extra_bits(i - MATCH_OFFSET));
+	}
+	sum += 13 * 3;
+	for (u32 i = 0; i < MAX_BOOK_CODES; i++) {
+		sum += book_frequencies[i] * book[i].length;
+		if (i == 10) sum += book_frequencies[i] * 2;
+		if (i == 11) sum += book_frequencies[i] * 7;
+		if (i == 12) sum += book_frequencies[i] * 3;
+	}
+	sum += 7 + 64;
+	sum >>= 3;
+	return sum > len;
+}
+
 PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
+	u32 book_frequencies[MAX_BOOK_CODES] = {0};
 	CodeLength code_lengths[SYMBOL_COUNT] = {0};
+	CodeLength book[MAX_BOOK_CODES] = {0};
 	u8 match_array[2 * MAX_COMPRESS_LEN + 1] = {0};
 
 	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
@@ -646,7 +672,10 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	compress_find_matches(in, len, match_array, frequencies);
 	compress_calculate_lengths(frequencies, code_lengths, MAX_CODE_LENGTH);
 	compress_calculate_codes(code_lengths);
-	return compress_write(code_lengths, match_array, out);
+	compress_build_code_book(code_lengths, book, book_frequencies);
+	compress_calculate_block_type(frequencies, book_frequencies,
+				      code_lengths, book, len);
+	return compress_write(code_lengths, book, match_array, out);
 }
 
 PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
