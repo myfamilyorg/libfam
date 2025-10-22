@@ -59,6 +59,7 @@ if [ "${VALGRIND}" = "1" ]; then
 		--error-exitcode=1 \
 		${TEST_BIN} || exit $?;
 else
+
 	LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} ${TEST_BIN} || exit $?;
 fi
 

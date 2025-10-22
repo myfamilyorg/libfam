@@ -26,11 +26,14 @@
 #ifdef __AVX2__
 #include <immintrin.h>
 #endif /* __AVX2__ */
-#include <libfam/atomic.h>
 #include <libfam/bitstream.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/format.h>
+#include <libfam/iouring.h>
+#include <libfam/linux.h>
+#include <libfam/linux_time.h>
+#include <libfam/sysext.h>
 #include <libfam/utils.h>
 
 STATIC MatchInfo lz_hash_get(LzHash *hash, const u8 *text, u32 cpos) {
@@ -531,8 +534,30 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 	compress_write_lengths(&strm, code_lengths);
 
 	while (match_array[i] != 1) {
-		if (strm.bits_in_buffer >= 32) {
+		if (strm.bits_in_buffer >= 96) {
 			bitstream_writer_flush(&strm);
+			if (match_array[i] == 0) {
+				u8 symbol = match_array[i + 1];
+				CodeLength cl = code_lengths[symbol];
+				bitstream_writer_push(&strm, cl.code,
+						      cl.length);
+				i += 2;
+			} else
+				compress_write_match(&strm, code_lengths,
+						     match_array, &i);
+			if (match_array[i] == 1) break;
+
+			if (match_array[i] == 0) {
+				u8 symbol = match_array[i + 1];
+				CodeLength cl = code_lengths[symbol];
+				bitstream_writer_push(&strm, cl.code,
+						      cl.length);
+				i += 2;
+			} else
+				compress_write_match(&strm, code_lengths,
+						     match_array, &i);
+			if (match_array[i] == 1) break;
+
 			if (match_array[i] == 0) {
 				u8 symbol = match_array[i + 1];
 				CodeLength cl = code_lengths[symbol];
@@ -561,6 +586,218 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 	WRITE(&strm, 0, 64);
 	bitstream_writer_flush(&strm);
 	return (strm.bit_offset + 7) / 8;
+}
+
+PUBLIC i32 compress_stream(i32 in_fd, i32 out_fd) {
+	CompressHeader header;
+	u64 in_offset = 0;
+	u64 out_offset = sizeof(CompressHeader);
+	u8 in_chunk[2][MAX_COMPRESS_LEN], out_chunk[2][MAX_COMPRESS_BOUND_LEN];
+	u64 in_chunk_size = MAX_COMPRESS_LEN,
+	    out_chunk_size = compress_bound(MAX_COMPRESS_LEN);
+	IoUring *iou = NULL;
+	u64 next_read = 0, next_write = U64_MAX, id;
+	struct stat st;
+INIT:
+	if (fstat(in_fd, &st) < 0) ERROR();
+	if (!S_ISREG(st.st_mode)) ERROR(EINVAL);
+
+	header.file_size = fsize(in_fd);
+	header.version = 0;
+	header.permissions = st.st_mode & 07777;
+	header.mtime = st.st_mtime;
+	header.atime = st.st_atime;
+
+	if (iouring_init(&iou, 4) < 0) ERROR();
+
+	if (header.file_size == 0) ERROR(EINVAL);
+
+	if (iouring_init_write(iou, out_fd, (u8 *)&header,
+			       sizeof(CompressHeader), 0, 0) < 0)
+		ERROR();
+	if (iouring_submit(iou, 1) < 0) ERROR();
+	i32 res = iouring_spin(iou, &id);
+	if (res < 0) ERROR();
+	if (res != sizeof(CompressHeader)) ERROR(EIO);
+
+	in_chunk_size = min(header.file_size, MAX_COMPRESS_LEN);
+	if (iouring_init_read(iou, in_fd, in_chunk[0], in_chunk_size, in_offset,
+			      next_read) < 0)
+		ERROR();
+	iouring_submit(iou, 1);
+
+	while (in_offset < header.file_size) {
+		if (iouring_pending(iou, next_read)) {
+			while (true) {
+				iouring_spin(iou, &id);
+				if (id == next_read) break;
+			}
+		}
+		next_read++;
+
+		if (in_offset + MAX_COMPRESS_LEN <= header.file_size) {
+			in_chunk_size = min(
+			    header.file_size - (in_offset + MAX_COMPRESS_LEN),
+			    MAX_COMPRESS_LEN);
+			if (iouring_init_read(
+				iou, in_fd, in_chunk[next_read % 2],
+				in_chunk_size, in_offset + MAX_COMPRESS_LEN,
+				next_read) < 0)
+				ERROR();
+			iouring_submit(iou, 1);
+		}
+
+		in_chunk_size =
+		    min(header.file_size - in_offset, MAX_COMPRESS_LEN);
+
+		i32 result =
+		    compress_block(in_chunk[(next_read - 1) % 2], in_chunk_size,
+				   out_chunk[next_write % 2], out_chunk_size);
+		if (result < 0) ERROR(EINVAL);
+
+		if (iouring_init_write(iou, out_fd, out_chunk[next_write % 2],
+				       result, out_offset, next_write) < 0)
+			ERROR();
+		if (iouring_submit(iou, 1) < 0) ERROR();
+
+		if (out_fd == STDOUT_FD) {
+			u64 written = 0;
+			while (written < result) {
+				i32 res = iouring_spin(iou, &id);
+				if (res < 0) ERROR();
+				if (id == next_write) {
+					written += res;
+					if (written < result) {
+						if (iouring_init_write(
+							iou, out_fd,
+							out_chunk[next_write %
+								  2] +
+							    written,
+							result - written,
+							out_offset,
+							next_write) < 0)
+							ERROR();
+						if (iouring_submit(iou, 1) < 0)
+							ERROR();
+					}
+				}
+			}
+		} else if (next_write != U64_MAX) {
+			if (iouring_pending(iou, next_write + 1)) {
+				while (true) {
+					iouring_spin(iou, &id);
+					if (id == next_write + 1) break;
+				}
+			}
+		}
+
+		next_write--;
+		in_offset += in_chunk_size;
+		out_offset += result;
+	}
+	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
+	if (out_fd != STDOUT_FD) {
+		if (fresize(out_fd, out_offset) < 0) ERROR();
+		if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
+	}
+CLEANUP:
+	if (iou) iouring_destroy(iou);
+	RETURN;
+}
+
+PUBLIC i32 decompress_stream(i32 in_fd, i32 out_fd) {
+	CompressHeader header = {0};
+	u64 in_offset = sizeof(CompressHeader);
+	u64 out_offset = 0;
+	u8 in_chunk[MAX_COMPRESS_BOUND_LEN] = {0},
+	   out_chunk[4][MAX_COMPRESS_LEN + MAX_AVX_OVERWRITE] = {0};
+	u64 in_chunk_size = 0, out_chunk_size = 0, id;
+	IoUring *iou = NULL;
+	u64 in_file_size = fsize(in_fd);
+	u64 next_write = U32_MAX, next_read = 0;
+	struct timevalfam ts[2] = {0};
+INIT:
+	if (iouring_init(&iou, 4) < 0) ERROR();
+
+	in_chunk_size = compress_bound(MAX_COMPRESS_LEN);
+	out_chunk_size = MAX_COMPRESS_LEN;
+
+	if (iouring_init_read(iou, in_fd, &header, sizeof(CompressHeader), 0,
+			      next_read) < 0)
+		ERROR();
+	next_read++;
+
+	if (iouring_submit(iou, 1) < 0) ERROR();
+	iouring_spin(iou, &id);
+
+	while (out_offset < header.file_size) {
+		in_chunk_size = min(compress_bound(MAX_COMPRESS_LEN),
+				    in_file_size - in_offset);
+		if (iouring_init_read(iou, in_fd, in_chunk, in_chunk_size,
+				      in_offset, next_read) < 0)
+			ERROR();
+
+		if (iouring_submit(iou, 1) < 0) ERROR();
+		while (true) {
+			iouring_spin(iou, &id);
+			if (id == next_read) break;
+		}
+		next_read++;
+
+		u64 bytes_consumed = 0;
+		i32 result = decompress_block(in_chunk, in_chunk_size,
+					      out_chunk[next_write % 4],
+					      out_chunk_size, &bytes_consumed);
+		if (result < 0) ERROR(EINVAL);
+
+		if (iouring_init_write(iou, out_fd, out_chunk[next_write % 4],
+				       result, out_offset, next_write) < 0)
+			ERROR();
+		if (iouring_submit(iou, 1) < 0) ERROR();
+
+		if (out_fd == STDOUT_FD) {
+			u64 written = 0;
+			while (written < result) {
+				i32 res = iouring_spin(iou, &id);
+				if (res < 0) ERROR();
+				written += res;
+				if (written < result) {
+					if (iouring_init_write(
+						iou, out_fd,
+						out_chunk[next_write % 4] +
+						    written,
+						result - written, out_offset,
+						next_write) < 0)
+						ERROR();
+					if (iouring_submit(iou, 1) < 0) ERROR();
+				}
+			}
+		} else if (next_write != U64_MAX) {
+			if (iouring_pending(iou, next_write + 1)) {
+				while (true) {
+					iouring_spin(iou, &id);
+					if (id == next_write + 1) break;
+				}
+			}
+		}
+
+		in_offset += bytes_consumed;
+		out_offset += result;
+		next_write--;
+	}
+
+	while (iouring_pending_all(iou)) iouring_spin(iou, &id);
+	if (out_fd != STDOUT_FD) {
+		if (fresize(out_fd, out_offset) < 0) ERROR();
+		if (fchmod(out_fd, header.permissions & 07777) < 0) ERROR();
+
+		ts[0].tv_sec = header.atime;
+		ts[1].tv_sec = header.mtime;
+		if (utimesat(out_fd, NULL, ts, 0) < 0) ERROR();
+	}
+CLEANUP:
+	if (iou) iouring_destroy(iou);
+	RETURN;
 }
 
 #ifdef __AVX2__
@@ -634,6 +871,25 @@ INLINE static i32 compress_proc_match_unchecked(BitStreamReader *strm, u8 *out,
 	return 0;
 }
 
+STATIC i32 compress_next_code(
+    BitStreamReader *strm, const CodeLength code_lengths[SYMBOL_COUNT],
+    const HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)], u8 *out,
+    u32 capacity, u32 *itt) {
+	u16 bits = bitstream_reader_read(strm, MAX_CODE_LENGTH);
+	HuffmanLookup entry = lookup_table[bits];
+	u8 length = entry.length;
+	u16 symbol = entry.symbol;
+	bitstream_reader_clear(strm, length);
+	if (symbol < SYMBOL_TERM)
+		out[(*itt)++] = symbol;
+	else if (symbol == SYMBOL_TERM)
+		return -2;
+	else if (compress_proc_match_unchecked(strm, out, capacity, &entry,
+					       itt) < 0)
+		return -1;
+	return 0;
+}
+
 STATIC i32 compress_read_symbols(BitStreamReader *strm,
 				 const CodeLength code_lengths[SYMBOL_COUNT],
 				 u8 *out, u32 capacity, u64 *bytes_consumed) {
@@ -652,36 +908,23 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 				return -1;
 			}
 
-			u16 bits = bitstream_reader_read(strm, MAX_CODE_LENGTH);
-			HuffmanLookup entry = lookup_table[bits];
-			u8 length = entry.length;
-			symbol = entry.symbol;
-			bitstream_reader_clear(strm, length);
-			if (symbol < SYMBOL_TERM) {
-				out[itt++] = symbol;
-			} else if (symbol == SYMBOL_TERM) {
-				goto term;
-			} else if (compress_proc_match_unchecked(
-				       strm, out, capacity, &entry, &itt) < 0)
-				return -1;
+			for (u8 i = 0; i < 3; i++) {
+				i32 res = compress_next_code(strm, code_lengths,
+							     lookup_table, out,
+							     capacity, &itt);
+				if (res == -1)
+					return -1;
+				else if (res == -2)
+					goto term;
+			}
 		}
 
-		u16 bits = bitstream_reader_read(strm, MAX_CODE_LENGTH);
-		HuffmanLookup entry = lookup_table[bits];
-		u8 length = entry.length;
-		symbol = entry.symbol;
-		bitstream_reader_clear(strm, length);
-		if (symbol < SYMBOL_TERM) {
-			if (itt >= capacity) {
-				errno = EOVERFLOW;
-				return -1;
-			}
-			out[itt++] = symbol;
-		} else if (symbol == SYMBOL_TERM) {
-			goto term;
-		} else if (compress_proc_match_unchecked(strm, out, capacity,
-							 &entry, &itt) < 0)
+		i32 res = compress_next_code(strm, code_lengths, lookup_table,
+					     out, capacity, &itt);
+		if (res == -1)
 			return -1;
+		else if (res == -2)
+			goto term;
 	}
 
 	while (true) {
@@ -713,7 +956,7 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 
 term:
 	*bytes_consumed =
-	    (strm->bit_offset - strm->bits_in_buffer + 64 + 7) / 8;
+	    (strm->bit_offset - strm->bits_in_buffer + 128 + 7) / 8;
 	return itt;
 }
 
