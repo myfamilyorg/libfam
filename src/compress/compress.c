@@ -168,7 +168,7 @@ STATIC HuffmanNode *compress_extract_min(HuffmanMinHeap *heap) {
 }
 
 STATIC void compress_compute_lengths(HuffmanNode *node, u8 length,
-				     CodeLength code_lengths[SYMBOL_COUNT]) {
+				     CodeLength *code_lengths) {
 	if (!node) return;
 	if (!node->left && !node->right)
 		code_lengths[node->symbol].length = length;
@@ -176,16 +176,15 @@ STATIC void compress_compute_lengths(HuffmanNode *node, u8 length,
 	compress_compute_lengths(node->right, length + 1, code_lengths);
 }
 
-STATIC void compress_build_tree(const u32 frequencies[SYMBOL_COUNT],
-				CodeLength code_lengths[SYMBOL_COUNT],
-				HuffmanMinHeap *heap,
-				HuffmanNode nodes[SYMBOL_COUNT * 2 + 1]) {
+STATIC void compress_build_tree(const u32 *frequencies,
+				CodeLength *code_lengths, u16 count,
+				HuffmanMinHeap *heap, HuffmanNode *nodes) {
 	i32 i;
 	u16 node_counter = 0;
 
 	heap->size = 0;
 
-	for (i = 0; i < SYMBOL_COUNT; i++) {
+	for (i = 0; i < count; i++) {
 		if (frequencies[i]) {
 			HuffmanNode *next = &nodes[node_counter++];
 			compress_init_node(next, i, frequencies[i]);
@@ -210,14 +209,14 @@ STATIC void compress_build_tree(const u32 frequencies[SYMBOL_COUNT],
 	}
 }
 
-STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
-				   CodeLength code_lengths[SYMBOL_COUNT],
+STATIC void compress_limit_lengths(const u32 *frequencies,
+				   CodeLength *code_lengths, u16 count,
 				   u8 max_length) {
 	i32 i;
 	u32 excess = 0;
 	u32 needed = 0;
 
-	for (i = 0; i < SYMBOL_COUNT; i++) {
+	for (i = 0; i < count; i++) {
 		if (code_lengths[i].length > max_length) {
 			excess += (code_lengths[i].length - max_length) *
 				  frequencies[i];
@@ -227,7 +226,7 @@ STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
 	}
 
 	while (excess > 0 && needed > 0) {
-		for (i = 0; i < SYMBOL_COUNT && excess > 0; i++) {
+		for (i = 0; i < count && excess > 0; i++) {
 			if (code_lengths[i].length > 0 &&
 			    code_lengths[i].length < max_length &&
 			    frequencies[i] > 0) {
@@ -242,21 +241,21 @@ STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
 	}
 
 	u64 sum = 0;
-	for (i = 0; i < SYMBOL_COUNT; i++) {
+	for (i = 0; i < count; i++) {
 		if (code_lengths[i].length > 0) {
 			sum += 1ULL << (max_length - code_lengths[i].length);
 		}
 	}
 
 	while (sum > (1ULL << max_length)) {
-		for (i = SYMBOL_COUNT - 1; i >= 0; i--)
+		for (i = count - 1; i >= 0; i--)
 			if (code_lengths[i].length > 1 &&
 			    code_lengths[i].length < max_length) {
 				code_lengths[i].length++;
 				break;
 			}
 		sum = 0;
-		for (i = 0; i < SYMBOL_COUNT; i++) {
+		for (i = 0; i < count; i++) {
 			if (code_lengths[i].length > 0) {
 				sum += 1ULL
 				       << (max_length - code_lengths[i].length);
@@ -265,16 +264,17 @@ STATIC void compress_limit_lengths(const u32 frequencies[SYMBOL_COUNT],
 	}
 }
 
-STATIC void compress_calculate_lengths(const u32 frequencies[SYMBOL_COUNT],
-				       CodeLength code_lengths[SYMBOL_COUNT],
+STATIC void compress_calculate_lengths(const u32 *frequencies,
+				       CodeLength *code_lengths, u16 count,
 				       u8 max_length) {
 	HuffmanMinHeap heap;
-	HuffmanNode nodes[SYMBOL_COUNT * 2 + 1];
+	HuffmanNode nodes[count * 2 + 1];
 	HuffmanNode *root;
-	compress_build_tree(frequencies, code_lengths, &heap, nodes);
+	compress_build_tree(frequencies, code_lengths, count, &heap, nodes);
 	if ((root = compress_extract_min(&heap)) != NULL) {
 		compress_compute_lengths(root, 0, code_lengths);
-		compress_limit_lengths(frequencies, code_lengths, max_length);
+		compress_limit_lengths(frequencies, code_lengths, count,
+				       max_length);
 	}
 }
 
@@ -355,7 +355,7 @@ INIT:
 		}
 	}
 
-	compress_calculate_lengths(frequencies, book, 7);
+	compress_calculate_lengths(frequencies, book, 13, 7);
 	compress_calculate_codes(book, 13);
 
 CLEANUP:
@@ -420,7 +420,7 @@ CLEANUP:
 }
 
 STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
-			  const CodeLength book[SYMBOL_COUNT],
+			  const CodeLength book[MAX_BOOK_CODES],
 			  const u8 match_array[2 * MAX_COMPRESS_LEN + 1],
 			  u8 *out) {
 	u32 i = 0;
@@ -707,7 +707,8 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	}
 
 	compress_find_matches(in, len, match_array, frequencies);
-	compress_calculate_lengths(frequencies, code_lengths, MAX_CODE_LENGTH);
+	compress_calculate_lengths(frequencies, code_lengths, SYMBOL_COUNT,
+				   MAX_CODE_LENGTH);
 	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
 	compress_build_code_book(code_lengths, book, book_frequencies);
 	i32 bt = compress_calculate_block_type(frequencies, book_frequencies,
