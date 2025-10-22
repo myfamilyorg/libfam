@@ -51,8 +51,6 @@ void bitstream_writer_flush(BitStreamWriter *strm) {
 	strm->buffer = strm->bits_in_buffer = 0;
 }
 
-#include <libfam/format.h>
-
 i32 bitstream_reader_load(BitStreamReader *strm) {
 	u64 bit_offset = strm->bit_offset;
 	u64 bits_to_load = 128 - strm->bits_in_buffer;
@@ -66,7 +64,8 @@ i32 bitstream_reader_load(BitStreamReader *strm) {
 		return -1;
 	}
 
-	u128 new_bits = *(u128 *)(strm->data + byte_pos);
+	u128 new_bits;
+	memcpy(&new_bits, strm->data + byte_pos, sizeof(u128));
 	u128 high = bytes_needed == 17 ? (u64)strm->data[byte_pos + 16] : 0;
 	new_bits =
 	    (new_bits >> bit_remainder) | (high << (128 - bit_remainder));

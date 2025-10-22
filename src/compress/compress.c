@@ -789,7 +789,6 @@ INIT:
 			ERROR();
 		OK(res);
 	} else {
-		mfence();
 		compress_read_lengths(&strm, code_lengths);
 		compress_calculate_codes(code_lengths);
 		if ((res = compress_read_symbols(&strm, code_lengths, out,
