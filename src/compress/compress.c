@@ -476,7 +476,7 @@ INLINE static i32 compress_proc_match(BitStreamReader *strm, u8 *out,
 
 	actual_length = base_length + len_extra;
 	actual_distance = base_dist + dist_extra;
-	if (actual_length + *itt > capacity) {
+	if (__builtin_expect(actual_length + *itt > capacity, 0)) {
 		errno = EOVERFLOW;
 		return -1;
 	}
@@ -546,7 +546,7 @@ STATIC i32 compress_read_symbols(BitStreamReader *strm,
 
 		bitstream_reader_clear(strm, length);
 		if (symbol < SYMBOL_TERM) {
-			if (itt >= capacity) {
+			if (__builtin_expect(itt >= capacity, 0)) {
 				errno = EOVERFLOW;
 				return -1;
 			}
