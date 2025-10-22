@@ -47,8 +47,8 @@
 		break;                                                   \
 	else if (match_array[i] == 0) {                                  \
 		u8 symbol = match_array[i + 1];                          \
-		u16 code = codes[symbol];                                \
-		u8 length = lengths[symbol];                             \
+		u16 code = code_lengths[symbol].code;                    \
+		u8 length = code_lengths[symbol].length;                 \
 		bitstream_writer_push(&strm, code, length);              \
 		i += 2;                                                  \
 	} else {                                                         \
