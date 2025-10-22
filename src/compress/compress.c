@@ -26,6 +26,7 @@
 #ifdef __AVX2__
 #include <immintrin.h>
 #endif /* __AVX2__ */
+#include <libfam/atomic.h>
 #include <libfam/bitstream.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
@@ -459,7 +460,9 @@ INIT:
 
 	while (i < SYMBOL_COUNT) {
 		if (strm->bits_in_buffer < 7)
-			if (bitstream_reader_load(strm) < 0) ERROR(EOVERFLOW);
+			if (bitstream_reader_load(strm) < 0) {
+				ERROR(EOVERFLOW);
+			}
 		u8 bits = bitstream_reader_read(strm, 7);
 		HuffmanLookup entry = lookup_table[bits];
 		u16 code = entry.symbol;
@@ -468,20 +471,28 @@ INIT:
 			code_lengths[i++].length = code;
 			last_length = code;
 		} else if (code == 10) {
-			if (i == 0 || last_length == 0) ERROR(EPROTO);
+			if (i == 0 || last_length == 0) {
+				ERROR(EPROTO);
+			}
 			u8 repeat = TRY_READ(strm, 2) + 3;
-			if (i + repeat > SYMBOL_COUNT) ERROR(EPROTO);
+			if (i + repeat > SYMBOL_COUNT) {
+				ERROR(EPROTO);
+			}
 			for (j = 0; j < repeat; j++) {
 				code_lengths[i++].length = last_length;
 			}
 		} else if (code == 11) {
 			u8 zeros = TRY_READ(strm, 7) + 11;
-			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
+			if (i + zeros > SYMBOL_COUNT) {
+				ERROR(EPROTO);
+			}
 			for (j = 0; j < zeros; j++)
 				code_lengths[i++].length = 0;
 		} else if (code == 12) {
 			u8 zeros = TRY_READ(strm, 3) + 3;
-			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
+			if (i + zeros > SYMBOL_COUNT) {
+				ERROR(EPROTO);
+			}
 			for (j = 0; j < zeros; j++)
 				code_lengths[i++].length = 0;
 		}
@@ -546,6 +557,7 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 
 	WRITE(&strm, code_lengths[SYMBOL_TERM].code,
 	      code_lengths[SYMBOL_TERM].length);
+	WRITE(&strm, 0, 64);
 	WRITE(&strm, 0, 64);
 	bitstream_writer_flush(&strm);
 	return (strm.bit_offset + 7) / 8;
@@ -733,7 +745,9 @@ STATIC i32 compress_raw_copy(const u8 *in, u32 len, u8 *out, u32 capacity,
 	u32 block_len;
 INIT:
 	memcpy(&block_len, in, sizeof(u32));
-	if (block_len > capacity) ERROR(EOVERFLOW);
+	if (block_len > capacity) {
+		ERROR(EOVERFLOW);
+	}
 	memcpy(out, in + 4, block_len);
 	*bytes_consumed = block_len + 5;
 	OK(block_len);
@@ -770,14 +784,13 @@ INIT:
 	if (!len) ERROR(EINVAL);
 	block_type = in[0];
 	if (block_type) {
-		println("raw");
 		if ((res = compress_raw_copy(in + 1, len - 1, out, capacity,
 					     bytes_consumed)) < 0)
 			ERROR();
 		OK(res);
 	} else {
+		mfence();
 		compress_read_lengths(&strm, code_lengths);
-		println("2");
 		compress_calculate_codes(code_lengths);
 		if ((res = compress_read_symbols(&strm, code_lengths, out,
 						 capacity, bytes_consumed)) < 0)

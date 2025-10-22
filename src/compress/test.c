@@ -127,7 +127,6 @@ Test(compress1) {
 		timer = micros() - timer;
 		comp_sum += timer;
 
-		println("comp result={}", result);
 		ASSERT(result > 0, "compress_block");
 		timer = micros();
 		result = decompress_block(out, result, verify, file_size + 32,

@@ -193,7 +193,7 @@
 			}                                                     \
 		}                                                             \
 		format_clear(&_f__);                                          \
-		_exit(-1);                                                    \
+		_famexit(-1);                                                 \
 	})
 
 typedef struct {
