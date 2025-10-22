@@ -39,10 +39,12 @@
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
 
-STATIC MatchInfo lz_hash_get(const LzHash *hash, const u8 *text, u32 cpos) {
+STATIC MatchInfo lz_hash_get(LzHash *restrict hash, const u8 *restrict text,
+			     u32 cpos) {
 	u16 pos, dist, len = 0;
 	u32 mpos, key = *(u32 *)(text + cpos);
 	pos = hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT];
+	hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = cpos;
 	dist = (u16)cpos - pos;
 	if (!dist) return (MatchInfo){.len = 0, .dist = 0};
 	mpos = cpos - dist;
@@ -68,14 +70,15 @@ STATIC MatchInfo lz_hash_get(const LzHash *hash, const u8 *text, u32 cpos) {
 	return (MatchInfo){.len = len, .dist = dist};
 }
 
-STATIC void lz_hash_set(LzHash *hash, const u8 *text, u32 cpos) {
+STATIC void lz_hash_set(LzHash *restrict hash, const u8 *restrict text,
+			u32 cpos) {
 	u32 key = *(u32 *)(text + cpos);
 	hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = (u16)cpos;
 }
 
 void compress_find_matches(const u8 *in, u32 len,
-			   u8 match_array[2 * MAX_COMPRESS_LEN + 1],
-			   u32 frequencies[SYMBOL_COUNT]) {
+			   u8 match_array[restrict 2 * MAX_COMPRESS_LEN + 1],
+			   u32 frequencies[restrict SYMBOL_COUNT]) {
 	u32 i = 0, max, out_itt = 0;
 	LzHash hash = {0};
 	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
@@ -84,35 +87,32 @@ void compress_find_matches(const u8 *in, u32 len,
 		MatchInfo mi = lz_hash_get(&hash, in, i);
 		if (mi.len >= MIN_MATCH_LEN) {
 			u8 mc = get_match_code(mi.len, mi.dist);
-			frequencies[mc + MATCH_OFFSET]++;
 			u8 len_extra = length_extra_bits_value(mc, mi.len);
 			u16 dist_extra = distance_extra_bits_value(mc, mi.dist);
 			u8 len_extra_bits_count = length_extra_bits(mc);
 			u32 combined_extra =
 			    ((u32)dist_extra << len_extra_bits_count) |
 			    len_extra;
-
-			match_array[out_itt] = mc + 2;
-			((u32 *)(match_array + out_itt + 1))[0] =
-			    combined_extra;
+			u16 match_symbol = mc + MATCH_OFFSET;
+			frequencies[match_symbol]++;
+			((u32 *)(match_array + out_itt))[0] =
+			    (combined_extra << 8) | (mc + 2);
 			out_itt += 4;
 
-			lz_hash_set(&hash, in, i);
 			lz_hash_set(&hash, in, i + 1);
 			lz_hash_set(&hash, in, i + 2);
 			lz_hash_set(&hash, in, i + 3);
 			i += mi.len;
 		} else {
-			lz_hash_set(&hash, in, i);
-			u8 ch = in[i++];
-			frequencies[ch]++;
-			((u16 *)match_array)[out_itt >> 1] = ch << 8;
+			frequencies[in[i]]++;
+			match_array[out_itt + 1] = in[i];
+			i++;
 			out_itt += 2;
 		}
 	}
 	while (i < len) {
 		frequencies[in[i]]++;
-		((u16 *)match_array)[(out_itt) >> 1] = in[i] << 8;
+		match_array[out_itt + 1] = in[i];
 		out_itt += 2;
 		i++;
 	}
