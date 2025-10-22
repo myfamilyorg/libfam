@@ -659,20 +659,37 @@ compress_calculate_block_type(const u32 frequencies[SYMBOL_COUNT],
 }
 
 STATIC i32 compress_write_raw(const u8 *in, u32 len, u8 *out) {
-	out[0] = 1;
-	memcpy(out + 1, &len, sizeof(u32));
-	memcpy(out + 5, in, len);
-	return len + 5;
+	u32 value;
+	if (!len) {
+		out[0] = 0x80;
+		return 3;
+	}
+	value = (len << 1) | 0x00000080;
+	memcpy(out, &value, 3);
+	memcpy(out + 3, in, len);
+	return len + 3;
 }
 
 STATIC i32 compress_read_raw(const u8 *in, u32 len, u8 *out, u32 capacity,
 			     u64 *bytes_consumed) {
 	u32 block_len;
+	u8 bytes[4];
 INIT:
-	memcpy(&block_len, in, sizeof(u32));
+	if (len < 3) ERROR(EOVERFLOW);
+	if (len == 3) {
+		if (in[0] != 0x80 || in[1] != 0 || in[2] != 0) ERROR(EOVERFLOW);
+		return 0;
+	}
+	bytes[0] = in[0] & ~0x80;
+	bytes[1] = in[1];
+	bytes[2] = in[2];
+	bytes[3] = 0;
+	block_len = (*(u32 *)bytes) >> 1;
 	if (block_len > capacity) ERROR(EOVERFLOW);
-	memcpy(out, in + 4, block_len);
-	*bytes_consumed = block_len + 5;
+	if (len < block_len + 3) ERROR(EOVERFLOW);
+
+	memcpy(out, in + 3, block_len);
+	*bytes_consumed = block_len + 3;
 	OK(block_len);
 CLEANUP:
 	RETURN;
@@ -711,7 +728,7 @@ PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
 		return -1;
 	}
 	if (in[0]) {
-		return compress_read_raw(in + 1, len - 1, out, capacity,
+		return compress_read_raw(in, len, out, capacity,
 					 bytes_consumed);
 	} else {
 		compress_read_lengths(&strm, code_lengths);
@@ -721,5 +738,5 @@ PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
 	}
 }
 
-PUBLIC u64 compress_bound(u64 len) { return len + (len >> 5) + 1024; }
+PUBLIC u64 compress_bound(u64 len) { return len + 3; }
 
