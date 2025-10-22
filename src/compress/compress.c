@@ -76,7 +76,7 @@ void compress_find_matches(const u8 *in, u32 len,
 			   u32 frequencies[restrict SYMBOL_COUNT]) {
 	u32 i = 0, max, out_itt = 0;
 	LzHash hash = {0};
-	max = len >= MAX_MATCH_LEN ? len - MAX_MATCH_LEN : 0;
+	max = len >= 31 + MAX_MATCH_LEN ? len - (31 + MAX_MATCH_LEN) : 0;
 
 	while (i < max) {
 		MatchInfo mi = lz_hash_get(&hash, in, i);
