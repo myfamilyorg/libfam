@@ -426,6 +426,7 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 			  u8 *out) {
 	u32 i = 0;
 	BitStreamWriter strm = {out};
+	WRITE(&strm, 0, 8); /* Block type */
 	compress_write_lengths(&strm, code_lengths, book);
 	i = 0;
 	while (true) {
@@ -493,7 +494,7 @@ STATIC i32 compress_read_lengths(BitStreamReader *strm,
 	CodeLength book_code_lengths[SYMBOL_COUNT] = {0};
 	HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
 INIT:
-
+	TRY_READ(strm, 8); /* Skip over block type */
 	for (i = 0; i < 13; i++)
 		book_code_lengths[i].length = TRY_READ(strm, 3);
 
@@ -657,6 +658,26 @@ compress_calculate_block_type(const u32 frequencies[SYMBOL_COUNT],
 	return sum > len;
 }
 
+STATIC i32 compress_write_raw(const u8 *in, u32 len, u8 *out) {
+	out[0] = 1;
+	memcpy(out + 1, &len, sizeof(u32));
+	memcpy(out + 5, in, len);
+	return len + 5;
+}
+
+STATIC i32 compress_read_raw(const u8 *in, u32 len, u8 *out, u32 capacity,
+			     u64 *bytes_consumed) {
+	u32 block_len;
+INIT:
+	memcpy(&block_len, in, sizeof(u32));
+	if (block_len > capacity) ERROR(EOVERFLOW);
+	memcpy(out, in + 4, block_len);
+	*bytes_consumed = block_len + 5;
+	OK(block_len);
+CLEANUP:
+	RETURN;
+}
+
 PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	u32 book_frequencies[MAX_BOOK_CODES] = {0};
@@ -673,19 +694,31 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	compress_calculate_lengths(frequencies, code_lengths, MAX_CODE_LENGTH);
 	compress_calculate_codes(code_lengths);
 	compress_build_code_book(code_lengths, book, book_frequencies);
-	compress_calculate_block_type(frequencies, book_frequencies,
-				      code_lengths, book, len);
-	return compress_write(code_lengths, book, match_array, out);
+	i32 bt = compress_calculate_block_type(frequencies, book_frequencies,
+					       code_lengths, book, len);
+	if (bt != 0)
+		return compress_write_raw(in, len, out);
+	else
+		return compress_write(code_lengths, book, match_array, out);
 }
 
 PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
 			    u64 *bytes_consumed) {
 	BitStreamReader strm = {in, len};
 	CodeLength code_lengths[SYMBOL_COUNT] = {0};
-	compress_read_lengths(&strm, code_lengths);
-	compress_calculate_codes(code_lengths);
-	return compress_read_symbols(&strm, code_lengths, out, capacity,
-				     bytes_consumed);
+	if (len == 0) {
+		errno = EINVAL;
+		return -1;
+	}
+	if (in[0]) {
+		return compress_read_raw(in + 1, len - 1, out, capacity,
+					 bytes_consumed);
+	} else {
+		compress_read_lengths(&strm, code_lengths);
+		compress_calculate_codes(code_lengths);
+		return compress_read_symbols(&strm, code_lengths, out, capacity,
+					     bytes_consumed);
+	}
 }
 
 PUBLIC u64 compress_bound(u64 len) { return len + (len >> 5) + 1024; }
