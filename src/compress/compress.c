@@ -579,7 +579,7 @@ INLINE static i32 compress_proc_match(BitStreamReader *strm, u8 *out,
 
 	actual_length = base_length + len_extra;
 	actual_distance = base_dist + dist_extra;
-	if (__builtin_expect(actual_length + *itt > capacity, 0)) {
+	if (__builtin_expect(actual_length + 31 + *itt > capacity, 0)) {
 		errno = EOVERFLOW;
 		return -1;
 	}
