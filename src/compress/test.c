@@ -93,6 +93,12 @@ Test(bitstream_perf) {
 	(void)write_mbps;
 }
 
+Test(bitstream_overflow) {
+	u8 data[1] = {0};
+	BitStreamReader rdr = {data, sizeof(data)};
+	ASSERT_EQ(bitstream_reader_load(&rdr), -1, "overflow");
+}
+
 #define ITER (16)
 
 Test(compress1) {
