@@ -282,7 +282,9 @@ STATIC void compress_calculate_codes(CodeLength *code_lengths, u16 count) {
 	u32 length_start[MAX_CODE_LENGTH + 1] = {0};
 	u32 length_pos[MAX_CODE_LENGTH + 1] = {0};
 
-	for (i = 0; i < count; i++) length_count[code_lengths[i].length]++;
+	for (i = 0; i < count; i++) {
+		length_count[code_lengths[i].length]++;
+	}
 
 	for (i = 1; i <= MAX_CODE_LENGTH; i++) {
 		code <<= 1;
@@ -493,8 +495,9 @@ STATIC i32 compress_read_lengths(BitStreamReader *strm,
 	HuffmanLookup lookup_table[(1U << MAX_BOOK_CODE_LENGTH)] = {0};
 INIT:
 	TRY_READ(strm, 8); /* Skip over block type */
-	for (i = 0; i < MAX_BOOK_CODES; i++)
+	for (i = 0; i < MAX_BOOK_CODES; i++) {
 		book_code_lengths[i].length = TRY_READ(strm, 3);
+	}
 
 	compress_calculate_codes(book_code_lengths, MAX_BOOK_CODES);
 	compress_build_lookup_table(book_code_lengths, MAX_BOOK_CODES,

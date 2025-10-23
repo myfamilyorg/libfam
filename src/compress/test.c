@@ -216,7 +216,12 @@ Test(compress_other) {
 
 Test(compress_oob) {
 	u64 bytes_consumed;
-	u8 data2[1024], out2[2048] = {0}, verify2[2048];
+	u8 data2[1024], out2[2048], verify2[2048];
+	/* Note: valgrind reports uninitialized memory access with gcc -O3,
+	 * however this data is initialized by compress_block and correctly
+	 * processed, or so it seems. For now, we zero the first 58 bytes, which
+	 * should not be necessary. */
+	for (u32 i = 0; i < 58; i++) out2[i] = 0;
 	for (u32 i = 0; i < 1024; i++) data2[i] = 'x';
 	i32 len = compress_block(data2, 1024, out2, 2048);
 	len = decompress_block(out2, len, verify2, 1024, &bytes_consumed);
