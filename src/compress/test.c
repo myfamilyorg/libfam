@@ -30,15 +30,14 @@
 #include <libfam/sysext.h>
 #include <libfam/test.h>
 
-/*
 #define PERF_SIZE 2000
 #define PERF_ITER (128)
 
 Test(bitstream_perf) {
 	u64 len_sum = 0;
-	u8 lengths[PERF_SIZE];
-	u8 codes[PERF_SIZE];
-	u8 data[PERF_SIZE * 4000];
+	u8 lengths[PERF_SIZE] = {0};
+	u8 codes[PERF_SIZE] = {0};
+	u8 data[PERF_SIZE * 2] = {0};
 	Rng rng;
 	i32 i, c;
 
@@ -93,44 +92,6 @@ Test(bitstream_perf) {
 	(void)read_mbps;
 	(void)write_mbps;
 }
-
-Test(compress_stream1) {
-	unlink("/tmp/1.cz");
-	unlink("/tmp/1cmp.txt");
-	const u8 *fname = "resources/akjv5.txt";
-	i32 in_fd = file(fname);
-	i32 out_fd = file("/tmp/1.cz");
-	ASSERT(!compress_stream(in_fd, out_fd), "compress_stream");
-	close(in_fd);
-	close(out_fd);
-
-	in_fd = file("/tmp/1.cz");
-	out_fd = file("/tmp/1cmp.txt");
-	ASSERT(!decompress_stream(in_fd, out_fd), "decompress_stream");
-	close(in_fd);
-	close(out_fd);
-
-	i32 cmp_fd = file("/tmp/1cmp.txt");
-	i32 cmp_orig = file(fname);
-	u64 size = fsize(cmp_fd);
-	u64 cmp_size = fsize(cmp_orig);
-
-	ASSERT_EQ(size, cmp_size, "sizes");
-	u8 *cmp = fmap(cmp_fd, size, 0);
-	u8 *orig = fmap(cmp_orig, size, 0);
-
-	ASSERT(cmp && orig, "fmap");
-	ASSERT(!memcmp(cmp, orig, size), "equal");
-
-	munmap(cmp, size);
-	munmap(orig, size);
-
-	close(cmp_fd);
-	close(cmp_orig);
-	unlink("/tmp/1.cz");
-	unlink("/tmp/1cmp.txt");
-}
-*/
 
 #define ITER (16)
 
