@@ -183,3 +183,45 @@ Test(compress_rand) {
 	close(fd);
 }
 
+Test(compress_other) {
+	u8 out[1024];
+	u8 verify[1024];
+	u64 bytes_consumed;
+	i32 len;
+	ASSERT((len = compress_block("", 0, out, 1024)) > 0, "compress");
+	ASSERT(!decompress_block(out, len, verify, sizeof(verify),
+				 &bytes_consumed),
+	       "decompress");
+	ASSERT_EQ(bytes_consumed, 3, "bc=3");
+
+	ASSERT(compress_block("", 0, out, 0) < 0, "compress_bound");
+	ASSERT(decompress_block("", 0, out, 0, &bytes_consumed) < 0,
+	       "decompress with len=0");
+
+	ASSERT((len = compress_block("b", 1, out, 1024)) > 0, "compress2");
+	ASSERT_EQ(
+	    decompress_block(out, len, verify, sizeof(verify), &bytes_consumed),
+	    1, "len=1");
+	ASSERT_EQ(bytes_consumed, 4, "bc=4");
+	ASSERT_EQ(verify[0], 'b', "v[0]='b'");
+
+	const u8 *data = "aaaaaaaaaaaaaaa";
+	ASSERT((len = compress_block(data, strlen(data), out, 1024)) > 0,
+	       "compress");
+	ASSERT_EQ(
+	    decompress_block(out, len, verify, sizeof(verify), &bytes_consumed),
+	    strlen(data), "repeat a");
+	ASSERT(!memcmp(data, verify, strlen(data)), "aaa..");
+
+	u8 data2[1024], out2[2048], verify2[2048];
+	for (u32 i = 0; i < 1024; i++) data2[i] = 'x';
+	len = compress_block(data2, 1024, out2, 2048);
+	len = decompress_block(out2, len, verify2, 1024, &bytes_consumed);
+	ASSERT_EQ(len, 1024, "len=1024");
+	ASSERT(!memcmp(verify2, data2, 1024), "verify2");
+	ASSERT_EQ(bytes_consumed, 58, "bc=58 {}", bytes_consumed);
+	for (u32 i = 0; i < 1024; i++)
+		ASSERT_EQ(
+		    decompress_block(out2, len, verify2, i, &bytes_consumed),
+		    -1, "overflow");
+}

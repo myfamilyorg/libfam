@@ -529,11 +529,6 @@ INIT:
 			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
 			for (j = 0; j < zeros; j++)
 				code_lengths[i++].length = 0;
-		} else if (code == 12) {
-			u8 zeros = TRY_READ(strm, 3) + 3;
-			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
-			for (j = 0; j < zeros; j++)
-				code_lengths[i++].length = 0;
 		}
 	}
 
@@ -662,6 +657,8 @@ STATIC i32 compress_write_raw(const u8 *in, u32 len, u8 *out) {
 	u32 value;
 	if (!len) {
 		out[0] = 0x80;
+		out[1] = 0x0;
+		out[2] = 0x0;
 		return 3;
 	}
 	value = (len << 1) | 0x00000080;
@@ -678,6 +675,7 @@ INIT:
 	if (len < 3) ERROR(EOVERFLOW);
 	if (len == 3) {
 		if (in[0] != 0x80 || in[1] != 0 || in[2] != 0) ERROR(EOVERFLOW);
+		*bytes_consumed = 3;
 		return 0;
 	}
 	bytes[0] = in[0] & ~0x80;
