@@ -212,10 +212,13 @@ Test(compress_other) {
 	    decompress_block(out, len, verify, sizeof(verify), &bytes_consumed),
 	    strlen(data), "repeat a");
 	ASSERT(!memcmp(data, verify, strlen(data)), "aaa..");
+}
 
-	u8 data2[1024], out2[2048], verify2[2048];
+Test(compress_oob) {
+	u64 bytes_consumed;
+	u8 data2[1024], out2[2048] = {0}, verify2[2048];
 	for (u32 i = 0; i < 1024; i++) data2[i] = 'x';
-	len = compress_block(data2, 1024, out2, 2048);
+	i32 len = compress_block(data2, 1024, out2, 2048);
 	len = decompress_block(out2, len, verify2, 1024, &bytes_consumed);
 	ASSERT_EQ(len, 1024, "len=1024");
 	ASSERT(!memcmp(verify2, data2, 1024), "verify2");

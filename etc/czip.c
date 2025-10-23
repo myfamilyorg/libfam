@@ -119,18 +119,22 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 }
 
 void do_compress(const CzipFileHeader *header, i32 in_fd, i32 out_fd) {
+	/*
 	if (compress_stream(in_fd, out_fd) < 0) {
 		println("Could not compress stream!");
 		_famexit(-1);
 	}
+	*/
 }
 
 void do_decompress(const CzipFileHeader *header, i32 in_fd, i32 out_fd,
 		   u64 in_file_size) {
+	/*
 	if (decompress_stream(in_fd, out_fd) < 0) {
 		println("Could not decompress stream!");
 		_famexit(-1);
 	}
+	*/
 }
 
 void run_compressor(CzipConfig *config) {
