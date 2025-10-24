@@ -24,13 +24,140 @@
  *******************************************************************************/
 
 #include <libfam/compress.h>
+#include <libfam/compress_file.h>
 #include <libfam/compress_impl.h>
+#include <libfam/format.h>
 #include <libfam/iouring.h>
 #include <libfam/linux.h>
 #include <libfam/linux_time.h>
+#include <libfam/memory.h>
+#include <libfam/string.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
+
+STATIC i32 __attribute__((unused)) stream_write_header(i32 out_fd,
+						       i16 permissions,
+						       i64 mtime, i64 atime,
+						       const u8 *filename) {
+	u8 flags = 0;
+	u8 buffer[1024];
+	u16 offset = 0;
+	u64 file_name_len = filename ? strlen(filename) : 0;
+	u8 version = VERSION;
+	u32 magic = MAGIC;
+INIT:
+	if (file_name_len > MAX_FILE_NAME) ERROR(EINVAL);
+	if (permissions >= 0) flags |= STREAM_FLAG_HAS_PERMISSIONS;
+	if (mtime >= 0) flags |= STREAM_FLAG_HAS_MTIME;
+	if (atime >= 0) flags |= STREAM_FLAG_HAS_ATIME;
+	if (filename) flags |= STREAM_FLAG_HAS_FILE_NAME;
+
+	memcpy(buffer + offset, &magic, sizeof(u32));
+	offset += sizeof(u32);
+	memcpy(buffer + offset, &version, sizeof(u8));
+	offset += sizeof(u8);
+	memcpy(buffer + offset, &flags, sizeof(u8));
+	offset += sizeof(u8);
+	if (permissions >= 0) {
+		memcpy(buffer + offset, &permissions, sizeof(u16));
+		offset += sizeof(u16);
+	}
+	if (mtime >= 0) {
+		memcpy(buffer + offset, &mtime, sizeof(u64));
+		offset += sizeof(u64);
+	}
+	if (atime >= 0) {
+		memcpy(buffer + offset, &atime, sizeof(u64));
+		offset += sizeof(u64);
+	}
+	if (filename) {
+		memcpy(buffer + offset, filename, file_name_len);
+		buffer[offset + file_name_len] = 0;
+		offset += file_name_len + 1;
+	}
+	u16 written = 0;
+	while (written < offset) {
+		i64 value = write(out_fd, buffer + written, offset - written);
+		if (value < 0) ERROR();
+		written += value;
+	}
+
+	OK(offset);
+CLEANUP:
+	RETURN;
+}
+
+STATIC i32 __attribute__((unused)) stream_read_header(
+    i32 in_fd, ComressFileHeader *header) {
+	u8 buffer[1024] = {0}, flags;
+	u16 total = 0, offset = 0;
+	u64 needed = sizeof(u32) + sizeof(u8) * 2;
+INIT:
+	while (total < needed) {
+		i64 value = read(in_fd, buffer + total, needed - total);
+		if (value < 0) ERROR();
+		total += value;
+	}
+	if (((u32 *)buffer)[0] != MAGIC) ERROR(EPROTO);
+	if (buffer[4] != VERSION) ERROR(EPROTO);
+	flags = buffer[5];
+	needed = 0;
+	total = 0;
+	if (flags & STREAM_FLAG_HAS_PERMISSIONS) needed += 2;
+	if (flags & STREAM_FLAG_HAS_MTIME) needed += 8;
+	if (flags & STREAM_FLAG_HAS_ATIME) needed += 8;
+	if (flags & STREAM_FLAG_HAS_FILE_NAME) needed += MAX_FILE_NAME + 1;
+
+	total = 0;
+	while (total < needed) {
+		i64 value = read(in_fd, buffer + total, needed - total);
+		if (value < 0) ERROR();
+		if (value == 0) ERROR(EPROTO);
+		total += value;
+		offset = 0;
+
+		if (flags & STREAM_FLAG_HAS_PERMISSIONS &&
+		    total - offset >= sizeof(u16)) {
+			memcpy(&header->permissions, buffer + offset,
+			       sizeof(u16));
+			offset += sizeof(u16);
+		} else if (flags & STREAM_FLAG_HAS_PERMISSIONS)
+			continue;
+
+		if (flags & STREAM_FLAG_HAS_MTIME &&
+		    total - offset >= sizeof(u64)) {
+			memcpy(&header->mtime, buffer + offset, sizeof(u64));
+			offset += sizeof(u64);
+		} else if (flags & STREAM_FLAG_HAS_MTIME)
+			continue;
+
+		if (flags & STREAM_FLAG_HAS_ATIME &&
+		    total - offset >= sizeof(u64)) {
+			memcpy(&header->atime, buffer + offset, sizeof(u64));
+			offset += sizeof(u64);
+		} else if (flags & STREAM_FLAG_HAS_ATIME)
+			continue;
+
+		if (flags & STREAM_FLAG_HAS_FILE_NAME && total - offset > 0) {
+			u64 len = strlen((char *)(buffer + offset));
+			if (len > MAX_FILE_NAME) ERROR(EPROTO);
+			if (len < total - offset) {
+				header->filename = alloc(len + 1);
+				if (!header->filename) ERROR();
+				strcpy((char *)header->filename,
+				       (char *)(buffer + offset));
+				offset += len + 1;
+			} else
+				continue;
+		}
+
+		break;
+	}
+	OK(offset + 6);
+CLEANUP:
+	RETURN;
+}
 
 PUBLIC i32 decompress_file(i32 in_fd, i32 out_fd) {
 	CompressHeader header = {0};
@@ -131,7 +258,8 @@ PUBLIC i32 compress_file(i32 in_fd, i32 out_fd) {
 	CompressHeader header;
 	u64 in_offset = 0;
 	u64 out_offset = sizeof(CompressHeader);
-	u8 in_chunk[2][MAX_COMPRESS_LEN], out_chunk[2][MAX_COMPRESS_BOUND_LEN];
+	u8 in_chunk[2][MAX_COMPRESS_LEN] = {0},
+	   out_chunk[2][MAX_COMPRESS_BOUND_LEN] = {0};
 	u64 in_chunk_size = MAX_COMPRESS_LEN,
 	    out_chunk_size = compress_bound(MAX_COMPRESS_LEN);
 	IoUring *iou = NULL;
