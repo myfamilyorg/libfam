@@ -26,6 +26,9 @@
 #define MAGIC 0xC3161337
 #define VERSION 1
 
+#define CHUNK_SIZE (1 << 18)
+#define MAX_COMPRESSED_SIZE (CHUNK_SIZE + 3 + sizeof(ChunkHeader))
+
 #define STREAM_FLAG_HAS_PERMISSIONS (0x1 << 0)
 #define STREAM_FLAG_HAS_MTIME (0x1 << 1)
 #define STREAM_FLAG_HAS_ATIME (0x1 << 2)
@@ -37,4 +40,8 @@ typedef struct {
 	u64 mtime;
 	u64 atime;
 	u8 *filename;
-} ComressFileHeader;
+} CompressFileHeader;
+
+typedef struct {
+	u32 size;
+} ChunkHeader;
