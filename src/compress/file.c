@@ -91,7 +91,6 @@ STATIC i32 compress_read_header(i32 in_fd, CompressFileHeader *header) {
 	u16 total = 0, offset = 0;
 	u64 needed = sizeof(u32) + sizeof(u8) * 2;
 INIT:
-	lseek(in_fd, 0, SEEK_SET);
 	while (total < needed) {
 		i64 value = read(in_fd, buffer + total, needed - total);
 		if (value < 0) ERROR();
@@ -201,6 +200,7 @@ PUBLIC i32 decompress_file(i32 in_fd, i32 out_fd) {
 	bool read_pending = true, fin = false;
 	ChunkHeader *ch = NULL;
 INIT:
+	if (lseek(in_fd, 0, SEEK_SET) < 0) ERROR();
 	if (iouring_init(&iou, 4) < 0) ERROR();
 	if ((roffset = compress_read_header(in_fd, &header)) < 0) ERROR();
 	if (compress_file_sched_read(iou, in_fd, roffset, sizeof(ChunkHeader),
@@ -233,10 +233,9 @@ INIT:
 		else
 			ERROR(EPROTO);
 
-		i32 res2 = decompress_block(
-		    rbuf[index], expected_bytes - sizeof(ChunkHeader),
-		    wbuf[index], CHUNK_SIZE, &bytes_consumed);
-		expected_bytes = ch->size + sizeof(ChunkHeader);
+		i32 res2 = decompress_block(rbuf[index], res, wbuf[index],
+					    CHUNK_SIZE, &bytes_consumed);
+		expected_bytes = ch ? ch->size + sizeof(ChunkHeader) : 0;
 
 		if (compress_file_sched_write(iou, out_fd, woffset, res2,
 					      wbuf[index], next_write) < 0)
