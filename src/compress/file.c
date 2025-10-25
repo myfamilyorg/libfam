@@ -199,7 +199,21 @@ PUBLIC i32 decompress_file(i32 in_fd, i32 out_fd) {
 	u64 expected_bytes, bytes_consumed;
 	bool read_pending = true, fin = false;
 	ChunkHeader *ch = NULL;
+	bool in_is_regular_file, out_is_regular_file;
+	struct stat st;
 INIT:
+	if (fstat(out_fd, &st) < 0) ERROR();
+	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
+		ERROR(EINVAL);
+	out_is_regular_file = S_ISREG(st.st_mode);
+
+	if (fstat(in_fd, &st) < 0) ERROR();
+	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
+		ERROR(EINVAL);
+	in_is_regular_file = S_ISREG(st.st_mode);
+
+	(void)in_is_regular_file;
+
 	if (lseek(in_fd, 0, SEEK_SET) < 0) ERROR();
 	if (iouring_init(&iou, 4) < 0) ERROR();
 	if ((roffset = compress_read_header(in_fd, &header)) < 0) ERROR();
@@ -241,11 +255,28 @@ INIT:
 					      wbuf[index], next_write) < 0)
 			ERROR();
 
+		read_pending = true;
+		if (!out_is_regular_file) {
+			u32 wsum = 0;
+			while (true) {
+				u64 id;
+				i32 spin_res = iouring_spin(iou, &id);
+				if (id == next_read) {
+					res = spin_res;
+					read_pending = false;
+				} else if (id == next_write) {
+					if (spin_res < 0) ERROR();
+					wsum += spin_res;
+					if (wsum >= res2) break;
+				}
+			}
+		}
+
 		roffset += res;
 		woffset += res2;
 		next_read++;
 
-		if (next_write < U64_MAX) {
+		if (out_is_regular_file && next_write < U64_MAX) {
 			if (iouring_pending(iou, next_write + 1)) {
 				while (true) {
 					u64 id;
@@ -278,9 +309,20 @@ PUBLIC i32 compress_file(i32 in_fd, i32 out_fd) {
 	u64 next_read = 0, next_write = U64_MAX;
 	i32 res, res2;
 	bool read_pending = true;
+	bool in_is_regular_file, out_is_regular_file;
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
+	if (fstat(out_fd, &st) < 0) ERROR();
+	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
+		ERROR(EINVAL);
+	out_is_regular_file = S_ISREG(st.st_mode);
+
 	if (fstat(in_fd, &st) < 0) ERROR();
+	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
+		ERROR(EINVAL);
+	in_is_regular_file = S_ISREG(st.st_mode);
+
+	(void)in_is_regular_file;
 
 	if ((woffset = compress_write_header(out_fd, st.st_mode & 0777,
 					     st.st_mtime, st.st_atime, NULL)) <
@@ -316,12 +358,28 @@ INIT:
 					      wbuf[index], next_write) < 0)
 			ERROR();
 
+		read_pending = true;
+		if (!out_is_regular_file) {
+			u32 wsum = 0;
+			while (true) {
+				u64 id;
+				i32 spin_res = iouring_spin(iou, &id);
+				if (id == next_read) {
+					res = spin_res;
+					read_pending = false;
+				} else if (id == next_write) {
+					if (spin_res < 0) ERROR();
+					wsum += spin_res;
+					if (wsum >= res2) break;
+				}
+			}
+		}
+
 		roffset += res;
 		woffset += res2;
 		next_read++;
 
-		read_pending = true;
-		if (next_write < U64_MAX) {
+		if (out_is_regular_file && next_write < U64_MAX) {
 			if (iouring_pending(iou, next_write + 1)) {
 				while (true) {
 					u64 id;
