@@ -287,4 +287,5 @@ Test(bitstream_partial_masks) {
 			    bit_offset, bits_to_write);
 		}
 	}
+	println("sz={}", sizeof(HuffmanLookup));
 }

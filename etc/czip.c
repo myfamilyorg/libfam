@@ -54,6 +54,7 @@ typedef struct {
 	u64 atime;
 	u16 permissions;
 	u16 czip_version;
+	const u8 *file;
 } CzipFileHeader;
 
 CzipConfig parse_argv(i32 argc, u8 **argv) {
@@ -184,17 +185,26 @@ void run_compressor(CzipConfig *config) {
 	if (config->console) {
 		outfd = STDOUT_FD;
 	} else {
-		strncpy(output_file, config->file, strlen_in_file);
-		output_file[strlen_in_file] = '.';
-		output_file[strlen_in_file + 1] = 'c';
-		output_file[strlen_in_file + 2] = 'z';
-		output_file[strlen_in_file + 3] = 0;
+		if (strlen_in_file == 0) {
+			strncpy(output_file, "default", 7);
+			output_file[7] = '.';
+			output_file[7 + 1] = 'c';
+			output_file[7 + 2] = 'z';
+			output_file[7 + 3] = 0;
+		} else {
+			strncpy(output_file, config->file, strlen_in_file);
+			output_file[strlen_in_file] = '.';
+			output_file[strlen_in_file + 1] = 'c';
+			output_file[strlen_in_file + 2] = 'z';
+			output_file[strlen_in_file + 3] = 0;
+		}
 
 		outfd = file(output_file);
 		if (outfd < 0) {
 			println("Could not open file '{}'.", output_file);
 			_famexit(-1);
 		}
+		fchmod(outfd, 0664);
 	}
 
 	if (strlen_in_file) {
@@ -204,8 +214,8 @@ void run_compressor(CzipConfig *config) {
 		header.permissions = st.st_mode & 0xFFF;
 		header.czip_version = 0;
 	} else {
-		header.mtime = 0;
-		header.atime = 0;
+		header.mtime = micros() / 1000000;
+		header.atime = micros() / 1000000;
 		header.permissions = 0644;
 	}
 
@@ -307,7 +317,7 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 		println("-h, --help          print this message");
 		println("-v, --version       print version");
 		println(
-		    "\nNote: if '-' is specified stdin will be used as "
+		    "\nNote: if no file is specified stdin will be used as "
 		    "the "
 		    "input file.");
 		return config.return_value;
