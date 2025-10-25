@@ -42,7 +42,7 @@ void bitstream_writer_flush(BitStreamWriter *strm) {
 	strm->data[byte_pos] = (current_byte & mask) | new_bits;
 	strm->buffer >>= bits_to_write;
 	strm->bits_in_buffer -= bits_to_write;
-	byte_pos += bit_offset != 8;
+	byte_pos++;
 
 	u64 bits_mask = bitstream_masks[strm->bits_in_buffer];
 	u64 *data64 = (u64 *)(strm->data + byte_pos);
