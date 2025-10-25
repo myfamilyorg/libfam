@@ -402,3 +402,16 @@ CLEANUP:
 	if (iou) iouring_destroy(iou);
 	RETURN;
 }
+
+PUBLIC i32 decompress_get_filename(i32 fd, u8 filename[MAX_FILE_NAME + 1]) {
+	CompressFileHeader header = {0};
+INIT:
+	if (lseek(fd, 0, SEEK_SET) < 0) ERROR();
+	if (compress_read_header(fd, &header) < 0) ERROR();
+	if (header.filename)
+		memcpy(filename, header.filename, strlen(header.filename));
+	else
+		filename[0] = 0;
+CLEANUP:
+	RETURN;
+}
