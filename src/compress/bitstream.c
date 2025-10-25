@@ -37,11 +37,6 @@ static const u8 bitstream_partial_masks[8][9] = {
     {0, 191, 63, 63, 63, 63, 63, 63, 63},
     {0, 127, 127, 127, 127, 127, 127, 127, 127}};
 
-void bitstream_writer_push(BitStreamWriter *strm, u64 bits, u8 num_bits) {
-	strm->buffer |= bits << strm->bits_in_buffer;
-	strm->bits_in_buffer += num_bits;
-}
-
 void bitstream_writer_flush(BitStreamWriter *strm) {
 	u64 bit_offset = strm->bit_offset & 0x7;
 	u64 byte_pos = strm->bit_offset >> 3;

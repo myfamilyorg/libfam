@@ -112,10 +112,14 @@ typedef struct {
 	u8 bits_in_buffer;
 } BitStreamWriter;
 
-void bitstream_writer_push(BitStreamWriter *strm, u64 bits, u8 num_bits);
 void bitstream_writer_flush(BitStreamWriter *strm);
-
 i32 bitstream_reader_load(BitStreamReader *strm);
+
+static inline __attribute__((always_inline)) void bitstream_writer_push(
+    BitStreamWriter *strm, u64 bits, u8 num_bits) {
+	strm->buffer |= bits << strm->bits_in_buffer;
+	strm->bits_in_buffer += num_bits;
+}
 
 static inline __attribute__((always_inline)) u64
 bitstream_reader_read(const BitStreamReader *strm, u8 num_bits) {
