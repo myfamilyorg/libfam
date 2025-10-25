@@ -291,6 +291,13 @@ INIT:
 	}
 
 	while (iouring_pending_all(iou)) iouring_spin(iou, &next_write);
+	if (out_is_regular_file) {
+		struct timevalfam ts[2] = {0};
+		if (fchmod(out_fd, header.permissions & 0777) < 0) ERROR();
+		ts[0].tv_sec = header.atime;
+		ts[1].tv_sec = header.mtime;
+		if (utimesat(out_fd, NULL, ts, 0) < 0) ERROR();
+	}
 CLEANUP:
 	if (header.filename) release(header.filename);
 	if (iou) iouring_destroy(iou);
