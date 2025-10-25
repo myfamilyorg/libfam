@@ -32,7 +32,7 @@ u64 compress_bound(u64 source_len);
 i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity);
 i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity,
 		     u64 *bytes_consumed);
-i32 compress_file(i32 in_fd, i32 out_fd);
+i32 compress_file(i32 in_fd, i32 out_fd, const u8 *filename);
 i32 decompress_file(i32 in_fd, i32 out_fd);
 
 #endif /* _COMPRESS_H */

@@ -304,7 +304,7 @@ CLEANUP:
 	RETURN;
 }
 
-PUBLIC i32 compress_file(i32 in_fd, i32 out_fd) {
+PUBLIC i32 compress_file(i32 in_fd, i32 out_fd, const u8 *filename) {
 	struct stat st;
 	i64 roffset = 0, woffset;
 	IoUring *iou = NULL;
@@ -325,9 +325,9 @@ INIT:
 	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
 		ERROR(EINVAL);
 
-	if ((woffset = compress_write_header(out_fd, st.st_mode & 0777,
-					     st.st_mtime, st.st_atime, NULL)) <
-	    0)
+	if ((woffset =
+		 compress_write_header(out_fd, st.st_mode & 0777, st.st_mtime,
+				       st.st_atime, filename)) < 0)
 		ERROR();
 
 	if (compress_file_sched_read(iou, in_fd, roffset, CHUNK_SIZE, rbuf[0],

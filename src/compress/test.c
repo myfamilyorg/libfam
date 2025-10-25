@@ -240,7 +240,7 @@ Test(compress_file1) {
 	const u8 *fname = "resources/akjv5.txt";
 	i32 in_fd = file(fname);
 	i32 out_fd = file("/tmp/1.cz");
-	ASSERT(!compress_file(in_fd, out_fd), "compress_file");
+	ASSERT(!compress_file(in_fd, out_fd, "test.txt"), "compress_file");
 	close(in_fd);
 	close(out_fd);
 
