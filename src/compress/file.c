@@ -199,7 +199,7 @@ PUBLIC i32 decompress_file(i32 in_fd, i32 out_fd) {
 	u64 expected_bytes, bytes_consumed;
 	bool read_pending = true, fin = false;
 	ChunkHeader *ch = NULL;
-	bool out_is_regular_file;
+	bool out_is_regular_file, in_is_regular_file;
 	struct stat st;
 INIT:
 	if (fstat(out_fd, &st) < 0) ERROR();
@@ -210,8 +210,10 @@ INIT:
 	if (fstat(in_fd, &st) < 0) ERROR();
 	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
 		ERROR(EINVAL);
+	in_is_regular_file = S_ISREG(st.st_mode);
 
-	if (lseek(in_fd, 0, SEEK_SET) < 0) ERROR();
+	if (in_is_regular_file)
+		if (lseek(in_fd, 0, SEEK_SET) < 0) ERROR();
 	if (iouring_init(&iou, 4) < 0) ERROR();
 	if ((roffset = compress_read_header(in_fd, &header)) < 0) ERROR();
 	if (compress_file_sched_read(iou, in_fd, roffset, sizeof(ChunkHeader),

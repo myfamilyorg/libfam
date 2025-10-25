@@ -126,8 +126,7 @@ void do_compress(const CzipFileHeader *header, i32 in_fd, i32 out_fd) {
 	}
 }
 
-void do_decompress(const CzipFileHeader *header, i32 in_fd, i32 out_fd,
-		   u64 in_file_size) {
+void do_decompress(i32 in_fd, i32 out_fd) {
 	if (decompress_file(in_fd, out_fd) < 0) {
 		println("Could not decompress stream!");
 		_famexit(-1);
@@ -235,52 +234,61 @@ void run_decompressor(CzipConfig *config) {
 	u8 output_file[MAX_PATH];
 	u64 strlen_config_file;
 
-	if (!exists(config->file)) {
+	if (config->file && !exists(config->file)) {
 		println("Specified file '{}' does not exist.", config->file);
 		_famexit(-1);
 	}
 
-	strlen_config_file = strlen(config->file);
+	strlen_config_file = config->file ? strlen(config->file) : 0;
 
-	if (strlen_config_file < 3) {
+	if (strlen_config_file > 0 && strlen_config_file < 3) {
 		println("Specified filename '{}' is too short.", config->file);
 		_famexit(-1);
 	}
-	if (strncmp(config->file + strlen_config_file - 3, ".cz", 3) != 0) {
-		println("Specified filename '{}' is not a .cz file.",
-			config->file);
-		_famexit(-1);
-	}
-	if (strlen_config_file > MAX_PATH - 4) {
-		println("Specified filename '{}' is too long.", config->file);
-		_famexit(-1);
-	}
 
-	infd = file(config->file);
+	if (strlen_config_file) {
+		if (strncmp(config->file + strlen_config_file - 3, ".cz", 3) !=
+		    0) {
+			println("Specified filename '{}' is not a .cz file.",
+				config->file);
+			_famexit(-1);
+		}
+		if (strlen_config_file > MAX_PATH - 4) {
+			println("Specified filename '{}' is too long.",
+				config->file);
+			_famexit(-1);
+		}
+
+		infd = file(config->file);
+	} else
+		infd = 0;
 	if (infd < 0) {
 		println("Could not open file '{}'.", config->file);
 		_famexit(-1);
 	}
 
-	file_size = fsize(infd);
-	if (file_size < 0) {
-		println("Could not obtain file size for file '{}'.",
-			config->file);
-		_famexit(-1);
-	}
-
-	header = fmap(infd, sizeof(CzipFileHeader), 0);
-	if (!header) {
-		println("Could not fmap file '{}'.", config->file);
-		_famexit(-1);
+	if (infd) {
+		file_size = fsize(infd);
+		if (file_size < 0) {
+			println("Could not obtain file size for file '{}'.",
+				config->file);
+			_famexit(-1);
+		}
 	}
 
 	if (config->console) {
 		outfd = STDOUT_FD;
-		do_decompress(header, infd, outfd, file_size);
+		do_decompress(infd, outfd);
 	} else {
-		strncpy(output_file, config->file, strlen_config_file - 3);
-		output_file[strlen_config_file - 3] = 0;
+		if (infd) {
+			strncpy(output_file, config->file,
+				strlen_config_file - 3);
+			output_file[strlen_config_file - 3] = 0;
+		} else {
+			strncpy(output_file, "default.txt",
+				strlen("default.txt"));
+			output_file[strlen("default.txt")] = 0;
+		}
 		if (exists(output_file)) {
 			println("Specified filename '{}' already exists.",
 				output_file);
@@ -293,10 +301,9 @@ void run_decompressor(CzipConfig *config) {
 			_famexit(-1);
 		}
 
-		do_decompress(header, infd, outfd, file_size);
+		do_decompress(infd, outfd);
 		close(outfd);
 	}
-	munmap(header, sizeof(CzipFileHeader));
 	close(infd);
 	if (!config->console) unlink(config->file);
 }
@@ -317,7 +324,8 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 		println("-h, --help          print this message");
 		println("-v, --version       print version");
 		println(
-		    "\nNote: if no file is specified stdin will be used as "
+		    "\nNote: if no file is specified stdin will be "
+		    "used as "
 		    "the "
 		    "input file.");
 		return config.return_value;
