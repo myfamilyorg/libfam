@@ -413,5 +413,6 @@ INIT:
 	else
 		filename[0] = 0;
 CLEANUP:
+	if (header.filename) release(header.filename);
 	RETURN;
 }
