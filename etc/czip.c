@@ -137,16 +137,18 @@ void run_compressor(CzipConfig *config) {
 	i32 infd, outfd;
 	u8 output_file[MAX_PATH];
 	u64 file_size;
-	u64 strlen_in_file = strlen(config->file);
+	u64 strlen_in_file;
 	struct stat st;
 	CzipFileHeader header;
+
+	strlen_in_file = config->file ? strlen(config->file) : 0;
 
 	if (strlen_in_file + 4 > MAX_PATH) {
 		println("Specified filename '{}' is too long.", config->file);
 		_famexit(-1);
 	}
 
-	if (!exists(config->file)) {
+	if (strlen_in_file && !exists(config->file)) {
 		println("Specified file '{}' does not exist.", config->file);
 		_famexit(-1);
 	}
@@ -156,22 +158,27 @@ void run_compressor(CzipConfig *config) {
 		_famexit(-1);
 	}
 
-	infd = file(config->file);
+	if (!strlen_in_file) {
+		infd = 0;
+	} else
+		infd = file(config->file);
 	if (infd < 0) {
 		println("Could not open file '{}'.", config->file);
 		_famexit(-1);
 	}
 
-	file_size = fsize(infd);
-	if (file_size < 0) {
-		println("Could not obtain file size for file '{}'.",
-			config->file);
-		_famexit(-1);
-	}
+	if (strlen_in_file) {
+		file_size = fsize(infd);
+		if (file_size < 0) {
+			println("Could not obtain file size for file '{}'.",
+				config->file);
+			_famexit(-1);
+		}
 
-	if (fstatat(AT_FDCWD, config->file, &st, 0) < 0) {
-		println("Could not stat file '{}'.");
-		_famexit(-1);
+		if (fstatat(AT_FDCWD, config->file, &st, 0) < 0) {
+			println("Could not stat file '{}'.");
+			_famexit(-1);
+		}
 	}
 
 	if (config->console) {
@@ -190,11 +197,17 @@ void run_compressor(CzipConfig *config) {
 		}
 	}
 
-	header.file_size = file_size;
-	header.mtime = st.st_mtime;
-	header.atime = st.st_atime;
-	header.permissions = st.st_mode & 0xFFF;
-	header.czip_version = 0;
+	if (strlen_in_file) {
+		header.file_size = file_size;
+		header.mtime = st.st_mtime;
+		header.atime = st.st_atime;
+		header.permissions = st.st_mode & 0xFFF;
+		header.czip_version = 0;
+	} else {
+		header.mtime = 0;
+		header.atime = 0;
+		header.permissions = 0644;
+	}
 
 	do_compress(&header, infd, outfd);
 
@@ -284,9 +297,7 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 
 	if (config.version) {
 		println("czip {}", LIBFAM_VERSION);
-	} else if (config.help || !config.file) {
-		if (!config.file && !config.help)
-			println("Error: No file was specified!");
+	} else if (config.help) {
 		println("Usage: czip [OPTION]... [FILE]...");
 		println(
 		    "-c, --console       write to standard output, "

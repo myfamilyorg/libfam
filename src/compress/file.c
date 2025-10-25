@@ -199,7 +199,7 @@ PUBLIC i32 decompress_file(i32 in_fd, i32 out_fd) {
 	u64 expected_bytes, bytes_consumed;
 	bool read_pending = true, fin = false;
 	ChunkHeader *ch = NULL;
-	bool in_is_regular_file, out_is_regular_file;
+	bool out_is_regular_file;
 	struct stat st;
 INIT:
 	if (fstat(out_fd, &st) < 0) ERROR();
@@ -210,9 +210,6 @@ INIT:
 	if (fstat(in_fd, &st) < 0) ERROR();
 	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
 		ERROR(EINVAL);
-	in_is_regular_file = S_ISREG(st.st_mode);
-
-	(void)in_is_regular_file;
 
 	if (lseek(in_fd, 0, SEEK_SET) < 0) ERROR();
 	if (iouring_init(&iou, 4) < 0) ERROR();
@@ -309,7 +306,7 @@ PUBLIC i32 compress_file(i32 in_fd, i32 out_fd) {
 	u64 next_read = 0, next_write = U64_MAX;
 	i32 res, res2;
 	bool read_pending = true;
-	bool in_is_regular_file, out_is_regular_file;
+	bool out_is_regular_file;
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
 	if (fstat(out_fd, &st) < 0) ERROR();
@@ -320,9 +317,6 @@ INIT:
 	if (fstat(in_fd, &st) < 0) ERROR();
 	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
 		ERROR(EINVAL);
-	in_is_regular_file = S_ISREG(st.st_mode);
-
-	(void)in_is_regular_file;
 
 	if ((woffset = compress_write_header(out_fd, st.st_mode & 0777,
 					     st.st_mtime, st.st_atime, NULL)) <
