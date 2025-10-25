@@ -163,29 +163,6 @@ i32 iouring_submit(IoUring *iou, u32 count) {
 	return io_uring_enter2(iou->ring_fd, count, 0, 0, NULL, 0);
 }
 
-i32 iouring_wait(IoUring *iou, u64 *id) {
-	u32 mask = *iou->cq_mask;
-	u32 hval, tval;
-	i32 res;
-	u64 user_data;
-	do {
-		i32 r;
-	begin_loop:
-		r = io_uring_enter2(iou->ring_fd, 0, 1, IORING_ENTER_GETEVENTS,
-				    NULL, 0);
-		if (r < 0) return -1;
-		hval = __aload32(iou->cq_head);
-		tval = __aload32(iou->cq_tail);
-		if (hval == tval) goto begin_loop;
-		i32 cqe_idx = hval & mask;
-		res = iou->cqes[cqe_idx].res;
-		user_data = iou->cqes[cqe_idx].user_data;
-	} while (!__cas32(iou->cq_head, &hval, hval + 1));
-
-	*id = user_data;
-	return res;
-}
-
 i32 iouring_spin(IoUring *iou, u64 *id) {
 	u32 mask = *iou->cq_mask;
 	i32 res;

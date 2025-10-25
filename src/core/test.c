@@ -1203,7 +1203,7 @@ Test(iouring_module) {
 	iouring_submit(iou, 1);
 
 	ASSERT(iouring_pending(iou, 456), "pending 456");
-	res = iouring_wait(iou, &id);
+	res = iouring_spin(iou, &id);
 	ASSERT(!iouring_pending(iou, 456), "pending 456");
 	ASSERT(!iouring_pending_all(iou), "pending all");
 

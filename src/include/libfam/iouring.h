@@ -37,7 +37,6 @@ i32 iouring_init_write(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 i32 iouring_submit(IoUring *iou, u32 count);
 bool iouring_pending(IoUring *iou, u64 id);
 bool iouring_pending_all(IoUring *iou);
-i32 iouring_wait(IoUring *iou, u64 *id);
 i32 iouring_spin(IoUring *iou, u64 *id);
 void iouring_destroy(IoUring *iou);
 
