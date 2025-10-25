@@ -58,12 +58,13 @@ i32 bitstream_reader_load(BitStreamReader *strm) {
 	u64 byte_pos = bit_offset >> 3;
 	__builtin_prefetch(strm->data + byte_pos, 1, 3);
 	u8 bit_remainder = bit_offset & 0x7;
+	u64 bytes_needed = end_byte - byte_pos;
 	if (end_byte > strm->max_size) {
 		errno = EOVERFLOW;
 		return -1;
 	}
 	u64 new_bits = *(u64 *)(strm->data + byte_pos);
-	u64 high = strm->data[byte_pos + 8];
+	u64 high = bytes_needed == 9 ? (u64)strm->data[byte_pos + 8] : 0;
 	new_bits = (new_bits >> bit_remainder) | (high << (64 - bit_remainder));
 	new_bits &= bitstream_masks[bits_to_load];
 
