@@ -27,16 +27,6 @@
 #include <libfam/limits.h>
 #include <libfam/utils.h>
 
-static const u8 bitstream_partial_masks[8][9] = {
-    {0, 254, 252, 248, 240, 224, 192, 128, 0},
-    {0, 253, 249, 241, 225, 193, 129, 1, 1},
-    {0, 251, 243, 227, 195, 131, 3, 3, 3},
-    {0, 247, 231, 199, 135, 7, 7, 7, 7},
-    {0, 239, 207, 143, 15, 15, 15, 15, 15},
-    {0, 223, 159, 31, 31, 31, 31, 31, 31},
-    {0, 191, 63, 63, 63, 63, 63, 63, 63},
-    {0, 127, 127, 127, 127, 127, 127, 127, 127}};
-
 void bitstream_writer_flush(BitStreamWriter *strm) {
 	u64 bit_offset = strm->bit_offset & 0x7;
 	u64 byte_pos = strm->bit_offset >> 3;

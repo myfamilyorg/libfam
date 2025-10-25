@@ -53,7 +53,7 @@ Test(bitstream_perf) {
 		rng_gen(&rng, codes, sizeof(codes));
 		for (i = 0; i < PERF_SIZE; i++)
 			lengths[i] = lengths[i] < 16 ? 1 : lengths[i] >> 4,
-			codes[i] &= (lengths[i] - 1);
+			codes[i] &= (1ULL << lengths[i]) - 1;
 
 		i64 start = micros();
 		for (i = 0; i < PERF_SIZE; i++) {
@@ -271,3 +271,20 @@ Test(compress_file1) {
 	unlink("/tmp/1cmp.txt");
 }
 
+Test(bitstream_partial_masks) {
+	for (u8 bit_offset = 0; bit_offset < 8; bit_offset++) {
+		for (u8 bits_to_write = 0; bits_to_write <= 8;
+		     bits_to_write++) {
+			u8 expected_mask = 0xFF;
+			if (bits_to_write > 0) {
+				expected_mask &= ~(((1ULL << bits_to_write) - 1)
+						   << bit_offset);
+			}
+			ASSERT_EQ(
+			    bitstream_partial_masks[bit_offset][bits_to_write],
+			    expected_mask,
+			    "Mask for bit_offset={}, bits_to_write={}",
+			    bit_offset, bits_to_write);
+		}
+	}
+}
