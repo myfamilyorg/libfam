@@ -18,7 +18,10 @@ From myfamilyworldwide.org: "Using this identifying name, My Family, individuals
 > — **1 Corinthians 12:12-14**
 
 ## Installation
+Required: git and clang or gcc and minimal Linux install. clang suggested.
 ```
+sudo apt install clang git
+git clone https://github.com/myfamilyorg/libfam
 ./build
 ./build test
 sudo ./build install
