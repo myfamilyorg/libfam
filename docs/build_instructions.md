@@ -1,10 +1,14 @@
 # Overview
 
-    Libfam is a C prgoramming language shared library that can be used to build other tools. The first such example is the czip tool which is part of the 1.0.0 release. czip is a utility that compresses and decompresses files. It demonstrates and showcases some of libfam's functionality.
+    Libfam is a C prgoramming language shared library that can be used to build other tools.
+The first such example is the czip tool which is part of the 1.0.0 release.
+czip is a utility that compresses and decompresses files.
+It demonstrates and showcases some of libfam's functionality.
 
 # Build
 
-    Libfam comes with its own build tool `build`. So, building it only requires that you have bash and a c compiler (clang or gcc). clang is preferred. 
+    Libfam comes with its own build tool `build`. So, building it only requires that you have
+bash and a c compiler (clang or gcc). clang is preferred. 
 
 ```
     # sudo apt install git clang
