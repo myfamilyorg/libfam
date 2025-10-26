@@ -28,6 +28,7 @@
 
 #include <libfam/types.h>
 
+#define BIBLE_SIZE 4634229
 #define BIBLE_VERSE_COUNT 31107
 #define MAX_VERSE_LEN 537
 
@@ -38,7 +39,7 @@ typedef struct {
 	u32 length;
 } Bible;
 
-void init_bible(void);
+i32 init_bible(void);
 void bible_verse(const Bible *bible, u16 verse, u8 buf[MAX_VERSE_LEN]);
 const Bible *bible(void);
 

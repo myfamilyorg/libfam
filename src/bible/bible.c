@@ -24,14 +24,17 @@
  *******************************************************************************/
 
 #include <libfam/bible.h>
+#include <libfam/compress_file.h>
 #include <libfam/debug.h>
+#include <libfam/format.h>
 #include <libfam/sha3.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
+#include <libfam/sysext.h>
 #include <libfam/utils.h>
 #include <libfam/xxdir_dat.h>
 
-Bible __bible = {.text = xxdir_file_0};
+Bible __bible;
 
 const u8 BIBLE_HASH[] = {0x4a, 0xfa, 0xea, 0xfb, 0x35, 0xd6, 0x5f, 0x62,
 			 0x35, 0xc8, 0x80, 0x63, 0x55, 0x62, 0x60, 0x27,
@@ -67,7 +70,27 @@ STATIC void bible_build_offsets(Bible *bible) {
 	bible->lengths[j - 1] = len;
 }
 
-void init_bible(void) {
+#include <libfam/test_base.h>
+
+void decompress_bible(const u8 *bible_compressed, u64 clen, u8 *bible_text) {
+	u64 roffset = 24, woffset = 0;
+
+	while (roffset < clen) {
+		u64 bytes_consumed;
+		ChunkHeader cheader;
+		memcpy(&cheader, bible_compressed + roffset,
+		       sizeof(ChunkHeader));
+		roffset += sizeof(ChunkHeader);
+		i32 res =
+		    decompress_block(bible_compressed + roffset, cheader.size,
+				     bible_text + woffset, BIBLE_SIZE - woffset,
+				     &bytes_consumed);
+		roffset += cheader.size;
+		woffset += res;
+	}
+}
+
+i32 init_bible(void) {
 	const u8 *msg = "Bible hash did not match! Halting!\n";
 #if TEST == 1
 	bool _debug = _debug_bible_invalid_hash;
@@ -75,17 +98,22 @@ void init_bible(void) {
 	bool _debug = false;
 #endif /* TEST */
 
-	bool v = _debug
-		     ? true
-		     : bible_check_hash(xxdir_file_0, xxdir_file_size_0) != 0;
+	u8 *bible_text = smap(BIBLE_SIZE);
+	if (!bible_text) return -1;
+	decompress_bible(xxdir_file_0, xxdir_file_size_0, bible_text);
+	__bible.text = bible_text;
+	__bible.length = BIBLE_SIZE;
+
+	bool v =
+	    _debug ? true : bible_check_hash(__bible.text, __bible.length) != 0;
 	if (v) {
 		i32 __attribute__((unused)) _v;
 		_v = write(2, msg, strlen(msg));
 		_famexit(-1);
-		return;
+		return -1;
 	}
-	__bible.length = xxdir_file_size_0;
 	bible_build_offsets(&__bible);
+	return 0;
 }
 
 void bible_verse(const Bible *bible, u16 verse, u8 buf[MAX_VERSE_LEN]) {
