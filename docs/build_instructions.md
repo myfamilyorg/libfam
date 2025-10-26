@@ -193,9 +193,8 @@ Note: if no file is specified stdin will be used as the input file.
 The czip utility is a gzip-like tool that compresses and decompresses files. You can use it to compress files like so:
 
 ```
-    # ls -l resources/akjv5.txt.cz 
--rw-rw-r-- 1 chris chris 8054358 Oct 25 21:38 resources/akjv5.txt.cz
-chris@chris-ThinkPad-E16-Gen-1:~/projects/libfam$ czip -d resources/akjv5.txt.cz 
+    # ls -l resources/akjv5.txt 
+-rw------- 1 chris chris 23171145 Oct 24 20:00 resources/akjv5.txt
     # md5sum resources/akjv5.txt 
 52090bac792917a391136bc1fdfaaf15  resources/akjv5.txt
     # czip resources/akjv5.txt 
