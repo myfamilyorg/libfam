@@ -30,10 +30,10 @@
 #include <libfam/limits.h>
 #include <libfam/types.h>
 
-#define REPEAT_VALUE_INDEX 10
-#define REPEAT_ZERO_LONG_INDEX 11
-#define REPEAT_ZERO_SHORT_INDEX 12
-#define MAX_CODE_LENGTH 9
+#define REPEAT_VALUE_INDEX 11
+#define REPEAT_ZERO_LONG_INDEX 12
+#define REPEAT_ZERO_SHORT_INDEX 13
+#define MAX_CODE_LENGTH 10
 #define MAX_BOOK_CODE_LENGTH 7
 #define MAX_BOOK_CODES (MAX_CODE_LENGTH + 4)
 #define LEN_SHIFT 4
