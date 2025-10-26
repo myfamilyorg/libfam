@@ -1,6 +1,6 @@
 # Overview
 
-`czip` is a tool that uses the libfam library compression functions. It has similar functionality to gzip. When you [build](https://myfamilyorg.github.io/libfam/build_instructions) the Libfam project. `czip` is designed to be very fast while still achieving a moderately high level of compression. The compression/decompression speeds are comparable to lz4 with significantly better compression levels which are comparable to gzip -1. Additionally, czip uses significantly less memory than lz4. In addition to the performance, it uses minmal resources. It is single threaded and uses less memory than either gzip -1 or lz4. See table below.
+`czip` is a tool that uses the libfam library compression functions. It has similar functionality to gzip. When you [build](https://myfamilyorg.github.io/libfam/build_instructions) the Libfam project, `czip` is be included and will be installed as well. `czip` is designed to be very fast while still achieving a moderately high level of compression. The compression/decompression speeds are faster than lz4 with significantly better compression levels which are better than gzip -1. In addition to the performance, `czip` uses minmal resources. `czip` is single threaded and uses less memory than either gzip -1 or lz4. See table below.
 
 # Performance
 
