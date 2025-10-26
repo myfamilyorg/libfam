@@ -345,6 +345,17 @@ INIT:
 
 		if (res < 0) ERROR();
 		if (res == 0 && last_res != CHUNK_SIZE) break;
+		while (res < CHUNK_SIZE) {
+			u64 rem = CHUNK_SIZE - res;
+			if (compress_file_sched_read(iou, in_fd, roffset + res,
+						     rem, rbuf[index] + res,
+						     next_read) < 0)
+				ERROR();
+			i32 nres = compress_file_complete(iou, next_read);
+			if (nres < 0) ERROR();
+			if (nres == 0) break;
+			res += nres;
+		}
 		if (res == CHUNK_SIZE) {
 			if (compress_file_sched_read(
 				iou, in_fd, roffset + CHUNK_SIZE, CHUNK_SIZE,
