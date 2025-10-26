@@ -10,15 +10,14 @@
     <img src="docs/MyFamilyLogo.png" alt="Logo">
 </p>
 
-LibFam is a lightweight C library with no dependencies, supporting the My Family project (https://www.myfamilyworldwide.org/) to unite the Body of Christ through efficient software. Version 1.0.0 provides compression functionality which can be used to store and share scripture, messages, videos, and images, with a `gzip`-like tool called `czip`. Future releases will add an asynchronous database/file system for further connectivity. LibFam runs on Linux x64 and arm64.
+LibFam is a lightweight C library with no dependencies, supporting the My Family project (https://www.myfamilyworldwide.org/) to unite the Body of Christ through efficient software. Version 1.0.0 provides compression functionality which can be used to store and share scripture, messages, videos, and images, with a `gzip`-like tool called `czip`. Future releases will add an asynchronous database/file system for further connectivity as well as other features. LibFam runs on Linux x64 and arm64.
 
 From myfamilyworldwide.org: "Using this identifying name, My Family, individuals, groups, and organizations could declare themselves as part of the universal Body of Christ, no longer separated by differing doctrinal statements, but unified through the common belief in the God of Jesus Christ as represented within Scripture."
 
-> “Just as a body, though one, has many parts, but all its many parts form one body, so it is with Christ. For we were all baptized by one Spirit so as to form one body—whether Jews or Gentiles, slave or free—and we were all given the one Spirit to drink. Even so the body is not made up of one part but of many.”  
-> — **1 Corinthians 12:12-14**
-
 ## Installation
+
 Required: git and clang or gcc and minimal Linux install. clang suggested.
+
 ```
 sudo apt install clang git
 git clone https://github.com/myfamilyorg/libfam
@@ -26,3 +25,7 @@ git clone https://github.com/myfamilyorg/libfam
 ./build test
 sudo ./build install
 ```
+
+> “Just as a body, though one, has many parts, but all its many parts form one body, so it is with Christ. For we were all baptized by one Spirit so as to form one body—whether Jews or Gentiles, slave or free—and we were all given the one Spirit to drink. Even so the body is not made up of one part but of many.”
+> — **1 Corinthians 12:12-14**
+
