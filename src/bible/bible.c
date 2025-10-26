@@ -26,7 +26,6 @@
 #include <libfam/bible.h>
 #include <libfam/compress_file.h>
 #include <libfam/debug.h>
-#include <libfam/format.h>
 #include <libfam/sha3.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
@@ -70,9 +69,8 @@ STATIC void bible_build_offsets(Bible *bible) {
 	bible->lengths[j - 1] = len;
 }
 
-#include <libfam/test_base.h>
-
-void decompress_bible(const u8 *bible_compressed, u64 clen, u8 *bible_text) {
+STATIC void decompress_bible(const u8 *bible_compressed, u64 clen,
+			     u8 *bible_text) {
 	u64 roffset = 24, woffset = 0;
 
 	while (roffset < clen) {
