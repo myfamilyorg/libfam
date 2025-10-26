@@ -326,7 +326,7 @@ INIT:
 					repeat++;
 				}
 				if (repeat >= 3) {
-					frequencies[10]++;
+					frequencies[REPEAT_VALUE_INDEX]++;
 					i += repeat - 1;
 					last_length = 0;
 					continue;
@@ -344,11 +344,11 @@ INIT:
 			if (run >= 11) {
 				run = run > 138 ? 127 : run - 11;
 				i += run + 10;
-				frequencies[11]++;
+				frequencies[REPEAT_ZERO_LONG_INDEX]++;
 			} else if (run >= 3) {
 				run = run - 3;
 				i += run + 2;
-				frequencies[12]++;
+				frequencies[REPEAT_ZERO_SHORT_INDEX]++;
 			} else
 				frequencies[0]++;
 			last_length = 0;
@@ -381,8 +381,9 @@ INIT:
 					repeat++;
 				}
 				if (repeat >= 3) {
-					WRITE(strm, book[10].code,
-					      book[10].length);
+					WRITE(strm,
+					      book[REPEAT_VALUE_INDEX].code,
+					      book[REPEAT_VALUE_INDEX].length);
 					WRITE(strm, repeat - 3, 2);
 					i += repeat - 1;
 					last_length = 0;
@@ -401,12 +402,14 @@ INIT:
 			run -= i;
 			if (run >= 11) {
 				run = run > 138 ? 127 : run - 11;
-				WRITE(strm, book[11].code, book[11].length);
+				WRITE(strm, book[REPEAT_ZERO_LONG_INDEX].code,
+				      book[REPEAT_ZERO_LONG_INDEX].length);
 				WRITE(strm, run, 7);
 				i += run + 10;
 			} else if (run >= 3) {
 				run = run - 3;
-				WRITE(strm, book[12].code, book[12].length);
+				WRITE(strm, book[REPEAT_ZERO_SHORT_INDEX].code,
+				      book[REPEAT_ZERO_SHORT_INDEX].length);
 				WRITE(strm, run, 3);
 				i += run + 2;
 			} else
@@ -512,22 +515,22 @@ INIT:
 		HuffmanLookup entry = lookup_table[bits];
 		u16 code = entry.symbol;
 		bitstream_reader_clear(strm, entry.length);
-		if (code < 10) {
+		if (code < REPEAT_VALUE_INDEX) {
 			code_lengths[i++].length = code;
 			last_length = code;
-		} else if (code == 10) {
+		} else if (code == REPEAT_VALUE_INDEX) {
 			if (i == 0 || last_length == 0) ERROR(EPROTO);
 			u8 repeat = TRY_READ(strm, 2) + 3;
 			if (i + repeat > SYMBOL_COUNT) ERROR(EPROTO);
 			for (j = 0; j < repeat; j++) {
 				code_lengths[i++].length = last_length;
 			}
-		} else if (code == 11) {
+		} else if (code == REPEAT_ZERO_LONG_INDEX) {
 			u8 zeros = TRY_READ(strm, 7) + 11;
 			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
 			for (j = 0; j < zeros; j++)
 				code_lengths[i++].length = 0;
-		} else if (code == 12) {
+		} else if (code == REPEAT_ZERO_SHORT_INDEX) {
 			u8 zeros = TRY_READ(strm, 3) + 3;
 			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
 			for (j = 0; j < zeros; j++)
@@ -647,9 +650,10 @@ compress_calculate_block_type(const u32 frequencies[SYMBOL_COUNT],
 	sum += MAX_BOOK_CODES * 3;
 	for (u32 i = 0; i < MAX_BOOK_CODES; i++) {
 		sum += book_frequencies[i] * book[i].length;
-		if (i == 10) sum += book_frequencies[i] * 2;
-		if (i == 11) sum += book_frequencies[i] * 7;
-		if (i == 12) sum += book_frequencies[i] * 3;
+		if (i == REPEAT_VALUE_INDEX) sum += book_frequencies[i] * 2;
+		if (i == REPEAT_ZERO_LONG_INDEX) sum += book_frequencies[i] * 7;
+		if (i == REPEAT_ZERO_SHORT_INDEX)
+			sum += book_frequencies[i] * 3;
 	}
 	sum += 7 + 64;
 	sum >>= 3;
