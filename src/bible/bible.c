@@ -88,7 +88,7 @@ STATIC void decompress_bible(const u8 *bible_compressed, u64 clen,
 	}
 }
 
-i32 init_bible(void) {
+PUBLIC i32 init_bible(void) {
 	const u8 *msg = "Bible hash did not match! Halting!\n";
 #if TEST == 1
 	bool _debug = _debug_bible_invalid_hash;
@@ -114,11 +114,11 @@ i32 init_bible(void) {
 	return 0;
 }
 
-void bible_verse(const Bible *bible, u16 verse, u8 buf[MAX_VERSE_LEN]) {
+PUBLIC void bible_verse(const Bible *bible, u16 verse, u8 buf[MAX_VERSE_LEN]) {
 	u16 len = bible->lengths[verse];
 	const u8 *text = bible->text + bible->offsets[verse];
 	while (len--) *buf++ = *text++;
 	*buf = 0;
 }
 
-const Bible *bible(void) { return &__bible; }
+PUBLIC const Bible *bible(void) { return &__bible; }
