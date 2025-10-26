@@ -212,6 +212,8 @@ Test(compress_other) {
 	    decompress_block(out, len, verify, sizeof(verify), &bytes_consumed),
 	    strlen(data), "repeat a");
 	ASSERT(!memcmp(data, verify, strlen(data)), "aaa..");
+
+	ASSERT_EQ(compress_block(NULL, 1, NULL, 1), -1, "null input");
 }
 
 Test(compress_oob) {
