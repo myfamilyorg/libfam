@@ -19,11 +19,19 @@ From myfamilyworldwide.org: "Using this identifying name, My Family, individuals
 Required: git and clang or gcc and minimal Linux install. clang suggested.
 
 ```
-sudo apt install clang git
-git clone https://github.com/myfamilyorg/libfam
-./build
-./build test
-sudo ./build install
+# sudo apt install clang git
+# git clone https://github.com/myfamilyorg/libfam
+# ./build
+# ./build test
+# sudo ./build install
+# czip --help
+Usage: czip [OPTION]... [FILE]...
+-c, --console       write to standard output, keep files unchanged
+-d, --decompress    decompress
+-h, --help          print this message
+-v, --version       print version
+
+Note: if no file is specified stdin will be used as the input file.
 ```
 
 > “Just as a body, though one, has many parts, but all its many parts form one body, so it is with Christ. For we were all baptized by one Spirit so as to form one body—whether Jews or Gentiles, slave or free—and we were all given the one Spirit to drink. Even so the body is not made up of one part but of many.”
