@@ -219,7 +219,8 @@ INIT:
 	if (compress_file_sched_read(iou, in_fd, roffset, sizeof(ChunkHeader),
 				     &cheader, 0) < 0)
 		ERROR();
-	if (compress_file_complete(iou, 0) < sizeof(ChunkHeader)) ERROR(EPROTO);
+	u64 len0 = compress_file_complete(iou, 0);
+	if (len0 < sizeof(ChunkHeader)) ERROR(EPROTO);
 	expected_bytes = cheader.size + sizeof(ChunkHeader);
 	roffset += sizeof(ChunkHeader);
 
@@ -313,7 +314,7 @@ PUBLIC i32 compress_file(i32 in_fd, i32 out_fd, const u8 *filename) {
 	u8 rbuf[2][CHUNK_SIZE] = {0};
 	u8 wbuf[2][MAX_COMPRESSED_SIZE] = {0};
 	u64 next_read = 0, next_write = U64_MAX;
-	i32 res, res2;
+	i32 res = 0, res2;
 	bool read_pending = true;
 	bool out_is_regular_file;
 INIT:
@@ -336,19 +337,21 @@ INIT:
 				     0) < 0)
 		ERROR();
 
+	i32 last_res = CHUNK_SIZE;
 	while (true) {
 		u8 index = next_read & 1;
 		if (read_pending) res = compress_file_complete(iou, next_read);
 		read_pending = true;
 
 		if (res < 0) ERROR();
-		if (res == 0) break;
+		if (res == 0 && last_res != CHUNK_SIZE) break;
 		if (res == CHUNK_SIZE) {
 			if (compress_file_sched_read(
 				iou, in_fd, roffset + CHUNK_SIZE, CHUNK_SIZE,
 				rbuf[(next_read + 1) % 2], next_read + 1) < 0)
 				ERROR();
 		}
+		last_res = res;
 		if ((res2 = compress_block(
 			 rbuf[index], res, wbuf[index] + sizeof(ChunkHeader),
 			 MAX_COMPRESSED_SIZE - sizeof(ChunkHeader))) < 0)

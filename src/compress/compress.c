@@ -703,6 +703,11 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	CodeLength book[MAX_BOOK_CODES] = {0};
 	u8 match_array[2 * MAX_COMPRESS_LEN + 1] = {0};
 
+	if (in == NULL || out == NULL) {
+		errno = EFAULT;
+		return -1;
+	}
+
 	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
 		errno = EINVAL;
 		return -1;

@@ -23,3 +23,5 @@ if [ "${FINAL_CHECKSUM}" != "${INITIAL_CHECKSUM}" ]; then
 fi
 rm ./5gb.txt
 echo "Success!"
+
+./scripts/cmdline_test.sh
