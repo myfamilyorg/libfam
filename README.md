@@ -10,7 +10,7 @@
     <img src="docs/MyFamilyLogo.png" alt="Logo">
 </p>
 
-LibFam is a lightweight C library with no dependencies, supporting the My Family project (https://www.myfamilyworldwide.org/) to unite the Body of Christ through efficient software. Version 1.0.0 provides compression functionality which can be used to store and share scripture, messages, videos, and images, with a `gzip`-like tool called `czip`. Future releases will add an asynchronous database/file system for further connectivity as well as other features. LibFam runs on Linux x64 and arm64.
+LibFam is a lightweight C library with no dependencies, supporting the My Family project (https://www.myfamilyworldwide.org/) to unite the Body of Christ through efficient software. Version 1.0.0 provides compression functionality which can be used to store and share scripture, messages, videos, and images, with a `gzip`-like tool called [czip](https://myfamilyorg.github.io/libfam/czip). Future releases will add an asynchronous database/file system for further connectivity as well as other features. LibFam runs on Linux x64 and arm64.
 
 From myfamilyworldwide.org: "Using this identifying name, My Family, individuals, groups, and organizations could declare themselves as part of the universal Body of Christ, no longer separated by differing doctrinal statements, but unified through the common belief in the God of Jesus Christ as represented within Scripture."
 
