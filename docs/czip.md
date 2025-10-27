@@ -1,6 +1,6 @@
 # Overview
 
-`czip` is a tool that uses the libfam library compression functions. It has similar functionality to gzip. When you [install](https://myfamilyorg.github.io/libfam/build_instructions) the Libfam project, `czip` will be installed as well. `czip` is designed to be very fast while still achieving a moderately high level of compression. The compression/decompression speeds are faster than lz4 with significantly better compression levels which are better than gzip -1. In addition to the performance, `czip` uses minmal resources. `czip` is single threaded and uses less memory than either gzip -1 or lz4. See table below.
+`czip`, part of the `libfam` library for MyFamilyWorldwide.org, is a single-threaded compression tool designed to efficiently compress Bible texts and structured data for spreading the gospel. With `gzip`-like functionality, `czip` is installed via the [libfam project](https://myfamilyorg.github.io/libfam/build_instructions). It delivers faster compression and decompression than `LZ4`, better compression ratios than `gzip -1`, and a simpler codebase with 12x less memory usage than `zstd` (1.8 MB vs. 22.8 MB). Optimized for minimal resources, `czip` is ideal for lightweight systems like databases and missionary tools. See performance table below.
 
 # Performance
 
