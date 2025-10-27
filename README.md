@@ -24,7 +24,7 @@ Required: git and clang or gcc and minimal Linux install. clang suggested.
 # git clone https://github.com/myfamilyorg/libfam
 # cd libfam
 # ./build
-# ./build test --novalgrind
+# ./build test --novalgrind --minram
 # sudo ./build install
 # czip --help
 Usage: czip [OPTION]... [FILE]...

@@ -10,6 +10,7 @@ usage() {
 	echo "  --f=<filter> := filter to target single test (e.g. --f=alloc1) default: all tests";
 	echo "  --novalgrind := runs tests without valgrind";
 	echo "  --quick := run without flto (link time optimization)";
+	echo "  --minram := only run tests that use minimal ram";
         exit -1;
 }
 
