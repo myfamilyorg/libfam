@@ -436,6 +436,8 @@ Test(compress_file_errors2) {
 }
 
 Test(compress_file_redir_large) {
+	if (getenv("VALGRIND")) return;
+
 	i32 fds[2], pid;
 	pipe(fds);
 	if (!(pid = fork())) {
