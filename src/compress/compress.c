@@ -214,6 +214,7 @@ STATIC void compress_limit_lengths(const u32 *frequencies,
 	u32 excess = 0;
 	u32 needed = 0;
 
+	// Step 1: Cap lengths and calculate excess
 	for (i = 0; i < count; i++) {
 		if (code_lengths[i].length > max_length) {
 			excess += (code_lengths[i].length - max_length) *
@@ -223,21 +224,31 @@ STATIC void compress_limit_lengths(const u32 *frequencies,
 		}
 	}
 
+	// Step 2: Redistribute excess to lowest-frequency symbols
 	while (excess > 0 && needed > 0) {
-		for (i = 0; i < count && excess > 0; i++) {
+		// Find the symbol with the smallest frequency among those with
+		// length < max_length
+		i32 min_freq_idx = -1;
+		u32 min_freq = U32_MAX;
+		for (i = 0; i < count; i++) {
 			if (code_lengths[i].length > 0 &&
 			    code_lengths[i].length < max_length &&
-			    frequencies[i] > 0) {
-				u32 delta = (excess < frequencies[i])
-						? excess
-						: frequencies[i];
-				code_lengths[i].length++;
-				excess -= delta;
-				needed -= delta;
+			    frequencies[i] > 0 && frequencies[i] < min_freq) {
+				min_freq = frequencies[i];
+				min_freq_idx = i;
 			}
 		}
+		if (min_freq_idx == -1) break;	// No suitable symbol found
+
+		u32 delta = (excess < frequencies[min_freq_idx])
+				? excess
+				: frequencies[min_freq_idx];
+		code_lengths[min_freq_idx].length++;
+		excess -= delta;
+		needed -= delta;
 	}
 
+	// Step 3: Ensure Kraft inequality
 	u64 sum = 0;
 	for (i = 0; i < count; i++) {
 		if (code_lengths[i].length > 0) {
@@ -246,12 +257,21 @@ STATIC void compress_limit_lengths(const u32 *frequencies,
 	}
 
 	while (sum > (1ULL << max_length)) {
-		for (i = count - 1; i >= 0; i--)
+		// Find the lowest-frequency symbol with length > 1 and <
+		// max_length
+		i32 min_freq_idx = -1;
+		u32 min_freq = U32_MAX;
+		for (i = 0; i < count; i++) {
 			if (code_lengths[i].length > 1 &&
-			    code_lengths[i].length < max_length) {
-				code_lengths[i].length++;
-				break;
+			    code_lengths[i].length < max_length &&
+			    frequencies[i] < min_freq) {
+				min_freq = frequencies[i];
+				min_freq_idx = i;
 			}
+		}
+		if (min_freq_idx == -1) break;	// No suitable symbol found
+
+		code_lengths[min_freq_idx].length++;
 		sum = 0;
 		for (i = 0; i < count; i++) {
 			if (code_lengths[i].length > 0) {
@@ -269,8 +289,21 @@ STATIC void compress_calculate_lengths(const u32 *frequencies,
 	HuffmanNode nodes[count * 2 + 1];
 	HuffmanNode *root;
 	compress_build_tree(frequencies, code_lengths, count, &heap, nodes);
+
 	if ((root = compress_extract_min(&heap)) != NULL) {
 		compress_compute_lengths(root, 0, code_lengths);
+
+		/*
+		println("pre-limit ({}):", count);
+		for (u16 i = 0; i < count; i++) {
+			if (frequencies[i])
+				println("freq[{}]={},len[{}]={}", i,
+					frequencies[i], i,
+					code_lengths[i].length);
+		}
+		println("end pre-limit");
+		*/
+
 		compress_limit_lengths(frequencies, code_lengths, count,
 				       max_length);
 	}
@@ -721,6 +754,13 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	compress_calculate_lengths(frequencies, code_lengths, SYMBOL_COUNT,
 				   MAX_CODE_LENGTH);
 	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
+	/*
+	for (u16 i = 0; i < SYMBOL_COUNT; i++) {
+		if (frequencies[i])
+			println("freq[{}]={},len[{}]={}", i, frequencies[i], i,
+				code_lengths[i].length);
+	}
+	*/
 	compress_build_code_book(code_lengths, book, book_frequencies);
 	i32 bt = compress_calculate_block_type(frequencies, book_frequencies,
 					       code_lengths, book, len);
