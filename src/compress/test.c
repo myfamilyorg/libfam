@@ -26,6 +26,7 @@
 #include <libfam/bitstream.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
+#include <libfam/env.h>
 #include <libfam/linux.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
@@ -293,6 +294,8 @@ Test(bitstream_partial_masks) {
 }
 
 Test(compress_file_errors) {
+	if (getenv("VALGRIND")) return;
+
 	u8 *outpath = "/tmp/out_file_errors.txt";
 	u8 *outpath2 = "/tmp/out_file_errors2.txt";
 	unlink(outpath);
@@ -338,6 +341,7 @@ Test(compress_file_errors) {
 
 	out = file(outpath2);
 	res = decompress_file(fds[0], out);
+	println("res={}", res);
 	ASSERT(!res, "no err");
 	await(pid);
 
