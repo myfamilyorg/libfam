@@ -49,6 +49,10 @@ if [ ! -e target/bin/runtests ] || [ src/test/main.c -nt target/bin/runtests ]; 
         ${COMMAND} || exit $?;
 fi
 
+if [ "${MINRAM}" = "1" ]; then
+	export MINRAM=1;
+fi
+
 export TEST_PATTERN=${FILTER};
 if [ "${VALGRIND}" = "1" ]; then
 	export VALGRIND=1;

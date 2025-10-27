@@ -30,6 +30,7 @@ COV=0;
 INSTALL=0;
 SILENT=0;
 VALGRIND=1;
+MINRAM=0;
 SPEC=0;
 CC=clang;
 CFLAGS="-O3 \
@@ -82,6 +83,9 @@ for var in "$@"; do
 		;;
 	--novalgrind)
 		VALGRIND=0;
+		;;
+	--minram)
+		MINRAM=1;
 		;;
 	--quick)
 		FLTO=0;
