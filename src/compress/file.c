@@ -258,8 +258,6 @@ INIT:
 			if (sched_val < 0) ERROR();
 		} else if (expected_bytes == res + 4)
 			fin = true;
-		else
-			ERROR(EPROTO);
 
 		i32 res2 = decompress_block(rbuf[index], res, wbuf[index],
 					    CHUNK_SIZE, &bytes_consumed);
@@ -397,13 +395,18 @@ INIT:
 			while (true) {
 				u64 id;
 				i32 spin_res = iouring_spin(iou, &id);
-				if (id == next_read) {
+				if (id == next_read || id == next_read + 1) {
 					res = spin_res;
 					read_pending = false;
 				} else if (id == next_write) {
 					if (spin_res < 0) ERROR();
 					wsum += spin_res;
 					if (wsum >= res2) break;
+
+					sched_val = compress_file_sched_write(
+					    iou, out_fd, woffset, res2 - wsum,
+					    wbuf[index] + wsum, next_write);
+					if (sched_val < 0) ERROR();
 				}
 			}
 		}

@@ -434,3 +434,30 @@ Test(compress_file_errors2) {
 	close(fds[1]);
 	await(pid);
 }
+
+Test(compress_file_redir_large) {
+	i32 fds[2], pid;
+	pipe(fds);
+	if (!(pid = fork())) {
+		close(fds[0]);
+		i32 fd = file("resources/akjv5.txt");
+		i32 res = compress_file(fd, fds[1], NULL);
+		(void)res;
+		close(fds[1]);
+		_famexit(0);
+	}
+
+	close(fds[1]);
+
+	u64 len_sum = 0;
+	while (true) {
+		u8 buf[500000];
+		i32 len = read(fds[0], buf, sizeof(buf));
+		if (len <= 0) break;
+		len_sum += len;
+	}
+	ASSERT_EQ(len_sum, 7962139, "size of compressed akjv5.txt");
+
+	await(pid);
+	close(fds[0]);
+}
