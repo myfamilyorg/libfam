@@ -368,7 +368,8 @@ Test(alloc3) {
 	if (getenv("VALGRIND")) return;
 	i32 i;
 	i32 pids[ALLOC_THREADS];
-	Alloc *a = alloc_init(AllocSmap, 512);
+	Alloc *a = alloc_init(AllocSmap, 32);
+	ASSERT(a, "alloc_init");
 	u64 *count = smap(sizeof(u64));
 	*count = 0;
 

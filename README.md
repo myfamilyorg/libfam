@@ -19,10 +19,12 @@ From myfamilyworldwide.org: "Using this identifying name, My Family, individuals
 Required: git and clang or gcc and minimal Linux install. clang suggested.
 
 ```
+# sudo apt update
 # sudo apt install clang git
 # git clone https://github.com/myfamilyorg/libfam
+# cd libfam
 # ./build
-# ./build test
+# ./build test --novalgrind
 # sudo ./build install
 # czip --help
 Usage: czip [OPTION]... [FILE]...
