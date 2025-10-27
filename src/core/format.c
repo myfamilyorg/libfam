@@ -28,7 +28,6 @@
 #include <libfam/limits.h>
 #include <libfam/memory.h>
 #include <libfam/string.h>
-#include <libfam/test_base.h>
 #include <libfam/utils.h>
 
 typedef enum {

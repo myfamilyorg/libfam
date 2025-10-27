@@ -26,6 +26,7 @@
 #include <libfam/bitstream.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
+#include <libfam/linux.h>
 #include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
@@ -289,4 +290,63 @@ Test(bitstream_partial_masks) {
 			    bit_offset, bits_to_write);
 		}
 	}
+}
+
+Test(compress_file_errors) {
+	u8 *outpath = "/tmp/out_file_errors.txt";
+	u8 *outpath2 = "/tmp/out_file_errors2.txt";
+	unlink(outpath);
+	i32 pid;
+	i32 fd_dir = open("/tmp", O_RDONLY, 0600);
+	ASSERT_EQ(decompress_file(0, fd_dir), -1, "decompress out err");
+	ASSERT_EQ(decompress_file(fd_dir, 0), -1, "decompress in err");
+	ASSERT_EQ(compress_file(0, fd_dir, NULL), -1, "compress out err");
+	ASSERT_EQ(compress_file(fd_dir, 0, NULL), -1, "compress in err");
+	close(fd_dir);
+
+	i32 fds[2];
+	pipe(fds);
+	i32 out = file(outpath);
+
+	if (!(pid = fork())) {
+		close(fds[0]);
+		write(fds[1], "abc", 3);
+		close(fds[1]);
+		_famexit(0);
+	}
+	close(fds[1]);
+
+	i32 res = compress_file(fds[0], out, NULL);
+	ASSERT(!res, "no err");
+	await(pid);
+
+	close(fds[0]);
+	close(out);
+
+	pipe(fds);
+
+	if (!(pid = fork())) {
+		u8 buffer[1024];
+		close(fds[0]);
+		i32 comp_fd = file(outpath);
+		i32 len = read(comp_fd, buffer, sizeof(buffer));
+		write(fds[1], buffer, len);
+		close(fds[1]);
+		_famexit(0);
+	}
+	close(fds[1]);
+
+	out = file(outpath2);
+	res = decompress_file(fds[0], out);
+	ASSERT(!res, "no err");
+	await(pid);
+
+	close(fds[1]);
+	close(out);
+
+	out = file(outpath2);
+	u8 buffer[1024];
+	ASSERT_EQ(read(out, buffer, sizeof(buffer)), 3, "len=3");
+	ASSERT(!memcmp(buffer, "abc", 3), "verify");
+	close(out);
 }
