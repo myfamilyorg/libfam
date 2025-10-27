@@ -201,6 +201,7 @@ PUBLIC i32 decompress_file(i32 in_fd, i32 out_fd) {
 	ChunkHeader *ch = NULL;
 	bool out_is_regular_file, in_is_regular_file;
 	struct stat st;
+	i32 sched_val;
 INIT:
 	if (fstat(out_fd, &st) < 0) ERROR();
 	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
@@ -216,18 +217,18 @@ INIT:
 		if (lseek(in_fd, 0, SEEK_SET) < 0) ERROR();
 	if (iouring_init(&iou, 4) < 0) ERROR();
 	if ((roffset = compress_read_header(in_fd, &header)) < 0) ERROR();
-	if (compress_file_sched_read(iou, in_fd, roffset, sizeof(ChunkHeader),
-				     &cheader, 0) < 0)
-		ERROR();
+	sched_val = compress_file_sched_read(iou, in_fd, roffset,
+					     sizeof(ChunkHeader), &cheader, 0);
+	if (sched_val < 0) ERROR();
 	u64 len0 = compress_file_complete(iou, 0);
 	if (len0 < sizeof(ChunkHeader)) ERROR(EPROTO);
 	expected_bytes = cheader.size + sizeof(ChunkHeader);
 	roffset += sizeof(ChunkHeader);
 
-	if (compress_file_sched_read(iou, in_fd, roffset,
-				     cheader.size + sizeof(ChunkHeader),
-				     rbuf[0], 0) < 0)
-		ERROR();
+	sched_val = compress_file_sched_read(iou, in_fd, roffset,
+					     cheader.size + sizeof(ChunkHeader),
+					     rbuf[0], 0);
+	if (sched_val < 0) ERROR();
 
 	while (!fin) {
 		u8 index = next_read & 1;
@@ -236,10 +237,10 @@ INIT:
 		if (res < 0) ERROR();
 		while (!in_is_regular_file && res < expected_bytes) {
 			u64 rem = expected_bytes - res;
-			if (compress_file_sched_read(iou, in_fd, roffset + res,
-						     rem, rbuf[index] + res,
-						     next_read) < 0)
-				ERROR();
+			sched_val = compress_file_sched_read(
+			    iou, in_fd, roffset + res, rem, rbuf[index] + res,
+			    next_read);
+			if (sched_val < 0) ERROR();
 			i32 nres = compress_file_complete(iou, next_read);
 			if (nres < 0) ERROR();
 			if (nres == 0) break;
@@ -249,11 +250,11 @@ INIT:
 		if (expected_bytes == res) {
 			ch = (void *)(rbuf[index] + expected_bytes -
 				      sizeof(ChunkHeader));
-			if (compress_file_sched_read(
-				iou, in_fd, roffset + expected_bytes,
-				ch->size + sizeof(ChunkHeader),
-				rbuf[(next_read + 1) % 2], next_read + 1) < 0)
-				ERROR();
+			sched_val = compress_file_sched_read(
+			    iou, in_fd, roffset + expected_bytes,
+			    ch->size + sizeof(ChunkHeader),
+			    rbuf[(next_read + 1) % 2], next_read + 1);
+			if (sched_val < 0) ERROR();
 		} else if (expected_bytes == res + 4)
 			fin = true;
 		else
@@ -263,9 +264,9 @@ INIT:
 					    CHUNK_SIZE, &bytes_consumed);
 		expected_bytes = ch ? ch->size + sizeof(ChunkHeader) : 0;
 
-		if (compress_file_sched_write(iou, out_fd, woffset, res2,
-					      wbuf[index], next_write) < 0)
-			ERROR();
+		sched_val = compress_file_sched_write(
+		    iou, out_fd, woffset, res2, wbuf[index], next_write);
+		if (sched_val < 0) ERROR();
 
 		read_pending = true;
 		if (!out_is_regular_file) {
@@ -329,6 +330,7 @@ PUBLIC i32 compress_file(i32 in_fd, i32 out_fd, const u8 *filename) {
 	i32 res = 0, res2;
 	bool read_pending = true;
 	bool out_is_regular_file, in_is_regular_file;
+	i32 sched_val;
 INIT:
 	if (iouring_init(&iou, 4) < 0) ERROR();
 	if (fstat(out_fd, &st) < 0) ERROR();
@@ -342,14 +344,13 @@ INIT:
 
 	in_is_regular_file = S_ISREG(st.st_mode);
 
-	if ((woffset =
-		 compress_write_header(out_fd, st.st_mode & 0777, st.st_mtime,
-				       st.st_atime, filename)) < 0)
-		ERROR();
+	woffset = compress_write_header(out_fd, st.st_mode & 0777, st.st_mtime,
+					st.st_atime, filename);
+	if (woffset < 0) ERROR();
 
-	if (compress_file_sched_read(iou, in_fd, roffset, CHUNK_SIZE, rbuf[0],
-				     0) < 0)
-		ERROR();
+	sched_val = compress_file_sched_read(iou, in_fd, roffset, CHUNK_SIZE,
+					     rbuf[0], 0);
+	if (sched_val < 0) ERROR();
 
 	i32 last_res = CHUNK_SIZE;
 	while (true) {
@@ -361,33 +362,33 @@ INIT:
 		if (res == 0 && last_res != CHUNK_SIZE) break;
 		while (!in_is_regular_file && res < CHUNK_SIZE) {
 			u64 rem = CHUNK_SIZE - res;
-			if (compress_file_sched_read(iou, in_fd, roffset + res,
-						     rem, rbuf[index] + res,
-						     next_read) < 0)
-				ERROR();
+			sched_val = compress_file_sched_read(
+			    iou, in_fd, roffset + res, rem, rbuf[index] + res,
+			    next_read);
+			if (sched_val < 0) ERROR();
 			i32 nres = compress_file_complete(iou, next_read);
 			if (nres < 0) ERROR();
 			if (nres == 0) break;
 			res += nres;
 		}
 		if (res == CHUNK_SIZE) {
-			if (compress_file_sched_read(
-				iou, in_fd, roffset + CHUNK_SIZE, CHUNK_SIZE,
-				rbuf[(next_read + 1) % 2], next_read + 1) < 0)
-				ERROR();
+			sched_val = compress_file_sched_read(
+			    iou, in_fd, roffset + CHUNK_SIZE, CHUNK_SIZE,
+			    rbuf[(next_read + 1) % 2], next_read + 1);
+			if (sched_val < 0) ERROR();
 		}
 		last_res = res;
-		if ((res2 = compress_block(
-			 rbuf[index], res, wbuf[index] + sizeof(ChunkHeader),
-			 MAX_COMPRESSED_SIZE - sizeof(ChunkHeader))) < 0)
-			ERROR();
+		res2 = compress_block(
+		    rbuf[index], res, wbuf[index] + sizeof(ChunkHeader),
+		    MAX_COMPRESSED_SIZE - sizeof(ChunkHeader));
+		if (res2 < 0) ERROR();
 		ChunkHeader *ch = (void *)wbuf[index];
 		ch->size = res2;
 		res2 += sizeof(ChunkHeader);
 
-		if (compress_file_sched_write(iou, out_fd, woffset, res2,
-					      wbuf[index], next_write) < 0)
-			ERROR();
+		sched_val = compress_file_sched_write(
+		    iou, out_fd, woffset, res2, wbuf[index], next_write);
+		if (sched_val < 0) ERROR();
 
 		read_pending = true;
 		if (!out_is_regular_file) {
