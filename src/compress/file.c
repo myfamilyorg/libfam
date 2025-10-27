@@ -438,10 +438,14 @@ PUBLIC i32 decompress_get_filename(i32 fd, u8 filename[MAX_FILE_NAME + 1]) {
 INIT:
 	if (lseek(fd, 0, SEEK_SET) < 0) ERROR();
 	if (compress_read_header(fd, &header) < 0) ERROR();
-	if (header.filename)
-		memcpy(filename, header.filename, strlen(header.filename));
-	else
+	if (header.filename) {
+		u64 len = strlen(header.filename);
+		memcpy(filename, header.filename, len);
+		OK(len);
+	} else {
 		filename[0] = 0;
+		OK(0);
+	}
 CLEANUP:
 	if (header.filename) release(header.filename);
 	RETURN;

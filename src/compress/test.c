@@ -251,6 +251,9 @@ Test(compress_file1) {
 	in_fd = file("/tmp/1.cz");
 	out_fd = file("/tmp/1cmp.txt");
 	ASSERT(!decompress_file(in_fd, out_fd), "decompress_file");
+	u8 buf[1024] = {0};
+	ASSERT_EQ(decompress_get_filename(in_fd, buf), 8, "len=8");
+	ASSERT(!memcmp(buf, "test.txt", 8), "test.txt");
 	close(in_fd);
 	close(out_fd);
 
@@ -273,6 +276,45 @@ Test(compress_file1) {
 	close(cmp_orig);
 	unlink("/tmp/1.cz");
 	unlink("/tmp/1cmp.txt");
+}
+
+Test(compress_file2) {
+	unlink("/tmp/2.cz");
+	unlink("/tmp/2cmp.txt");
+	const u8 *fname = "resources/test_min.txt";
+	i32 in_fd = file(fname);
+	i32 out_fd = file("/tmp/2.cz");
+	ASSERT(!compress_file(in_fd, out_fd, NULL), "compress_file");
+	close(in_fd);
+	close(out_fd);
+
+	in_fd = file("/tmp/2.cz");
+	out_fd = file("/tmp/2cmp.txt");
+	ASSERT(!decompress_file(in_fd, out_fd), "decompress_file");
+	u8 buf[1024] = {0};
+	ASSERT(!decompress_get_filename(in_fd, buf), "len=0");
+	close(in_fd);
+	close(out_fd);
+
+	i32 cmp_fd = file("/tmp/2cmp.txt");
+	i32 cmp_orig = file(fname);
+	u64 size = fsize(cmp_fd);
+	u64 cmp_size = fsize(cmp_orig);
+
+	ASSERT_EQ(size, cmp_size, "sizes");
+	u8 *cmp = fmap(cmp_fd, size, 0);
+	u8 *orig = fmap(cmp_orig, size, 0);
+
+	ASSERT(cmp && orig, "fmap");
+	ASSERT(!memcmp(cmp, orig, size), "equal");
+
+	munmap(cmp, size);
+	munmap(orig, size);
+
+	close(cmp_fd);
+	close(cmp_orig);
+	unlink("/tmp/2.cz");
+	unlink("/tmp/2cmp.txt");
 }
 
 Test(bitstream_partial_masks) {
@@ -299,6 +341,7 @@ Test(compress_file_errors) {
 	u8 *outpath = "/tmp/out_file_errors.txt";
 	u8 *outpath2 = "/tmp/out_file_errors2.txt";
 	unlink(outpath);
+	unlink(outpath2);
 	i32 pid;
 	i32 fd_dir = open("/tmp", O_RDONLY, 0600);
 	ASSERT_EQ(decompress_file(0, fd_dir), -1, "decompress out err");
@@ -341,7 +384,6 @@ Test(compress_file_errors) {
 
 	out = file(outpath2);
 	res = decompress_file(fds[0], out);
-	println("res={}", res);
 	ASSERT(!res, "no err");
 	await(pid);
 
@@ -353,4 +395,40 @@ Test(compress_file_errors) {
 	ASSERT_EQ(read(out, buffer, sizeof(buffer)), 3, "len=3");
 	ASSERT(!memcmp(buffer, "abc", 3), "verify");
 	close(out);
+}
+
+Test(compress_file_errors2) {
+	u8 *outpath = "/tmp/out_file_errors_2.txt";
+	unlink(outpath);
+	i32 pid;
+
+	i32 fds[2], fds_out[2];
+	pipe(fds);
+	pipe(fds_out);
+
+	if (!(pid = fork())) {
+		u8 buf[1024];
+		close(fds[1]);
+		u64 offset = 0;
+		for (u8 i = 0; i < 5; i++) {
+			i32 len = read(fds[0], buf + offset, sizeof(buf));
+			offset += len;
+			if (len == 0) break;
+		}
+		close(fds[0]);
+		i32 out = file(outpath);
+		write(out, buf, offset);
+		close(out);
+		out = file(outpath);
+		decompress_file(out, fds_out[1]);
+		close(out);
+		_famexit(0);
+	}
+	close(fds[0]);
+
+	i32 in_fd = file("resources/test_min.txt");
+	i32 res = compress_file(in_fd, fds[1], NULL);
+	ASSERT(!res, "no err");
+	close(fds[1]);
+	await(pid);
 }
