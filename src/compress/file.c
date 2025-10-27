@@ -109,45 +109,46 @@ INIT:
 
 	total = 0;
 	while (total < needed) {
+		u8 flag;
 		i64 value = read(in_fd, buffer + total, needed - total);
 		if (value < 0) ERROR();
 		if (value == 0) ERROR(EPROTO);
 		total += value;
 		offset = 0;
 
-		if (flags & STREAM_FLAG_HAS_PERMISSIONS &&
-		    total - offset >= sizeof(u16)) {
+		flag = flags & STREAM_FLAG_HAS_PERMISSIONS;
+		if (flag && !(total - offset >= sizeof(u16))) continue;
+		if (flag && total - offset >= sizeof(u16)) {
 			memcpy(&header->permissions, buffer + offset,
 			       sizeof(u16));
 			offset += sizeof(u16);
-		} else if (flags & STREAM_FLAG_HAS_PERMISSIONS)
-			continue;
+		}
 
-		if (flags & STREAM_FLAG_HAS_MTIME &&
-		    total - offset >= sizeof(u64)) {
+		flag = flags & STREAM_FLAG_HAS_MTIME;
+		if (flag && !(total - offset >= sizeof(u64))) continue;
+		if (flag && total - offset >= sizeof(u64)) {
 			memcpy(&header->mtime, buffer + offset, sizeof(u64));
 			offset += sizeof(u64);
-		} else if (flags & STREAM_FLAG_HAS_MTIME)
-			continue;
+		}
 
-		if (flags & STREAM_FLAG_HAS_ATIME &&
-		    total - offset >= sizeof(u64)) {
+		flag = flags & STREAM_FLAG_HAS_ATIME;
+		if (flag && !(total - offset >= sizeof(u64))) continue;
+		if (flag && total - offset >= sizeof(u64)) {
 			memcpy(&header->atime, buffer + offset, sizeof(u64));
 			offset += sizeof(u64);
-		} else if (flags & STREAM_FLAG_HAS_ATIME)
-			continue;
+		}
 
 		if (flags & STREAM_FLAG_HAS_FILE_NAME && total - offset > 0) {
 			u64 len = strlen((char *)(buffer + offset));
 			if (len > MAX_FILE_NAME) ERROR(EPROTO);
+			if (!(len < total - offset)) continue;
 			if (len < total - offset) {
 				header->filename = alloc(len + 1);
 				if (!header->filename) ERROR();
 				strcpy((char *)header->filename,
 				       (char *)(buffer + offset));
 				offset += len + 1;
-			} else
-				continue;
+			}
 		}
 
 		break;
