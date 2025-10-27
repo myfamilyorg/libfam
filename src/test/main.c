@@ -25,6 +25,7 @@
 
 #include <libfam/env.h>
 #include <libfam/errno.h>
+#include <libfam/linux.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
@@ -32,6 +33,7 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
+const u8 *SUCCESS_PATH = "/tmp/libfam_test_success";
 const u8 *SPACER =
     "------------------------------------------------------------------"
     "--------------------------\n";
@@ -101,6 +103,8 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	u64 total, len, test_count = 0;
 	f64 ms;
 	u8 buf[64];
+
+	unlinkat(AT_FDCWD, SUCCESS_PATH, 0);
 
 	(void)argc;
 	(void)argv;
@@ -182,6 +186,8 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	write(STDERR_FD, buf, strlen(buf));
 	write(STDERR_FD, " ms]\n", 5);
 	write(STDERR_FD, RESET, strlen(RESET));
+
+	openat(AT_FDCWD, SUCCESS_PATH, O_CREAT | O_RDWR, 0600);
 
 	_famexit(0);
 	return 0;

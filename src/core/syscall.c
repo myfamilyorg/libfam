@@ -143,7 +143,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 unlinkat(i32 dfd, const char *path, i32 flags) {
+PUBLIC i32 unlinkat(i32 dfd, const char *path, i32 flags) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_unlinkat, (i64)dfd, (i64)path, (i64)flags, 0,
@@ -426,7 +426,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 openat(i32 dfd, const u8 *pathname, i32 flags, u32 mode) {
+PUBLIC i32 openat(i32 dfd, const u8 *pathname, i32 flags, u32 mode) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_openat, (i64)dfd, (i64)pathname, (i64)flags,

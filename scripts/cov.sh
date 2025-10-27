@@ -53,7 +53,11 @@ fi
 ${COMMAND} || exit -1;
 
 export TEST_PATTERN="*";
-LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} ${TEST_BIN} || exit -1;
+LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} ${TEST_BIN} || exit $?;
+if [ ! -e /tmp/libfam_test_success ]; then
+	echo "tests failed!";
+	exit 1;
+fi
 
 for DIR in ${SUB_DIRS}; do
 	cp ./src/${DIR}/*.c ./target/cobjs/${DIR}/
