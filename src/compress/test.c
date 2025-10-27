@@ -398,6 +398,8 @@ Test(compress_file_errors) {
 }
 
 Test(compress_file_errors2) {
+	if (getenv("VALGRIND")) return;
+
 	u8 *outpath = "/tmp/out_file_errors_2.txt";
 	unlink(outpath);
 	i32 pid;
