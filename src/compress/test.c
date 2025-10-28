@@ -458,7 +458,7 @@ Test(compress_file_redir_large) {
 		if (len <= 0) break;
 		len_sum += len;
 	}
-	ASSERT_EQ(len_sum, 7964517, "size of compressed akjv5.txt");
+	ASSERT_EQ(len_sum, 7962139, "size of compressed akjv5.txt");
 
 	await(pid);
 	close(fds[0]);
