@@ -562,3 +562,62 @@ Test(decompress_file_redir_in) {
 	unlink("/tmp/compress_file_redir_in.txt");
 	close(in);
 }
+
+Test(compress_both_redir) {
+	if (getenv("VALGRIND")) return;
+	unlink("/tmp/compress_file_redir_in.txt");
+
+	i32 fds[2], pid;
+	pipe(fds);
+	if (!(pid = fork())) {
+		i32 fds_out[2];
+
+		close(fds[1]);
+		pipe(fds_out);
+
+		if (!(pid = fork())) {
+			u8 buf[256 * 1024];
+			i32 out = file("/tmp/compress_file_redir_in.txt");
+			close(fds_out[1]);
+
+			while (true) {
+				i32 len = read(fds_out[0], buf, sizeof(buf));
+				write(out, buf, len);
+				if (!len) break;
+			}
+
+			close(fds_out[0]);
+			close(out);
+			_famexit(0);
+		}
+		close(fds_out[0]);
+
+		compress_file(fds[0], fds_out[1], NULL);
+
+		close(fds_out[1]);
+		close(fds[0]);
+		_famexit(0);
+	}
+
+	close(fds[0]);
+	i32 in = file("resources/akjv5.txt");
+
+	while (true) {
+		u8 buf[256 * 1024];
+		i32 len = read(in, buf, sizeof(buf));
+		if (!len) break;
+		i32 rem = 0;
+		while (rem < len) {
+			i32 v = write(fds[1], buf + rem, len - rem);
+			ASSERT(v >= 0, "v={}", v);
+			rem += v;
+		}
+	}
+	close(fds[1]);
+	await(pid);
+	i32 conf_fd = file("/tmp/compress_file_redir_in.txt");
+	ASSERT_EQ(fsize(conf_fd), 7955345, "file size=7955345");
+	close(conf_fd);
+	unlink("/tmp/compress_file_redir_in.txt");
+	close(in);
+}
