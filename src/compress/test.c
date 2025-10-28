@@ -464,6 +464,36 @@ Test(compress_file_redir_large) {
 	close(fds[0]);
 }
 
+Test(decompress_file_redir_large) {
+	if (getenv("VALGRIND")) return;
+
+	i32 fds[2], pid;
+	pipe(fds);
+	if (!(pid = fork())) {
+		close(fds[0]);
+		i32 fd = file("resources/xxdir/akjv.txt.cz");
+		i32 res = decompress_file(fd, fds[1]);
+		(void)res;
+		close(fds[1]);
+		_famexit(0);
+	}
+
+	close(fds[1]);
+
+	u64 len_sum = 0;
+	while (true) {
+		u8 buf[500000];
+		i32 len = read(fds[0], buf, sizeof(buf));
+		if (len <= 0) break;
+		len_sum += len;
+	}
+	ASSERT_EQ(len_sum, 4634229, "size of compressed akjv.txt ({} != {})",
+		  len_sum, 4634229);
+
+	await(pid);
+	close(fds[0]);
+}
+
 Test(compress_file_redir_in) {
 	if (getenv("VALGRIND")) return;
 	unlink("/tmp/compress_file_redir_in.txt");
@@ -499,3 +529,40 @@ Test(compress_file_redir_in) {
 	close(conf_fd);
 	unlink("/tmp/compress_file_redir_in.txt");
 }
+
+Test(decompress_file_redir_in) {
+	if (getenv("VALGRIND")) return;
+	unlink("/tmp/decompress_file_redir_in.txt");
+
+	i32 fds[2], pid;
+	pipe(fds);
+	if (!(pid = fork())) {
+		close(fds[1]);
+		i32 out = file("/tmp/decompress_file_redir_in.txt");
+		decompress_file(fds[0], out);
+		close(fds[0]);
+		_famexit(0);
+	}
+
+	close(fds[0]);
+	i32 in = file("resources/xxdir/akjv.txt.cz");
+
+	while (true) {
+		u8 buf[256 * 1024];
+		i32 len = read(in, buf, sizeof(buf));
+		if (!len) break;
+		i32 rem = 0;
+		while (rem < len) {
+			i32 v = write(fds[1], buf + rem, len - rem);
+			ASSERT(v >= 0, "v={}", v);
+			rem += v;
+		}
+	}
+	close(fds[1]);
+	await(pid);
+	i32 conf_fd = file("/tmp/decompress_file_redir_in.txt");
+	ASSERT_EQ(fsize(conf_fd), 4634229, "file size=4634229");
+	close(conf_fd);
+	unlink("/tmp/compress_file_redir_in.txt");
+}
+

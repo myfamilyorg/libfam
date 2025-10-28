@@ -194,7 +194,7 @@ PUBLIC i32 decompress_file(i32 in_fd, i32 out_fd) {
 	ChunkHeader cheader = {0};
 	i64 roffset, woffset = 0;
 	u8 rbuf[2][MAX_COMPRESSED_SIZE] = {0};
-	u8 wbuf[2][CHUNK_SIZE] = {0};
+	u8 wbuf[2][CHUNK_SIZE + 1024] = {0};
 	i32 res = 0;
 	u64 next_read = 0, next_write = U64_MAX;
 	u64 expected_bytes, bytes_consumed;
@@ -260,12 +260,15 @@ INIT:
 			fin = true;
 
 		i32 res2 = decompress_block(rbuf[index], res, wbuf[index],
-					    CHUNK_SIZE, &bytes_consumed);
+					    CHUNK_SIZE + 1024, &bytes_consumed);
+		if (res2 < 0) ERROR();
 		expected_bytes = ch ? ch->size + sizeof(ChunkHeader) : 0;
 
 		sched_val = compress_file_sched_write(
 		    iou, out_fd, woffset, res2, wbuf[index], next_write);
 		if (sched_val < 0) ERROR();
+
+		roffset += res;
 
 		read_pending = true;
 		if (!out_is_regular_file) {
@@ -273,18 +276,22 @@ INIT:
 			while (true) {
 				u64 id;
 				i32 spin_res = iouring_spin(iou, &id);
-				if (id == next_read) {
+				if (id == next_read + 1) {
 					res = spin_res;
 					read_pending = false;
 				} else if (id == next_write) {
 					if (spin_res < 0) ERROR();
 					wsum += spin_res;
 					if (wsum >= res2) break;
+
+					sched_val = compress_file_sched_write(
+					    iou, out_fd, woffset, res2 - wsum,
+					    wbuf[index] + wsum, next_write);
+					if (sched_val < 0) ERROR();
 				}
 			}
 		}
 
-		roffset += res;
 		woffset += res2;
 		next_read++;
 
