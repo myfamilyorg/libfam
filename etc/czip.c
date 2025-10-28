@@ -44,6 +44,7 @@ typedef struct {
 	bool console;
 	bool version;
 	bool help;
+	bool keep;
 	const u8 *file;
 	i32 return_value;
 } CzipConfig;
@@ -76,6 +77,9 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 				} else if (!strcmp(arg, "help")) {
 					ret.help = true;
 					return ret;
+				} else if (!strcmp(arg, "keep")) {
+					ret.keep = true;
+					return ret;
 				} else {
 					println("Illegal option: {}", argv[i]);
 					ret.help = true;
@@ -96,6 +100,8 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 						ret.help = true;
 					else if (ch == 'v')
 						ret.version = true;
+					else if (ch == 'k')
+						ret.keep = true;
 					else {
 						println("Illegal option: {c}",
 							ch);
@@ -221,7 +227,7 @@ void run_compressor(CzipConfig *config) {
 	do_compress(&header, infd, outfd);
 
 	close(infd);
-	if (!config->console) {
+	if (!config->console && !config->keep) {
 		close(outfd);
 		unlink(config->file);
 	}
@@ -305,7 +311,7 @@ void run_decompressor(CzipConfig *config) {
 		close(outfd);
 	}
 	close(infd);
-	if (!config->console) unlink(config->file);
+	if (!config->console && !config->keep) unlink(config->file);
 }
 
 i32 main(i32 argc, u8 **argv, u8 **envp) {
@@ -323,6 +329,7 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 		println("-d, --decompress    decompress");
 		println("-h, --help          print this message");
 		println("-v, --version       print version");
+		println("-k, --keep          keep original file");
 		println(
 		    "\nNote: if no file is specified stdin will be "
 		    "used as "
