@@ -10,7 +10,6 @@ usage() {
 	echo "  --f=<filter> := filter to target single test (e.g. --f=alloc1) default: all tests";
 	echo "  --novalgrind := runs tests without valgrind";
 	echo "  --quick := run without flto (link time optimization)";
-	echo "  --minram := only run tests that use minimal ram";
         exit -1;
 }
 
@@ -31,7 +30,6 @@ COV=0;
 INSTALL=0;
 SILENT=0;
 VALGRIND=1;
-MINRAM=0;
 SPEC=0;
 CC=clang;
 CFLAGS="-O3 \
@@ -84,9 +82,6 @@ for var in "$@"; do
 		;;
 	--novalgrind)
 		VALGRIND=0;
-		;;
-	--minram)
-		MINRAM=1;
 		;;
 	--quick)
 		FLTO=0;

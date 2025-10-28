@@ -361,11 +361,18 @@ Test(alloc2) {
 	munmap(ptrs, sizeof(void *) * ALLOC_COUNT);
 }
 
-#define ALLOC_THREADS 32
-#define ALLOC_TCOUNT (32 * 1024)
+Test(alloc_cas_loop) {
+	_debug_alloc_cas_loop = 1;
+	void *tmp = alloc(32);
+	release(tmp);
+	ASSERT_BYTES(0);
+}
+
+#define ALLOC_THREADS 4
+#define ALLOC_TCOUNT (4 * 1024)
 
 Test(alloc3) {
-	if (getenv("VALGRIND") || getenv("MINRAM")) return;
+	if (getenv("VALGRIND")) return;
 	i32 i;
 	i32 pids[ALLOC_THREADS];
 	Alloc *a = alloc_init(AllocSmap, 32);

@@ -66,7 +66,7 @@ STATIC i64 alloc_chunk_offset(Alloc *a, i64 *ptr, u64 slab_size, u64 index) {
 		BitMap *bmp = (BitMap *)((u8 *)a + sizeof(Alloc));
 		if ((cur = bitmap_find_free_bit(bmp)) < 0) break;
 		i64 expected = -1;
-		if (__cas64(ptr, &expected, cur)) {
+		if (!_debug_alloc_cas_loop && __cas64(ptr, &expected, cur)) {
 			Chunk *chunk = alloc_chunk_for_offset(a, cur);
 			chunk->slab_size = slab_size;
 			BitMap *cbmp = (BitMap *)((u8 *)chunk + sizeof(Chunk));
@@ -75,6 +75,7 @@ STATIC i64 alloc_chunk_offset(Alloc *a, i64 *ptr, u64 slab_size, u64 index) {
 			mfence();
 			break;
 		}
+		if (_debug_alloc_cas_loop) _debug_alloc_cas_loop--;
 		bitmap_release_bit(bmp, cur);
 	}
 	return cur;
