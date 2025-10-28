@@ -138,10 +138,40 @@ void perror(const char *s);
 #define EBUSY 16
 
 /*
+ * Constant: EEXIST
+ * File exists (17).
+ */
+#define EEXIST 17
+
+/*
+ * Constant: ENOTDIR
+ * Not a directory (20).
+ */
+#define ENOTDIR 20
+
+/*
+ * Constant: EISDIR
+ * Is a directory (21).
+ */
+#define EISDIR 21
+
+/*
  * Constant: EINVAL
  * Invalid argument (22).
  */
 #define EINVAL 22
+
+/*
+ * Constant: ENFILE
+ * File table overflow (23).
+ */
+#define ENFILE 23
+
+/*
+ * Constant: EMFILE
+ * Too many open files (24).
+ */
+#define EMFILE 24
 
 /*
  * Constant: ENOSPC
@@ -150,10 +180,40 @@ void perror(const char *s);
 #define ENOSPC 28
 
 /*
+ * Constant: ESPIPE
+ * Illegal seek (29).
+ */
+#define ESPIPE 29
+
+/*
  * Constant: EPIPE
  * Broken pipe (32).
  */
 #define EPIPE 32
+
+/*
+ * Constant: ERANGE
+ * Result too large (34).
+ */
+#define ERANGE 34
+
+/*
+ * Constant: EDEADLK
+ * Resource deadlock would occur (35).
+ */
+#define EDEADLK 35
+
+/*
+ * Constant: ENOSYS
+ * Function not implemented (38).
+ */
+#define ENOSYS 38
+
+/*
+ * Constant: ENOTEMPTY
+ * Directory not empty (39).
+ */
+#define ENOTEMPTY 39
 
 /*
  * Constant: EPROTO
@@ -166,6 +226,60 @@ void perror(const char *s);
  * Value too large for defined data type (75).
  */
 #define EOVERFLOW 75
+
+/*
+ * Constant: ENOTSUP
+ * Operation not supported (95).
+ */
+#define ENOTSUP 95
+
+/*
+ * Constant: EAFNOSUPPORT
+ * Address family not supported by protocol (97).
+ */
+#define EAFNOSUPPORT 97
+
+/*
+ * Constant: EADDRINUSE
+ * Address already in use (98).
+ */
+#define EADDRINUSE 98
+
+/*
+ * Constant: ENETUNREACH
+ * Network is unreachable (101).
+ */
+#define ENETUNREACH 101
+
+/*
+ * Constant: ECONNREFUSED
+ * Connection refused (111).
+ */
+#define ECONNREFUSED 111
+
+/*
+ * Constant: ETIMEDOUT
+ * Connection timed out (110).
+ */
+#define ETIMEDOUT 110
+
+/*
+ * Constant: EINPROGRESS
+ * Operation now in progress (115).
+ */
+#define EINPROGRESS 115
+
+/*
+ * Constant: EBADFD
+ * File descriptor in bad state (77).
+ */
+#define EBADFD 77
+
+/*
+ * Constant: EWOULDBLOCK
+ * Operation would block (same as EAGAIN on Linux).
+ */
+#define EWOULDBLOCK EAGAIN
 
 /*
  * Constant: EDUPLICATE
