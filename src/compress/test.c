@@ -463,3 +463,39 @@ Test(compress_file_redir_large) {
 	await(pid);
 	close(fds[0]);
 }
+
+Test(compress_file_redir_in) {
+	if (getenv("VALGRIND")) return;
+	unlink("/tmp/compress_file_redir_in.txt");
+
+	i32 fds[2], pid;
+	pipe(fds);
+	if (!(pid = fork())) {
+		close(fds[1]);
+		i32 out = file("/tmp/compress_file_redir_in.txt");
+		compress_file(fds[0], out, NULL);
+		close(fds[0]);
+		_famexit(0);
+	}
+
+	close(fds[0]);
+	i32 in = file("resources/akjv5.txt");
+
+	while (true) {
+		u8 buf[256 * 1024];
+		i32 len = read(in, buf, sizeof(buf));
+		if (!len) break;
+		i32 rem = 0;
+		while (rem < len) {
+			i32 v = write(fds[1], buf + rem, len - rem);
+			ASSERT(v >= 0, "v={}", v);
+			rem += v;
+		}
+	}
+	close(fds[1]);
+	await(pid);
+	i32 conf_fd = file("/tmp/compress_file_redir_in.txt");
+	ASSERT_EQ(fsize(conf_fd), 7955345, "file size=7955345");
+	close(conf_fd);
+	unlink("/tmp/compress_file_redir_in.txt");
+}
