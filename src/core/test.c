@@ -715,6 +715,7 @@ Test(pipetwo) {
 	}
 	ASSERT(pid > 0, "pid>0");
 	ASSERT(!reap(pid), "reap");
+	await(pid);
 	close(fds[0]);
 	close(fds[1]);
 }

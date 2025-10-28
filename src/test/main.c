@@ -187,7 +187,7 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	write(STDERR_FD, " ms]\n", 5);
 	write(STDERR_FD, RESET, strlen(RESET));
 
-	openat(AT_FDCWD, SUCCESS_PATH, O_CREAT | O_RDWR, 0600);
+	close(openat(AT_FDCWD, SUCCESS_PATH, O_CREAT | O_RDWR, 0600));
 
 	_famexit(0);
 	return 0;

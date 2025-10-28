@@ -101,7 +101,7 @@ Test(bitstream_overflow) {
 	ASSERT_EQ(bitstream_reader_load(&rdr), -1, "overflow");
 }
 
-#define ITER (1)
+#define ITER (16)
 
 Test(compress1) {
 	u64 bytes_consumed;
@@ -133,8 +133,6 @@ Test(compress1) {
 		ASSERT(!memcmp(verify, in, file_size), "verify");
 	}
 
-	/*println("avg comp={},decomp={}", comp_sum / ITER, decomp_sum /
-	 * ITER);*/
 	(void)comp_sum;
 	(void)decomp_sum;
 
@@ -174,8 +172,6 @@ Test(compress_rand) {
 		ASSERT(!memcmp(verify, in, file_size), "verify");
 	}
 
-	/*println("avg comp={},decomp={}", comp_sum / ITER, decomp_sum /
-	 * ITER);*/
 	(void)comp_sum;
 	(void)decomp_sum;
 
@@ -221,10 +217,6 @@ Test(compress_other) {
 Test(compress_oob) {
 	u64 bytes_consumed;
 	u8 data2[1024], out2[2048], verify2[2048];
-	/* Note: valgrind reports uninitialized memory access with gcc -O3,
-	 * however this data is initialized by compress_block and correctly
-	 * processed, or so it seems. For now, we zero the first 58 bytes, which
-	 * should not be necessary. */
 	for (u32 i = 0; i < 58; i++) out2[i] = 0;
 	for (u32 i = 0; i < 1024; i++) data2[i] = 'x';
 	i32 len = compress_block(data2, 1024, out2, 2048);
@@ -387,7 +379,7 @@ Test(compress_file_errors) {
 	ASSERT(!res, "no err");
 	await(pid);
 
-	close(fds[1]);
+	close(fds[0]);
 	close(out);
 
 	out = file(outpath2);
@@ -433,6 +425,9 @@ Test(compress_file_errors2) {
 	ASSERT(!res, "no err");
 	close(fds[1]);
 	await(pid);
+	close(in_fd);
+	close(fds_out[0]);
+	close(fds_out[1]);
 }
 
 Test(compress_file_redir_large) {
@@ -528,6 +523,7 @@ Test(compress_file_redir_in) {
 	ASSERT_EQ(fsize(conf_fd), 7955345, "file size=7955345");
 	close(conf_fd);
 	unlink("/tmp/compress_file_redir_in.txt");
+	close(in);
 }
 
 Test(decompress_file_redir_in) {
@@ -564,5 +560,5 @@ Test(decompress_file_redir_in) {
 	ASSERT_EQ(fsize(conf_fd), 4634229, "file size=4634229");
 	close(conf_fd);
 	unlink("/tmp/compress_file_redir_in.txt");
+	close(in);
 }
-
