@@ -28,8 +28,39 @@
 
 #include <libfam/types.h>
 
+/*
+ * Function: b64_encode
+ * Encodes binary data into Base64 text.
+ * inputs:
+ *         const u8 *in     - pointer to input binary data.
+ *         u64 in_len       - length of input data in bytes.
+ *         u8 *out          - pointer to output buffer for encoded text.
+ *         u64 out_max      - maximum capacity of output buffer (including
+ * null). return value: u64 - number of bytes written to out (excluding null),
+ * or 0 on error. errors: None (returns 0 on failure). notes: Output is
+ * null-terminated if space allows. Required output size: ((in_len + 2) / 3) * 4
+ * + 1 (including null). If out_max is insufficient, returns 0 and out is
+ * unmodified. in and out must not be null; in_len may be 0. Uses standard
+ * Base64 alphabet (RFC 4648).
+ */
 u64 b64_encode(const u8 *in, u64 in_len, u8 *out, u64 out_max);
+
+/*
+ * Function: b64_decode
+ * Decodes Base64 text into binary data.
+ * inputs:
+ *         const u8 *in     - pointer to input Base64 text (null-terminated or
+ * not). u64 in_len       - length of input data in bytes (excluding null if
+ * present). u8 *out          - pointer to output buffer for decoded binary. u64
+ * out_max      - maximum capacity of output buffer. return value: u64 - number
+ * of bytes written to out, or 0 on error. errors: None (returns 0 on failure).
+ * notes:
+ *         Input must contain only valid Base64 characters (A-Z, a-z, 0-9, +, /,
+ * =). Padding '=' is optional but respected if present. Required output size:
+ * (in_len * 3) / 4 (rounded down). If out_max is insufficient or input is
+ * invalid, returns 0 and out is unmodified. in and out must not be null; in_len
+ * may be 0. Stops at first invalid character or end of input.
+ */
 u64 b64_decode(const u8 *in, u64 in_len, u8 *out, u64 out_max);
 
 #endif /* _B64_H */
-

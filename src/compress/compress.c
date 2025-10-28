@@ -27,6 +27,7 @@
 #include <immintrin.h>
 #endif /* __AVX2__ */
 #include <libfam/bitstream.h>
+#include <libfam/builtin.h>
 #include <libfam/compress.h>
 #include <libfam/compress_impl.h>
 #include <libfam/format.h>
@@ -52,7 +53,7 @@ STATIC MatchInfo lz_hash_get(LzHash *restrict hash, const u8 *restrict text,
 		__m256i cmp = _mm256_cmpeq_epi8(vec1, vec2);
 		mask = _mm256_movemask_epi8(cmp);
 
-		len += (mask != 0xFFFFFFFF) * __builtin_ctz(~mask) +
+		len += (mask != 0xFFFFFFFF) * ctz_u32(~mask) +
 		       (mask == 0xFFFFFFFF) * 32;
 	} while (mask == 0xFFFFFFFF && len < MAX_MATCH_LEN);
 #else

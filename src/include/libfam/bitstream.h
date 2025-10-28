@@ -29,6 +29,18 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
+/*
+ * Constant: bitstream_partial_masks
+ * Precomputed byte masks for partial byte writes during flush.
+ * values:
+ *         bitstream_partial_masks[byte_offset][bits_to_write]
+ * notes:
+ *         Used internally by bitstream_writer_flush to mask out unwanted
+ *         bits in the final byte when writing incomplete bytes.
+ *         Each row corresponds to a starting bit offset within a byte (0–7).
+ *         Each column corresponds to number of bits to write (1–8).
+ *         Last column (index 8) is 0 for padding.
+ */
 static const u8 bitstream_partial_masks[8][9] = {
     {255, 254, 252, 248, 240, 224, 192, 128, 0},
     {255, 253, 249, 241, 225, 193, 129, 1, 1},
@@ -39,74 +51,57 @@ static const u8 bitstream_partial_masks[8][9] = {
     {255, 191, 63, 63, 63, 63, 63, 63, 63},
     {255, 127, 127, 127, 127, 127, 127, 127, 127}};
 
+/*
+ * Constant: bitstream_masks
+ * Precomputed 64-bit masks for extracting up to 64 bits.
+ * values:
+ *         bitstream_masks[n] = (1ULL << n) - 1
+ * notes:
+ *         bitstream_masks[0] = 0, bitstream_masks[64] = ~0ULL.
+ *         Used by bitstream_reader_read to extract the low n bits from buffer.
+ *         Indexed directly by number of bits requested (1 to 64).
+ */
 static const u64 bitstream_masks[65] = {
-    0x0000000000000000ULL, /* num_bits = 0 */
-    0x0000000000000001ULL, /* num_bits = 1 */
-    0x0000000000000003ULL, /* num_bits = 2 */
-    0x0000000000000007ULL, /* num_bits = 3 */
-    0x000000000000000FULL, /* num_bits = 4 */
-    0x000000000000001FULL, /* num_bits = 5 */
-    0x000000000000003FULL, /* num_bits = 6 */
-    0x000000000000007FULL, /* num_bits = 7 */
-    0x00000000000000FFULL, /* num_bits = 8 */
-    0x00000000000001FFULL, /* num_bits = 9 */
-    0x00000000000003FFULL, /* num_bits = 10 */
-    0x00000000000007FFULL, /* num_bits = 11 */
-    0x0000000000000FFFULL, /* num_bits = 12 */
-    0x0000000000001FFFULL, /* num_bits = 13 */
-    0x0000000000003FFFULL, /* num_bits = 14 */
-    0x0000000000007FFFULL, /* num_bits = 15 */
-    0x000000000000FFFFULL, /* num_bits = 16 */
-    0x000000000001FFFFULL, /* num_bits = 17 */
-    0x000000000003FFFFULL, /* num_bits = 18 */
-    0x000000000007FFFFULL, /* num_bits = 19 */
-    0x00000000000FFFFFULL, /* num_bits = 20 */
-    0x00000000001FFFFFULL, /* num_bits = 21 */
-    0x00000000003FFFFFULL, /* num_bits = 22 */
-    0x00000000007FFFFFULL, /* num_bits = 23 */
-    0x0000000000FFFFFFULL, /* num_bits = 24 */
-    0x0000000001FFFFFFULL, /* num_bits = 25 */
-    0x0000000003FFFFFFULL, /* num_bits = 26 */
-    0x0000000007FFFFFFULL, /* num_bits = 27 */
-    0x000000000FFFFFFFULL, /* num_bits = 28 */
-    0x000000001FFFFFFFULL, /* num_bits = 29 */
-    0x000000003FFFFFFFULL, /* num_bits = 30 */
-    0x000000007FFFFFFFULL, /* num_bits = 31 */
-    0x00000000FFFFFFFFULL, /* num_bits = 32 */
-    0x00000001FFFFFFFFULL, /* num_bits = 33 */
-    0x00000003FFFFFFFFULL, /* num_bits = 34 */
-    0x00000007FFFFFFFFULL, /* num_bits = 35 */
-    0x0000000FFFFFFFFFULL, /* num_bits = 36 */
-    0x0000001FFFFFFFFFULL, /* num_bits = 37 */
-    0x0000003FFFFFFFFFULL, /* num_bits = 38 */
-    0x0000007FFFFFFFFFULL, /* num_bits = 39 */
-    0x000000FFFFFFFFFFULL, /* num_bits = 40 */
-    0x000001FFFFFFFFFFULL, /* num_bits = 41 */
-    0x000003FFFFFFFFFFULL, /* num_bits = 42 */
-    0x000007FFFFFFFFFFULL, /* num_bits = 43 */
-    0x00000FFFFFFFFFFFULL, /* num_bits = 44 */
-    0x00001FFFFFFFFFFFULL, /* num_bits = 45 */
-    0x00003FFFFFFFFFFFULL, /* num_bits = 46 */
-    0x00007FFFFFFFFFFFULL, /* num_bits = 47 */
-    0x0000FFFFFFFFFFFFULL, /* num_bits = 48 */
-    0x0001FFFFFFFFFFFFULL, /* num_bits = 49 */
-    0x0003FFFFFFFFFFFFULL, /* num_bits = 50 */
-    0x0007FFFFFFFFFFFFULL, /* num_bits = 51 */
-    0x000FFFFFFFFFFFFFULL, /* num_bits = 52 */
-    0x001FFFFFFFFFFFFFULL, /* num_bits = 53 */
-    0x003FFFFFFFFFFFFFULL, /* num_bits = 54 */
-    0x007FFFFFFFFFFFFFULL, /* num_bits = 55 */
-    0x00FFFFFFFFFFFFFFULL, /* num_bits = 56 */
-    0x01FFFFFFFFFFFFFFULL, /* num_bits = 57 */
-    0x03FFFFFFFFFFFFFFULL, /* num_bits = 58 */
-    0x07FFFFFFFFFFFFFFULL, /* num_bits = 59 */
-    0x0FFFFFFFFFFFFFFFULL, /* num_bits = 60 */
-    0x1FFFFFFFFFFFFFFFULL, /* num_bits = 61 */
-    0x3FFFFFFFFFFFFFFFULL, /* num_bits = 62 */
-    0x7FFFFFFFFFFFFFFFULL, /* num_bits = 63 */
-    0xFFFFFFFFFFFFFFFFULL  /* num_bits = 64 */
-};
+    0x0000000000000000ULL, 0x0000000000000001ULL, 0x0000000000000003ULL,
+    0x0000000000000007ULL, 0x000000000000000FULL, 0x000000000000001FULL,
+    0x000000000000003FULL, 0x000000000000007FULL, 0x00000000000000FFULL,
+    0x00000000000001FFULL, 0x00000000000003FFULL, 0x00000000000007FFULL,
+    0x0000000000000FFFULL, 0x0000000000001FFFULL, 0x0000000000003FFFULL,
+    0x0000000000007FFFULL, 0x000000000000FFFFULL, 0x000000000001FFFFULL,
+    0x000000000003FFFFULL, 0x000000000007FFFFULL, 0x00000000000FFFFFULL,
+    0x00000000001FFFFFULL, 0x00000000003FFFFFULL, 0x00000000007FFFFFULL,
+    0x0000000000FFFFFFULL, 0x0000000001FFFFFFULL, 0x0000000003FFFFFFULL,
+    0x0000000007FFFFFFULL, 0x000000000FFFFFFFULL, 0x000000001FFFFFFFULL,
+    0x000000003FFFFFFFULL, 0x000000007FFFFFFFULL, 0x00000000FFFFFFFFULL,
+    0x00000001FFFFFFFFULL, 0x00000003FFFFFFFFULL, 0x00000007FFFFFFFFULL,
+    0x0000000FFFFFFFFFULL, 0x0000001FFFFFFFFFULL, 0x0000003FFFFFFFFFULL,
+    0x0000007FFFFFFFFFULL, 0x000000FFFFFFFFFFULL, 0x000001FFFFFFFFFFULL,
+    0x000003FFFFFFFFFFULL, 0x000007FFFFFFFFFFULL, 0x00000FFFFFFFFFFFULL,
+    0x00001FFFFFFFFFFFULL, 0x00003FFFFFFFFFFFULL, 0x00007FFFFFFFFFFFULL,
+    0x0000FFFFFFFFFFFFULL, 0x0001FFFFFFFFFFFFULL, 0x0003FFFFFFFFFFFFULL,
+    0x0007FFFFFFFFFFFFULL, 0x000FFFFFFFFFFFFFULL, 0x001FFFFFFFFFFFFFULL,
+    0x003FFFFFFFFFFFFFULL, 0x007FFFFFFFFFFFFFULL, 0x00FFFFFFFFFFFFFFULL,
+    0x01FFFFFFFFFFFFFFULL, 0x03FFFFFFFFFFFFFFULL, 0x07FFFFFFFFFFFFFFULL,
+    0x0FFFFFFFFFFFFFFFULL, 0x1FFFFFFFFFFFFFFFULL, 0x3FFFFFFFFFFFFFFFULL,
+    0x7FFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL};
 
+/*
+ * Type: BitStreamReader
+ * Stateful reader for bit-level data from a byte stream.
+ * members:
+ *         const u8 *data         - input byte stream.
+ *         u64 max_size           - total size of data in bytes.
+ *         u64 bit_offset         - current bit position in the stream.
+ *         u64 buffer             - bit buffer (holds up to 64 bits).
+ *         u8 bits_in_buffer      - number of valid bits in buffer.
+ * notes:
+ *         Must be initialized externally before use.
+ *         Use bitstream_reader_load to refill buffer when needed.
+ *         bit_offset advances as bits are consumed.
+ *         Typical initialization:
+ *         u8 data[BITSTREAM_SIZE];
+ *         BitStreamReader r = {data, sizeof(data)};
+ */
 typedef struct {
 	const u8 *data;
 	u64 max_size;
@@ -115,6 +110,23 @@ typedef struct {
 	u8 bits_in_buffer;
 } BitStreamReader;
 
+/*
+ * Type: BitStreamWriter
+ * Stateful writer for bit-level data into a byte stream.
+ * members:
+ *         u8 *data               - output byte stream.
+ *         u64 bit_offset         - current bit position in the stream.
+ *         u64 buffer             - bit buffer (holds up to 64 bits).
+ *         u8 bits_in_buffer      - number of valid bits in buffer.
+ * notes:
+ *         Must be initialized externally before use.
+ *         Use bitstream_writer_push to add bits.
+ *         Call bitstream_writer_flush to write partial byte.
+ *         bit_offset advances as bits are flushed.
+ *         Typical initialization:
+ *         u8 data[BITSTREAM_SIZE];
+ *         BitStreamWriter w = {data};
+ */
 typedef struct {
 	u8 *data;
 	u64 bit_offset;
@@ -122,20 +134,92 @@ typedef struct {
 	u8 bits_in_buffer;
 } BitStreamWriter;
 
+/*
+ * Function: bitstream_writer_flush
+ * Flushes any remaining bits in the buffer to the output stream.
+ * inputs:
+ *         BitStreamWriter *strm - pointer to initialized writer.
+ * return value: None.
+ * errors: None.
+ * notes:
+ *         strm must be non-null and properly initialized.
+ *         Writes partial byte using bitstream_partial_masks.
+ *         Advances bit_offset by bits_in_buffer. After call, bits_in_buffer ==
+ *         0. Must be called at end of stream to avoid data loss.
+ */
 void bitstream_writer_flush(BitStreamWriter *strm);
+
+/*
+ * Function: bitstream_reader_load
+ * Loads up to 64 bits from the input stream into the buffer.
+ * inputs:
+ *         BitStreamReader *strm - pointer to initialized reader.
+ * return value: i32 - 0 on success, or -1 on error.
+ * errors:
+ *         EOVERFLOW - if end of stream reached or strm is invalid.
+ * notes:
+ *         strm must be non-null and properly initialized.
+ *         Consumes whole bytes from data[bit_offset >> 3].
+ *         Updates bit_offset and bits_in_buffer.
+ *         Returns 0 if no more data available.
+ *         Caller must check return value before using buffer.
+ */
 i32 bitstream_reader_load(BitStreamReader *strm);
 
+/*
+ * Function: bitstream_writer_push
+ * Pushes bits into the writer's buffer (inline).
+ * inputs:
+ *         BitStreamWriter *strm - pointer to initialized writer.
+ *         u64 bits              - bits to write (low-order bits used).
+ *         u8 num_bits           - number of bits to write (1 to 64).
+ * return value: None.
+ * errors: None.
+ * notes:
+ *         strm must be non-null.
+ *         num_bits must be > 0 and <= 64 - bits_in_buffer.
+ *         Automatically flushes all bits in the buffer.
+ *         Uses little-endian bit ordering within bytes.
+ *         Always inlined for performance.
+ */
 static inline __attribute__((always_inline)) void bitstream_writer_push(
     BitStreamWriter *strm, u64 bits, u8 num_bits) {
 	strm->buffer |= bits << strm->bits_in_buffer;
 	strm->bits_in_buffer += num_bits;
 }
 
+/*
+ * Function: bitstream_reader_read
+ * Reads bits from the reader's buffer without consuming them.
+ * inputs:
+ *         const BitStreamReader *strm - pointer to loaded reader.
+ *         u8 num_bits                 - number of bits to read (1 to 64).
+ * return value: u64 - the low-order num_bits from buffer.
+ * errors: None.
+ * notes:
+ *         strm must be non-null and have at least num_bits in buffer.
+ *         Uses bitstream_masks[num_bits] to mask result.
+ *         Does not modify bit_offset or bits_in_buffer.
+ *         Always inlined for performance.
+ */
 static inline __attribute__((always_inline)) u64
 bitstream_reader_read(const BitStreamReader *strm, u8 num_bits) {
 	return strm->buffer & bitstream_masks[num_bits];
 }
 
+/*
+ * Function: bitstream_reader_clear
+ * Consumes (clears) bits from the reader's buffer.
+ * inputs:
+ *         BitStreamReader *strm - pointer to loaded reader.
+ *         u8 num_bits           - number of bits to consume.
+ * return value: None.
+ * errors: None.
+ * notes:
+ *         strm must be non-null and have at least num_bits in buffer.
+ *         Shifts buffer right by num_bits and decrements bits_in_buffer.
+ *         Always inlined for performance.
+ */
 static inline __attribute__((always_inline)) void bitstream_reader_clear(
     BitStreamReader *strm, u8 num_bits) {
 	strm->buffer = strm->buffer >> num_bits;

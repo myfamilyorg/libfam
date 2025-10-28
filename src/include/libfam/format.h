@@ -31,8 +31,27 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
+/*
+ * Constant: FORMATTER_INIT
+ * Initializer for a Formatter structure.
+ * notes:
+ *         Sets all fields to zero.
+ *         Use as: Formatter f = FORMATTER_INIT;
+ */
 #define FORMATTER_INIT {0};
 
+/*
+ * Macro: FORMAT_ITEM
+ * Converts a value into a Printable structure using _Generic.
+ * inputs:
+ *         ign   - ignored parameter (used for macro expansion).
+ *         value - value to convert.
+ * return value: Printable - typed value ready for formatting.
+ * notes:
+ *         Supports signed/unsigned integers (all sizes), char*, u8*, float,
+ * double. void* is treated as unsigned integer (address). Unsupported types
+ * result in "unsupported" string. Used internally by FORMAT macro via FOR_EACH.
+ */
 #define FORMAT_ITEM(ign, value)                                                \
 	({                                                                     \
 		Printable _p__ = _Generic((value),                             \
@@ -134,6 +153,21 @@
 		_p__;                                                          \
 	})
 
+/*
+ * Macro: FORMAT
+ * Appends formatted string and arguments to a Formatter using custom syntax.
+ * inputs:
+ *         f   - pointer to Formatter.
+ *         fmt - format string with {} placeholders.
+ *         ... - arguments (converted via FORMAT_ITEM).
+ * return value: i32 - 0 on success, -1 on error.
+ * notes:
+ *         Custom syntax inside {}: [:<|>width][.precision][x|X|b|c|n]
+ *         Examples:
+ *           println("x={x}", 0xFE);        // x=0xfe
+ *           println("x=${n.2}", 1234567.93); // x=$1,234,567.93
+ *         {{ and }} escape to { and }.
+ */
 #ifdef __clang__
 #define FORMAT(f, fmt, ...)                                                    \
 	({                                                                     \
@@ -158,6 +192,20 @@
 	})
 #endif
 
+/*
+ * Macro: println
+ * Formats and prints a line to stderr using custom format syntax.
+ * inputs:
+ *         fmt - format string.
+ *         ... - arguments.
+ * return value: None.
+ * notes:
+ *         Appends newline.
+ *         Output goes to stderr.
+ *         Examples:
+ *           println("Hello, {}!", "world");     // Hello, world!
+ *           println("x={x}", 0xFE);             // x=0xfe
+ */
 #define println(fmt, ...)                                                     \
 	({                                                                    \
 		const u8 *_tmp__;                                             \
@@ -171,6 +219,16 @@
 		format_clear(&_f__);                                          \
 	})
 
+/*
+ * Macro: print
+ * Formats and prints text to stderr (no newline).
+ * inputs:
+ *         fmt - format string.
+ *         ... - arguments.
+ * return value: None.
+ * notes:
+ *         Output goes to stderr.
+ */
 #define print(fmt, ...)                                               \
 	({                                                            \
 		const u8 *_tmp__;                                     \
@@ -182,6 +240,17 @@
 		format_clear(&_f__);                                  \
 	})
 
+/*
+ * Macro: panic
+ * Formats, prints error, and exits with failure.
+ * inputs:
+ *         fmt - format string.
+ *         ... - arguments.
+ * return value: None (does not return).
+ * notes:
+ *         Appends newline.
+ *         Calls _famexit(-1).
+ */
 #define panic(fmt, ...)                                                       \
 	({                                                                    \
 		const u8 *_tmp__;                                             \
@@ -220,8 +289,45 @@ typedef struct {
 	} data;
 } Printable;
 
+/*
+ * Function: format_append
+ * Appends formatted string and arguments to a Formatter.
+ * inputs:
+ *         Formatter *f - pointer to formatter.
+ *         const u8 *fmt - format string.
+ *         ... - zero or more Printable arguments.
+ * return value: i32 - 0 on success, -1 on error with errno set.
+ * errors:
+ *         ENOMEM         - allocation failed.
+ *         EPROTO         - invalid format syntax.
+ * notes:
+ *         Custom syntax: [:<|>width][.precision][x|X|b|c|n]
+ *         {{ and }} escape to { and }.
+ */
 i32 format_append(Formatter *f, const u8 *fmt, ...);
+
+/*
+ * Function: format_clear
+ * Resets or frees a Formatter.
+ * inputs:
+ *         Formatter *f - pointer to formatter.
+ * return value: None.
+ * errors: None.
+ * notes:
+ *         Frees buffer and resets fields.
+ */
 void format_clear(Formatter *f);
+
+/*
+ * Function: format_to_string
+ * Returns null-terminated string from Formatter.
+ * inputs:
+ *         Formatter *f - pointer to formatter.
+ * return value: const u8 * - pointer to string, or "" on error.
+ * errors: None.
+ * notes:
+ *         Valid until next append or clear.
+ */
 const u8 *format_to_string(Formatter *f);
 
 #endif /* _FORMAT_H */
