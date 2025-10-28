@@ -246,19 +246,23 @@ STATIC void compress_limit_lengths(const u32 *frequencies,
 	}
 
 	while (sum > (1ULL << max_length)) {
-		for (i = count - 1; i >= 0; i--)
+		u16 best = 0;
+		u32 min_freq = U32_MAX;
+		for (u16 i = 0; i < count; ++i) {
 			if (code_lengths[i].length > 1 &&
-			    code_lengths[i].length < max_length) {
-				code_lengths[i].length++;
-				break;
-			}
-		sum = 0;
-		for (i = 0; i < count; i++) {
-			if (code_lengths[i].length > 0) {
-				sum += 1ULL
-				       << (max_length - code_lengths[i].length);
+			    code_lengths[i].length < max_length &&
+			    frequencies[i] < min_freq) {
+				min_freq = frequencies[i];
+				best = i;
 			}
 		}
+		if (min_freq == U32_MAX) break;
+		code_lengths[best].length++;
+		sum = 0;
+		for (i = 0; i < count; i++)
+			if (code_lengths[i].length > 0)
+				sum += 1ULL
+				       << (max_length - code_lengths[i].length);
 	}
 }
 

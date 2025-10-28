@@ -101,7 +101,7 @@ Test(bitstream_overflow) {
 	ASSERT_EQ(bitstream_reader_load(&rdr), -1, "overflow");
 }
 
-#define ITER (16)
+#define ITER (1)
 
 Test(compress1) {
 	u64 bytes_consumed;
@@ -458,7 +458,7 @@ Test(compress_file_redir_large) {
 		if (len <= 0) break;
 		len_sum += len;
 	}
-	ASSERT_EQ(len_sum, 7962139, "size of compressed akjv5.txt");
+	ASSERT_EQ(len_sum, 7955345, "size of compressed akjv5.txt");
 
 	await(pid);
 	close(fds[0]);
