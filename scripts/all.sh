@@ -35,3 +35,4 @@ if needs_linking "$LIB_NAME" $OBJECTS; then
 fi
 
 . ./scripts/czip.sh || exit $?;
+. ./scripts/abench.sh || exit $?;
