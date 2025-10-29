@@ -232,6 +232,7 @@ INIT:
 	if (sched_val < 0) ERROR();
 
 	while (!fin) {
+		if (expected_bytes > MAX_COMPRESSED_SIZE) ERROR(EOVERFLOW);
 		u8 index = next_read & 1;
 		if (read_pending) res = compress_file_complete(iou, next_read);
 		read_pending = true;
@@ -251,6 +252,7 @@ INIT:
 		if (expected_bytes == res) {
 			ch = (void *)(rbuf[index] + expected_bytes -
 				      sizeof(ChunkHeader));
+			if (ch->size > MAX_COMPRESSED_SIZE) ERROR(EOVERFLOW);
 			sched_val = compress_file_sched_read(
 			    iou, in_fd, roffset + expected_bytes,
 			    ch->size + sizeof(ChunkHeader),
@@ -263,6 +265,7 @@ INIT:
 					    CHUNK_SIZE + 1024, &bytes_consumed);
 		if (res2 < 0) ERROR();
 		expected_bytes = ch ? ch->size + sizeof(ChunkHeader) : 0;
+		if (expected_bytes > MAX_COMPRESSED_SIZE) ERROR(EOVERFLOW);
 
 		sched_val = compress_file_sched_write(
 		    iou, out_fd, woffset, res2, wbuf[index], next_write);
