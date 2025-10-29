@@ -101,7 +101,7 @@ static inline u8 distance_extra_bits(u8 match_code) {
 
 - To support LSB processing, czip uses a "no-common-suffix" canonical Huffman coding scheme, allowing it to efficiently use lookup tables.
 
-# High-Performance LZ77 Hashtable
+## High-Performance LZ77 Hashtable
 
 `czip` utilizes a highly optimized LZ77 hashtable for fast pattern matching.
 
