@@ -1,10 +1,15 @@
 # Overview
 
-`czip`, part of the `libfam` library for MyFamily, is a single-threaded compression tool designed to efficiently compress Bible texts and structured data for spreading the gospel. With `gzip`-like functionality, `czip` is installed via the [libfam project](https://myfamilyorg.github.io/libfam/build_instructions). It delivers faster compression and decompression than `LZ4`, better compression ratios than `gzip -1`, and a simpler codebase with 12x less memory usage than `zstd` (1.8 MB vs. 22.8 MB). Optimized for minimal resources, `czip` is ideal for lightweight systems like databases and missionary tools. See performance table below.
+**Czip: An Optimized Compression Tool for libfam**
 
-# Performance
+`czip`, a core component of the libfam library, is a single-threaded, high-performance compression utility. It was developed with a specific focus on optimizing compression for structured data, particularly text, and excels in resource-constrained environments.
 
-The performance metrics are measured against the file in resources ./resources/akjv5.txt. This is a copy of the American King James bible text with 5 copies. The total size of the file is 23.17 MB. They are tested using Clang 18.1.3 using Linux 6.14.0-33 on a AMD Ryzen Zen 3 processor (6 core / 12 thread) running at 2.944 Ghz.
+# Performance Comparison
+
+- **Test Data**: A 23.17 MB text file containing repeated sections of text. **Five copies of the American King James Version of the bible from biblehub.com**
+- **Hardware**: AMD Ryzen Zen 3 (6-core / 12-thread) @ 2.944 GHz.
+- **Software**: Clang 18.1.3, Linux 6.14.0-33.
+- **Notes**: The `zstd` benchmark was run with --single-thread --fast=1.
 
 | Compression Tool        | Compressed Size | Compression Ratio | Compression Time | Decompression Time | Memory Usage (Compression) | Memory Usage (Decompression) |
 |-------------|-----------------|-------------------|------------------|--------------------|----------------------------|------------------------------|
@@ -13,11 +18,9 @@ The performance metrics are measured against the file in resources ./resources/a
 | **zstd**    | 8.82 MB   | 2.62 (38.10%)           | 0.079s           | 0.023s             | 22.8 MB                     | 5.0 MB            |
 | **LZ4**     | 10.76 MB        | 2.15:1 (46.46%)   | 0.080s           | 0.035s             | 9.7 MB                      | 1.6 MB                       |
 
-Note: zstd with --single-thread --fast=1
+# Usage
 
-# Example Usage
-
-`czip` is designed to function similarly to gzip. `czip` can be used to compress files and decompress them using the -d option. Additionally, redirect to/from stdin/stdout and pipe in other commands is available. Examples:
+`czip` provides a command-line interface designed to be familiar to gzip users.
 
 ```
 $ ls -l 
@@ -33,7 +36,7 @@ total 96
 -rw------- 1 chris chris 97265 Oct 15 14:55 test_wikipedia.txt
 ```
 
-This example shows redirection with the console option for both compression and decompression.
+## Input/Output redirection.
 
 ```
 $ cat test_wikipedia.txt | czip -c > ./test_wikipedia2.txt.cz   
@@ -46,7 +49,7 @@ $ diff test_wikipedia.txt test_wikipedia2.txt
 $ 
 ```
 
-Here is the full help option output.
+## Help menu.
 
 ```
 $ czip --help
@@ -60,9 +63,21 @@ Note: if no file is specified stdin will be used as the input file.
 $ 
 ```
 
-# Design/Architecture
+# Architectural Overview
 
-`czip` is designed to be fast with moderately good compression ratios. The way this is achieved is through several techniques. The [Zstandard](https://github.com/Cyan4973/FiniteStateEntropy) project has documented clearly the benefits of Finite State Entropy (FSE). However, as noted, huffman codes are significantly faster than FSE. While, Huffman codes generally have similar results with respect to encoding literals (which is why they are used in the Zstandard project for literals in most cases), FSE is superior for encoding length and distance codes which have skewed distributions. To solve this problem, without the use of FSE, we combine the length and distance codes into a single `match code`. Match codes have a code combined with length extra bits and distance extra bits. So, for instance match code 0 has 0 length/distance extra bits while match code 1 has 0 length extra bits and a single distance extra bit. This resolves the skew problem because in DEFLATE like schemes, length codes 3-7 are highly skewed as are distance codes 1-8. By combining them (into a single code), the skew is decreased. This decrease is significant enough that the ideal huffman length of these codes is now greater than 1 for most data sets. We now have the benefits of using huffman codes for non-skewed data. Additionally, we efficiently use the codes. The only difference between each code is how many extra bits are available to that code. So, each distance code has one more extra bit than the previous one and each length code has one more extra bit than the previous one. This leads to efficient calculation of these values, for instance:
+`czip` achieves its speed and memory efficiency through several key design choices, focusing on algorithmic simplicity and hardware optimization.
+
+**Combined Match Codes for Huffman Efficiency**
+
+`czip` sidesteps the need for more complex encoding schemes like Finite State Entropy (FSE) by addressing the skewed distribution of length and distance codes typically seen in DEFLATE-like schemes.
+
+- **Problem**: In DEFLATE-like implementations, the distribution of length codes (3-7) and distance codes (1-8) is highly skewed, favoring short codes. FSE is often used to handle this, but it is computationally more intensive than Huffman coding and uses more resources as well. In addition the implementation of FSE is quite complex leading to a greater attack surface and more ongoing maintenance.
+
+- **czip Solution**: Length and distance codes are combined into a single "match code." This normalizes the statistical distribution of the codes, making them suitable for efficient Huffman coding.
+
+- **Benefit**: This allows czip to leverage the speed of Huffman coding for all code types, resulting in faster compression and decompression than many FSE-based implementations. The core compression logic is also significantly smaller (approx. 1,500 lines of code).
+
+- **Implementation**: The code values are derived using simple bitwise arithmetic, as seen in the following C functions:
 
 ```
 static inline u16 get_match_code(u16 len, u32 dist) {
@@ -80,11 +95,21 @@ static inline u8 distance_extra_bits(u8 match_code) {
 }
 ```
 
-These values can be determined with simple arithmetic calculations. This leads to the performance results that have been noted above (faster than lz4 on compression and decompression with better compression ratios than zlib level 1). In addition this results in very little memory usage as noted and a much simpler code base than FSE based implementations. The core of the compression library is roughly 1,500 lines of code.
+## Least Significant Bit (LSB) Bitstream
 
-Another advantage comes from using a least significant bit (LSB) bitstream. By using an LSB bitstream, we do not need to reverse the bits on little-endian systems and can therefore simply dereference a 64 bit unsigned integer in and out of the input/output. This allows for faster bitstream operations than, the more common MSB bitstreams that most projects use. To do this, we have to use no-common-suffix cannonical huffman codes as opposed to the more common no-common-prefix cannonical huffman codes. That way we can still take advantage of a lookup table. The lookup table is simply inverted from the regular no-common-prefix lookup tables.
+- By using an LSB bitstream, czip avoids the need for bit-reversal on little-endian systems (the majority of modern hardware), leading to faster bitstream operations.
 
-A third advantage comes from our highly efficient hashtable. The size of the hashtable is small (128kb) so it is stored on the stack. By having this size fixed, we can use a shift of 16 bits and avoid an additional modulus opertaion. We also avoid many operations by simply assuming that the existing value is a match and checking it (either with scalar operations or SIMD where supported). But basically this allows for an almost completely branchless section of code where we determine matches and non-matches. See code below:
+- To support LSB processing, czip uses a "no-common-suffix" canonical Huffman coding scheme, allowing it to efficiently use lookup tables.
+
+# High-Performance LZ77 Hashtable
+
+`czip` utilizes a highly optimized LZ77 hashtable for fast pattern matching.
+
+- **Stack-Allocated**: The table's fixed size (128 KB) allows it to be allocated on the stack, benefiting from cache locality.
+
+- **Branchless Matching**: The match-finding logic is designed to be nearly branchless. It assumes a match exists, retrieves the candidate position, and then verifies it, which is highly efficient on modern CPUs.
+
+- **SIMD Acceleration**: On systems with AVX2 support, the match-checking loop is replaced with SIMD instructions (_mm256_cmpeq_epi8), allowing for 32-byte comparisons in a single instruction and further accelerating performance.
 
 ```
 STATIC MatchInfo lz_hash_get(LzHash *restrict hash, const u8 *restrict text,
@@ -119,9 +144,9 @@ STATIC MatchInfo lz_hash_get(LzHash *restrict hash, const u8 *restrict text,
 }
 ```
 
-This function both gets and sets the target offset in the text with very little branching. This is possible due to the exact sizes of the hashtable and the fact that we can cast values from a u32 into a u16. We also take advantage of the fact that the maximum match length is 256. The SIMD instructions continue while len < MAX_MATCH_LEN (256). Because this is divisible by 256 we don't need an additional tail loop because we know we find the correct length which is either 256 or a partial match where mask != 0xFFFFFFFF. Additionally we increment len with a branchless addition. Additionally we use tail processing to ensure the reads of up to 32 bytes out are valid and do not involve undefined behavior.
+## Lookup table efficiency
 
-Regarding decompression, as is customary we build a lookup table, but we store additional information in the lookup table values that reduces the computation time when we find a match. See data structure below:
+All needed data is built into the lookup tables allowing for fast decoding of codes.
 
 ```
 typedef struct {
@@ -134,8 +159,6 @@ typedef struct {
 } HuffmanLookup;
 ```
 
-This allows us to calculate these values once, when we build the lookup table and use them for our entire block.
+# Multi-threading
 
-# What's not implemented
-
-While some implementations use multi-threading, we have not implemented multi-threading in the core library. This is something that could be implemented, but currently we expect to implement multi-threading in our upcoming database implementation and thus building it directly into the core compression library would be redundant. However, the core compression/decompression functions are highly conducive to performance improvements from multi-threading. That's because the blocks are completely self contained. Since compress_block/decompress_block only support up to 256kb blocks, that means a file that's several megabytes or larger could be parallelized by chunking the file into 256kb blocks and compressing/decompressing in parallel. That's something that could be done, but for now we are deferring this in favor of simplicity and our priorities of the database implementation.
+While czip's core compression and decompression functions are designed for high parallelization, multithreading has not been implemented in the core library. This decision was made to keep the implementation simple and prioritize development of the upcoming database implementation. Files can be parallelized by an application that chunks the data into 256KB blocks and processes them concurrently.
