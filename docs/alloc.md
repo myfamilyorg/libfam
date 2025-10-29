@@ -38,4 +38,19 @@ alloc/release/resize can be used exactly like malloc/free/realloc.
 
 # Design/Architecture
 
+```
+┌────────────────────┐
+│  Global Allocator  │ ← init_global_allocator(64)
+├────────────────────┤
+│  Slab[8]  Slab[16] │ ← 4 MB each
+│  Slab[32] Slab[64] │
+│  ...     Slab[1M]  │
+└────────────────────┘
+        ↓
+     alloc(128)
+        ↓
+   CAS on bitmap → instant slot
+        ↓
+   return aligned pointer
+```
 alloc/release/resize (which correspond to malloc/free/realloc) are implement lock-free using arena scheduling. The basic approach is to request a 4mb 'chunk' for each slab size. Slab sizes range from 8 bytes to 1mb (each power of two in that range). When you 'alloc', a new chunk is allocated if it has not been allocated for that size. Then CAS (compare and swap) operations are used to efficiently allocate memory. This allow for thread safe allocation/deallocation and the above performance numbers.
