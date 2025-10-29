@@ -1,2 +1,3 @@
 - [Build Instructions](https://myfamilyorg.github.io/libfam/build_instructions)
+- [Alloc](https://myfamilyorg.github.io/libfam/alloc)
 - [czip](https://myfamilyorg.github.io/libfam/czip)
