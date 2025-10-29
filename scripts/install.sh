@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the target directory for the library
-LIB_VERSION="0.0.1"
+LIB_VERSION="1.0.0"
 LIB_DIR="/usr/lib/libfam-${LIB_VERSION}"
 CZIP_BIN=./target/bin/czip
 CZIP_INSTALL_DIR=/usr/local/bin

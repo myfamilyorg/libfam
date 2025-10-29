@@ -31,7 +31,7 @@ i32 main(i32 argc, char **argv) {
 Save as test.c. Then compile/link to libfam:
 
 ```
-clang -lfam -L/usr/lib/libfam-0.0.1 test.c
+clang -lfam -L/usr/lib/libfam-1.0.0 test.c
 ```
 
 alloc/release/resize can be used exactly like malloc/free/realloc.
