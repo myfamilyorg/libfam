@@ -6,7 +6,7 @@
 
 # Performance Comparison
 
-- **Test Data**: A 23.17 MB text file containing repeated sections of text. **Five copies of the American King James Version of the bible from biblehub.com**
+- **Test Data**: A 23.17 MB text file containing repeated sections of text. **Five copies of the American King James Version of the bible from github.com/bible-hub**
 - **Hardware**: AMD Ryzen Zen 3 (6-core / 12-thread) @ 2.944 GHz.
 - **Software**: Clang 18.1.3, Linux 6.14.0-33.
 - **Notes**: The `zstd` benchmark was run with --single-thread --fast=1.
