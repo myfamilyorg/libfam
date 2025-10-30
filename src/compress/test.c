@@ -621,3 +621,54 @@ Test(compress_both_redir) {
 	unlink("/tmp/compress_file_redir_in.txt");
 	close(in);
 }
+
+#define FUZZ_BUF_SIZE (1 << 16)
+#define FUZZ_ITER 100
+
+Test(decomp_fuzz) {
+	u8 buf[FUZZ_BUF_SIZE] = {0};
+	u8 out[FUZZ_BUF_SIZE * 10] = {0};
+	Rng rng;
+
+	ASSERT(!rng_init(&rng), "rng init");
+
+	for (u64 i = 0; i < FUZZ_ITER; i++) {
+		u64 bytes_consumed = 0;
+		u16 len = 0;
+		rng_gen(&rng, &len, sizeof(len));
+		rng_gen(&rng, buf, len);
+		i32 res = decompress_block(buf, len, out, sizeof(out),
+					   &bytes_consumed);
+		ASSERT(res <= (i32)compress_bound(len), "compress_bound");
+	}
+}
+
+Test(decomp_fuzz2) {
+	u8 out[1024 * 256], in[1024 * 128];
+	const u8 *path = "./resources/test_wikipedia.txt";
+	i32 fd = file(path);
+	u64 file_size = min(fsize(fd), 128 * 1024);
+	u8 *inmap = fmap(fd, file_size, 0);
+	Rng rng;
+
+	memcpy(in, inmap, file_size);
+
+	ASSERT(!rng_init(&rng), "rng init");
+
+	for (u64 i = 0; i < FUZZ_ITER; i++) {
+		i32 res;
+		u64 bytes_consumed;
+		u16 r = 0, offset = 0;
+
+		rng_gen(&rng, &offset, sizeof(offset));
+		rng_gen(&rng, &r, sizeof(r));
+		r %= 1024;
+		offset %= 90000;
+		rng_gen(&rng, in + 1024 + offset, r);
+		res = decompress_block(in, file_size, out, sizeof(out),
+				       &bytes_consumed);
+		ASSERT(res <= (i32)compress_bound(file_size), "compress_bound");
+	}
+	close(fd);
+	munmap(inmap, file_size);
+}
