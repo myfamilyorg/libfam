@@ -159,11 +159,6 @@ void run_compressor(CzipConfig *config) {
 		_famexit(-1);
 	}
 
-	if (exists(output_file)) {
-		println("Output file '{}' already exists.", output_file);
-		_famexit(-1);
-	}
-
 	if (!strlen_in_file) {
 		infd = 0;
 	} else
