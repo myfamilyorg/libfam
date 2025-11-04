@@ -2,6 +2,16 @@
 
 Libfam has its own memory allocator (alloc/release). These are comparable to malloc/free from libc. However, they are more performant. They outperform libc and jemalloc by using a slab allocator that uses arena allocation using lock-free methods to allocate memory.
 
+# Performance
+
+The test program for these benchmarks is in etc/abench.c. They are tested using Clang 18.1.3 using Linux 6.14.0-33 on a AMD Ryzen Zen 3 processor (6 core / 12 thread) running at 2.944 Ghz. abench.c does 1000 allocations followed by 1000 deallocations. The size of each allocation is 128 bytes.
+
+| Allocator      | Time (µs) | Speedup vs jemalloc |
+|----------------|----------:|---------------------|
+| **libfam `alloc()`** | **39** | **2.1×** |
+| jemalloc (`malloc`)  | 82  | 1.0× |
+| glibc `malloc()`     | 208 | 0.4× |
+
 # Using alloc/release
 
 Using alloc/release is pretty straight forward. Simply link to libfam (-lfam) and call init_global_allocator(u64 num_chunks);
