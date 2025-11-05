@@ -29,8 +29,8 @@
 #include <libfam/types.h>
 #include <stdlib.h>
 
-#define ALLOC_COUNT (500 * 1024)
-#define ALLOC_SIZE 8
+#define ALLOC_COUNT 1024
+#define ALLOC_SIZE 128
 
 i32 main(i32 argc, char **argv) {
 	u64 i;
@@ -48,7 +48,6 @@ i32 main(i32 argc, char **argv) {
 		else
 			arr[i] = alloc(ALLOC_SIZE);
 	}
-	println("mem={}", allocated_bytes());
 
 	for (i = 0; i < ALLOC_COUNT; i++) {
 		if (use_libc)
