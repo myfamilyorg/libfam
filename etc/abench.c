@@ -29,15 +29,17 @@
 #include <libfam/types.h>
 #include <stdlib.h>
 
-#define ALLOC_COUNT 1024
-#define ALLOC_SIZE 128
+#define ALLOC_COUNT (500 * 1024)
+#define ALLOC_SIZE 8
 
 i32 main(i32 argc, char **argv) {
 	u64 i;
 	init_global_allocator(64);
-	u8 *arr[ALLOC_COUNT];
+	u8 **arr;
 	bool use_libc = false;
 	if (argc >= 2 && !strcmp(argv[1], "--libc")) use_libc = true;
+
+	arr = map(sizeof(u8 *) * ALLOC_COUNT);
 
 	i64 timer = micros();
 	for (i = 0; i < ALLOC_COUNT; i++) {
@@ -46,6 +48,7 @@ i32 main(i32 argc, char **argv) {
 		else
 			arr[i] = alloc(ALLOC_SIZE);
 	}
+	println("mem={}", allocated_bytes());
 
 	for (i = 0; i < ALLOC_COUNT; i++) {
 		if (use_libc)
@@ -56,6 +59,8 @@ i32 main(i32 argc, char **argv) {
 	timer = micros() - timer;
 	println("use_libc={},elapsed_time={}µs,ALLOC_COUNT={},ALLOC_SIZE={}",
 		use_libc, timer, ALLOC_COUNT, ALLOC_SIZE);
+
+	munmap(arr, sizeof(u8 *) * ALLOC_COUNT);
 
 	return 0;
 }

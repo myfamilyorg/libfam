@@ -101,6 +101,9 @@ CFLAGS="${CFLAGS} \
 if [ "$FLTO" = "1" ]; then
         CFLAGS="${CFLAGS} -flto=auto";
 fi
+if [ "$MEM_TRACKING" = "1" ]; then
+	CFLAGS="${CFLAGS} -DMEM_TRACKING";
+fi
 
 if [ "${LDFLAGS}" = "" ]; then
         LDFLAGS="-O3 -ffreestanding -nostdlib -fstack-protector -shared -fvisibility=hidden";

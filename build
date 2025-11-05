@@ -10,6 +10,7 @@ usage() {
 	echo "  --f=<filter> := filter to target single test (e.g. --f=alloc1) default: all tests";
 	echo "  --novalgrind := runs tests without valgrind";
 	echo "  --quick := run without flto (link time optimization)";
+	echo "  --mem_tracking := run with memory tracking enabled (allows profiling memory)";
         exit -1;
 }
 
@@ -30,6 +31,7 @@ COV=0;
 INSTALL=0;
 SILENT=0;
 VALGRIND=1;
+MEM_TRACKING=0;
 SPEC=0;
 CC=clang;
 CFLAGS="-O3 \
@@ -66,6 +68,9 @@ for var in "$@"; do
 		;;
 	--help)
 		usage
+		;;
+	--mem_tracking)
+		MEM_TRACKING=1;
 		;;
 	--f=*)
 		FILTER="${var#*=}";

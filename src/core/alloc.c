@@ -35,6 +35,12 @@
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
 
+#if TEST == 1
+#ifndef MEM_TRACKING
+#define MEM_TRACKING
+#endif /* MEM_TRACKING */
+#endif /* TEST */
+
 #define _p(msg)                                     \
 	do {                                        \
 		write(STDERR_FD, msg, strlen(msg)); \
@@ -108,9 +114,9 @@ STATIC void *alloc_slab(Alloc *a, u64 size) {
 		if ((ret = alloc_from_chunk(chunk))) break;
 		ptr = &chunk->next;
 	}
-#if TEST == 1
+#ifdef MEM_TRACKING
 	if (ret) __aadd64(&a->allocated_bytes, slab_size);
-#endif /* TEST */
+#endif /* MEM_TRACKING */
 	return ret;
 }
 
@@ -126,9 +132,9 @@ STATIC void release_slab(Alloc *a, void *ptr) {
 	u64 index =
 	    ((u64)ptr - ((u64)chunk + sizeof(Chunk) + bmp_size)) / slab_size;
 	bitmap_release_bit(chunk_bmp, index);
-#if TEST == 1
+#ifdef MEM_TRACKING
 	__asub64(&a->allocated_bytes, slab_size);
-#endif /* TEST */
+#endif /* MEM_TRACKING */
 }
 
 STATIC void *alloc_map(Alloc *a, u64 size) {
@@ -140,9 +146,9 @@ STATIC void *alloc_map(Alloc *a, u64 size) {
 	if (chunk) {
 		chunk->size = size;
 		chunk->magic = MAGIC;
-#if TEST == 1
+#ifdef MEM_TRACKING
 		__aadd64(&a->allocated_bytes, size);
-#endif /* TEST */
+#endif /* MEM_TRACKING */
 		return (u8 *)chunk + sizeof(MmapChunk);
 	} else {
 		errno = ENOMEM;
@@ -152,9 +158,9 @@ STATIC void *alloc_map(Alloc *a, u64 size) {
 
 STATIC void release_map(Alloc *a, void *ptr) {
 	MmapChunk *chunk = (MmapChunk *)((u8 *)ptr - sizeof(MmapChunk));
-#if TEST == 1
+#ifdef MEM_TRACKING
 	__asub64(&a->allocated_bytes, chunk->size);
-#endif /* TEST */
+#endif /* MEM_TRACKING */
 
 	if (chunk->magic != MAGIC) _p(MAGIC_ERROR);
 	if (munmap(chunk, chunk->size) < 0) _p("munmap1");
@@ -187,9 +193,9 @@ Alloc *alloc_init(AllocType t, u64 chunks) {
 		i32 i;
 		ret->chunks = chunks;
 		for (i = 0; i < SLAB_COUNT; i++) ret->slab_pointers[i] = -1;
-#if TEST == 1
+#ifdef MEM_TRACKING
 		ret->allocated_bytes = 0;
-#endif /* TEST */
+#endif /* MEM_TRACKING */
 		ret->t = t;
 		BitMap *bmp = (BitMap *)((u8 *)ret + sizeof(Alloc));
 		bitmap_init(bmp, chunks);

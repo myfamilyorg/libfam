@@ -154,6 +154,7 @@ void *bresize(Alloc *a, void *ptr, u64 new_size);
  *         a must not be NULL and must be valid.
  *         Value is exact at the time of call; may change immediately after.
  *         Useful for memory usage tracking and leak detection.
+ *         Requires build with --mem_tracking enabled or test.
  */
 u64 alloc_allocated_bytes(const Alloc *a);
 
@@ -169,6 +170,7 @@ u64 alloc_allocated_bytes(const Alloc *a);
  *         alloc_allocated_bytes.
  *         Intended for use in testing or when restarting tracking.
  *         a must not be NULL.
+ *         Requires build with --mem_tracking enabled or test.
  */
 void alloc_reset_allocated_bytes(Alloc *a);
 

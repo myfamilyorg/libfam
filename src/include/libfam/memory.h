@@ -105,6 +105,7 @@ void release(void *ptr);
  *         Value is exact at the time of call; may change immediately after.
  *         Useful for memory usage tracking and leak detection.
  *         Equivalent to alloc_allocated_bytes(&global_alloc).
+ *         Requires build with --mem_tracking enabled or test.
  */
 u64 allocated_bytes(void);
 
@@ -119,6 +120,7 @@ u64 allocated_bytes(void);
  *         allocated_bytes.
  *         Intended for use in testing or restarting tracking.
  *         Equivalent to alloc_reset_allocated_bytes(&global_alloc).
+ *         Requires build with --mem_tracking enabled or test.
  */
 void reset_allocated_bytes(void);
 
