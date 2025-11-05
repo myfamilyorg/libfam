@@ -188,6 +188,38 @@ CLEANUP:
 	RETURN;
 }
 
+STATIC i32 compress_file_sync(i32 in_fd, i32 out_fd, u8 rbuf[2][CHUNK_SIZE],
+			      u8 wbuf[2][MAX_COMPRESSED_SIZE]) {
+INIT:
+	while (true) {
+		i64 to_read = CHUNK_SIZE, total_read = 0;
+		while (total_read < to_read) {
+			i32 res = read(in_fd, rbuf[0] + total_read,
+				       to_read - total_read);
+			if (res < 0) ERROR();
+			if (res == 0) break;
+			total_read += res;
+		}
+
+		if (!total_read) break;
+		i32 res = compress_block(rbuf[0], total_read,
+					 wbuf[0] + sizeof(ChunkHeader),
+					 MAX_COMPRESSED_SIZE);
+		if (res < 0) ERROR();
+		ChunkHeader *ch = (void *)wbuf[0];
+		ch->size = res;
+		i64 to_write = res + sizeof(ChunkHeader), total_written = 0;
+		while (total_written < to_write) {
+			i32 res = write(out_fd, wbuf[0] + total_written,
+					to_write - total_written);
+			if (res < 0) ERROR();
+			total_written += res;
+		}
+	}
+CLEANUP:
+	RETURN;
+}
+
 PUBLIC i32 decompress_file(i32 in_fd, i32 out_fd) {
 	IoUring *iou = NULL;
 	CompressFileHeader header = {0};
@@ -341,7 +373,6 @@ PUBLIC i32 compress_file(i32 in_fd, i32 out_fd, const u8 *filename) {
 	bool out_is_regular_file, in_is_regular_file;
 	i32 sched_val;
 INIT:
-	if (iouring_init(&iou, 4) < 0) ERROR();
 	if (fstat(out_fd, &st) < 0) ERROR();
 	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
 		ERROR(EINVAL);
@@ -356,6 +387,11 @@ INIT:
 	woffset = compress_write_header(out_fd, st.st_mode & 0777, st.st_mtime,
 					st.st_atime, filename);
 	if (woffset < 0) ERROR();
+
+	if (!in_is_regular_file || !out_is_regular_file)
+		return compress_file_sync(in_fd, out_fd, rbuf, wbuf);
+
+	if (iouring_init(&iou, 4) < 0) ERROR();
 
 	sched_val = compress_file_sched_read(iou, in_fd, roffset, CHUNK_SIZE,
 					     rbuf[0], 0);

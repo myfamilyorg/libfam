@@ -520,7 +520,8 @@ Test(compress_file_redir_in) {
 	close(fds[1]);
 	await(pid);
 	i32 conf_fd = file("/tmp/compress_file_redir_in.txt");
-	ASSERT_EQ(fsize(conf_fd), 7955345, "file size=7955345");
+	ASSERT_EQ(fsize(conf_fd), 7955345, "file size=7955345/{}",
+		  fsize(conf_fd));
 	close(conf_fd);
 	unlink("/tmp/compress_file_redir_in.txt");
 	close(in);
