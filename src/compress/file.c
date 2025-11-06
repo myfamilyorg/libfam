@@ -188,6 +188,44 @@ CLEANUP:
 	RETURN;
 }
 
+STATIC i32 decompress_file_sync(i32 in_fd, i32 out_fd,
+				u8 rbuf[2][MAX_COMPRESSED_SIZE],
+				u8 wbuf[2][CHUNK_SIZE + 1024]) {
+	ChunkHeader cheader;
+	u64 bytes_consumed;
+INIT:
+	while (true) {
+		i32 res = read(in_fd, &cheader, sizeof(ChunkHeader));
+		if (res < 0) ERROR();
+		if (res == 0) break;
+		if (res < sizeof(ChunkHeader)) ERROR(EPROTO);
+		if (cheader.size > MAX_COMPRESSED_SIZE) ERROR(EPROTO);
+		i32 total_read = 0;
+		while (total_read < cheader.size) {
+			res = read(in_fd, rbuf[0] + total_read,
+				   cheader.size - total_read);
+			if (res < 0) ERROR();
+			if (res == 0) ERROR(EPROTO);
+			total_read += res;
+		}
+
+		res = decompress_block(rbuf[0], cheader.size, wbuf[0],
+				       CHUNK_SIZE + 1024, &bytes_consumed);
+		if (res < 0) ERROR();
+
+		i32 total_written = 0;
+
+		while (total_written < res) {
+			i32 wlen = write(out_fd, wbuf[0] + total_written,
+					 res - total_written);
+			if (wlen < 0) ERROR();
+			total_written += wlen;
+		}
+	}
+CLEANUP:
+	RETURN;
+}
+
 STATIC i32 compress_file_sync(i32 in_fd, i32 out_fd, u8 rbuf[2][CHUNK_SIZE],
 			      u8 wbuf[2][MAX_COMPRESSED_SIZE]) {
 INIT:
@@ -248,8 +286,15 @@ INIT:
 
 	if (in_is_regular_file)
 		if (lseek(in_fd, 0, SEEK_SET) < 0) ERROR();
-	if (iouring_init(&iou, 4) < 0) ERROR();
 	if ((roffset = compress_read_header(in_fd, &header)) < 0) ERROR();
+
+	if (!in_is_regular_file || !out_is_regular_file) {
+		if (header.filename) release(header.filename);
+		return decompress_file_sync(in_fd, out_fd, rbuf, wbuf);
+	}
+
+	if (iouring_init(&iou, 4) < 0) ERROR();
+
 	sched_val = compress_file_sched_read(iou, in_fd, roffset,
 					     sizeof(ChunkHeader), &cheader, 0);
 	if (sched_val < 0) ERROR();
