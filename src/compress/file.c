@@ -314,18 +314,6 @@ INIT:
 		if (read_pending) res = compress_file_complete(iou, next_read);
 		read_pending = true;
 		if (res < 0) ERROR();
-		while (!in_is_regular_file && res < expected_bytes) {
-			u64 rem = expected_bytes - res;
-			sched_val = compress_file_sched_read(
-			    iou, in_fd, roffset + res, rem, rbuf[index] + res,
-			    next_read);
-			if (sched_val < 0) ERROR();
-			i32 nres = compress_file_complete(iou, next_read);
-			if (nres < 0) ERROR();
-			if (nres == 0) break;
-			res += nres;
-		}
-
 		if (expected_bytes == res) {
 			ch = (void *)(rbuf[index] + expected_bytes -
 				      sizeof(ChunkHeader));
@@ -351,31 +339,10 @@ INIT:
 		roffset += res;
 
 		read_pending = true;
-		if (!out_is_regular_file) {
-			u32 wsum = 0;
-			while (true) {
-				u64 id;
-				i32 spin_res = iouring_spin(iou, &id);
-				if (id == next_read + 1) {
-					res = spin_res;
-					read_pending = false;
-				} else if (id == next_write) {
-					if (spin_res < 0) ERROR();
-					wsum += spin_res;
-					if (wsum >= res2) break;
-
-					sched_val = compress_file_sched_write(
-					    iou, out_fd, woffset, res2 - wsum,
-					    wbuf[index] + wsum, next_write);
-					if (sched_val < 0) ERROR();
-				}
-			}
-		}
-
 		woffset += res2;
 		next_read++;
 
-		if (out_is_regular_file && next_write < U64_MAX) {
+		if (next_write < U64_MAX) {
 			if (iouring_pending(iou, next_write + 1)) {
 				while (true) {
 					u64 id;
@@ -393,13 +360,11 @@ INIT:
 	}
 
 	while (iouring_pending_all(iou)) iouring_spin(iou, &next_write);
-	if (out_is_regular_file) {
-		struct timevalfam ts[2] = {0};
-		if (fchmod(out_fd, header.permissions & 0777) < 0) ERROR();
-		ts[0].tv_sec = header.atime;
-		ts[1].tv_sec = header.mtime;
-		if (utimesat(out_fd, NULL, ts, 0) < 0) ERROR();
-	}
+	struct timevalfam ts[2] = {0};
+	if (fchmod(out_fd, header.permissions & 0777) < 0) ERROR();
+	ts[0].tv_sec = header.atime;
+	ts[1].tv_sec = header.mtime;
+	if (utimesat(out_fd, NULL, ts, 0) < 0) ERROR();
 CLEANUP:
 	if (header.filename) release(header.filename);
 	if (iou) iouring_destroy(iou);
@@ -450,17 +415,6 @@ INIT:
 
 		if (res < 0) ERROR();
 		if (res == 0 && last_res != CHUNK_SIZE) break;
-		while (!in_is_regular_file && res < CHUNK_SIZE) {
-			u64 rem = CHUNK_SIZE - res;
-			sched_val = compress_file_sched_read(
-			    iou, in_fd, roffset + res, rem, rbuf[index] + res,
-			    next_read);
-			if (sched_val < 0) ERROR();
-			i32 nres = compress_file_complete(iou, next_read);
-			if (nres < 0) ERROR();
-			if (nres == 0) break;
-			res += nres;
-		}
 		if (res == CHUNK_SIZE) {
 			sched_val = compress_file_sched_read(
 			    iou, in_fd, roffset + CHUNK_SIZE, CHUNK_SIZE,
@@ -481,32 +435,11 @@ INIT:
 		if (sched_val < 0) ERROR();
 
 		read_pending = true;
-		if (!out_is_regular_file) {
-			u32 wsum = 0;
-			while (true) {
-				u64 id;
-				i32 spin_res = iouring_spin(iou, &id);
-				if (id == next_read || id == next_read + 1) {
-					res = spin_res;
-					read_pending = false;
-				} else if (id == next_write) {
-					if (spin_res < 0) ERROR();
-					wsum += spin_res;
-					if (wsum >= res2) break;
-
-					sched_val = compress_file_sched_write(
-					    iou, out_fd, woffset, res2 - wsum,
-					    wbuf[index] + wsum, next_write);
-					if (sched_val < 0) ERROR();
-				}
-			}
-		}
-
 		roffset += res;
 		woffset += res2;
 		next_read++;
 
-		if (out_is_regular_file && next_write < U64_MAX) {
+		if (next_write < U64_MAX) {
 			if (iouring_pending(iou, next_write + 1)) {
 				while (true) {
 					u64 id;
