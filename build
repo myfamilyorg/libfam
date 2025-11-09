@@ -6,7 +6,7 @@ usage() {
         echo "Options:";
         echo "  -s := run in silent mode (less output)";
 	echo "  --cc=<compiler> := c compiler to use default 'clang'";
-	echo "  --cflags=<cflags> := c flags to use default '-O3 -Werror -Wall -std=x11'";
+	echo "  --cflags=<cflags> := c flags to use default '-O3 -Werror -Wall -std=c11'";
 	echo "  --f=<filter> := filter to target single test (e.g. --f=alloc1) default: all tests";
 	echo "  --novalgrind := runs tests without valgrind";
 	echo "  --quick := run without flto (link time optimization)";
