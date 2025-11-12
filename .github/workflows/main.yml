@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - release2
     tags:
       - '*'
   pull_request:
