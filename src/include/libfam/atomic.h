@@ -45,19 +45,8 @@
  *         ptr and expected must not be null.
  */
 static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
-#ifdef __aarch64__
-	/*
 	return __atomic_compare_exchange(ptr, expected, &desired, false,
 					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
-					 */
-	u64 old = *expected;
-	i32 success = __sync_bool_compare_and_swap(ptr, old, desired);
-	if (!success) *expected = *ptr;
-	return success;
-#elif defined(__x86_64__)
-	return __atomic_compare_exchange(ptr, expected, &desired, false,
-					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
-#endif /* __x86_64__ */
 }
 
 /*
@@ -74,21 +63,7 @@ static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
  *         ptr must not be null.
  */
 static __inline u32 __aand32(volatile u32 *ptr, u32 value) {
-#ifdef __aarch64__
-	u32 old, tmp;
-	__asm__ volatile(
-	    "1: ldaxr %w0, [%2]\n"
-	    "and %w1, %w0, %w3\n"
-	    "stxr w4, %w1, [%2]\n"
-	    "cbnz w4, 1b\n"
-	    "dmb ish\n"
-	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
-	    : "r"(value)
-	    : "w4", "memory");
-	return old;
-#elif defined(__x86_64__)
 	return __atomic_fetch_and(ptr, value, __ATOMIC_SEQ_CST);
-#endif /* __x86_64__ */
 }
 
 /*
@@ -105,21 +80,7 @@ static __inline u32 __aand32(volatile u32 *ptr, u32 value) {
  *         ptr must not be null.
  */
 static __inline u32 __aadd32(volatile u32 *ptr, u32 value) {
-#ifdef __aarch64__
-	u32 old, tmp;
-	__asm__ volatile(
-	    "1: ldaxr %w0, [%2]\n"
-	    "add %w1, %w0, %w3\n"
-	    "stxr w4, %w1, [%2]\n"
-	    "cbnz w4, 1b\n"
-	    "dmb ish\n"
-	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
-	    : "r"(value)
-	    : "w4", "memory");
-	return old;
-#elif defined(__x86_64__)
 	return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
-#endif /* __x86_64__ */
 }
 
 /*
@@ -153,21 +114,7 @@ static __inline u32 __asub32(volatile u32 *ptr, u32 value) {
  *         ptr must not be null.
  */
 static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
-#ifdef __aarch64__
-	u32 old, tmp;
-	__asm__ volatile(
-	    "1: ldaxr %w0, [%2]\n"
-	    "orr %w1, %w0, %w3\n"
-	    "stxr w4, %w1, [%2]\n"
-	    "cbnz w4, 1b\n"
-	    "dmb ish\n"
-	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
-	    : "r"(value)
-	    : "w4", "memory");
-	return old;
-#elif defined(__x86_64__)
 	return __atomic_fetch_or(ptr, value, __ATOMIC_SEQ_CST);
-#endif /* __x86_64__ */
 }
 
 /*
@@ -187,18 +134,8 @@ static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
  *         ptr and expected must not be null.
  */
 static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
-#ifdef __aarch64__
-	/*
-	return __atomic_compare_exchange(ptr, expected, &desired, false,
-					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);*/
-	u64 old = *expected;
-	i32 success = __sync_bool_compare_and_swap(ptr, old, desired);
-	if (!success) *expected = *ptr;
-	return success;
-#elif defined(__x86_64__)
 	return __atomic_compare_exchange(ptr, expected, &desired, false,
 					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
-#endif /* __x86_64__ */
 }
 
 /*
@@ -215,21 +152,7 @@ static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
  *         ptr must not be null.
  */
 static __inline u64 __aand64(volatile u64 *ptr, u64 value) {
-#ifdef __aarch64__
-	u64 old, tmp;
-	__asm__ volatile(
-	    "1: ldaxr %x0, [%2]\n"
-	    "and %x1, %x0, %x3\n"
-	    "stxr w4, %x1, [%2]\n"
-	    "cbnz w4, 1b\n"
-	    "dmb ish\n"
-	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
-	    : "r"(value)
-	    : "w4", "memory");
-	return old;
-#elif defined(__x86_64__)
 	return __atomic_fetch_and(ptr, value, __ATOMIC_SEQ_CST);
-#endif /* __x86_64__ */
 }
 
 /*
@@ -246,21 +169,7 @@ static __inline u64 __aand64(volatile u64 *ptr, u64 value) {
  *         ptr must not be null.
  */
 static __inline u64 __aadd64(volatile u64 *ptr, u64 value) {
-#ifdef __aarch64__
-	u64 old, tmp;
-	__asm__ volatile(
-	    "1: ldaxr %x0, [%2]\n"
-	    "add %x1, %x0, %x3\n"
-	    "stxr w4, %x1, [%2]\n"
-	    "cbnz w4, 1b\n"
-	    "dmb ish\n"
-	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
-	    : "r"(value)
-	    : "w4", "memory");
-	return old;
-#elif defined(__x86_64__)
 	return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
-#endif /* __x86_64__ */
 }
 
 /*
@@ -294,21 +203,7 @@ static __inline u64 __asub64(volatile u64 *ptr, u64 value) {
  *         ptr must not be null.
  */
 static __inline u64 __aor64(volatile u64 *ptr, u64 value) {
-#ifdef __aarch64__
-	u64 old, tmp;
-	__asm__ volatile(
-	    "1: ldaxr %x0, [%2]\n"
-	    "orr %x1, %x0, %x3\n"
-	    "stxr w4, %x1, [%2]\n"
-	    "cbnz w4, 1b\n"
-	    "dmb ish\n"
-	    : "=&r"(old), "=&r"(tmp), "+r"(ptr)
-	    : "r"(value)
-	    : "w4", "memory");
-	return old;
-#elif defined(__x86_64__)
 	return __atomic_fetch_or(ptr, value, __ATOMIC_SEQ_CST);
-#endif /* __x86_64__ */
 }
 
 /*
