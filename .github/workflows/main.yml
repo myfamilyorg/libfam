@@ -40,7 +40,13 @@ jobs:
         with:
           fetch-depth: 0
       - name: Check linux version
-        run: uname -a
+        run: |
+          uname -a
+          gcc --version
+          sudo apt install gcc-14
+          gcc --version
+          gcc-14 --version
+          gcc-15 --version
       - name: build
         run: |
           ./.ci/build
@@ -72,7 +78,10 @@ jobs:
         with:
           fetch-depth: 0
       - name: Check linux version
-        run: uname -a
+        run: |
+          uname -a
+          sudo apt install gcc-14
+
       - name: test
         run: |
           ./.ci/test --novalgrind
@@ -102,7 +111,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Check linux version
-        run: uname -a
+        run: |
+          uname -a
+          sudo apt install gcc-14
       - name: coverage
         run: |
           ./.ci/coverage
@@ -132,7 +143,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Check linux version
-        run: uname -a
+        run: |
+          uname -a
+          sudo apt install gcc-14
       - name: end2end
         run: |
           ./.ci/end2end
