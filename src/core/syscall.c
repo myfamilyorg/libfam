@@ -31,7 +31,7 @@
 #include <libfam/utils.h>
 
 #ifdef __aarch64__
-#define SYS_pread64 17
+#define SYS_pread64 67
 #define SYS_epoll_create1 20
 #define SYS_epoll_ctl 21
 #define SYS_epoll_pwait 22
