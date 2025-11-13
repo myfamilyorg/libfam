@@ -62,18 +62,18 @@ static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
 
 		    "cbz w1, 2f\n"     /* Jump to success if store succeeded */
 		    "1: mov %w1, #0\n" /* Set success = 0 (fail) */
-		    "b 3f\n" -
-			"2: mov %w1, #1\n" /* Set success = 1 (success) */
-			"3: dmb ish\n"	   /* Memory barrier */
+		    "b 3f\n"
+		    "2: mov %w1, #1\n" /* Set success = 1 (success) */
+		    "3: dmb ish\n"     /* Memory barrier */
 
 		    : "=&r"(result), "=&r"(success)
 		    : "r"(ptr), "r"(*expected), "r"(desired)
-		    : "cc", "memory");
+		    : "w1", "memory");
 		if (success) break;
 		*expected = result;
 		if (result != orig_expected) break;
 	}
-	-return success;
+	return success;
 
 #endif /* __aarch64__ */
 }
@@ -223,7 +223,7 @@ static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
 		    "3: dmb ish\n"     /* Memory barrier */
 		    : "=&r"(result), "=&r"(success)
 		    : "r"(ptr), "r"(*expected), "r"(desired)
-		    : "cc", "memory");
+		    : "w1", "memory");
 		if (success) break;
 		*expected = result;
 		if (result != orig_expected) break;
