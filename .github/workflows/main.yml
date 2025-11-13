@@ -45,6 +45,7 @@ jobs:
           gcc --version
           sudo apt install gcc-14
           gcc --version
+          gcc-14 --version
       - name: build
         run: |
           ./.ci/build
