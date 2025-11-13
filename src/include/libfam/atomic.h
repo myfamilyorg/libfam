@@ -46,8 +46,14 @@
  */
 static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
 #ifdef __aarch64__
+	/*
 	return __atomic_compare_exchange(ptr, expected, &desired, false,
 					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+					 */
+	u64 old = *expected;
+	i32 success = __sync_bool_compare_and_swap(ptr, old, desired);
+	if (!success) *expected = *ptr;
+	return success;
 #elif defined(__x86_64__)
 	return __atomic_compare_exchange(ptr, expected, &desired, false,
 					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
@@ -182,8 +188,13 @@ static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
  */
 static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
 #ifdef __aarch64__
+	/*
 	return __atomic_compare_exchange(ptr, expected, &desired, false,
-					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);*/
+	u64 old = *expected;
+	i32 success = __sync_bool_compare_and_swap(ptr, old, desired);
+	if (!success) *expected = *ptr;
+	return success;
 #elif defined(__x86_64__)
 	return __atomic_compare_exchange(ptr, expected, &desired, false,
 					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
