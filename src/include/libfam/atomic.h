@@ -49,23 +49,32 @@ static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
 	return __atomic_compare_exchange_n(ptr, expected, desired, false,
 					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 #elif defined(__aarch64__)
-	u32 old;
-	u32 tmp; /* dummy for stxr status */
+	u32 result;
+	i32 success;
+	u32 orig_expected = *expected;
+	i32 retries = 5;
+	while (retries--) {
+		__asm__ volatile(
+		    "ldaxr %w0, [%2]\n"	   /* Load-exclusive 32-bit */
+		    "cmp %w0, %w3\n"	   /* Compare with *expected */
+		    "b.ne 1f\n"		   /* Jump to fail if not equal */
+		    "stxr w1, %w4, [%2]\n" /* Store-exclusive desired */
 
-	__asm__ volatile(
-	    "1: ldaxr   %w[old],  [%[ptr]]\n" /* load exclusive */
-	    "    cmp     %w[old],  %w[exp]\n"
-	    "    b.ne    2f\n" /* not equal → exit   */
-	    "    stxr    %w[tmp],  %w[des], [%[ptr]]\n" /* store exclusive */
-	    "    cbnz    %w[tmp],  1b\n"		/* retry if failed   */
-	    "2:\n"
-	    : [old] "=&r"(old), /* early-clobber output */
-	      [tmp] "=&r"(tmp)	/* status register      */
-	    : [ptr] "r"(ptr), [exp] "r"(*expected), [des] "r"(desired)
-	    : "cc", "memory");
+		    "cbz w1, 2f\n"     /* Jump to success if store succeeded */
+		    "1: mov %w1, #0\n" /* Set success = 0 (fail) */
+		    "b 3f\n" -
+			"2: mov %w1, #1\n" /* Set success = 1 (success) */
+			"3: dmb ish\n"	   /* Memory barrier */
 
-	*expected = old;	 /* return the value we actually saw */
-	return old == *expected; /* 1 on success, 0 on failure          */
+		    : "=&r"(result), "=&r"(success)
+		    : "r"(ptr), "r"(*expected), "r"(desired)
+		    : "cc", "memory");
+		if (success) break;
+		*expected = result;
+		if (result != orig_expected) break;
+	}
+	-return success;
+
 #endif /* __aarch64__ */
 }
 
@@ -197,22 +206,30 @@ static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
  */
 static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
 #ifdef __aarch64__
-	u64 old;
-	u32 tmp; /* stxr returns a 32-bit status */
+	u64 result;
+	i32 success;
+	u64 orig_expected = *expected;
+	i32 retries = 5;
+	while (retries--) {
+		__asm__ volatile(
+		    "ldaxr %x0, [%2]\n"	   /* Load-exclusive 64-bit */
+		    "cmp %x0, %x3\n"	   /* Compare with *expected */
+		    "b.ne 1f\n"		   /* Jump to fail if not equal */
+		    "stxr w1, %x4, [%2]\n" /* Store-exclusive desired */
+		    "cbz w1, 2f\n"     /* Jump to success if store succeeded */
+		    "1: mov %w1, #0\n" /* Set success = 0 (fail) */
+		    "b 3f\n"
+		    "2: mov %w1, #1\n" /* Set success = 1 (success) */
+		    "3: dmb ish\n"     /* Memory barrier */
+		    : "=&r"(result), "=&r"(success)
+		    : "r"(ptr), "r"(*expected), "r"(desired)
+		    : "cc", "memory");
+		if (success) break;
+		*expected = result;
+		if (result != orig_expected) break;
+	}
+	return success;
 
-	__asm__ volatile(
-	    "1: ldaxr   %[old],  [%[ptr]]\n"
-	    "    cmp     %[old],  %[exp]\n"
-	    "    b.ne    2f\n"
-	    "    stxr    %w[tmp], %[des], [%[ptr]]\n"
-	    "    cbnz    %w[tmp], 1b\n"
-	    "2:\n"
-	    : [old] "=&r"(old), [tmp] "=&r"(tmp)
-	    : [ptr] "r"(ptr), [exp] "r"(*expected), [des] "r"(desired)
-	    : "cc", "memory");
-
-	*expected = old;
-	return old == *expected;
 #elif defined(__x86_64__)
 	return __atomic_compare_exchange_n(ptr, expected, desired, false,
 					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
