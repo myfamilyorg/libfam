@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ARCH=$(uname -m)
+
 ./build clean all --cc=gcc || exit $?;
 
 ldd target/lib/libfam.so  | grep "statically linked" || { echo "not statically linked!"; exit 1; }

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ARCH=$(uname -m)
+
 ./build clean test --cflags=-g $1 || exit $?;
 
 ./build clean test --cc=clang $1 || exit $?;
