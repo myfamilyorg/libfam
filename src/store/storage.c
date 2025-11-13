@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <libfam/format.h>
 #include <libfam/iouring.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
@@ -38,7 +39,7 @@
 
 typedef struct LRUEntry {
 	u64 sector;
-	u8 *page;
+	u8 page[PAGE_SIZE];
 	u32 next_chain;
 	u32 next_lru;
 	u32 prev_lru;
@@ -74,14 +75,13 @@ INIT:
 	memset(ret->hashmap, 0xFF, sizeof(u32) * hashmap_size);
 	ret->hashmap_size = hashmap_size;
 
-	ret->oldest = cache_size - 1;
-	ret->newest = 0;
+	ret->oldest = 0;
+	ret->newest = cache_size - 1;
 	for (u32 i = 0; i < cache_size; i++) {
 		ret->entries[i].next_lru = i + 1;
 		ret->entries[i].prev_lru = i - 1;
 		ret->entries[i].next_chain = U32_MAX;
 		ret->entries[i].sector = U64_MAX;
-		ret->entries[i].page = NULL;
 	}
 	ret->entries[cache_size - 1].next_lru = U32_MAX;
 
@@ -107,12 +107,104 @@ void storage_destroy(Storage *s) {
 
 void *storage_load(Storage *s, u64 sector) {
 	u32 hash = (sector * HASH_CONSTANT) % s->hashmap_size;
-	u32 index = s->hashmap[hash];
-	LRUEntry *cur = &s->entries[index];
-	while (true) {
-		if (cur->sector == U64_MAX) break;
-		if (cur->sector == sector) return cur->page;
-		cur = &s->entries[cur->next_chain];
+	u32 idx = s->hashmap[hash];
+	/*println("sector={},idx={},hash={}", sector, idx, hash);*/
+
+	while (idx != U32_MAX) {
+		LRUEntry *e = &s->entries[idx];
+		if (e->sector == sector) {
+			println("update newest. newest={}, idx={}", s->newest,
+				idx);
+
+			if (s->newest != idx) {
+				if (e->prev_lru != U32_MAX)
+					s->entries[e->prev_lru].next_lru =
+					    e->next_lru;
+				if (e->next_lru != U32_MAX)
+					s->entries[e->next_lru].prev_lru =
+					    e->prev_lru;
+				if (s->oldest == idx) s->oldest = e->next_lru;
+
+				e->prev_lru = U32_MAX;
+				e->next_lru = s->newest;
+				s->entries[s->newest].next_lru = idx;
+				s->newest = idx;
+			}
+
+			println("cache hit {X}", (u64)e->page);
+			return e->page;
+		}
+		idx = e->next_chain;
 	}
-	return NULL;
+
+	u32 victim = s->oldest;
+	/*println("victim={}", victim);*/
+	LRUEntry *victim_entry = &s->entries[victim];
+	/*println("victim->sector={},next_lru={},prev_lru={}",
+		victim_entry->sector, victim_entry->next_lru,
+		victim_entry->prev_lru);*/
+
+	i64 res =
+	    pread64(s->fd, victim_entry->page, PAGE_SIZE, sector * PAGE_SIZE);
+	if (res < 0) return NULL;
+	if (res != PAGE_SIZE) {
+		errno = EIO;
+		return NULL;
+	}
+
+	s->oldest = victim_entry->next_lru;
+	LRUEntry *oldest_entry = &s->entries[s->oldest];
+	oldest_entry->prev_lru = U32_MAX;
+
+	idx = s->hashmap[hash];
+	if (idx == U32_MAX) {
+		s->hashmap[hash] = victim;
+	} else {
+		while (true) {
+			u32 next = s->entries[idx].next_chain;
+			if (next == U32_MAX) {
+				s->entries[idx].next_chain = victim;
+				break;
+			}
+		}
+	}
+
+	victim_entry->sector = sector;
+	victim_entry->next_lru = U32_MAX;
+	victim_entry->prev_lru = s->newest;
+	LRUEntry *newest_entry = &s->entries[s->newest];
+	newest_entry->next_lru = U32_MAX;
+
+	if (victim_entry->sector != U64_MAX) {
+		u32 old_hash =
+		    (victim_entry->sector * HASH_CONSTANT) % s->hashmap_size;
+		u32 prev = U32_MAX;
+		u32 curr = s->hashmap[old_hash];
+		while (curr != U32_MAX) {
+			if (curr == victim) {
+				if (prev == U32_MAX) {
+					s->hashmap[old_hash] =
+					    victim_entry->next_chain;
+				} else {
+					s->entries[prev].next_chain =
+					    victim_entry->next_chain;
+				}
+				break;
+			}
+			prev = curr;
+			curr = s->entries[curr].next_chain;
+		}
+	}
+
+	/*println("cache miss {X}", (u64)victim_entry->page);*/
+	return victim_entry->page;
 }
+
+/* typedef struct LRUEntry {
+	u64 sector;
+	u8 page[PAGE_SIZE];
+	u32 next_chain;
+	u32 next_lru;
+	u32 prev_lru;
+} LRUEntry;
+*/
