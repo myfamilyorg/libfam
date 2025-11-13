@@ -45,8 +45,9 @@
  *         ptr and expected must not be null.
  */
 static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
-	return __atomic_compare_exchange_n(ptr, expected, desired, false,
-					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+	return __atomic_compare_exchange((volatile u32 *)ptr, expected,
+					 &desired, false, __ATOMIC_SEQ_CST,
+					 __ATOMIC_SEQ_CST);
 }
 
 /*
@@ -176,8 +177,9 @@ static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
  *         ptr and expected must not be null.
  */
 static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
-	return __atomic_compare_exchange_n(ptr, expected, desired, false,
-					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+	return __atomic_compare_exchange((volatile u64 *)ptr, expected,
+					 &desired, false, __ATOMIC_SEQ_CST,
+					 __ATOMIC_SEQ_CST);
 }
 
 /*
