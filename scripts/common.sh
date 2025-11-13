@@ -106,9 +106,14 @@ if [ "$MEM_TRACKING" = "1" ]; then
 fi
 
 if [ "${LDFLAGS}" = "" ]; then
-        LDFLAGS="-O3 -mno-outline-atomics -ffreestanding -nostdlib -fstack-protector -shared -fvisibility=hidden";
+        LDFLAGS="-O3 -ffreestanding -nostdlib -fstack-protector -shared -fvisibility=hidden";
         if [ "${FLTO}" = "1" ]; then
                 LDFLAGS="${LDFLAGS} -flto=auto";
         fi
 fi
+
+if [[ "${ARCH}" = "aarch64" ]]; then
+        LDFLAGS="${LDFLAGS} -mno-outline-atomics";
+fi
+
 

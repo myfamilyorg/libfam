@@ -23,6 +23,7 @@ check_single_option() {
     SPEC=1;
 }
 
+ARCH=$(uname -m)
 TEST=0;
 CLEAN=0;
 ALL=0;
@@ -34,13 +35,16 @@ VALGRIND=1;
 MEM_TRACKING=0;
 SPEC=0;
 CC=clang;
+
 CFLAGS="-O3 \
-	-mno-outline-atomics \
 	-Werror \
 	-Wall \
 	-funroll-loops \
 	-fstack-protector \
 	-std=c11";
+if [[ "${ARCH}" = "aarch64" ]]; then
+	CFLAGS="${CFLAGS} -mno-outline-atomics";
+fi
 FILTER=*;
 
 for var in "$@"; do
