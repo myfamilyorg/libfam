@@ -45,37 +45,13 @@
  *         ptr and expected must not be null.
  */
 static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
-#ifdef __x86_64__
-	return __atomic_compare_exchange_n(ptr, expected, desired, false,
-					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
-#elif defined(__aarch64__)
-	u32 result;
-	i32 success;
-	u32 orig_expected = *expected;
-	i32 retries = 5;
-	while (retries--) {
-		__asm__ volatile(
-		    "ldaxr %w0, [%2]\n"	   /* Load-exclusive 32-bit */
-		    "cmp %w0, %w3\n"	   /* Compare with *expected */
-		    "b.ne 1f\n"		   /* Jump to fail if not equal */
-		    "stxr w1, %w4, [%2]\n" /* Store-exclusive desired */
-
-		    "cbz w1, 2f\n"     /* Jump to success if store succeeded */
-		    "1: mov %w1, #0\n" /* Set success = 0 (fail) */
-		    "b 3f\n" -
-			"2: mov %w1, #1\n" /* Set success = 1 (success) */
-			"3: dmb ish\n"	   /* Memory barrier */
-
-		    : "=&r"(result), "=&r"(success)
-		    : "r"(ptr), "r"(*expected), "r"(desired)
-		    : "cc", "memory");
-		if (success) break;
-		*expected = result;
-		if (result != orig_expected) break;
-	}
-	-return success;
-
-#endif /* __aarch64__ */
+#ifdef __aarch64__
+	return __atomic_compare_exchange(ptr, expected, &desired, false,
+					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+#elif defined(__x86_64__)
+	return __atomic_compare_exchange(ptr, expected, &desired, false,
+					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+#endif /* __x86_64__ */
 }
 
 /*
@@ -206,33 +182,11 @@ static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
  */
 static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
 #ifdef __aarch64__
-	u64 result;
-	i32 success;
-	u64 orig_expected = *expected;
-	i32 retries = 5;
-	while (retries--) {
-		__asm__ volatile(
-		    "ldaxr %x0, [%2]\n"	   /* Load-exclusive 64-bit */
-		    "cmp %x0, %x3\n"	   /* Compare with *expected */
-		    "b.ne 1f\n"		   /* Jump to fail if not equal */
-		    "stxr w1, %x4, [%2]\n" /* Store-exclusive desired */
-		    "cbz w1, 2f\n"     /* Jump to success if store succeeded */
-		    "1: mov %w1, #0\n" /* Set success = 0 (fail) */
-		    "b 3f\n"
-		    "2: mov %w1, #1\n" /* Set success = 1 (success) */
-		    "3: dmb ish\n"     /* Memory barrier */
-		    : "=&r"(result), "=&r"(success)
-		    : "r"(ptr), "r"(*expected), "r"(desired)
-		    : "cc", "memory");
-		if (success) break;
-		*expected = result;
-		if (result != orig_expected) break;
-	}
-	return success;
-
+	return __atomic_compare_exchange(ptr, expected, &desired, false,
+					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 #elif defined(__x86_64__)
-	return __atomic_compare_exchange_n(ptr, expected, desired, false,
-					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+	return __atomic_compare_exchange(ptr, expected, &desired, false,
+					 __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 #endif /* __x86_64__ */
 }
 
