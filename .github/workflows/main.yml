@@ -75,8 +75,6 @@ jobs:
       - name: Check linux version
         run: |
           uname -a
-          sudo apt install gcc-14
-
       - name: test
         run: |
           ./.ci/test --novalgrind
@@ -108,7 +106,6 @@ jobs:
       - name: Check linux version
         run: |
           uname -a
-          sudo apt install gcc-14
       - name: coverage
         run: |
           ./.ci/coverage
@@ -140,7 +137,6 @@ jobs:
       - name: Check linux version
         run: |
           uname -a
-          sudo apt install gcc-14
       - name: end2end
         run: |
           ./.ci/end2end
