@@ -31,6 +31,7 @@
 #include <libfam/utils.h>
 
 #ifdef __aarch64__
+#define SYS_pread64 17
 #define SYS_epoll_create1 20
 #define SYS_epoll_ctl 21
 #define SYS_epoll_pwait 22
@@ -77,6 +78,7 @@
 #define SYS_mmap 9
 #define SYS_munmap 11
 #define SYS_rt_sigaction 13
+#define SYS_pread64 17
 #define SYS_sched_yield 24
 #define SYS_msync 26
 #define SYS_nanosleep 35
@@ -158,6 +160,17 @@ i64 read(i32 fd, void *buf, u64 count) {
 	i64 v;
 INIT:
 	v = raw_syscall(SYS_read, (i64)fd, (i64)buf, (i64)count, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i64 pread64(i32 fd, void *buf, u64 count, u64 offset) {
+	i64 v;
+INIT:
+	v = raw_syscall(SYS_pread64, (i64)fd, (i64)buf, (i64)count, (i64)offset,
+			0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:

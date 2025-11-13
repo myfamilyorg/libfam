@@ -28,7 +28,6 @@
 #include <libfam/iouring.h>
 #include <libfam/linux.h>
 #include <libfam/memory.h>
-#include <libfam/spin.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
@@ -50,7 +49,6 @@ struct IoUring {
 	u32 *cq_tail;
 	u32 *sq_mask;
 	u32 *cq_mask;
-	SpinLock lock;
 };
 
 i32 iouring_init(IoUring **iou, u32 queue_depth) {
@@ -96,7 +94,6 @@ INIT:
 					       (*iou)->params.cq_off.cqes);
 
 	(*iou)->queue_depth = queue_depth;
-	(*iou)->lock.value = 0;
 CLEANUP:
 	if (!IS_OK) {
 		iouring_destroy(*iou);
@@ -117,11 +114,8 @@ struct io_uring_sqe *iouring_get_sqe(IoUring *iou) {
 i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
 		      u64 foffset, u64 id) {
 	struct io_uring_sqe *sqe;
-
-	spin_lock(&iou->lock);
 	sqe = iouring_get_sqe(iou);
 	if (!sqe) {
-		spin_unlock(&iou->lock);
 		errno = EBUSY;
 		return -1;
 	}
@@ -132,7 +126,6 @@ i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
 	sqe->len = len;
 	sqe->off = foffset;
 	sqe->user_data = id;
-	spin_unlock(&iou->lock);
 	__aadd32(iou->sq_tail, 1);
 	return 0;
 }
@@ -140,10 +133,8 @@ i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
 i32 iouring_init_write(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 		       u64 id) {
 	struct io_uring_sqe *sqe;
-	spin_lock(&iou->lock);
 	sqe = iouring_get_sqe(iou);
 	if (!sqe) {
-		spin_unlock(&iou->lock);
 		errno = EBUSY;
 		return -1;
 	}
@@ -154,7 +145,6 @@ i32 iouring_init_write(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 	sqe->len = len;
 	sqe->off = foffset;
 	sqe->user_data = id;
-	spin_unlock(&iou->lock);
 	__aadd32(iou->sq_tail, 1);
 	return 0;
 }

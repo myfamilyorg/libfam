@@ -1325,3 +1325,12 @@ Test(spin_threads) {
 	munmap(count, sizeof(u64));
 	munmap(sl, sizeof(SpinLock));
 }
+
+Test(pread64) {
+	u8 buf[10];
+	i32 fd = file("./resources/akjv5.txt");
+	i64 v = pread64(fd, buf, 10, 1);
+	ASSERT_EQ(v, 10, "pread 10");
+	ASSERT(!memcmp(buf, "enesis||1|", 10), "value");
+	close(fd);
+}

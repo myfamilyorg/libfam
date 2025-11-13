@@ -628,4 +628,16 @@ i32 io_uring_register(u32 fd, u32 opcode, void *arg, u32 nr_args);
  */
 i32 fstat(i32 fd, struct stat *buf);
 
+/*
+ * Function: pread64
+ * reads the bytes at specified offset
+ * inputs:
+ *         i32 fd                 - file descriptor.
+ *         void *buf              - location to write data to.
+ *         u64 count              - number of bytes to write.
+ *         u64 offset             - offset within the file.
+ * return value: i32 - 0 on success, -1 on error.
+ */
+i64 pread64(i32 fd, void *buf, u64 count, u64 offset);
+
 #endif /* _SYSCALL_H */
