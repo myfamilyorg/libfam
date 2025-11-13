@@ -45,34 +45,8 @@
  *         ptr and expected must not be null.
  */
 static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
-#ifdef __x86_64__
 	return __atomic_compare_exchange_n(ptr, expected, desired, false,
 					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
-#elif defined(__aarch64__)
-	u32 result;
-	i32 success;
-	u32 orig_expected = *expected;
-	i32 retries = 5;
-	while (retries--) {
-		__asm__ volatile(
-		    "ldaxr %w0, [%2]\n"
-		    "cmp %w0, %w3\n"
-		    "b.ne 1f\n"
-		    "stxr w1, %w4, [%2]\n"
-		    "cbz w1, 2f\n"
-		    "1: mov %w1, #0\n"
-		    "b 3f\n"
-		    "2: mov %w1, #1\n"
-		    "3: dmb ish\n"
-		    : "=&r"(result), "=&r"(success)
-		    : "r"(ptr), "r"(*expected), "r"(desired)
-		    : "w1", "memory");
-		if (success) break;
-		*expected = result;
-		if (result != orig_expected) break;
-	}
-	return success;
-#endif /* __aarch64__ */
 }
 
 /*
@@ -202,34 +176,8 @@ static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
  *         ptr and expected must not be null.
  */
 static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
-#ifdef __aarch64__
-	u64 result;
-	i32 success;
-	u64 orig_expected = *expected;
-	i32 retries = 5;
-	while (retries--) {
-		__asm__ volatile(
-		    "ldaxr %x0, [%2]\n"
-		    "cmp %x0, %x3\n"
-		    "b.ne 1f\n"
-		    "stxr w1, %x4, [%2]\n"
-		    "cbz w1, 2f\n"
-		    "1: mov %w1, #0\n"
-		    "b 3f\n"
-		    "2: mov %w1, #1\n"
-		    "3: dmb ish\n"
-		    : "=&r"(result), "=&r"(success)
-		    : "r"(ptr), "r"(*expected), "r"(desired)
-		    : "w1", "memory");
-		if (success) break;
-		*expected = result;
-		if (result != orig_expected) break;
-	}
-	return success;
-#elif defined(__x86_64__)
 	return __atomic_compare_exchange_n(ptr, expected, desired, false,
 					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
-#endif /* __x86_64__ */
 }
 
 /*
