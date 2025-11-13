@@ -42,11 +42,6 @@ jobs:
       - name: Check linux version
         run: |
           uname -a
-          gcc --version
-          sudo apt update
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-          sudo apt update
-          sudo apt install -y gcc-15 g++-15
       - name: build
         run: |
           ./.ci/build
@@ -119,8 +114,8 @@ jobs:
           ./.ci/coverage
   linux_amd64_end2end:
     runs-on: ubuntu-latest
-    strategy: 
-      matrix: 
+    strategy:
+      matrix:
         platform: [linux-amd64]
     steps:
       - name: Checkout code
@@ -134,8 +129,8 @@ jobs:
           ./.ci/end2end
   linux_aarch64_end2end:
     runs-on: ubuntu-24.04-arm
-    strategy: 
-      matrix: 
+    strategy:
+      matrix:
         platform: [linux-aarch64]
     steps:
       - name: Checkout code
@@ -149,4 +144,3 @@ jobs:
       - name: end2end
         run: |
           ./.ci/end2end
-

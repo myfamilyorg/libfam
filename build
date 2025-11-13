@@ -35,6 +35,7 @@ MEM_TRACKING=0;
 SPEC=0;
 CC=clang;
 CFLAGS="-O3 \
+	-mno-outline-atomics \
 	-Werror \
 	-Wall \
 	-funroll-loops \

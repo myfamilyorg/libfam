@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./build clean all --cc=gcc-15 || exit $?;
+./build clean all --cc=gcc || exit $?;
 
 ldd target/lib/libfam.so  | grep "statically linked" || { echo "not statically linked!"; exit 1; }
 UNDEFINED_COUNT=$(nm target/lib/libfam.so | grep " U " | wc -l)
@@ -20,7 +20,7 @@ if [ "$UNDEFINED_COUNT" -ne 0 ]; then
         exit 1
 fi
 
-./build clean all --cc=gcc-15 --quick --cflags="-O0" || exit $?;
+./build clean all --cc=gcc --quick --cflags="-O0" || exit $?;
 
 ldd target/lib/libfam.so  | grep "statically linked" || { echo "not statically linked!"; exit 1; }
 UNDEFINED_COUNT=$(nm target/lib/libfam.so | grep " U " | wc -l)
