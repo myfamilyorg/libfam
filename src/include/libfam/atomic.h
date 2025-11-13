@@ -49,22 +49,23 @@ static __inline i32 __cas32(u32 *ptr, u32 *expected, u32 desired) {
 	return __atomic_compare_exchange_n(ptr, expected, desired, false,
 					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 #elif defined(__aarch64__)
-	u32 result;
-	i32 success;
+	u32 old;
+	u32 tmp; /* dummy for stxr status */
 
 	__asm__ volatile(
-	    "1: ldaxr   %w[result], [%[ptr]]\n"
-	    "    cmp     %w[result], %w[exp]\n"
-	    "    b.ne    2f\n"
-	    "    stxr    %w[success], %w[des], [%[ptr]]\n"
-	    "    cbnz    %w[success], 1b\n"
+	    "1: ldaxr   %w[old],  [%[ptr]]\n" /* load exclusive */
+	    "    cmp     %w[old],  %w[exp]\n"
+	    "    b.ne    2f\n" /* not equal → exit   */
+	    "    stxr    %w[tmp],  %w[des], [%[ptr]]\n" /* store exclusive */
+	    "    cbnz    %w[tmp],  1b\n"		/* retry if failed   */
 	    "2:\n"
-	    : [result] "=&r"(result), [success] "=&r"(success)
+	    : [old] "=&r"(old), /* early-clobber output */
+	      [tmp] "=&r"(tmp)	/* status register      */
 	    : [ptr] "r"(ptr), [exp] "r"(*expected), [des] "r"(desired)
 	    : "cc", "memory");
 
-	*expected = result;
-	return success;
+	*expected = old;	 /* return the value we actually saw */
+	return old == *expected; /* 1 on success, 0 on failure          */
 #endif /* __aarch64__ */
 }
 
@@ -196,22 +197,22 @@ static __inline u32 __aor32(volatile u32 *ptr, u32 value) {
  */
 static __inline i32 __cas64(u64 *ptr, u64 *expected, u64 desired) {
 #ifdef __aarch64__
-	u64 result;
-	i32 success;
+	u64 old;
+	u32 tmp; /* stxr returns a 32-bit status */
 
 	__asm__ volatile(
-	    "1: ldaxr   %[result], [%[ptr]]\n"
-	    "    cmp     %[result], %[exp]\n"
+	    "1: ldaxr   %[old],  [%[ptr]]\n"
+	    "    cmp     %[old],  %[exp]\n"
 	    "    b.ne    2f\n"
-	    "    stxr    %w[success], %[des], [%[ptr]]\n"
-	    "    cbnz    %w[success], 1b\n"
+	    "    stxr    %w[tmp], %[des], [%[ptr]]\n"
+	    "    cbnz    %w[tmp], 1b\n"
 	    "2:\n"
-	    : [result] "=&r"(result), [success] "=&r"(success)
+	    : [old] "=&r"(old), [tmp] "=&r"(tmp)
 	    : [ptr] "r"(ptr), [exp] "r"(*expected), [des] "r"(desired)
 	    : "cc", "memory");
 
-	*expected = result;
-	return success;
+	*expected = old;
+	return old == *expected;
 #elif defined(__x86_64__)
 	return __atomic_compare_exchange_n(ptr, expected, desired, false,
 					   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
