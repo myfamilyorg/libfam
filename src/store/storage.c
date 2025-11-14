@@ -34,12 +34,10 @@
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
 
-#define PAGE_SIZE 4096
 #define HASH_CONSTANT 0x9e3779b9U
 
 typedef struct LRUEntry {
 	u64 sector;
-	/*u8 page[PAGE_SIZE];*/
 	u8 *page;
 	u32 next_chain;
 	u32 next_lru;
@@ -54,6 +52,11 @@ struct Storage {
 	u32 newest;
 	i32 fd;
 	IoUring *iou;
+};
+
+struct StorageWriteBatch {
+	u64 next;
+	Storage *s;
 };
 
 STATIC void storage_lru_touch(Storage *s, u32 idx) {
@@ -200,5 +203,66 @@ void *storage_load(Storage *s, u64 sector) {
 	}
 
 	return victim_entry->page;
+}
+
+i32 storage_write_batch_init(Storage *s, StorageWriteBatch **batch) {
+	StorageWriteBatch *ret = NULL;
+INIT:
+	ret = alloc(sizeof(StorageWriteBatch));
+	if (!ret) ERROR();
+	ret->s = s;
+	ret->next = 0;
+	*batch = ret;
+CLEANUP:
+	RETURN;
+}
+
+void storage_write_batch_destroy(StorageWriteBatch *batch) { release(batch); }
+
+i32 storage_sched_write(StorageWriteBatch *batch, const void *page,
+			u64 sector) {
+INIT:
+	if (iouring_init_write(batch->s->iou, batch->s->fd, page, PAGE_SIZE,
+			       sector * PAGE_SIZE, batch->next) < 0)
+		ERROR();
+	batch->next++;
+CLEANUP:
+	RETURN;
+}
+
+i32 storage_write_complete(StorageWriteBatch *batch) {
+	u64 id, complete_count = 0;
+	i32 res;
+	u8 *complete = NULL;
+INIT:
+	if (!batch->next) OK(0);
+
+	if (iouring_init_fsync(batch->s->iou, batch->s->fd, batch->next) < 0)
+		ERROR();
+
+	batch->next++;
+
+	complete = alloc(sizeof(u8) * batch->next);
+	if (!complete) ERROR();
+	memset(complete, 0, sizeof(u8) * batch->next);
+
+	if (iouring_submit(batch->s->iou, batch->next) < 0) ERROR();
+	while (complete_count < batch->next) {
+		res = iouring_spin(batch->s->iou, &id);
+		if (res < 0) ERROR();
+		if (id >= batch->next) ERROR(EINVAL);
+
+		if (id != batch->next - 1) {
+			if (res < PAGE_SIZE) ERROR(EIO);
+			if (complete[id]) ERROR(EINVAL);
+			complete[id] = 1;
+		}
+
+		complete_count++;
+	}
+CLEANUP:
+	release(complete);
+	batch->next = 0;
+	RETURN;
 }
 

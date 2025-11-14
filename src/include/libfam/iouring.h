@@ -61,7 +61,7 @@ i32 iouring_init(IoUring **iou, u32 queue_depth);
  * inputs:
  *         IoUring *iou         - initialized io_uring handle.
  *         i32 fd               - file descriptor to read from.
- *         const void *buf      - buffer to store read data.
+ *         void *buf            - buffer to store read data.
  *         u64 len              - number of bytes to read.
  *         u64 foffset          - file offset to read from.
  *         u64 id               - user-defined identifier for the operation.
@@ -75,8 +75,8 @@ i32 iouring_init(IoUring **iou, u32 queue_depth);
  *         Use iouring_pending or iouring_spin to check completion.
  *         On completion, len bytes are read into buf (or fewer on EOF).
  */
-i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
-		      u64 foffset, u64 id);
+i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
+		      u64 id);
 
 /*
  * Function: iouring_init_write
@@ -84,7 +84,7 @@ i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
  * inputs:
  *         IoUring *iou         - initialized io_uring handle.
  *         i32 fd               - file descriptor to write to.
- *         void *buf            - buffer containing data to write.
+ *         const void *buf      - buffer containing data to write.
  *         u64 len              - number of bytes to write.
  *         u64 foffset          - file offset to write to
  *         u64 id               - user-defined identifier for the operation.
@@ -98,8 +98,10 @@ i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
  *         Use iouring_pending or iouring_spin to check completion.
  *         On completion, len bytes are written from buf (or fewer on error).
  */
-i32 iouring_init_write(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
-		       u64 id);
+i32 iouring_init_write(IoUring *iou, i32 fd, const void *buf, u64 len,
+		       u64 foffset, u64 id);
+
+i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id);
 
 /*
  * Function: iouring_submit

@@ -471,6 +471,34 @@ enum {
 	IORING_REGISTER_USE_REGISTERED_RING = 1U << 31
 };
 
+enum {
+	IOSQE_FIXED_FILE_BIT,
+	IOSQE_IO_DRAIN_BIT,
+	IOSQE_IO_LINK_BIT,
+	IOSQE_IO_HARDLINK_BIT,
+	IOSQE_ASYNC_BIT,
+	IOSQE_BUFFER_SELECT_BIT,
+	IOSQE_CQE_SKIP_SUCCESS_BIT,
+};
+
+/*
+ * sqe->flags
+ */
+/* use fixed fileset */
+#define IOSQE_FIXED_FILE (1U << IOSQE_FIXED_FILE_BIT)
+/* issue after inflight IO */
+#define IOSQE_IO_DRAIN (1U << IOSQE_IO_DRAIN_BIT)
+/* links next sqe */
+#define IOSQE_IO_LINK (1U << IOSQE_IO_LINK_BIT)
+/* like LINK, but stronger */
+#define IOSQE_IO_HARDLINK (1U << IOSQE_IO_HARDLINK_BIT)
+/* always go async */
+#define IOSQE_ASYNC (1U << IOSQE_ASYNC_BIT)
+/* select buffer from sqe->buf_group */
+#define IOSQE_BUFFER_SELECT (1U << IOSQE_BUFFER_SELECT_BIT)
+/* don't post CQE if request succeeded */
+#define IOSQE_CQE_SKIP_SUCCESS (1U << IOSQE_CQE_SKIP_SUCCESS_BIT)
+
 #define IORING_OFF_SQ_RING 0ULL
 #define IORING_OFF_CQ_RING 0x8000000ULL
 #define IORING_OFF_SQES 0x10000000ULL

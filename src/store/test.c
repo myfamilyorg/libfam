@@ -30,7 +30,7 @@
 
 Test(store1) {
 	void *values[74];
-	const u8 *path = "/tmp/storage1.dat";
+	const u8 *path = "/tmp/store1.dat";
 	void *ptr;
 	Storage *s1 = NULL;
 	unlink(path);
@@ -42,7 +42,6 @@ Test(store1) {
 
 	for (u32 i = 0; i < 74; i++) {
 		ptr = storage_load(s1, i);
-		/*println("i={},ptr={X}", i, (u64)ptr);*/
 		values[i] = ptr;
 		ASSERT(ptr, "storage_load {}", i);
 
@@ -57,6 +56,39 @@ Test(store1) {
 	ASSERT(ptr, "storage_load 0");
 	ASSERT(ptr != values[0], "cache removed");
 
+	storage_destroy(s1);
+	unlink(path);
+	ASSERT_BYTES(0);
+}
+
+Test(store2) {
+	const u8 *path = "/tmp/store2.dat";
+	Storage *s1 = NULL;
+	StorageWriteBatch *b1;
+	unlink(path);
+	i32 fd = file(path);
+	fresize(fd, 4096 * 128);
+	close(fd);
+	ASSERT(!storage_open(&s1, path, 64, 512), "storage_open");
+	ASSERT(s1, "s1");
+
+	u8 page[PAGE_SIZE] = {0};
+	page[0] = 1;
+	page[1] = 2;
+	page[2] = 3;
+
+	ASSERT(!storage_write_batch_init(s1, &b1), "batch_init");
+	ASSERT(!storage_sched_write(b1, page, 0), "storage_sched_write");
+	ASSERT(!storage_write_complete(b1), "write_complete");
+
+	u8 *ptr = storage_load(s1, 0);
+	ASSERT(ptr, "ptr");
+	ASSERT_EQ(ptr[0], 1, "ptr[0]");
+	ASSERT_EQ(ptr[1], 2, "ptr[1]");
+	ASSERT_EQ(ptr[2], 3, "ptr[2]");
+	ASSERT_EQ(ptr[3], 0, "ptr[3]");
+
+	storage_write_batch_destroy(b1);
 	storage_destroy(s1);
 	unlink(path);
 	ASSERT_BYTES(0);

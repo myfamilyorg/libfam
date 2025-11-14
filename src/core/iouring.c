@@ -111,8 +111,8 @@ struct io_uring_sqe *iouring_get_sqe(IoUring *iou) {
 	return &iou->sqes[index];
 }
 
-i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
-		      u64 foffset, u64 id) {
+i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
+		      u64 id) {
 	struct io_uring_sqe *sqe;
 	sqe = iouring_get_sqe(iou);
 	if (!sqe) {
@@ -130,8 +130,8 @@ i32 iouring_init_read(IoUring *iou, i32 fd, const void *buf, u64 len,
 	return 0;
 }
 
-i32 iouring_init_write(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
-		       u64 id) {
+i32 iouring_init_write(IoUring *iou, i32 fd, const void *buf, u64 len,
+		       u64 foffset, u64 id) {
 	struct io_uring_sqe *sqe;
 	sqe = iouring_get_sqe(iou);
 	if (!sqe) {
@@ -145,6 +145,22 @@ i32 iouring_init_write(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 	sqe->len = len;
 	sqe->off = foffset;
 	sqe->user_data = id;
+	__aadd32(iou->sq_tail, 1);
+	return 0;
+}
+
+i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id) {
+	struct io_uring_sqe *sqe = iouring_get_sqe(iou);
+	if (!sqe) {
+		errno = EBUSY;
+		return -1;
+	}
+
+	sqe->opcode = IORING_OP_FSYNC;
+	sqe->fd = fd;
+	sqe->flags = IOSQE_IO_DRAIN;
+	sqe->user_data = id;
+
 	__aadd32(iou->sq_tail, 1);
 	return 0;
 }
