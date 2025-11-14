@@ -29,7 +29,9 @@
 #include <libfam/test.h>
 
 Test(store1) {
+	void *values[74];
 	const u8 *path = "/tmp/storage1.dat";
+	void *ptr;
 	Storage *s1 = NULL;
 	unlink(path);
 	i32 fd = file(path);
@@ -38,11 +40,22 @@ Test(store1) {
 	ASSERT(!storage_open(&s1, path, 64, 512), "storage_open");
 	ASSERT(s1, "s1");
 
-	for (u32 i = 0; i < 64; i++) {
-		void *ptr = storage_load(s1, i);
-		ASSERT(ptr, "storage_load 0");
-		/*println("i={},ptr={X}", i, ptr);*/
+	for (u32 i = 0; i < 74; i++) {
+		ptr = storage_load(s1, i);
+		/*println("i={},ptr={X}", i, (u64)ptr);*/
+		values[i] = ptr;
+		ASSERT(ptr, "storage_load {}", i);
+
+		if (i == 50) {
+			ptr = storage_load(s1, 40);
+			ASSERT(ptr, "storage load 40 (cached)");
+			ASSERT_EQ(ptr, values[40], "values[40]");
+		}
 	}
+
+	ptr = storage_load(s1, 0);
+	ASSERT(ptr, "storage_load 0");
+	ASSERT(ptr != values[0], "cache removed");
 
 	storage_destroy(s1);
 	unlink(path);

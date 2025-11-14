@@ -56,6 +56,22 @@ struct Storage {
 	IoUring *iou;
 };
 
+STATIC void storage_lru_touch(Storage *s, u32 idx) {
+	if (s->newest != idx) {
+		LRUEntry *e = &s->entries[idx];
+		if (e->prev_lru != U32_MAX)
+			s->entries[e->prev_lru].next_lru = e->next_lru;
+		if (e->next_lru != U32_MAX)
+			s->entries[e->next_lru].prev_lru = e->prev_lru;
+		if (s->oldest == idx) s->oldest = e->next_lru;
+
+		e->prev_lru = U32_MAX;
+		e->next_lru = s->newest;
+		s->entries[s->newest].next_lru = idx;
+		s->newest = idx;
+	}
+}
+
 i32 storage_open(Storage **storage, const char *path, u32 cache_size,
 		 u32 queue_size) {
 	u64 hashmap_size = cache_size * 2;
@@ -124,21 +140,7 @@ void *storage_load(Storage *s, u64 sector) {
 	while (idx != U32_MAX) {
 		LRUEntry *e = &s->entries[idx];
 		if (e->sector == sector) {
-			if (s->newest != idx) {
-				if (e->prev_lru != U32_MAX)
-					s->entries[e->prev_lru].next_lru =
-					    e->next_lru;
-				if (e->next_lru != U32_MAX)
-					s->entries[e->next_lru].prev_lru =
-					    e->prev_lru;
-				if (s->oldest == idx) s->oldest = e->next_lru;
-
-				e->prev_lru = U32_MAX;
-				e->next_lru = s->newest;
-				s->entries[s->newest].next_lru = idx;
-				s->newest = idx;
-			}
-
+			storage_lru_touch(s, idx);
 			return e->page;
 		}
 		idx = e->next_chain;
@@ -160,9 +162,9 @@ void *storage_load(Storage *s, u64 sector) {
 	oldest_entry->prev_lru = U32_MAX;
 
 	idx = s->hashmap[hash];
-	if (idx == U32_MAX) {
+	if (idx == U32_MAX)
 		s->hashmap[hash] = victim;
-	} else {
+	else {
 		while (true) {
 			u32 next = s->entries[idx].next_chain;
 			if (next == U32_MAX) {
@@ -173,13 +175,8 @@ void *storage_load(Storage *s, u64 sector) {
 	}
 
 	u64 orig_sector = victim_entry->sector;
+	storage_lru_touch(s, victim);
 	victim_entry->sector = sector;
-	victim_entry->next_lru = U32_MAX;
-	victim_entry->prev_lru = s->newest;
-	LRUEntry *newest_entry = &s->entries[s->newest];
-	newest_entry->next_lru = U32_MAX;
-	s->entries[s->newest].next_lru = victim;
-	s->newest = victim;
 
 	if (orig_sector != U64_MAX) {
 		u32 old_hash =
@@ -188,13 +185,13 @@ void *storage_load(Storage *s, u64 sector) {
 		u32 curr = s->hashmap[old_hash];
 		while (curr != U32_MAX) {
 			if (curr == victim) {
-				if (prev == U32_MAX) {
+				if (prev == U32_MAX)
 					s->hashmap[old_hash] =
 					    victim_entry->next_chain;
-				} else {
+				else
 					s->entries[prev].next_chain =
 					    victim_entry->next_chain;
-				}
+
 				break;
 			}
 			prev = curr;
