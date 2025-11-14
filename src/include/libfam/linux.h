@@ -48,7 +48,12 @@
 #define O_RDWR 02
 #define O_EXCL 00000200
 #define O_SYNC 04000000
+#ifdef __aarch64__
+#define O_DIRECT 0200000
+#elif defined(__x86_64__)
 #define O_DIRECT 00040000
+#endif /* __x86_64__ */
+
 #define O_RDONLY 00000000
 #define O_NONBLOCK 04000
 #define AT_FDCWD -100
