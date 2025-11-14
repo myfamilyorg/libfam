@@ -33,19 +33,16 @@ Test(store1) {
 	Storage *s1 = NULL;
 	unlink(path);
 	i32 fd = file(path);
-	fresize(fd, 4096 * 30);
+	fresize(fd, 4096 * 128);
 	close(fd);
 	ASSERT(!storage_open(&s1, path, 64, 512), "storage_open");
 	ASSERT(s1, "s1");
 
-	void *ptr = storage_load(s1, 1);
-
-	ASSERT(ptr, "storage_load 0");
-	ptr = storage_load(s1, 1);
-	ASSERT(ptr, "storage_load 0 cached");
-	(void)ptr;
-
-	ptr = storage_load(s1, 2);
+	for (u32 i = 0; i < 64; i++) {
+		void *ptr = storage_load(s1, i);
+		ASSERT(ptr, "storage_load 0");
+		/*println("i={},ptr={X}", i, ptr);*/
+	}
 
 	storage_destroy(s1);
 	unlink(path);

@@ -39,7 +39,8 @@
 
 typedef struct LRUEntry {
 	u64 sector;
-	u8 page[PAGE_SIZE];
+	/*u8 page[PAGE_SIZE];*/
+	u8 *page;
 	u32 next_chain;
 	u32 next_lru;
 	u32 prev_lru;
@@ -60,6 +61,7 @@ i32 storage_open(Storage **storage, const char *path, u32 cache_size,
 	u64 hashmap_size = cache_size * 2;
 	Storage *ret = NULL;
 	IoUring *iou = NULL;
+	u8 *pages = NULL;
 INIT:
 	ret = alloc(sizeof(Storage));
 	if (!ret) ERROR();
@@ -77,7 +79,10 @@ INIT:
 
 	ret->oldest = 0;
 	ret->newest = cache_size - 1;
+	pages = smap(PAGE_SIZE * cache_size);
+	if (!pages) ERROR();
 	for (u32 i = 0; i < cache_size; i++) {
+		ret->entries[i].page = pages + PAGE_SIZE * i;
 		ret->entries[i].next_lru = i + 1;
 		ret->entries[i].prev_lru = i - 1;
 		ret->entries[i].next_chain = U32_MAX;
@@ -87,13 +92,20 @@ INIT:
 
 	*storage = ret;
 CLEANUP:
-	if (!IS_OK) storage_destroy(ret);
+	if (!IS_OK) {
+		storage_destroy(ret);
+		if (pages) release(pages);
+	}
 	RETURN;
 }
 
 void storage_destroy(Storage *s) {
 	if (s) {
-		if (s->entries) release(s->entries);
+		if (s->entries) {
+			if (s->entries[0].page)
+				munmap(s->entries[0].page, s->hashmap_size / 2);
+			release(s->entries);
+		}
 		if (s->hashmap) release(s->hashmap);
 		if (s->iou) iouring_destroy(s->iou);
 		if (s->fd > 0) close(s->fd);
@@ -108,14 +120,10 @@ void storage_destroy(Storage *s) {
 void *storage_load(Storage *s, u64 sector) {
 	u32 hash = (sector * HASH_CONSTANT) % s->hashmap_size;
 	u32 idx = s->hashmap[hash];
-	/*println("sector={},idx={},hash={}", sector, idx, hash);*/
 
 	while (idx != U32_MAX) {
 		LRUEntry *e = &s->entries[idx];
 		if (e->sector == sector) {
-			println("update newest. newest={}, idx={}", s->newest,
-				idx);
-
 			if (s->newest != idx) {
 				if (e->prev_lru != U32_MAX)
 					s->entries[e->prev_lru].next_lru =
@@ -131,18 +139,13 @@ void *storage_load(Storage *s, u64 sector) {
 				s->newest = idx;
 			}
 
-			println("cache hit {X}", (u64)e->page);
 			return e->page;
 		}
 		idx = e->next_chain;
 	}
 
 	u32 victim = s->oldest;
-	/*println("victim={}", victim);*/
 	LRUEntry *victim_entry = &s->entries[victim];
-	/*println("victim->sector={},next_lru={},prev_lru={}",
-		victim_entry->sector, victim_entry->next_lru,
-		victim_entry->prev_lru);*/
 
 	i64 res =
 	    pread64(s->fd, victim_entry->page, PAGE_SIZE, sector * PAGE_SIZE);
@@ -169,13 +172,16 @@ void *storage_load(Storage *s, u64 sector) {
 		}
 	}
 
+	u64 orig_sector = victim_entry->sector;
 	victim_entry->sector = sector;
 	victim_entry->next_lru = U32_MAX;
 	victim_entry->prev_lru = s->newest;
 	LRUEntry *newest_entry = &s->entries[s->newest];
 	newest_entry->next_lru = U32_MAX;
+	s->entries[s->newest].next_lru = victim;
+	s->newest = victim;
 
-	if (victim_entry->sector != U64_MAX) {
+	if (orig_sector != U64_MAX) {
 		u32 old_hash =
 		    (victim_entry->sector * HASH_CONSTANT) % s->hashmap_size;
 		u32 prev = U32_MAX;
@@ -196,15 +202,6 @@ void *storage_load(Storage *s, u64 sector) {
 		}
 	}
 
-	/*println("cache miss {X}", (u64)victim_entry->page);*/
 	return victim_entry->page;
 }
 
-/* typedef struct LRUEntry {
-	u64 sector;
-	u8 page[PAGE_SIZE];
-	u32 next_chain;
-	u32 next_lru;
-	u32 prev_lru;
-} LRUEntry;
-*/
