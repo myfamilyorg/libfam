@@ -72,7 +72,7 @@ Test(store2) {
 	ASSERT(!storage_open(&s1, path, 64, 512), "storage_open");
 	ASSERT(s1, "s1");
 
-	u8 page[PAGE_SIZE] = {0};
+	u8 __attribute__((aligned(4096))) page[PAGE_SIZE] = {0};
 	page[0] = 1;
 	page[1] = 2;
 	page[2] = 3;
