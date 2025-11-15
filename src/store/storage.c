@@ -237,15 +237,18 @@ i32 storage_write_complete(StorageWriteBatch *batch) {
 INIT:
 	if (!batch->next) OK(0);
 
+	/*
 	if (iouring_init_fsync(batch->s->iou, batch->s->fd, batch->next) < 0)
 		ERROR();
 
 	batch->next++;
+	*/
 
 	complete = alloc(sizeof(u8) * batch->next);
 	if (!complete) ERROR();
 	memset(complete, 0, sizeof(u8) * batch->next);
 
+	println("iouring submit with next={}", batch->next);
 	if (iouring_submit(batch->s->iou, batch->next) < 0) ERROR();
 	while (complete_count < batch->next) {
 		res = iouring_spin(batch->s->iou, &id);
