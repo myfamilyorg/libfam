@@ -34,12 +34,14 @@
 i32 main(i32 argc, char **argv) {
 	Storage *s = NULL;
 	init_global_allocator(64);
-	u8 __attribute__((aligned(4096))) page[PAGE_SIZE] = {0};
+	/*u8 __attribute__((aligned(4096))) page[PAGE_SIZE] = {0};*/
 
 	if (argc != 2) panic("Usage: ./sbench <path>");
 
 	if (storage_open(&s, argv[1], 64, 512) < 0)
 		panic("Storage open failed: {}", strerror(errno));
+
+	u8 *page = storage_get_registered_buffer(s);
 
 	i64 timer = micros();
 	for (u32 i = 0; i < SECTORS; i++) {
@@ -54,11 +56,13 @@ i32 main(i32 argc, char **argv) {
 
 	for (u32 i = 0; i < SECTORS; i++) {
 		u8 *lp = storage_load(s, i);
-		/*if (lp[0] != ('A' + (i % 26))) panic("mismatch at {}", i);*/
+		if (lp[0] != ('A' + (i % 26))) panic("mismatch at {}", i);
 	}
 	timer = micros() - timer;
 	println("success: {} micros, store time = {}", timer, store_time);
 
+	storage_unregister_buffers(s);
+	munmap(page, PAGE_SIZE);
 	storage_destroy(s);
 	return 0;
 }

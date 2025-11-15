@@ -268,3 +268,19 @@ CLEANUP:
 	RETURN;
 }
 
+PUBLIC void *storage_get_registered_buffer(Storage *s) {
+	void *ret = map(PAGE_SIZE);
+	if (!ret) return NULL;
+	struct iovec v = {.iov_base = ret, .iov_len = PAGE_SIZE};
+	if (io_uring_register(iouring_ring_fd(s->iou), IORING_REGISTER_BUFFERS,
+			      &v, 1) < 0) {
+		munmap(ret, PAGE_SIZE);
+		return NULL;
+	}
+	return ret;
+}
+
+PUBLIC void storage_unregister_buffers(Storage *s) {
+	io_uring_register(s->fd, IORING_UNREGISTER_BUFFERS, NULL, 0);
+}
+

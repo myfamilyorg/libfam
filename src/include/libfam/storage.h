@@ -42,5 +42,7 @@ i32 storage_write_batch_init(Storage *s, StorageWriteBatch **batch);
 void storage_write_batch_destroy(StorageWriteBatch *batch);
 i32 storage_sched_write(StorageWriteBatch *batch, const void *page, u64 sector);
 i32 storage_write_complete(StorageWriteBatch *batch);
+void *storage_get_registered_buffer(Storage *s);
+void storage_unregister_buffers(Storage *s);
 
 #endif /* _STORAGE_H */

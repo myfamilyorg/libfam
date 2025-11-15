@@ -101,6 +101,23 @@ i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 i32 iouring_init_write(IoUring *iou, i32 fd, const void *buf, u64 len,
 		       u64 foffset, u64 id);
 
+/*
+ * Function: iouring_init_fsync
+ * Queues an asynchronous fsync operation.
+ * inputs:
+ *         IoUring *iou         - initialized io_uring handle.
+ *         i32 fd               - file descriptor to fsync.
+ *         u64 id               - user-defined identifier for the operation.
+ * return value: i32 - 0 on success, -1 on error with errno set.
+ * errors:
+ *         EINVAL         - if iou is null, fd invalid.
+ * notes:
+ *         Operation is queued but not submitted until iouring_submit.
+ *         id must be unique among pending operations.
+ *         Use iouring_pending or iouring_spin to check completion.
+ *         On completion, file is fsynced.
+ */
+
 i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id);
 
 /*
@@ -180,5 +197,15 @@ i32 iouring_spin(IoUring *iou, u64 *id);
  *         After destruction, iou must not be used.
  */
 void iouring_destroy(IoUring *iou);
+
+/*
+ * Function: iouring_ring_fd
+ * Returns the underlying iouring file descriptor
+ * inputs:
+ *         IoUring *iou         - initialized io_uring handle.
+ * return value: the ring_fd.
+ * errors: None.
+ */
+i32 iouring_ring_fd(IoUring *iou);
 
 #endif /* _IO_URING_H */

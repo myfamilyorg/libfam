@@ -222,3 +222,4 @@ void iouring_destroy(IoUring *iou) {
 	release(iou);
 }
 
+i32 iouring_ring_fd(IoUring *iou) { return iou->ring_fd; }

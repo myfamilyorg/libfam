@@ -1054,6 +1054,8 @@ Test(ioruring) {
 	struct iovec v1 = {.iov_base = buf, .iov_len = 16384};
 	ASSERT(!io_uring_register(fd, IORING_REGISTER_BUFFERS, &v1, 1),
 	       "io_uring_register");
+	ASSERT(!io_uring_register(fd, IORING_UNREGISTER_BUFFERS, NULL, 0),
+	       "io_uring_unregister");
 	munmap(buf, 16384);
 
 	u32 sq_ring_size =
