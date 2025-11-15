@@ -249,6 +249,8 @@ INIT:
 	if (iouring_submit(batch->s->iou, batch->next) < 0) ERROR();
 	while (complete_count < batch->next) {
 		res = iouring_spin(batch->s->iou, &id);
+		if (res < 0) perror("iouring_spin");
+		println("res={},id={}", res, id);
 		if (res < 0) ERROR();
 		if (id >= batch->next) ERROR(EINVAL);
 
