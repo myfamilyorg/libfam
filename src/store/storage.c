@@ -222,6 +222,9 @@ void storage_write_batch_destroy(StorageWriteBatch *batch) { release(batch); }
 i32 storage_sched_write(StorageWriteBatch *batch, const void *page,
 			u64 sector) {
 INIT:
+	println("init write fd={},page={X},size={},offset={},id={}",
+		batch->s->fd, (u64)page, PAGE_SIZE, sector * PAGE_SIZE,
+		batch->next);
 	if (iouring_init_write(batch->s->iou, batch->s->fd, page, PAGE_SIZE,
 			       sector * PAGE_SIZE, batch->next) < 0)
 		ERROR();
