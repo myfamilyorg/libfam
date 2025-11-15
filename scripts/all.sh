@@ -36,3 +36,4 @@ fi
 
 . ./scripts/czip.sh || exit $?;
 . ./scripts/abench.sh || exit $?;
+. ./scripts/sbench.sh || exit $?;

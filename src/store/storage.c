@@ -75,8 +75,8 @@ STATIC void storage_lru_touch(Storage *s, u32 idx) {
 	}
 }
 
-i32 storage_open(Storage **storage, const char *path, u32 cache_size,
-		 u32 queue_size) {
+PUBLIC i32 storage_open(Storage **storage, const char *path, u32 cache_size,
+			u32 queue_size) {
 	u64 hashmap_size = cache_size * 2;
 	Storage *ret = NULL;
 	IoUring *iou = NULL;
@@ -118,7 +118,7 @@ CLEANUP:
 	RETURN;
 }
 
-void storage_destroy(Storage *s) {
+PUBLIC void storage_destroy(Storage *s) {
 	if (s) {
 		if (s->entries) {
 			if (s->entries[0].page)
@@ -136,7 +136,7 @@ void storage_destroy(Storage *s) {
 	}
 }
 
-void *storage_load(Storage *s, u64 sector) {
+PUBLIC void *storage_load(Storage *s, u64 sector) {
 	u32 hash = (sector * HASH_CONSTANT) % s->hashmap_size;
 	u32 idx = s->hashmap[hash];
 
@@ -205,7 +205,7 @@ void *storage_load(Storage *s, u64 sector) {
 	return victim_entry->page;
 }
 
-i32 storage_write_batch_init(Storage *s, StorageWriteBatch **batch) {
+PUBLIC i32 storage_write_batch_init(Storage *s, StorageWriteBatch **batch) {
 	StorageWriteBatch *ret = NULL;
 INIT:
 	ret = alloc(sizeof(StorageWriteBatch));
@@ -217,10 +217,12 @@ CLEANUP:
 	RETURN;
 }
 
-void storage_write_batch_destroy(StorageWriteBatch *batch) { release(batch); }
+PUBLIC void storage_write_batch_destroy(StorageWriteBatch *batch) {
+	release(batch);
+}
 
-i32 storage_sched_write(StorageWriteBatch *batch, const void *page,
-			u64 sector) {
+PUBLIC i32 storage_sched_write(StorageWriteBatch *batch, const void *page,
+			       u64 sector) {
 INIT:
 	if (iouring_init_write(batch->s->iou, batch->s->fd, page, PAGE_SIZE,
 			       sector * PAGE_SIZE, batch->next) < 0)
@@ -230,7 +232,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 storage_write_complete(StorageWriteBatch *batch) {
+PUBLIC i32 storage_write_complete(StorageWriteBatch *batch) {
 	u64 id, complete_count = 0;
 	i32 res;
 	u8 *complete = NULL;
