@@ -34,7 +34,6 @@
 i32 main(i32 argc, char **argv) {
 	Storage *s = NULL;
 	init_global_allocator(64);
-	/*u8 __attribute__((aligned(4096))) page[PAGE_SIZE] = {0};*/
 
 	if (argc != 2) panic("Usage: ./sbench <path>");
 
