@@ -112,7 +112,3 @@ if [ "${LDFLAGS}" = "" ]; then
         fi
 fi
 
-if [[ "${ARCH}" = "aarch64" ]]; then
-        LDFLAGS="${LDFLAGS} -mno-outline-atomics";
-fi
-
