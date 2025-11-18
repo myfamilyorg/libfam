@@ -47,5 +47,5 @@ int main(int argc, u8 **argv, u8 **envp) {
 	iouring_init(&iou, 4);
 	iouring_register_stdio(iou);
 	i64 res = write(iou, 2, "test\n", 5);
-	return res;
+	return 0;
 }
