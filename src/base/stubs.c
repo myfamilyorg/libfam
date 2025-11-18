@@ -54,4 +54,20 @@ PUBLIC u32 __aarch64_ldadd4_acq_rel(volatile u32 *p, u32 val) {
 	    : "memory", "cc");
 	return old;
 }
+
+PUBLIC u32 __aarch64_cas4_acq_rel(volatile u32 *p, u32 old_val, u32 new_val) {
+	u32 read, tmp;
+	__asm__ __volatile__(
+	    "1: ldaxr   %w0, [%2]\n"
+	    "   cmp     %w0, %w3\n"
+	    "   b.ne    2f\n"
+	    "   stlxr   %w1, %w4, [%2]\n"
+	    "   cbnz    %w1, 1b\n"
+	    "2:\n"
+	    : "=&r"(read), "=&r"(tmp)
+	    : "r"(p), "r"(old_val), "r"(new_val)
+	    : "memory", "cc");
+	return read;
+}
+
 #endif
