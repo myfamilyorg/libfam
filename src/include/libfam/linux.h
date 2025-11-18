@@ -83,6 +83,173 @@ struct io_uring_params {
 	struct io_cqring_offsets cq_off;
 };
 
+struct io_uring_cqe {
+	u64 user_data;
+	i32 res;
+	u32 flags;
+	u64 big_cqe[];
+};
+
+struct io_uring_sqe {
+	u8 opcode;
+	u8 flags;
+	u16 ioprio;
+	i32 fd;
+	union {
+		u64 off;
+		u64 addr2;
+		struct {
+			u32 cmd_op;
+			u32 __pad1;
+		};
+	};
+	union {
+		u64 addr;
+		u64 splice_off_in;
+		struct {
+			u32 level;
+			u32 optname;
+		};
+	};
+	u32 len;
+	union {
+		i32 rw_flags;
+		u32 fsync_flags;
+		u16 poll_events;
+		u32 poll32_events;
+		u32 sync_range_flags;
+		u32 msg_flags;
+		u32 timeout_flags;
+		u32 accept_flags;
+		u32 cancel_flags;
+		u32 open_flags;
+		u32 statx_flags;
+		u32 fadvise_advice;
+		u32 splice_flags;
+		u32 rename_flags;
+		u32 unlink_flags;
+		u32 hardlink_flags;
+		u32 xattr_flags;
+		u32 msg_ring_flags;
+		u32 uring_cmd_flags;
+		u32 waitid_flags;
+		u32 futex_flags;
+		u32 install_fd_flags;
+	};
+	u64 user_data;
+	union {
+		u16 buf_index;
+		u16 buf_group;
+	} __attribute__((packed));
+	u16 personality;
+	union {
+		i32 splice_fd_in;
+		u32 file_index;
+		u32 optlen;
+		struct {
+			u16 addr_len;
+			u16 __pad3[1];
+		};
+	};
+	union {
+		struct {
+			u64 addr3;
+			u64 __pad2[1];
+		};
+		u64 optval;
+		u8 cmd[0];
+	};
+};
+
+enum io_uring_op {
+	IORING_OP_NOP,
+	IORING_OP_READV,
+	IORING_OP_WRITEV,
+	IORING_OP_FSYNC,
+	IORING_OP_READ_FIXED,
+	IORING_OP_WRITE_FIXED,
+	IORING_OP_POLL_ADD,
+	IORING_OP_POLL_REMOVE,
+	IORING_OP_SYNC_FILE_RANGE,
+	IORING_OP_SENDMSG,
+	IORING_OP_RECVMSG,
+	IORING_OP_TIMEOUT,
+	IORING_OP_TIMEOUT_REMOVE,
+	IORING_OP_ACCEPT,
+	IORING_OP_ASYNC_CANCEL,
+	IORING_OP_LINK_TIMEOUT,
+	IORING_OP_CONNECT,
+	IORING_OP_FALLOCATE,
+	IORING_OP_OPENAT,
+	IORING_OP_CLOSE,
+	IORING_OP_FILES_UPDATE,
+	IORING_OP_STATX,
+	IORING_OP_READ,
+	IORING_OP_WRITE,
+	IORING_OP_FADVISE,
+	IORING_OP_MADVISE,
+	IORING_OP_SEND,
+	IORING_OP_RECV,
+	IORING_OP_OPENAT2,
+	IORING_OP_EPOLL_CTL,
+	IORING_OP_SPLICE,
+	IORING_OP_PROVIDE_BUFFERS,
+	IORING_OP_REMOVE_BUFFERS,
+	IORING_OP_TEE,
+	IORING_OP_SHUTDOWN,
+	IORING_OP_RENAMEAT,
+	IORING_OP_UNLINKAT,
+	IORING_OP_MKDIRAT,
+	IORING_OP_SYMLINKAT,
+	IORING_OP_LINKAT,
+	IORING_OP_MSG_RING,
+	IORING_OP_FSETXATTR,
+	IORING_OP_SETXATTR,
+	IORING_OP_FGETXATTR,
+	IORING_OP_GETXATTR,
+	IORING_OP_SOCKET,
+	IORING_OP_URING_CMD,
+	IORING_OP_SEND_ZC,
+	IORING_OP_SENDMSG_ZC,
+	IORING_OP_READ_MULTISHOT,
+	IORING_OP_WAITID,
+	IORING_OP_FUTEX_WAIT,
+	IORING_OP_FUTEX_WAKE,
+	IORING_OP_FUTEX_WAITV,
+	IORING_OP_FIXED_FD_INSTALL,
+	IORING_OP_LAST,
+};
+
+enum {
+	IOSQE_FIXED_FILE_BIT,
+	IOSQE_IO_DRAIN_BIT,
+	IOSQE_IO_LINK_BIT,
+	IOSQE_IO_HARDLINK_BIT,
+	IOSQE_ASYNC_BIT,
+	IOSQE_BUFFER_SELECT_BIT,
+	IOSQE_CQE_SKIP_SUCCESS_BIT,
+};
+
+struct iovec {
+	void *iov_base;
+	u64 iov_len;
+};
+
+#define IOSQE_FIXED_FILE (1U << IOSQE_FIXED_FILE_BIT)
+#define IOSQE_IO_DRAIN (1U << IOSQE_IO_DRAIN_BIT)
+#define IOSQE_IO_LINK (1U << IOSQE_IO_LINK_BIT)
+#define IOSQE_IO_HARDLINK (1U << IOSQE_IO_HARDLINK_BIT)
+#define IOSQE_ASYNC (1U << IOSQE_ASYNC_BIT)
+#define IOSQE_BUFFER_SELECT (1U << IOSQE_BUFFER_SELECT_BIT)
+#define IOSQE_CQE_SKIP_SUCCESS (1U << IOSQE_CQE_SKIP_SUCCESS_BIT)
+
+#define IORING_OFF_SQ_RING 0ULL
+#define IORING_OFF_CQ_RING 0x8000000ULL
+#define IORING_OFF_SQES 0x10000000ULL
+#define IORING_OFF_PBUF_RING 0x80000000ULL
+#define IORING_OFF_PBUF_SHIFT 16
+#define IORING_OFF_MMAP_MASK 0xf8000000ULL
+
 struct timeval {
 	u64 tv_sec;
 	u64 tv_usec;
@@ -92,5 +259,13 @@ struct timezone {
 	i32 tz_minuteswest;
 	i32 tz_dsttime;
 };
+
+/* MMAP */
+#define PROT_READ 0x01
+#define PROT_WRITE 0x02
+#define MAP_SHARED 0x01
+#define MAP_PRIVATE 0x02
+#define MAP_ANONYMOUS 0x20
+#define MAP_FAILED ((void *)-1)
 
 #endif /* _LINUX_H */
