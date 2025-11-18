@@ -29,6 +29,7 @@
 #include <libfam/utils.h>
 
 #ifdef __aarch64__
+#define SYS_write 64
 #define SYS_waitid 95
 #define SYS_kill 129
 #define SYS_rt_sigaction 134
