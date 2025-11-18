@@ -36,6 +36,7 @@ fi
 
 if [ ! -e target/bin/runtests ] || [ src/test/main.c -nt target/bin/runtests ]; then
         mkdir -p target/bin;
+	ARCH=`uname -i`;
         COMMAND="${CC} \
                 ${CDEFS} \
                 ${TEST_CFLAGS} \
@@ -43,6 +44,10 @@ if [ ! -e target/bin/runtests ] || [ src/test/main.c -nt target/bin/runtests ]; 
                 -o ${TEST_BIN} \
                 ${TEST_SRC} \
                 -lfamtest";
+	if [[ "${ARCH}" = "aarch64" ]]; then
+		COMMAND="${COMMAND} -mno-outline-atomics";
+	fi
+
         if [ "$SILENT" != "1" ]; then
                 echo ${COMMAND};
         fi
