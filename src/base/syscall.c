@@ -42,6 +42,7 @@
 #define SYS_io_uring_register 427
 #define SYS_clone3 435
 #elif defined(__x86_64__)
+#define SYS_write 1
 #define SYS_mmap 9
 #define SYS_munmap 11
 #define SYS_rt_sigaction 13
@@ -126,6 +127,16 @@ PUBLIC void _exit(i32 status){
 #else
     SYSCALL_EXIT
 #endif
+}
+
+PUBLIC i64 write2(i32 fd, const u8 *buf, u64 len) {
+	i64 v;
+INIT:
+	v = (i64)raw_syscall(SYS_write, fd, (i64)buf, len, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
 }
 
 i32 getpid(void) {

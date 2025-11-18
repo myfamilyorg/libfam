@@ -23,7 +23,14 @@
  *
  *******************************************************************************/
 
+#include <libfam/iouring.h>
+#include <libfam/limits.h>
+#include <libfam/syscall.h>
 #include <libfam/sysext.h>
+#include <libfam/test_base.h>
+#include <libfam/utils.h>
+
+IoUring *global_iou = NULL;
 
 void yield(void) {
 #if defined(__x86_64__)
@@ -31,4 +38,11 @@ void yield(void) {
 #elif defined(__aarch64__)
 	__asm__ __volatile__("yield" ::: "memory");
 #endif
+}
+
+PUBLIC i64 write(IoUring *iou, i32 fd, const void *buf, u64 len) {
+	u64 id;
+	if (iouring_init_write(iou, fd, buf, len, 0, U64_MAX) < 0) return -1;
+	if (iouring_submit(iou, 1) < 0) return -1;
+	return iouring_wait(iou, &id);
 }

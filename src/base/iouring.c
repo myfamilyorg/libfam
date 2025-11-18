@@ -28,6 +28,7 @@
 #include <libfam/linux.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
+#include <libfam/test_base.h>
 #include <libfam/utils.h>
 
 struct IoUring {
@@ -49,7 +50,7 @@ struct IoUring {
 	u32 *cq_mask;
 };
 
-i32 iouring_init(IoUring **iou, u32 queue_depth) {
+PUBLIC i32 iouring_init(IoUring **iou, u32 queue_depth) {
 INIT:
 	*iou = NULL;
 	if (!(*iou = mmap(NULL, sizeof(IoUring), PROT_READ | PROT_WRITE,
@@ -188,6 +189,11 @@ i32 iouring_submit(IoUring *iou, u32 count) {
 	return io_uring_enter2(iou->ring_fd, count, 0, 0, NULL, 0);
 }
 
+PUBLIC i32 iouring_register_stdio(IoUring *iou) {
+	i32 fds[3] = {0, 1, 2};
+	return io_uring_register(iou->ring_fd, IORING_REGISTER_FILES, fds, 3);
+}
+
 i32 iouring_spin(IoUring *iou, u64 *id) {
 	u32 mask = *iou->cq_mask;
 	i32 res;
@@ -208,6 +214,25 @@ i32 iouring_spin(IoUring *iou, u64 *id) {
 		user_data = iou->cqes[cqe_idx].user_data;
 	} while (!__cas32(iou->cq_head, &hval, hval + 1));
 	*id = user_data;
+	return res;
+}
+
+i32 iouring_wait(IoUring *iou, u64 *id) {
+	u32 head, tail, mask = *iou->cq_mask;
+	for (;;) {
+		head = __aload32(iou->cq_head);
+		tail = __aload32(iou->cq_tail);
+		if (head != tail) break;
+		i32 ret = io_uring_enter2(iou->ring_fd, 0, 1,
+					  IORING_ENTER_GETEVENTS, NULL, 0);
+
+		(void)ret;
+	}
+	u32 idx = head & mask;
+	i32 res = iou->cqes[idx].res;
+	*id = iou->cqes[idx].user_data;
+	__astore32(iou->cq_head, head + 1);
+
 	return res;
 }
 

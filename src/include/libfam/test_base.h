@@ -23,12 +23,38 @@
  *
  *******************************************************************************/
 
-#ifndef _SYSEXT_H
-#define _SYSEXT_H
+#ifndef _TEST_BASE_H
+#define _TEST_BASE_H
 
+#include <libfam/syscall.h>
 #include <libfam/types.h>
+#include <libfam/utils.h>
 
-void yield(void);
-i64 write(IoUring *iou, i32 fd, const void *buf, u64 len);
+static i64 __attribute__((unused)) write_num(i32 fd, u64 num) {
+	u8 buf[21];
+	u8 *p;
+	u64 len;
+	i64 written;
+INIT:
+	if (fd < 0) ERROR(EBADF);
 
-#endif /* _SYSEXT_H */
+	p = buf + sizeof(buf) - 1;
+	*p = '\0';
+
+	if (num == 0)
+		*--p = '0';
+	else
+		while (num > 0) {
+			*--p = '0' + (num % 10);
+			num /= 10;
+		}
+
+	len = buf + sizeof(buf) - 1 - p;
+	written = write2(fd, p, len);
+	if (written < 0) ERROR();
+	if ((u64)written != len) ERROR(EIO);
+CLEANUP:
+	RETURN;
+}
+
+#endif /* _TEST_BASE_H */

@@ -1,3 +1,7 @@
+#include <libfam/iouring.h>
+#include <libfam/syscall.h>
+#include <libfam/sysext.h>
+#include <libfam/test_base.h>
 #include <libfam/types.h>
 
 #ifndef COVERAGE
@@ -38,4 +42,10 @@ __asm__(
 #endif /* __x86_64__ */
 #endif /* COVERAGE */
 
-int main(int argc, u8 **argv, u8 **envp) { return 0; }
+int main(int argc, u8 **argv, u8 **envp) {
+	IoUring *iou = NULL;
+	iouring_init(&iou, 4);
+	iouring_register_stdio(iou);
+	i64 res = write(iou, 2, "test\n", 5);
+	return res;
+}
