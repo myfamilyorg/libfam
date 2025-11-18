@@ -40,37 +40,3 @@ PUBLIC void __stack_chk_guard(void) {
 	_v = write(STDERR_FD, msg, strlen(msg));*/
 	_exit(-1);
 }
-
-#ifdef __aarch64__
-PUBLIC u32 __aarch64_ldadd4_acq_rel(volatile u32 *p, u32 val) {
-	u32 old, new_val, status;
-
-	__asm__ __volatile__(
-	    "1: ldaxr   %w[old], [%[ptr]]\n"
-	    "   add     %w[new], %w[old], %w[val]\n"
-	    "   stlxr   %w[status], %w[new], [%[ptr]]\n"
-	    "   cbnz    %w[status], 1b\n"
-	    : [old] "=&r"(old), [new] "=&r"(new_val), [status] "=&r"(status)
-	    : [ptr] "r"(p), [val] "r"(val)
-	    : "memory", "cc");
-
-	return old;
-}
-
-PUBLIC u32 __aarch64_cas4_acq_rel(volatile u32 *p, u32 old_val, u32 new_val) {
-	u32 read, status;
-
-	__asm__ __volatile__(
-	    "1: ldaxr   %w[read], [%[ptr]]\n"
-	    "   cmp     %w[read], %w[old]\n"
-	    "   b.ne    2f\n"
-	    "   stlxr   %w[status], %w[new], [%[ptr]]\n"
-	    "   cbnz    %w[status], 1b\n"
-	    "2:\n"
-	    : [read] "=&r"(read), [status] "=&r"(status)
-	    : [ptr] "r"(p), [old] "r"(old_val), [new] "r"(new_val)
-	    : "memory", "cc");
-
-	return read;
-}
-#endif
