@@ -42,35 +42,35 @@ PUBLIC void __stack_chk_guard(void) {
 }
 
 #ifdef __aarch64__
-PUBLIC u32 __aarch64_ldadd4_acq_rel(volatile u32 *ptr, u32 val) {
-	u32 old, tmp;
+PUBLIC u32 __aarch64_ldadd4_acq_rel(volatile u32 *p, u32 val) {
+	u32 old, new_val, status;
 
 	__asm__ __volatile__(
 	    "1: ldaxr   %w[old], [%[ptr]]\n"
-	    "   add     %w[tmp], %w[old], %w[val]\n"
-	    "   stlxr   %w[tmp], %w[tmp], [%[ptr]]\n"
-	    "   cbnz    %w[tmp], 1b\n"
-	    : [old] "=&r"(old), [tmp] "=&r"(tmp)
-	    : [ptr] "r"(ptr), [val] "r"(val)
+	    "   add     %w[new], %w[old], %w[val]\n"
+	    "   stlxr   %w[status], %w[new], [%[ptr]]\n"
+	    "   cbnz    %w[status], 1b\n"
+	    : [old] "=&r"(old), [new] "=&r"(new_val), [status] "=&r"(status)
+	    : [ptr] "r"(p), [val] "r"(val)
 	    : "memory", "cc");
 
 	return old;
 }
 
-PUBLIC u32 __aarch64_cas4_acq_rel(volatile u32 *ptr, u32 old_val, u32 new_val) {
-	u32 result, status;
+PUBLIC u32 __aarch64_cas4_acq_rel(volatile u32 *p, u32 old_val, u32 new_val) {
+	u32 read, status;
 
 	__asm__ __volatile__(
-	    "1: ldaxr   %w[res], [%[ptr]]\n"
-	    "   cmp     %w[res], %w[old]\n"
+	    "1: ldaxr   %w[read], [%[ptr]]\n"
+	    "   cmp     %w[read], %w[old]\n"
 	    "   b.ne    2f\n"
-	    "   stlxr   %w[st], %w[new], [%[ptr]]\n"
-	    "   cbnz    %w[st], 1b\n"
+	    "   stlxr   %w[status], %w[new], [%[ptr]]\n"
+	    "   cbnz    %w[status], 1b\n"
 	    "2:\n"
-	    : [res] "=&r"(result), [st] "=&r"(status)
-	    : [ptr] "r"(ptr), [old] "r"(old_val), [new] "r"(new_val)
+	    : [read] "=&r"(read), [status] "=&r"(status)
+	    : [ptr] "r"(p), [old] "r"(old_val), [new] "r"(new_val)
 	    : "memory", "cc");
 
-	return result;	// returns value actually read
+	return read;
 }
 #endif
