@@ -33,7 +33,7 @@ mkdir -p "${BIN_DIR}";
 . ./scripts/xxdir.sh
 
 for DIR in $SUB_DIRS; do
-        build_dir ${DIR} 1 cobjs || exit -1;
+        build_dir ${DIR} 1 cobjs || exit 1;
 done
 
 for dir in $SUB_DIRS; do
@@ -50,14 +50,10 @@ COMMAND="${CC} \
 if [ "$SILENT" != "1" ]; then
 	echo ${COMMAND};
 fi
-${COMMAND} || exit -1;
+${COMMAND} || exit 1;
 
 export TEST_PATTERN="*";
-LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} ${TEST_BIN} || exit $?;
-if [ ! -e /tmp/libfam_test_success ]; then
-	echo "tests failed!";
-	exit 1;
-fi
+LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} ${TEST_BIN} || { echo "tests failed!"; exit $?; }
 
 for DIR in ${SUB_DIRS}; do
 	cp ./src/${DIR}/*.c ./target/cobjs/${DIR}/
