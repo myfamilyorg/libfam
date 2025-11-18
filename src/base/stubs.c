@@ -43,7 +43,7 @@ PUBLIC void __stack_chk_guard(void) {
 
 #ifdef __aarch64__
 
-u32 __aarch64_cas4_acq_rel(volatile u32 *p, u32 old_val, u32 new_val) {
+PUBLIC u32 __aarch64_cas4_acq_rel(volatile u32 *p, u32 old_val, u32 new_val) {
 	u32 read, tmp;
 	__asm__ __volatile__(
 	    "1: ldaxr   %w0, [%2]\n"
@@ -58,8 +58,7 @@ u32 __aarch64_cas4_acq_rel(volatile u32 *p, u32 old_val, u32 new_val) {
 	return read;
 }
 
-// Full acq_rel atomic fetch-add, returns old value
-u32 __aarch64_ldadd4_acq_rel(volatile u32 *p, u32 val) {
+PUBLIC u32 __aarch64_ldadd4_acq_rel(volatile u32 *p, u32 val) {
 	u32 old, new_val, tmp;
 	__asm__ __volatile__(
 	    "1: ldaxr   %w0, [%3]\n"
