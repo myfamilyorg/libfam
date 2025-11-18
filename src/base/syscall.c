@@ -24,23 +24,37 @@
  *******************************************************************************/
 
 #include <libfam/debug.h>
-#include <libfam/errno.h>
 #include <libfam/linux.h>
-#include <libfam/linux_time.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
 #ifdef __aarch64__
-#define SYS_write 64
+#define SYS_waitid 95
+#define SYS_kill 129
+#define SYS_rt_sigaction 134
+#define SYS_settimeofday 164
 #define SYS_gettimeofday 169
-#define SYS_getrandom 278
-#elif defined(__amd64__)
-#define SYS_write 1
+#define SYS_getpid 172
+#define SYS_munmap 215
+#define SYS_mmap 222
+#define SYS_io_uring_setup 425
+#define SYS_io_uring_enter 426
+#define SYS_io_uring_register 427
+#define SYS_clone3 435
+#elif defined(__x86_64__)
+#define SYS_mmap 9
+#define SYS_munmap 11
+#define SYS_rt_sigaction 13
+#define SYS_getpid 39
+#define SYS_kill 62
 #define SYS_gettimeofday 96
-#define SYS_getrandom 318
-#else
-#error "Unsupported Platform"
-#endif /* ARCH */
+#define SYS_settimeofday 164
+#define SYS_waitid 247
+#define SYS_io_uring_setup 425
+#define SYS_io_uring_enter 426
+#define SYS_io_uring_register 427
+#define SYS_clone3 435
+#endif /* __x86_64__ */
 
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
 	i64 result;
@@ -71,11 +85,11 @@ i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
 	return result;
 }
 
-extern bool _debug_no_famexit;
+extern bool _debug_no_exit;
 
 #ifdef __aarch64__
 #define SYSCALL_EXIT                 \
-	if (_debug_no_famexit) return;  \
+	if (_debug_no_exit) return;  \
 	__asm__ volatile(            \
 	    "mov x8, #93\n"          \
 	    "mov x0, %0\n"           \
@@ -87,7 +101,7 @@ extern bool _debug_no_famexit;
 	}
 #elif defined(__x86_64__)
 #define SYSCALL_EXIT                                     \
-	if (_debug_no_famexit) return;                      \
+	if (_debug_no_exit) return;                      \
 	__asm__ volatile(                                \
 	    "movq $60, %%rax\n"                          \
 	    "movq %0, %%rdi\n"                           \
@@ -102,11 +116,11 @@ extern bool _debug_no_famexit;
 #ifdef COVERAGE
 void __gcov_dump(void);
 #define SYSCALL_EXIT_COV                    \
-	if (!_debug_no_famexit) __gcov_dump(); \
+	if (!_debug_no_exit) __gcov_dump(); \
 	SYSCALL_EXIT
 #endif /* COVERAGE */
 
-PUBLIC void _famexit(i32 status){
+PUBLIC void _exit(i32 status){
 #ifdef COVERAGE
     SYSCALL_EXIT_COV
 #else
@@ -114,20 +128,108 @@ PUBLIC void _famexit(i32 status){
 #endif
 }
 
-PUBLIC i64 write(i32 fd, const void *buf, u64 count) {
-	i64 v;
+i32 getpid(void) {
+	i32 v;
 INIT:
-#if TEST == 1
-	if ((fd == 1 || fd == 2) && _debug_no_write) return count;
-#endif /* TEST */
-	v = raw_syscall(SYS_write, (i64)fd, (i64)buf, (i64)count, 0, 0, 0);
+	v = (i32)raw_syscall(SYS_getpid, 0, 0, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:
 	RETURN;
 }
 
-i32 gettimeofday(struct timevalfam *tv, void *tz) {
+i32 kill(i32 pid, i32 signal) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_kill, (i64)pid, (i64)signal, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+void *mmap(void *addr, u64 length, i32 prot, i32 flags, i32 fd, i64 offset) {
+	void *ret =
+	    (void *)(u64)raw_syscall(SYS_mmap, (i64)addr, (i64)length,
+				     (i64)prot, (i64)flags, (i64)fd, offset);
+	if ((i64)ret < 0) {
+		errno = -(i64)ret;
+		return (void *)-1;
+	} else
+		return ret;
+}
+
+i32 munmap(void *addr, u64 len) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_munmap, (i64)addr, (i64)len, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 clone3(struct clone_args *args, u64 size) {
+	i32 v;
+INIT:
+
+#if TEST == 1
+	if (_debug_fail_clone3) return -1;
+#endif
+
+	v = (i32)raw_syscall(SYS_clone3, (i64)args, (i64)size, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 rt_sigaction(i32 signum, const struct rt_sigaction *act,
+		 struct rt_sigaction *oldact, u64 sigsetsize) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_rt_sigaction, (i64)signum, (i64)act,
+			     (i64)oldact, (i64)sigsetsize, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 io_uring_setup(u32 entries, struct io_uring_params *params) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_io_uring_setup, (i64)entries, (i64)params, 0,
+			     0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+i32 io_uring_enter2(u32 fd, u32 to_submit, u32 min_complete, u32 flags,
+		    void *arg, u64 sz) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_io_uring_enter, (i64)fd, (i64)to_submit,
+			     (i64)min_complete, (i64)flags, (i64)arg, (i64)sz);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 io_uring_register(u32 fd, u32 opcode, void *arg, u32 nr_args) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_io_uring_register, (i64)fd, (i64)opcode,
+			     (i64)arg, (i64)nr_args, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 gettimeofday(struct timeval *tv, void *tz) {
 	i32 v;
 INIT:
 	if (!tv) ERROR(EINVAL);
@@ -138,16 +240,25 @@ CLEANUP:
 	RETURN;
 }
 
-i32 getrandom(void *buffer, u64 length, u32 flags) {
-	i64 v;
+i32 settimeofday(const struct timeval *tv, const struct timezone *tz) {
+	i32 v;
 INIT:
-	if (length > 256) ERROR(EIO);
-	if (!buffer) ERROR(EFAULT);
-	v = raw_syscall(SYS_getrandom, (i64)buffer, (i64)length, (i64)flags, 0,
-			0, 0);
+	if (!tv) ERROR(EINVAL);
+	v = (i32)raw_syscall(SYS_settimeofday, (i64)tv, (i64)tz, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
-	if (v < length) ERROR(EIO);
 	OK(v);
 CLEANUP:
 	RETURN;
 }
+
+i32 waitid(i32 idtype, i32 id, void *infop, i32 options) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_waitid, idtype, (i64)id, (i64)infop,
+			     (i64)options, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+

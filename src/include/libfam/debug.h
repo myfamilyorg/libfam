@@ -29,19 +29,8 @@
 #include <libfam/types.h>
 
 #if TEST == 1
-extern bool _debug_no_write;
-extern bool _debug_no_famexit;
-extern bool _debug_fail_getsockbyname;
-extern bool _debug_fail_pipe2;
-extern bool _debug_fail_listen;
-extern bool _debug_fail_setsockopt;
-extern bool _debug_fail_fcntl;
-extern bool _debug_fail_epoll_create1;
+extern bool _debug_no_exit;
 extern bool _debug_fail_clone3;
-extern bool _debug_alloc_init_failure;
-extern u64 _debug_alloc_cas_loop;
-extern bool _debug_bible_invalid_hash;
-extern bool _debug_alloc_failure;
 #endif /* TEST */
 
 #endif /* _DEBUG_H */

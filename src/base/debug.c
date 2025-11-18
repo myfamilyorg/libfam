@@ -25,5 +25,6 @@
 
 #include <libfam/debug.h>
 
-bool _debug_no_write = false;
-bool _debug_no_famexit = false;
+bool _debug_no_exit = false;
+bool _debug_fail_clone3 = false;
+

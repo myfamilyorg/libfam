@@ -75,7 +75,7 @@ else
 fi
 
 INCDIR="src/include";
-SUB_DIRS="base crypto bible core compress store";
+SUB_DIRS="base";
 LIB_OUTPUT_DIR="./target/lib";
 BIN_DIR="./target/bin";
 
