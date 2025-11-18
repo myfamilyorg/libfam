@@ -41,7 +41,7 @@
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
-#define SYS_clone 56
+#define SYS_clone 120
 #elif defined(__x86_64__)
 #define SYS_mmap 9
 #define SYS_munmap 11
