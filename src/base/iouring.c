@@ -236,7 +236,7 @@ i32 iouring_wait(IoUring *iou, u64 *id) {
 	return res;
 }
 
-void iouring_destroy(IoUring *iou) {
+PUBLIC void iouring_destroy(IoUring *iou) {
 	if (!iou) return;
 	if (iou->sq_ring) munmap(iou->sq_ring, iou->sq_ring_size);
 	if (iou->cq_ring) munmap(iou->cq_ring, iou->cq_ring_size);
