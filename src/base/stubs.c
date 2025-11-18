@@ -41,22 +41,25 @@ PUBLIC void __stack_chk_guard(void) {
 	_exit(-1);
 }
 
+#ifdef __aarch64__
+
 u32 __aarch64_cas4_acq_rel(volatile void *ptr, u32 oldval, u32 newval) {
 	u32 result;
 	__asm__ __volatile__(
-	    "cas   w0, w1, [%2]\n"  // w0 = old, w1 = new, [x2] = ptr
-	    : "=&r"(result)
-	    : "r"(oldval), "r"(newval), "r"(ptr)
+	    "cas   %w[old], %w[new], [%[ptr]]"
+	    : [result] "=&r"(result)
+	    : [old] "r"(oldval), [new] "r"(newval), [ptr] "r"(ptr)
 	    : "memory");
 	return result;
 }
 
 u32 __aarch64_ldadd4_acq_rel(volatile void *ptr, u32 val) {
 	u32 result;
-	__asm__ __volatile__(
-	    "ldaddal  w1, w0, [%2]\n"  // w0 = result, w1 = val, [x2] = ptr
-	    : "=&r"(result)
-	    : "r"(val), "r"(ptr)
-	    : "memory");
+	__asm__ __volatile__("ldaddal %w[val], %w[result], [%[ptr]]"
+			     : [result] "=&r"(result)
+			     : [val] "r"(val), [ptr] "r"(ptr)
+			     : "memory");
 	return result;
 }
+
+#endif /* __aarch64__ */
