@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ARCH=$(uname -m)
+
 ./build clean test --cflags=-g $1 || exit $?;
 
 ./build clean test --cc=clang $1 || exit $?;
@@ -8,6 +10,10 @@
 
 ./build clean test --cc=clang $1 --quick --cflags="-O0" || exit $?;
 
-./build clean test --cc=gcc $1 --quick --cflags="-O0" || exit $?;
+if [[ "${ARCH}" = "aarch64" ]]; then
+./build clean test --cc=gcc $1 --quick --cflags="-O0 -mno-outline-atomics" || exit $?;
+else
+	./build clean test --cc=gcc $1 --quick --cflags="-O0" || exit $?;
+fi
 
 echo "All tests successfully completed!";
