@@ -61,13 +61,19 @@ u32 __aarch64_cas4_acq_rel(volatile void *ptr, u32 oldval, u32 newval) {
 	return result;
 }
 
-// LDADDAL — Load-Add-Acquire-Release (32-bit)
+// Atomic add — use LL/SC loop (works everywhere)
 u32 __aarch64_ldadd4_acq_rel(volatile void *ptr, u32 val) {
 	u32 result;
-	__asm__ __volatile__("    ldaddal %w[val], %w[res], [%[ptr]]"
-			     : [res] "=&r"(result)
-			     : [val] "r"(val), [ptr] "r"(ptr)
-			     : "memory");
+	__asm__ __volatile__(
+	    "0:                     \n"
+	    "    ldxr   w8, [%[ptr]] \n"
+	    "    add    w9, w8, %w[val] \n"
+	    "    stxr   w10, w9, [%[ptr]] \n"
+	    "    cbnz   w10, 0b      \n"
+	    "    mov    %w[res], w8  \n"
+	    : [res] "=&r"(result)
+	    : [ptr] "r"(ptr), [val] "r"(val)
+	    : "w8", "w9", "w10", "memory");
 	return result;
 }
 
