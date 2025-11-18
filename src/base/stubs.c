@@ -43,38 +43,33 @@ PUBLIC void __stack_chk_guard(void) {
 
 #ifdef __aarch64__
 
-// CAS — Compare And Swap (32-bit, acquire-release)
-u32 __aarch64_cas4_acq_rel(volatile void *ptr, u32 oldval, u32 newval) {
-	u32 result;
+u32 __aarch64_cas4_acq_rel(volatile u32 *p, u32 old_val, u32 new_val) {
+	u32 read, tmp;
 	__asm__ __volatile__(
-	    "0:                     \n"
-	    "    ldxr   w8, [%[ptr]] \n"	   // load exclusive
-	    "    cmp    w8, %w[old]  \n"	   // compare
-	    "    b.ne   1f           \n"	   // not equal → fail
-	    "    stxr   w8, %w[new], [%[ptr]] \n"  // store exclusive
-	    "    cbnz   w8, 0b       \n"	   // retry if failed
-	    "1:                     \n"
-	    "    mov    %w[res], w8  \n"
-	    : [res] "=&r"(result)
-	    : [ptr] "r"(ptr), [old] "r"(oldval), [new] "r"(newval)
-	    : "w8", "memory");
-	return result;
+	    "1: ldaxr   %w0, [%2]\n"
+	    "   cmp     %w0, %w3\n"
+	    "   b.ne    2f\n"
+	    "   stlxr   %w1, %w4, [%2]\n"
+	    "   cbnz    %w1, 1b\n"
+	    "2:\n"
+	    : "=&r"(read), "=&r"(tmp)
+	    : "r"(p), "r"(old_val), "r"(new_val)
+	    : "memory", "cc");
+	return read;
 }
 
-// Atomic add — use LL/SC loop (works everywhere)
-u32 __aarch64_ldadd4_acq_rel(volatile void *ptr, u32 val) {
-	u32 result;
+// Full acq_rel atomic fetch-add, returns old value
+u32 __aarch64_ldadd4_acq_rel(volatile u32 *p, u32 val) {
+	u32 old, new_val, tmp;
 	__asm__ __volatile__(
-	    "0:                     \n"
-	    "    ldxr   w8, [%[ptr]] \n"
-	    "    add    w9, w8, %w[val] \n"
-	    "    stxr   w10, w9, [%[ptr]] \n"
-	    "    cbnz   w10, 0b      \n"
-	    "    mov    %w[res], w8  \n"
-	    : [res] "=&r"(result)
-	    : [ptr] "r"(ptr), [val] "r"(val)
-	    : "w8", "w9", "w10", "memory");
-	return result;
+	    "1: ldaxr   %w0, [%3]\n"
+	    "   add     %w1, %w0, %w2\n"
+	    "   stlxr   %w2, %w1, [%3]\n"
+	    "   cbnz    %w2, 1b\n"
+	    : "=&r"(old), "=&r"(new_val), "=&r"(tmp)
+	    : "r"(p), "r"(val)
+	    : "memory", "cc");
+	return old;
 }
 
 #endif /* __aarch64__ */
