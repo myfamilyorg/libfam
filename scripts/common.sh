@@ -87,7 +87,7 @@ ARCH=`uname -i`;
 if [ "${ARCH}" = "x86_64" ]; then
 	MARCH="haswell";
 else
-	MARCH="armv8-a+nolse";
+	MARCH="armv8.1-a";
 fi
 
 CFLAGS="${CFLAGS} \
