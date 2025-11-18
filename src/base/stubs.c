@@ -41,3 +41,19 @@ PUBLIC void __stack_chk_guard(void) {
 	_exit(-1);
 }
 
+#ifdef __aarch64__
+__asm__(
+    ".global __aarch64_cas4_acq_rel\n"
+    "__aarch64_cas4_acq_rel:\n"
+    "    cas     w0, w1, [x2]\n"
+    "    ret\n");
+
+__asm__(
+    ".global __aarch64_ldadd4_acq_rel\n"
+    "__aarch64_ldadd4_acq_rel:\n"
+    "    ldar    w0, [x1]\n"
+    "    add     w0, w0, w2\n"
+    "    stlr    w0, [x1]\n"
+    "    ret\n");
+
+#endif /* __aarch64__ */
