@@ -42,4 +42,31 @@ i64 write(i32 fd, const void *buf, u64 len);
  */
 i64 micros(void);
 
+/*
+ * Function: Calls clone3 with shared file descriptors. Two processes will be
+ * created at this point just like fork but with shared file descriptor tables.
+ * Returns .
+ * inputs: None.
+ * return value: i32 - 0 for the child process and the pid for the parent.
+ * errors:
+ *         EAGAIN         - resource limit.
+ *         ENOMEM         - out of memory.
+ * notes:
+ *        Uses clone3() with shared file descriptor table.
+ */
+i32 two(void);
+
+/*
+ * Function: fork
+ * Creates a child process.
+ * inputs: None.
+ * return value: i32 - 0 in child, PID in parent, -1 on error.
+ * errors:
+ *         EAGAIN         - resource limit.
+ *         ENOMEM         - out of memory.
+ * notes:
+ *         Uses clone3() with default flags.
+ */
+i32 fork(void);
+
 #endif /* _SYSEXT_H */

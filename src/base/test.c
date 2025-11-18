@@ -23,8 +23,10 @@
  *
  *******************************************************************************/
 
+#include <libfam/atomic.h>
 #include <libfam/builtin.h>
 #include <libfam/debug.h>
+#include <libfam/env.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/rbtree.h>
@@ -437,14 +439,81 @@ Test(stack_fails) {
 	_debug_no_exit = false;
 }
 
-/*
-Test(rand1) {
-	u8 buf[128] = {0}, zero[128] = {0}, bigbuf[1024] = {0};
-	ASSERT(!memcmp(buf, zero, sizeof(buf)), "equal");
-	ASSERT_EQ(getrandom(buf, sizeof(buf), GRND_RANDOM), sizeof(buf),
-		  "rand");
-	ASSERT_EQ(getrandom(bigbuf, sizeof(bigbuf), GRND_RANDOM), -1, "rand");
-	ASSERT(memcmp(buf, zero, sizeof(buf)), "not equal");
-	ASSERT_EQ(gettimeofday(NULL, NULL), -1, "null gettimeofday");
+Test(syscall) {
+	i32 pid = getpid();
+	i32 ret = kill(pid, 0);
+	i32 ret2 = kill(I32_MAX, 0);
+	ASSERT(!ret, "our pid");
+	ASSERT(ret2, "invalid pid");
+
+	ASSERT_EQ(mmap(NULL, 1024, 100, 100, 100, 100), MAP_FAILED,
+		  "mmap fail");
+
+	void *ptr = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+			 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	ASSERT(ptr, "mmap");
+	ASSERT(!munmap(ptr, 4096), "munmap");
 }
-*/
+
+Test(clone) {
+	i32 pid, pid2;
+
+	u64 *val = mmap(NULL, sizeof(u64), PROT_READ | PROT_WRITE,
+			MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+	ASSERT(val, "mmap");
+	*val = 0;
+
+	pid = fork();
+	ASSERT(pid >= 0, "fork");
+	if (!pid) {
+		__aadd64(val, 1);
+		while (1) yield();
+	} else {
+	}
+
+	pid2 = fork();
+	ASSERT(pid2 >= 0, "fork2");
+	if (!pid2) {
+		__aadd64(val, 1);
+		while (1) yield();
+	} else {
+	}
+
+	while (__aload64(val) != 2) yield();
+	kill(pid, SIGKILL);
+	kill(pid2, SIGKILL);
+	munmap(val, sizeof(u64));
+}
+
+Test(clone2) {
+	i32 pid, pid2;
+
+	if (getenv("VALGRIND")) return;
+
+	u64 *val = mmap(NULL, sizeof(u64), PROT_READ | PROT_WRITE,
+			MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+	ASSERT(val, "mmap");
+	*val = 0;
+
+	pid = two();
+	ASSERT(pid >= 0, "two");
+	if (!pid) {
+		__aadd64(val, 1);
+		while (1) yield();
+	} else {
+	}
+
+	pid2 = two();
+	ASSERT(pid2 >= 0, "two2");
+	if (!pid2) {
+		__aadd64(val, 1);
+		while (1) yield();
+	} else {
+	}
+
+	while (__aload64(val) != 2) yield();
+	kill(pid, SIGKILL);
+	kill(pid2, SIGKILL);
+	munmap(val, sizeof(u64));
+}
+

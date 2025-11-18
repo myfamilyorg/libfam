@@ -60,6 +60,7 @@ if [ "${VALGRIND}" = "1" ]; then
 	export VALGRIND=1;
 	LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} \
 		valgrind \
+		--child-silent-after-fork=yes \
 		--tool=memcheck \
 		--track-origins=yes \
 		--error-exitcode=1 \

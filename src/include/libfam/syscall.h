@@ -41,7 +41,7 @@ i32 settimeofday(const struct timeval *tv, const struct timezone *tz);
 i32 kill(i32 pid, i32 signal);
 void *mmap(void *addr, u64 length, i32 prot, i32 flags, i32 fd, i64 offset);
 i32 munmap(void *addr, u64 len);
-i32 clone3(struct clone_args *args, u64 size);
+i32 clone(i64 flags, void *sp);
 i32 rt_sigaction(i32 signum, const struct rt_sigaction *act,
 		 struct rt_sigaction *oldact, u64 sigsetsize);
 void _exit(i32 status);

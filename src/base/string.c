@@ -45,6 +45,27 @@ PUBLIC char *strcpy(char *dest, const char *src) {
 	return dest;
 }
 
+PUBLIC char *strncpy(char *dest, const char *src, u64 n) {
+	u64 i;
+	for (i = 0; i < n && src[i] != '\0'; i++) dest[i] = src[i];
+	for (; i < n; i++) dest[i] = '\0';
+	return dest;
+}
+
+PUBLIC char *strcat(char *dest, const char *src) {
+	char *ptr = dest;
+	while (*ptr) ptr++;
+	while ((*ptr++ = *src++));
+	return dest;
+}
+
+PUBLIC char *strchr(const char *s, i32 c) {
+	do
+		if (*s == c) return (char *)s;
+	while (*s++);
+	return !c ? (char *)s : NULL;
+}
+
 PUBLIC i32 strncmp(const char *x, const char *y, u64 n) {
 	while (n > 0 && *x == *y && *x) x++, y++, n--;
 	if (n == 0) return 0;
@@ -72,6 +93,13 @@ PUBLIC i32 memcmp(const void *s1, const void *s2, u64 n) {
 		if (diff) return diff;
 	}
 	return 0;
+}
+
+PUBLIC void *memmove(void *dest, const void *src, u64 n) {
+	u8 *d = (void *)((u8 *)dest + n);
+	u8 *s = (void *)((u8 *)src + n);
+	while (n--) d--, s--, *d = *s;
+	return dest;
 }
 
 PUBLIC u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
@@ -150,6 +178,7 @@ PUBLIC u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
 		} else
 			while (i > 0) buf[pos++] = temp[--i];
 	}
+
 	if (frac_part > 0 && max_decimals > 0) {
 		buf[pos++] = '.';
 		u64 frac_start = pos;
@@ -168,4 +197,3 @@ PUBLIC u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
 	buf[pos] = '\0';
 	return pos;
 }
-

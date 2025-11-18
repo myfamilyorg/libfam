@@ -25,6 +25,7 @@
 
 #include <libfam/debug.h>
 #include <libfam/linux.h>
+#include <libfam/test_base.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
@@ -40,7 +41,7 @@
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
-#define SYS_clone3 435
+#define SYS_clone 56
 #elif defined(__x86_64__)
 #define SYS_mmap 9
 #define SYS_munmap 11
@@ -53,7 +54,7 @@
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
-#define SYS_clone3 435
+#define SYS_clone 56
 #endif /* __x86_64__ */
 
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
@@ -169,7 +170,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 clone3(struct clone_args *args, u64 size) {
+i32 clone(i64 flags, void *sp) {
 	i32 v;
 INIT:
 
@@ -177,7 +178,7 @@ INIT:
 	if (_debug_fail_clone3) return -1;
 #endif
 
-	v = (i32)raw_syscall(SYS_clone3, (i64)args, (i64)size, 0, 0, 0, 0);
+	v = (i32)raw_syscall(SYS_clone, flags, (i64)sp, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:
