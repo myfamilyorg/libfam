@@ -23,9 +23,69 @@
  *
  *******************************************************************************/
 
+#include <libfam/errno.h>
+#include <libfam/string.h>
+#include <libfam/syscall.h>
+#include <libfam/sysext.h>
 #include <libfam/utils.h>
 
 i32 __err_value = 0;
 PUBLIC i32 *__error(void) { return &__err_value; }
 i32 *__err_location(void) { return &__err_value; }
+
+PUBLIC void perror(const char *s) {
+	const u8 *err_msg;
+	i32 __attribute__((unused)) _v;
+	if (s) {
+		u64 len = strlen(s);
+		if (write(STDERR_FD, s, len) < len) return;
+		if (write(STDERR_FD, ": ", 2) < 2) return;
+	}
+	err_msg = strerror(errno);
+	_v = write(STDERR_FD, err_msg, strlen(err_msg));
+	_v = write(STDERR_FD, "\n", 1);
+}
+
+PUBLIC char *strerror(i32 err_code) {
+	switch (err_code) {
+		case SUCCESS:
+			return "Success";
+		case EPERM:
+			return "Operation not permitted";
+		case ENOENT:
+			return "No such file or directory";
+		case EINTR:
+			return "Interrupted system call";
+		case EIO:
+			return "Input/output error";
+		case EBADF:
+			return "Bad file descriptor";
+		case ECHILD:
+			return "No child processes";
+		case EAGAIN:
+			return "Resource temporarily unavailable";
+		case ENOMEM:
+			return "Out of memory";
+		case EFAULT:
+			return "Bad address";
+		case EBUSY:
+			return "Resource busy or locked";
+		case EINVAL:
+			return "Invalid argument";
+		case ENOSPC:
+			return "No space left on device";
+		case EPIPE:
+			return "Broken pipe";
+		case EPROTO:
+			return "Protocol error";
+		case EOVERFLOW:
+			return "Value too large for defined data type";
+		case EDUPLICATE:
+			return "Duplicate entries";
+		case ETODO:
+			return "todo/work in progress";
+		default:
+			return "Unknown error";
+	}
+}
 

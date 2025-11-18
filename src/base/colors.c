@@ -23,37 +23,17 @@
  *
  *******************************************************************************/
 
-#include <libfam/iouring.h>
-#include <libfam/limits.h>
-#include <libfam/linux.h>
-#include <libfam/syscall.h>
-#include <libfam/sysext.h>
-#include <libfam/test_base.h>
+#include <libfam/env.h>
+#include <libfam/types.h>
 #include <libfam/utils.h>
 
-IoUring *__global_iou__ = NULL;
-
-void yield(void) {
-#if defined(__x86_64__)
-	__asm__ __volatile__("pause" ::: "memory");
-#elif defined(__aarch64__)
-	__asm__ __volatile__("yield" ::: "memory");
-#endif
-}
-
-PUBLIC i64 write(i32 fd, const void *buf, u64 len) {
-	u64 id;
-	if (!__global_iou__) iouring_init(&__global_iou__, 1);
-	if (!__global_iou__) return -1;
-	if (iouring_init_write(__global_iou__, fd, buf, len, 0, U64_MAX) < 0)
-		return -1;
-	if (iouring_submit(__global_iou__, 1) < 0) return -1;
-	return iouring_wait(__global_iou__, &id);
-}
-
-PUBLIC i64 micros(void) {
-	struct timeval tv;
-	if (gettimeofday(&tv, NULL) < 0) return -1;
-	return (i64)tv.tv_sec * 1000000L + (i64)tv.tv_usec;
-}
-
+i32 no_color(void) { return getenv("NO_COLOR") != NULL; }
+PUBLIC const u8 *get_dimmed(void) { return no_color() ? "" : "\x1b[2m"; }
+PUBLIC const u8 *get_red(void) { return no_color() ? "" : "\x1b[31m"; }
+PUBLIC const u8 *get_bright_red(void) { return no_color() ? "" : "\x1b[91m"; }
+PUBLIC const u8 *get_green(void) { return no_color() ? "" : "\x1b[32m"; }
+PUBLIC const u8 *get_yellow(void) { return no_color() ? "" : "\x1b[33m"; }
+PUBLIC const u8 *get_cyan(void) { return no_color() ? "" : "\x1b[36m"; }
+PUBLIC const u8 *get_magenta(void) { return no_color() ? "" : "\x1b[35m"; }
+PUBLIC const u8 *get_blue(void) { return no_color() ? "" : "\x1b[34m"; }
+PUBLIC const u8 *get_reset(void) { return no_color() ? "" : "\x1b[0m"; }

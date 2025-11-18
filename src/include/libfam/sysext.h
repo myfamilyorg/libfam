@@ -30,5 +30,16 @@
 
 void yield(void);
 i64 write(i32 fd, const void *buf, u64 len);
+/*
+ * Function: micros
+ * Returns current time in microseconds since epoch.
+ * inputs: None.
+ * return value: i64 - microseconds.
+ * errors: None.
+ * notes:
+ *         Uses gettimeofday().
+ *         Monotonic if clock is.
+ */
+i64 micros(void);
 
 #endif /* _SYSEXT_H */

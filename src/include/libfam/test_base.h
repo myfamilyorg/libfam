@@ -26,9 +26,25 @@
 #ifndef _TEST_BASE_H
 #define _TEST_BASE_H
 
+#include <libfam/colors.h>
+#include <libfam/string.h>
 #include <libfam/syscall.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>
+
+#define MAX_TESTS 1024
+#define MAX_TEST_NAME 128
+
+void add_test_fn(void (*test_fn)(void), const u8 *name);
+static __attribute__((unused)) const u8 *__assertion_msg =
+    "\nassertion failed in test";
+
+extern i32 exe_test;
+typedef struct {
+	void (*test_fn)(void);
+	u8 name[MAX_TEST_NAME + 1];
+} TestEntry;
+extern TestEntry tests[];
 
 static i64 __attribute__((unused)) write_num(i32 fd, u64 num) {
 	u8 buf[21];
@@ -37,6 +53,7 @@ static i64 __attribute__((unused)) write_num(i32 fd, u64 num) {
 	i64 written;
 INIT:
 	if (fd < 0) ERROR(EBADF);
+
 	p = buf + sizeof(buf) - 1;
 	*p = '\0';
 
@@ -55,5 +72,75 @@ INIT:
 CLEANUP:
 	RETURN;
 }
+
+#define Test(name)                                                         \
+	void __test_##name(void);                                          \
+	static void __attribute__((constructor)) __add_test_##name(void) { \
+		add_test_fn(__test_##name, #name);                         \
+	}                                                                  \
+	void __test_##name(void)
+
+#define ASSERT_EQ(x, y, msg)                                                   \
+	do {                                                                   \
+		if ((x) != (y)) {                                              \
+			i32 __attribute((unused)) _v;                          \
+			_v = write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED)); \
+			_v = write(STDERR_FD, __assertion_msg,                 \
+				   strlen(__assertion_msg));                   \
+			_v = write(STDERR_FD, RESET, strlen(RESET));           \
+			_v = write(STDERR_FD, ": [", 3);                       \
+			_v = write(STDERR_FD, tests[exe_test].name,            \
+				   strlen(tests[exe_test].name));              \
+			_v = write(STDERR_FD, "]. '", 4);                      \
+			_v = write(STDERR_FD, msg, strlen(msg));               \
+			_v = write(STDERR_FD, "'\n", 2);                       \
+			_famexit(-1);                                             \
+		}                                                              \
+	} while (0);
+
+#ifdef __clang__
+#define ASSERT(x, msg)                                                         \
+	do {                                                                   \
+		_Pragma("GCC diagnostic push");                                \
+		_Pragma(                                                       \
+		    "GCC diagnostic ignored \"-Wsometimes-uninitialized\"");   \
+		if (!(x)) {                                                    \
+			i32 __attribute((unused)) _v;                          \
+			_v = write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED)); \
+			_v = write(STDERR_FD, __assertion_msg,                 \
+				   strlen(__assertion_msg));                   \
+			_v = write(STDERR_FD, RESET, strlen(RESET));           \
+			_v = write(STDERR_FD, ": [", 3);                       \
+			_v = write(STDERR_FD, tests[exe_test].name,            \
+				   strlen(tests[exe_test].name));              \
+			_v = write(STDERR_FD, "]. '", 4);                      \
+			_v = write(STDERR_FD, msg, strlen(msg));               \
+			_v = write(STDERR_FD, "'\n", 2);                       \
+			_famexit(-1);                                             \
+		}                                                              \
+		_Pragma("GCC diagnostic pop");                                 \
+	} while (0);
+#else
+#define ASSERT(x, msg)                                                         \
+	do {                                                                   \
+		_Pragma("GCC diagnostic push");                                \
+		_Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"");   \
+		if (!(x)) {                                                    \
+			i32 __attribute((unused)) _v;                          \
+			_v = write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED)); \
+			_v = write(STDERR_FD, __assertion_msg,                 \
+				   strlen(__assertion_msg));                   \
+			_v = write(STDERR_FD, RESET, strlen(RESET));           \
+			_v = write(STDERR_FD, ": [", 3);                       \
+			_v = write(STDERR_FD, tests[exe_test].name,            \
+				   strlen(tests[exe_test].name));              \
+			_v = write(STDERR_FD, "]. '", 4);                      \
+			_v = write(STDERR_FD, msg, strlen(msg));               \
+			_v = write(STDERR_FD, "'\n", 2);                       \
+			_famexit(-1);                                             \
+		}                                                              \
+		_Pragma("GCC diagnostic pop");                                 \
+	} while (0);
+#endif /* ASSERT */
 
 #endif /* _TEST_BASE_H */
