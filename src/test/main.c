@@ -43,9 +43,6 @@ __asm__(
 #endif /* COVERAGE */
 
 int main(int argc, u8 **argv, u8 **envp) {
-	IoUring *iou = NULL;
-	iouring_init(&iou, 4);
-	iouring_register_stdio(iou);
-	i64 res = write(iou, 2, "test\n", 5);
+	write(2, "test\n", 5);
 	return 0;
 }

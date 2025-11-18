@@ -95,6 +95,7 @@ INIT:
 					       (*iou)->params.cq_off.cqes);
 
 	(*iou)->queue_depth = queue_depth;
+	if (iouring_register_stdio(*iou) < 0) ERROR();
 CLEANUP:
 	if (!IS_OK) {
 		iouring_destroy(*iou);

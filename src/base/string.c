@@ -23,21 +23,14 @@
  *
  *******************************************************************************/
 
+#include <libfam/limits.h>
 #include <libfam/string.h>
-#include <libfam/syscall.h>
-#include <libfam/sysext.h>
+#include <libfam/types.h>
 #include <libfam/utils.h>
 
-PUBLIC void __stack_chk_fail(void) {
-	i32 __attribute__((unused)) _v;
-	const u8 *msg = "STACK_CHK_FAIL\n";
-	_v = write(STDERR_FD, msg, strlen(msg));
-	_exit(-1);
+PUBLIC u64 strlen(const char *x) {
+	const char *y = x;
+	while (*x) x++;
+	return x - y;
 }
 
-PUBLIC void __stack_chk_guard(void) {
-	i32 __attribute__((unused)) _v;
-	const u8 *msg = "STACK_CHK_GUARD\n";
-	_v = write(STDERR_FD, msg, strlen(msg));
-	_exit(-1);
-}

@@ -35,12 +35,8 @@ static i64 __attribute__((unused)) write_num(i32 fd, u64 num) {
 	u8 *p;
 	u64 len;
 	i64 written;
-	IoUring *iou = NULL;
 INIT:
 	if (fd < 0) ERROR(EBADF);
-	if (iouring_init(&iou, 5) < 0) ERROR();
-	if (iouring_register_stdio(iou) < 0) ERROR();
-
 	p = buf + sizeof(buf) - 1;
 	*p = '\0';
 
@@ -53,11 +49,10 @@ INIT:
 		}
 
 	len = buf + sizeof(buf) - 1 - p;
-	written = write(iou, fd, p, len);
+	written = write(fd, p, len);
 	if (written < 0) ERROR();
 	if ((u64)written != len) ERROR(EIO);
 CLEANUP:
-	iouring_destroy(iou);
 	RETURN;
 }
 

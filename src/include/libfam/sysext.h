@@ -29,6 +29,6 @@
 #include <libfam/types.h>
 
 void yield(void);
-i64 write(IoUring *iou, i32 fd, const void *buf, u64 len);
+i64 write(i32 fd, const void *buf, u64 len);
 
 #endif /* _SYSEXT_H */

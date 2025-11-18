@@ -30,7 +30,7 @@
 #include <libfam/test_base.h>
 #include <libfam/utils.h>
 
-IoUring *global_iou = NULL;
+IoUring *__global_iou__ = NULL;
 
 void yield(void) {
 #if defined(__x86_64__)
@@ -40,9 +40,12 @@ void yield(void) {
 #endif
 }
 
-PUBLIC i64 write(IoUring *iou, i32 fd, const void *buf, u64 len) {
+PUBLIC i64 write(i32 fd, const void *buf, u64 len) {
 	u64 id;
-	if (iouring_init_write(iou, fd, buf, len, 0, U64_MAX) < 0) return -1;
-	if (iouring_submit(iou, 1) < 0) return -1;
-	return iouring_wait(iou, &id);
+	if (!__global_iou__) iouring_init(&__global_iou__, 1);
+	if (!__global_iou__) return -1;
+	if (iouring_init_write(__global_iou__, fd, buf, len, 0, U64_MAX) < 0)
+		return -1;
+	if (iouring_submit(__global_iou__, 1) < 0) return -1;
+	return iouring_wait(__global_iou__, &id);
 }
