@@ -120,6 +120,9 @@ i32 iouring_init_write(IoUring *iou, i32 fd, const void *buf, u64 len,
 
 i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id);
 
+i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path, i32 flags,
+			i32 mode, u64 id);
+
 /*
  * Function: iouring_submit
  * Submits queued operations to the kernel.
@@ -136,34 +139,6 @@ i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id);
  *         completion with iouring_spin or iouring_pending.
  */
 i32 iouring_submit(IoUring *iou, u32 count);
-
-/*
- * Function: iouring_pending
- * Checks if an operation with the given id is still pending.
- * inputs:
- *         IoUring *iou         - initialized io_uring handle.
- *         u64 id               - user-defined operation identifier.
- * return value: bool - true if pending, false if completed or not found.
- * errors: None.
- * notes:
- *         iou must not be null.
- *         Returns false if id was never queued or already completed.
- *         Non-blocking; does not wait.
- */
-bool iouring_pending(IoUring *iou, u64 id);
-
-/*
- * Function: iouring_pending_all
- * Checks if any operations are still pending.
- * inputs:
- *         IoUring *iou         - initialized io_uring handle.
- * return value: bool - true if any operations pending, false if all done.
- * errors: None.
- * notes:
- *         iou must not be null.
- *         Returns false if no operations were ever queued.
- */
-bool iouring_pending_all(IoUring *iou);
 
 /*
  * Function: iouring_spin

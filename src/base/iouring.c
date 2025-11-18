@@ -120,7 +120,7 @@ i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 		return -1;
 	}
 	sqe->opcode = IORING_OP_READ;
-	sqe->flags = 0;
+	sqe->flags = IOSQE_FIXED_FILE;
 	sqe->fd = fd;
 	sqe->addr = (u64)buf;
 	sqe->len = len;
@@ -139,12 +139,31 @@ i32 iouring_init_write(IoUring *iou, i32 fd, const void *buf, u64 len,
 		return -1;
 	}
 	sqe->opcode = IORING_OP_WRITE;
-	sqe->flags = 0;
+	sqe->flags = IOSQE_FIXED_FILE;
 	sqe->fd = fd;
 	sqe->addr = (u64)buf;
 	sqe->len = len;
 	sqe->off = foffset;
 	sqe->user_data = id;
+	__aadd32(iou->sq_tail, 1);
+	return 0;
+}
+
+i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path, i32 flags,
+			i32 mode, u64 id) {
+	struct io_uring_sqe *sqe = iouring_get_sqe(iou);
+	if (!sqe) {
+		errno = EBUSY;
+		return -1;
+	}
+
+	sqe->opcode = IORING_OP_OPENAT;
+	sqe->fd = dirfd;
+	sqe->addr = (u64)path;
+	sqe->len = flags;
+	sqe->off = mode;
+	sqe->user_data = id;
+	sqe->flags = IOSQE_IO_DRAIN | IOSQE_IO_LINK;
 	__aadd32(iou->sq_tail, 1);
 	return 0;
 }
@@ -158,7 +177,7 @@ i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id) {
 
 	sqe->opcode = IORING_OP_FSYNC;
 	sqe->fd = fd;
-	sqe->flags = IOSQE_IO_DRAIN;
+	sqe->flags = IOSQE_IO_DRAIN | IOSQE_FIXED_FILE;
 	sqe->user_data = id;
 
 	__aadd32(iou->sq_tail, 1);
@@ -190,24 +209,6 @@ i32 iouring_spin(IoUring *iou, u64 *id) {
 	} while (!__cas32(iou->cq_head, &hval, hval + 1));
 	*id = user_data;
 	return res;
-}
-
-bool iouring_pending_all(IoUring *iou) {
-	return __aload32(iou->cq_head) != __aload32(iou->sq_tail);
-}
-
-bool iouring_pending(IoUring *iou, u64 id) {
-	u32 hval = __aload32(iou->cq_head);
-	u32 tval = __aload32(iou->sq_tail);
-	u32 mask = *iou->sq_mask;
-	u32 index = hval;
-	while (index < tval) {
-		u32 sqe_idx = iou->sq_array[index & mask];
-		if (iou->sqes[sqe_idx].user_data == id) return true;
-		index++;
-	}
-
-	return false;
 }
 
 void iouring_destroy(IoUring *iou) {
