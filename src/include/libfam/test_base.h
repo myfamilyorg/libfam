@@ -28,7 +28,7 @@
 
 #include <libfam/colors.h>
 #include <libfam/string.h>
-#include <libfam/syscall.h>
+#include <libfam/sysext.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
@@ -94,7 +94,7 @@ CLEANUP:
 			_v = write(STDERR_FD, "]. '", 4);                      \
 			_v = write(STDERR_FD, msg, strlen(msg));               \
 			_v = write(STDERR_FD, "'\n", 2);                       \
-			_famexit(-1);                                             \
+			_exit(-1);                                             \
 		}                                                              \
 	} while (0);
 
@@ -116,7 +116,7 @@ CLEANUP:
 			_v = write(STDERR_FD, "]. '", 4);                      \
 			_v = write(STDERR_FD, msg, strlen(msg));               \
 			_v = write(STDERR_FD, "'\n", 2);                       \
-			_famexit(-1);                                             \
+			_exit(-1);                                             \
 		}                                                              \
 		_Pragma("GCC diagnostic pop");                                 \
 	} while (0);
@@ -137,7 +137,7 @@ CLEANUP:
 			_v = write(STDERR_FD, "]. '", 4);                      \
 			_v = write(STDERR_FD, msg, strlen(msg));               \
 			_v = write(STDERR_FD, "'\n", 2);                       \
-			_famexit(-1);                                             \
+			_exit(-1);                                             \
 		}                                                              \
 		_Pragma("GCC diagnostic pop");                                 \
 	} while (0);
