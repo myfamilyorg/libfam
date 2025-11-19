@@ -37,7 +37,7 @@ i64 write(i32 fd, const void *buf, u64 len);
  * return value: i64 - microseconds.
  * errors: None.
  * notes:
- *         Uses gettimeofday().
+ *         Uses clock_gettime().
  *         Monotonic if clock is.
  */
 i64 micros(void);
@@ -52,7 +52,7 @@ i64 micros(void);
  *         EAGAIN         - resource limit.
  *         ENOMEM         - out of memory.
  * notes:
- *        Uses clone3() with shared file descriptor table.
+ *        Uses clone() with shared file descriptor table.
  */
 i32 two(void);
 
@@ -65,7 +65,7 @@ i32 two(void);
  *         EAGAIN         - resource limit.
  *         ENOMEM         - out of memory.
  * notes:
- *         Uses clone3() with default flags.
+ *         Uses clone() with default flags.
  */
 i32 fork(void);
 

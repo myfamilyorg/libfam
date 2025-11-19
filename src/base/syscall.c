@@ -33,28 +33,28 @@
 #define SYS_waitid 95
 #define SYS_kill 129
 #define SYS_rt_sigaction 134
-#define SYS_settimeofday 164
-#define SYS_gettimeofday 169
 #define SYS_getpid 172
 #define SYS_munmap 215
+#define SYS_clone 220
 #define SYS_mmap 222
+#define SYS_clock_settime 262
+#define SYS_clock_gettime 263
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
-#define SYS_clone 220
 #elif defined(__x86_64__)
 #define SYS_mmap 9
 #define SYS_munmap 11
 #define SYS_rt_sigaction 13
 #define SYS_getpid 39
+#define SYS_clone 56
 #define SYS_kill 62
-#define SYS_gettimeofday 96
-#define SYS_settimeofday 164
+#define SYS_clock_settime 227
+#define SYS_clock_gettime 228
 #define SYS_waitid 247
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
-#define SYS_clone 56
 #endif /* __x86_64__ */
 
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
@@ -230,33 +230,33 @@ CLEANUP:
 	RETURN;
 }
 
-i32 gettimeofday(struct timeval *tv, void *tz) {
-	i32 v;
-INIT:
-	if (!tv) ERROR(EINVAL);
-	v = (i32)raw_syscall(SYS_gettimeofday, (i64)tv, (i64)tz, 0, 0, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
-i32 settimeofday(const struct timeval *tv, const struct timezone *tz) {
-	i32 v;
-INIT:
-	if (!tv) ERROR(EINVAL);
-	v = (i32)raw_syscall(SYS_settimeofday, (i64)tv, (i64)tz, 0, 0, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
 i32 waitid(i32 idtype, i32 id, void *infop, i32 options) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_waitid, idtype, (i64)id, (i64)infop,
 			     (i64)options, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 clock_gettime(i32 clockid, struct timespec *tp) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_clock_gettime, (i64)clockid, (i64)tp, 0, 0, 0,
+			     0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 clock_settime(i32 clockid, const struct timespec *tp) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_clock_settime, (i64)clockid, (i64)tp, 0, 0, 0,
+			     0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:

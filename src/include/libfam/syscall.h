@@ -28,16 +28,14 @@
 
 #include <libfam/types.h>
 
-struct timeval;
-struct clone_args;
 struct rt_sigaction;
 struct io_uring_params;
-struct timezone;
+struct timespec;
 
+i32 clock_gettime(i32 clockid, struct timespec *tp);
+i32 clock_settime(i32 clockid, const struct timespec *tp);
 i32 getpid(void);
 i32 waitid(i32 idtype, i32 id, void *infop, i32 options);
-i32 gettimeofday(struct timeval *tv, void *tz);
-i32 settimeofday(const struct timeval *tv, const struct timezone *tz);
 i32 kill(i32 pid, i32 signal);
 void *mmap(void *addr, u64 length, i32 prot, i32 flags, i32 fd, i64 offset);
 i32 munmap(void *addr, u64 len);

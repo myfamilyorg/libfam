@@ -58,9 +58,9 @@ PUBLIC i64 write(i32 fd, const void *buf, u64 len) {
 }
 
 PUBLIC i64 micros(void) {
-	struct timeval tv;
-	if (gettimeofday(&tv, NULL) < 0) return -1;
-	return (i64)tv.tv_sec * 1000000L + (i64)tv.tv_usec;
+	struct timespec ts;
+	if (clock_gettime(CLOCK_REALTIME, &ts) < 0) return -1;
+	return (i64)ts.tv_sec * 1000000LL + (i64)(ts.tv_nsec / 1000);
 }
 
 PUBLIC i32 fork(void) {
