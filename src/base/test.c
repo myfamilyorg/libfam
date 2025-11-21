@@ -524,7 +524,7 @@ Test(open1) {
 
 	errno = 0;
 	i32 fd = open("/tmp/open1.dat", O_RDWR | O_CREAT, 0600);
-	ASSERT(fd > 0, "fd>0");
+	ASSERT(fd > 0, "fd>0 1");
 	ASSERT(!lseek(fd, 0, SEEK_END), "size=0");
 
 	ASSERT(!fallocate(fd, size), "fallocate");
@@ -532,7 +532,7 @@ Test(open1) {
 
 	close(fd);
 	fd = open("/tmp/open2.dat", O_RDWR | O_CREAT, 0600);
-	ASSERT(fd > 0, "fd>0");
+	ASSERT(fd > 0, "fd>0 2");
 	close(fd);
 	unlinkat(AT_FDCWD, "/tmp/open1.dat", 0);
 	unlinkat(AT_FDCWD, "/tmp/open2.dat", 0);

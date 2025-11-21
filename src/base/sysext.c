@@ -62,20 +62,16 @@ struct io_uring_files_update {
 };
 
 PUBLIC i32 open(const u8 *path, i32 flags, u32 mode) {
-	u64 id = 0;
+	u64 id = 0xCAFEBABE;
+	struct open_how how = {.flags = flags, .mode = mode};
 	i64 res;
 
 	if (!__global_iou__)
-		if (global_iou_init() < 0) return -1;
-
-	res = iouring_init_openat(__global_iou__, AT_FDCWD, path, flags, mode,
-				  id);
-	if (res < 0) return -1;
-
-	if (iouring_submit(__global_iou__, 1) < 0) return -1;
-
+		if (global_iou_init() < 0) return -2;
+	res = iouring_init_openat(__global_iou__, AT_FDCWD, path, &how, id);
+	if (res < 0) return -3;
+	if (iouring_submit(__global_iou__, 1) < 0) return -4;
 	res = iouring_wait(__global_iou__, &id);
-
 	return res;
 }
 

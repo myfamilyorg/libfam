@@ -159,19 +159,21 @@ i32 iouring_init_pwrite(IoUring *iou, i32 fd, const void *buf, u64 len,
 	return 0;
 }
 
-i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path, i32 flags,
-			i32 mode, u64 id) {
+i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path,
+			struct open_how *how, u64 id) {
 	struct io_uring_sqe *sqe = iouring_get_sqe(iou);
 	if (!sqe) {
 		errno = EBUSY;
 		return -1;
 	}
 
+	/*
 	struct open_how how = {
 	    .flags = (u64)flags,
 	    .mode = (u64)mode,
 	    .resolve = 0,
 	};
+	*/
 
 	memset(sqe, 0, sizeof(*sqe));
 
@@ -179,7 +181,7 @@ i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path, i32 flags,
 	sqe->fd = dirfd;
 	sqe->addr = (u64)path;
 	sqe->len = sizeof(struct open_how);
-	sqe->off = (u64)&how;
+	sqe->off = (u64)how;
 	sqe->user_data = id;
 
 	__aadd32(iou->sq_tail, 1);

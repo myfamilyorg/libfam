@@ -37,6 +37,7 @@
  *         to check completion.
  */
 typedef struct IoUring IoUring;
+struct open_how;
 
 /*
  * Function: iouring_init
@@ -120,8 +121,8 @@ i32 iouring_init_pwrite(IoUring *iou, i32 fd, const void *buf, u64 len,
 
 i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id);
 
-i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path, i32 flags,
-			i32 mode, u64 id);
+i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path,
+			struct open_how *how, u64 id);
 
 i32 iouring_init_close(IoUring *iou, i32 fd, u64 id);
 i32 iouring_init_fallocate(IoUring *iou, i32 fd, u64 new_size, u64 id);
