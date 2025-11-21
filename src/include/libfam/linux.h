@@ -75,6 +75,15 @@ struct io_uring_params {
 	struct io_cqring_offsets cq_off;
 };
 
+struct io_uring_rsrc_update2 {
+	u32 offset;
+	u32 resv;
+	u64 data;
+	u64 tags;
+	u32 nr;
+	u32 resv2;
+};
+
 struct io_uring_cqe {
 	u64 user_data;
 	i32 res;
@@ -393,5 +402,17 @@ struct timezone {
 #elif defined(__x86_64__)
 #define O_DIRECT 00040000
 #endif /* __x86_64__ */
+
+#define FALLOC_FL_KEEP_SIZE 0x01     /* default is extend size */
+#define FALLOC_FL_PUNCH_HOLE 0x02    /* de-allocates range */
+#define FALLOC_FL_NO_HIDE_STALE 0x04 /* reserved codepoint */
+
+/* Lseek consts */
+#define SEEK_SET 0  /* seek relative to beginning of file */
+#define SEEK_CUR 1  /* seek relative to current file position */
+#define SEEK_END 2  /* seek relative to end of file */
+#define SEEK_DATA 3 /* seek to the next data */
+#define SEEK_HOLE 4 /* seek to the next hole */
+#define SEEK_MAX SEEK_HOLE
 
 #endif /* _LINUX_H */

@@ -38,12 +38,12 @@ PUBLIC void perror(const char *s) {
 	i32 __attribute__((unused)) _v;
 	if (s) {
 		u64 len = strlen(s);
-		if (write(STDERR_FD, s, len) < len) return;
-		if (write(STDERR_FD, ": ", 2) < 2) return;
+		if (pwrite(STDERR_FD, s, len, 0) < len) return;
+		if (pwrite(STDERR_FD, ": ", 2, 0) < 2) return;
 	}
 	err_msg = strerror(errno);
-	_v = write(STDERR_FD, err_msg, strlen(err_msg));
-	_v = write(STDERR_FD, "\n", 1);
+	_v = pwrite(STDERR_FD, err_msg, strlen(err_msg), 0);
+	_v = pwrite(STDERR_FD, "\n", 1, 0);
 }
 
 PUBLIC char *strerror(i32 err_code) {

@@ -25,6 +25,7 @@
 
 #include <libfam/atomic.h>
 #include <libfam/iouring.h>
+#include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
@@ -95,7 +96,8 @@ INIT:
 					       (*iou)->params.cq_off.cqes);
 
 	(*iou)->queue_depth = queue_depth;
-	if (iouring_register_stdio(*iou) < 0) ERROR();
+	/*
+	if (iouring_register_stdio(*iou) < 0) ERROR();*/
 CLEANUP:
 	if (!IS_OK) {
 		iouring_destroy(*iou);
@@ -113,8 +115,8 @@ struct io_uring_sqe *iouring_get_sqe(IoUring *iou) {
 	return &iou->sqes[index];
 }
 
-i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
-		      u64 id) {
+i32 iouring_init_pread(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
+		       u64 id) {
 	struct io_uring_sqe *sqe;
 	sqe = iouring_get_sqe(iou);
 	if (!sqe) {
@@ -123,8 +125,9 @@ i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 	}
 
 	memset(sqe, 0, sizeof(*sqe));
+
 	sqe->opcode = IORING_OP_READ;
-	sqe->flags = IOSQE_FIXED_FILE;
+	sqe->flags = 0;
 	sqe->fd = fd;
 	sqe->addr = (u64)buf;
 	sqe->len = len;
@@ -134,8 +137,8 @@ i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 	return 0;
 }
 
-i32 iouring_init_write(IoUring *iou, i32 fd, const void *buf, u64 len,
-		       u64 foffset, u64 id) {
+i32 iouring_init_pwrite(IoUring *iou, i32 fd, const void *buf, u64 len,
+			u64 foffset, u64 id) {
 	struct io_uring_sqe *sqe;
 	sqe = iouring_get_sqe(iou);
 	if (!sqe) {
@@ -144,8 +147,9 @@ i32 iouring_init_write(IoUring *iou, i32 fd, const void *buf, u64 len,
 	}
 
 	memset(sqe, 0, sizeof(*sqe));
+
 	sqe->opcode = IORING_OP_WRITE;
-	sqe->flags = IOSQE_FIXED_FILE;
+	sqe->flags = 0;
 	sqe->fd = fd;
 	sqe->addr = (u64)buf;
 	sqe->len = len;
@@ -190,8 +194,28 @@ i32 iouring_init_close(IoUring *iou, i32 fd, u64 id) {
 	}
 
 	memset(sqe, 0, sizeof(*sqe));
+
 	sqe->opcode = IORING_OP_CLOSE;
 	sqe->fd = fd;
+	sqe->user_data = id;
+
+	__aadd32(iou->sq_tail, 1);
+	return 0;
+}
+
+i32 iouring_init_fallocate(IoUring *iou, i32 fd, u64 new_size, u64 id) {
+	struct io_uring_sqe *sqe = iouring_get_sqe(iou);
+	if (!sqe) {
+		errno = EBUSY;
+		return -1;
+	}
+
+	memset(sqe, 0, sizeof(*sqe));
+
+	sqe->opcode = IORING_OP_FALLOCATE;
+	sqe->fd = fd;
+	sqe->addr = new_size;
+	sqe->len = 0;
 	sqe->user_data = id;
 
 	__aadd32(iou->sq_tail, 1);
@@ -205,9 +229,11 @@ i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id) {
 		return -1;
 	}
 
+	memset(sqe, 0, sizeof(*sqe));
+
 	sqe->opcode = IORING_OP_FSYNC;
 	sqe->fd = fd;
-	sqe->flags = IOSQE_IO_DRAIN | IOSQE_FIXED_FILE;
+	sqe->flags = IOSQE_IO_DRAIN;
 	sqe->user_data = id;
 
 	__aadd32(iou->sq_tail, 1);

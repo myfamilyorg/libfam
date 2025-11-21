@@ -56,7 +56,7 @@ typedef struct IoUring IoUring;
 i32 iouring_init(IoUring **iou, u32 queue_depth);
 
 /*
- * Function: iouring_init_read
+ * Function: iouring_init_pread
  * Queues an asynchronous read operation.
  * inputs:
  *         IoUring *iou         - initialized io_uring handle.
@@ -75,15 +75,15 @@ i32 iouring_init(IoUring **iou, u32 queue_depth);
  *         Use iouring_pending or iouring_spin to check completion.
  *         On completion, len bytes are read into buf (or fewer on EOF).
  */
-i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
-		      u64 id);
+i32 iouring_init_pread(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
+		       u64 id);
 
 /*
- * Function: iouring_init_write
+ * Function: iouring_init_pwrite
  * Queues an asynchronous write operation.
  * inputs:
  *         IoUring *iou         - initialized io_uring handle.
- *         i32 fd               - file descriptor to write to.
+ *         i32 fd               - file descriptor to pwrite to.
  *         const void *buf      - buffer containing data to write.
  *         u64 len              - number of bytes to write.
  *         u64 foffset          - file offset to write to
@@ -98,8 +98,8 @@ i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
  *         Use iouring_pending or iouring_spin to check completion.
  *         On completion, len bytes are written from buf (or fewer on error).
  */
-i32 iouring_init_write(IoUring *iou, i32 fd, const void *buf, u64 len,
-		       u64 foffset, u64 id);
+i32 iouring_init_pwrite(IoUring *iou, i32 fd, const void *buf, u64 len,
+			u64 foffset, u64 id);
 
 /*
  * Function: iouring_init_fsync
@@ -124,6 +124,7 @@ i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path, i32 flags,
 			i32 mode, u64 id);
 
 i32 iouring_init_close(IoUring *iou, i32 fd, u64 id);
+i32 iouring_init_fallocate(IoUring *iou, i32 fd, u64 new_size, u64 id);
 
 /*
  * Function: iouring_submit

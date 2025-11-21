@@ -29,9 +29,11 @@
 #include <libfam/types.h>
 
 void yield(void);
-i64 write(i32 fd, const void *buf, u64 len);
-i64 read(i32 fd, void *buf, u64 len);
+i64 pwrite(i32 fd, const void *buf, u64 len, u64 offset);
+i64 pread(i32 fd, void *buf, u64 len, u64 offset);
 i32 open(const u8 *path, i32 flags, u32 mode);
+i32 fallocate(i32 fd, u64 new_size);
+i64 fsize(i32 fd);
 i32 close(i32 fd);
 i64 micros(void);
 i32 two(void);

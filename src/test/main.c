@@ -46,12 +46,12 @@ TestEntry tests[MAX_TESTS];
 void add_test_fn(void (*test_fn)(void), const u8 *name) {
 	if (strlen(name) > MAX_TEST_NAME) {
 		const u8 *msg = "test name too long!\n";
-		write(STDERR_FD, msg, strlen(msg));
+		pwrite(STDERR_FD, msg, strlen(msg), 0);
 		_exit(-1);
 	}
 	if (cur_tests >= MAX_TESTS) {
 		const u8 *msg = "too many tests!";
-		write(STDERR_FD, msg, strlen(msg));
+		pwrite(STDERR_FD, msg, strlen(msg), 0);
 		_exit(-1);
 	}
 	tests[cur_tests].test_fn = test_fn;
@@ -110,28 +110,28 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	if (init_environ(envp) < 0) {
 		perror("init_environ");
 		const u8 *msg = "Too many environment variables!\n";
-		write(STDERR_FD, msg, strlen(msg));
+		pwrite(STDERR_FD, msg, strlen(msg), 0);
 		_exit(-1);
 	}
 
 	pattern = getenv("TEST_PATTERN");
 
-	write(STDERR_FD, CYAN, strlen(CYAN));
+	pwrite(STDERR_FD, CYAN, strlen(CYAN), 0);
 	if (!pattern || !strcmp(pattern, "*")) {
-		write(STDERR_FD, "Running ", strlen("Running "));
+		pwrite(STDERR_FD, "Running ", strlen("Running "), 0);
 		write_num(STDERR_FD, cur_tests);
-		write(STDERR_FD, " tests", strlen(" tests"));
-		write(STDERR_FD, RESET, strlen(RESET));
-		write(STDERR_FD, "...\n", 4);
+		pwrite(STDERR_FD, " tests", strlen(" tests"), 0);
+		pwrite(STDERR_FD, RESET, strlen(RESET), 0);
+		pwrite(STDERR_FD, "...\n", 4, 0);
 	} else {
-		write(STDERR_FD, "Running test", strlen("Running test"));
-		write(STDERR_FD, RESET, strlen(RESET));
-		write(STDERR_FD, ": '", 3);
-		write(STDERR_FD, pattern, strlen(pattern));
-		write(STDERR_FD, "' ...\n", 6);
+		pwrite(STDERR_FD, "Running test", strlen("Running test"), 0);
+		pwrite(STDERR_FD, RESET, strlen(RESET), 0);
+		pwrite(STDERR_FD, ": '", 3, 0);
+		pwrite(STDERR_FD, pattern, strlen(pattern), 0);
+		pwrite(STDERR_FD, "' ...\n", 6, 0);
 	}
 
-	write(STDERR_FD, SPACER, strlen(SPACER));
+	pwrite(STDERR_FD, SPACER, strlen(SPACER), 0);
 
 	total = micros();
 
@@ -139,28 +139,28 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 		if (!pattern || !strcmp(pattern, "*") ||
 		    !strcmp(pattern, tests[exe_test].name)) {
 			i64 start = micros();
-			write(STDERR_FD, YELLOW, strlen(YELLOW));
-			write(STDERR_FD, "Running test",
-			      strlen("Running test"));
-			write(STDERR_FD, RESET, strlen(RESET));
-			write(STDERR_FD, " ", 1);
+			pwrite(STDERR_FD, YELLOW, strlen(YELLOW), 0);
+			pwrite(STDERR_FD, "Running test",
+			       strlen("Running test"), 0);
+			pwrite(STDERR_FD, RESET, strlen(RESET), 0);
+			pwrite(STDERR_FD, " ", 1, 0);
 			write_num(STDERR_FD, ++test_count);
-			write(STDERR_FD, " [", 2);
-			write(STDERR_FD, DIMMED, strlen(DIMMED));
-			write(STDERR_FD, tests[exe_test].name,
-			      strlen(tests[exe_test].name));
-			write(STDERR_FD, RESET, strlen(RESET));
+			pwrite(STDERR_FD, " [", 2, 0);
+			pwrite(STDERR_FD, DIMMED, strlen(DIMMED), 0);
+			pwrite(STDERR_FD, tests[exe_test].name,
+			       strlen(tests[exe_test].name), 0);
+			pwrite(STDERR_FD, RESET, strlen(RESET), 0);
 
-			write(STDERR_FD, "] ", 2);
+			pwrite(STDERR_FD, "] ", 2, 0);
 
 			tests[exe_test].test_fn();
 
-			write(STDERR_FD, GREEN, strlen(GREEN));
-			write(STDERR_FD, "[", 1);
+			pwrite(STDERR_FD, GREEN, strlen(GREEN), 0);
+			pwrite(STDERR_FD, "[", 1, 0);
 			write_num(STDERR_FD, (i64)(micros() - start));
-			write(STDERR_FD, "µs", strlen("µs"));
-			write(STDERR_FD, "]\n", 2);
-			write(STDERR_FD, RESET, strlen(RESET));
+			pwrite(STDERR_FD, "µs", strlen("µs"), 0);
+			pwrite(STDERR_FD, "]\n", 2, 0);
+			pwrite(STDERR_FD, RESET, strlen(RESET), 0);
 		}
 	}
 
@@ -168,22 +168,22 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	len = f64_to_string(buf, ms, 3, false);
 	buf[len] = 0;
 
-	write(STDERR_FD, SPACER, strlen(SPACER));
+	pwrite(STDERR_FD, SPACER, strlen(SPACER), 0);
 
-	write(STDERR_FD, GREEN, strlen(GREEN));
-	write(STDERR_FD, "Success", strlen("Success"));
-	write(STDERR_FD, RESET, strlen(RESET));
-	write(STDERR_FD, "! ", 2);
+	pwrite(STDERR_FD, GREEN, strlen(GREEN), 0);
+	pwrite(STDERR_FD, "Success", strlen("Success"), 0);
+	pwrite(STDERR_FD, RESET, strlen(RESET), 0);
+	pwrite(STDERR_FD, "! ", 2, 0);
 	write_num(STDERR_FD, test_count);
-	write(STDERR_FD, " ", 1);
-	write(STDERR_FD, CYAN, strlen(CYAN));
-	write(STDERR_FD, "tests passed!", strlen("tests passed!"));
-	write(STDERR_FD, RESET, strlen(RESET));
-	write(STDERR_FD, GREEN, strlen(GREEN));
-	write(STDERR_FD, " [", 2);
-	write(STDERR_FD, buf, strlen(buf));
-	write(STDERR_FD, " ms]\n", 5);
-	write(STDERR_FD, RESET, strlen(RESET));
+	pwrite(STDERR_FD, " ", 1, 0);
+	pwrite(STDERR_FD, CYAN, strlen(CYAN), 0);
+	pwrite(STDERR_FD, "tests passed!", strlen("tests passed!"), 0);
+	pwrite(STDERR_FD, RESET, strlen(RESET), 0);
+	pwrite(STDERR_FD, GREEN, strlen(GREEN), 0);
+	pwrite(STDERR_FD, " [", 2, 0);
+	pwrite(STDERR_FD, buf, strlen(buf), 0);
+	pwrite(STDERR_FD, " ms]\n", 5, 0);
+	pwrite(STDERR_FD, RESET, strlen(RESET), 0);
 
 	_exit(0);
 	return 0;

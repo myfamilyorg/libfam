@@ -31,6 +31,7 @@
 
 #ifdef __aarch64__
 #define SYS_unlinkat 35
+#define SYS_lseek 62
 #define SYS_waitid 95
 #define SYS_kill 129
 #define SYS_rt_sigaction 134
@@ -44,6 +45,7 @@
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
 #elif defined(__x86_64__)
+#define SYS_lseek 8
 #define SYS_mmap 9
 #define SYS_munmap 11
 #define SYS_rt_sigaction 13
@@ -259,6 +261,16 @@ i32 clock_settime(i32 clockid, const struct timespec *tp) {
 INIT:
 	v = (i32)raw_syscall(SYS_clock_settime, (i64)clockid, (i64)tp, 0, 0, 0,
 			     0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i64 lseek(i32 fd, i64 offset, i32 whence) {
+	i64 v;
+INIT:
+	v = raw_syscall(SYS_lseek, (i64)fd, (i64)offset, (i64)whence, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:

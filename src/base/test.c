@@ -370,10 +370,10 @@ Test(string_chr_cat) {
 Test(colors) {
 	i32 __attribute__((unused)) _v;
 	_debug_no_write = true;
-	_v = write(STDERR_FD, RED, strlen(RED));
-	_v = write(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED));
-	_v = write(STDERR_FD, MAGENTA, strlen(MAGENTA));
-	_v = write(STDERR_FD, BLUE, strlen(BLUE));
+	_v = pwrite(STDERR_FD, RED, strlen(RED), 0);
+	_v = pwrite(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED), 0);
+	_v = pwrite(STDERR_FD, MAGENTA, strlen(MAGENTA), 0);
+	_v = pwrite(STDERR_FD, BLUE, strlen(BLUE), 0);
 	_debug_no_write = false;
 }
 
@@ -518,12 +518,18 @@ Test(clone2) {
 }
 
 Test(open1) {
+	u64 size = 4097;
 	unlinkat(AT_FDCWD, "/tmp/open1.dat", 0);
 	unlinkat(AT_FDCWD, "/tmp/open2.dat", 0);
 
 	errno = 0;
 	i32 fd = open("/tmp/open1.dat", O_RDWR | O_CREAT, 0600);
 	ASSERT(fd > 0, "fd>0");
+	ASSERT(!lseek(fd, 0, SEEK_END), "size=0");
+
+	ASSERT(!fallocate(fd, size), "fallocate");
+	ASSERT_EQ(lseek(fd, 0, SEEK_END), size, "size");
+
 	close(fd);
 	fd = open("/tmp/open2.dat", O_RDWR | O_CREAT, 0600);
 	ASSERT(fd > 0, "fd>0");
