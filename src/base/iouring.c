@@ -167,14 +167,6 @@ i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path,
 		return -1;
 	}
 
-	/*
-	struct open_how how = {
-	    .flags = (u64)flags,
-	    .mode = (u64)mode,
-	    .resolve = 0,
-	};
-	*/
-
 	memset(sqe, 0, sizeof(*sqe));
 
 	sqe->opcode = IORING_OP_OPENAT2;
