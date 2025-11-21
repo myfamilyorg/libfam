@@ -82,6 +82,13 @@ struct io_uring_cqe {
 	u64 big_cqe[];
 };
 
+/* Exact copy of struct open_how from Linux 6.14 uapi/linux/openat2.h */
+struct open_how {
+	u64 flags;   /* O_* flags – same values as open(2) */
+	u64 mode;    /* File mode (only used with O_CREAT/O_TMPFILE) */
+	u64 resolve; /* RESOLVE_* flags – usually 0 */
+};
+
 struct io_uring_sqe {
 	u8 opcode;
 	u8 flags;
@@ -105,7 +112,7 @@ struct io_uring_sqe {
 	};
 	u32 len;
 	union {
-		i32 rw_flags;
+		u32 rw_flags;
 		u32 fsync_flags;
 		u16 poll_events;
 		u32 poll32_events;
@@ -372,5 +379,19 @@ struct timezone {
 #define CLOCK_BOOTTIME 7
 #define CLOCK_REALTIME_ALARM 8
 #define CLOCK_BOOTTIME_ALARM 9
+
+#define AT_FDCWD -100
+
+/* Open constants */
+#define O_CREAT 0100
+#define O_WRONLY 00000001
+#define O_RDWR 02
+#define O_EXCL 00000200
+#define O_SYNC 04000000
+#ifdef __aarch64__
+#define O_DIRECT 0200000
+#elif defined(__x86_64__)
+#define O_DIRECT 00040000
+#endif /* __x86_64__ */
 
 #endif /* _LINUX_H */

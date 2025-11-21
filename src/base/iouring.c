@@ -121,6 +121,8 @@ i32 iouring_init_read(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
 		errno = EBUSY;
 		return -1;
 	}
+
+	memset(sqe, 0, sizeof(*sqe));
 	sqe->opcode = IORING_OP_READ;
 	sqe->flags = IOSQE_FIXED_FILE;
 	sqe->fd = fd;
@@ -140,6 +142,8 @@ i32 iouring_init_write(IoUring *iou, i32 fd, const void *buf, u64 len,
 		errno = EBUSY;
 		return -1;
 	}
+
+	memset(sqe, 0, sizeof(*sqe));
 	sqe->opcode = IORING_OP_WRITE;
 	sqe->flags = IOSQE_FIXED_FILE;
 	sqe->fd = fd;
@@ -159,13 +163,37 @@ i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path, i32 flags,
 		return -1;
 	}
 
-	sqe->opcode = IORING_OP_OPENAT;
+	struct open_how how = {
+	    .flags = (u64)flags,
+	    .mode = (u64)mode,
+	    .resolve = 0,
+	};
+
+	memset(sqe, 0, sizeof(*sqe));
+
+	sqe->opcode = IORING_OP_OPENAT2;
 	sqe->fd = dirfd;
 	sqe->addr = (u64)path;
-	sqe->len = flags;
-	sqe->off = mode;
+	sqe->len = sizeof(struct open_how);
+	sqe->off = (u64)&how;
 	sqe->user_data = id;
-	sqe->flags = IOSQE_IO_DRAIN | IOSQE_IO_LINK;
+
+	__aadd32(iou->sq_tail, 1);
+	return 0;
+}
+
+i32 iouring_init_close(IoUring *iou, i32 fd, u64 id) {
+	struct io_uring_sqe *sqe = iouring_get_sqe(iou);
+	if (!sqe) {
+		errno = EBUSY;
+		return -1;
+	}
+
+	memset(sqe, 0, sizeof(*sqe));
+	sqe->opcode = IORING_OP_CLOSE;
+	sqe->fd = fd;
+	sqe->user_data = id;
+
 	__aadd32(iou->sq_tail, 1);
 	return 0;
 }

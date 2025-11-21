@@ -123,6 +123,8 @@ i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id);
 i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path, i32 flags,
 			i32 mode, u64 id);
 
+i32 iouring_init_close(IoUring *iou, i32 fd, u64 id);
+
 /*
  * Function: iouring_submit
  * Submits queued operations to the kernel.

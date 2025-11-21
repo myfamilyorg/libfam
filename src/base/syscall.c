@@ -30,6 +30,7 @@
 #include <libfam/utils.h>
 
 #ifdef __aarch64__
+#define SYS_unlinkat 35
 #define SYS_waitid 95
 #define SYS_kill 129
 #define SYS_rt_sigaction 134
@@ -52,6 +53,7 @@
 #define SYS_clock_settime 227
 #define SYS_clock_gettime 228
 #define SYS_waitid 247
+#define SYS_unlinkat 263
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
@@ -175,7 +177,7 @@ i32 clone(i64 flags, void *sp) {
 INIT:
 
 #if TEST == 1
-	if (_debug_fail_clone3) return -1;
+	if (_debug_fail_clone) return -1;
 #endif
 
 	v = (i32)raw_syscall(SYS_clone, flags, (i64)sp, 0, 0, 0, 0);
@@ -263,3 +265,15 @@ CLEANUP:
 	RETURN;
 }
 
+#if TEST == 1
+PUBLIC i32 unlinkat(i32 dfd, const char *path, i32 flags) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_unlinkat, (i64)dfd, (i64)path, (i64)flags, 0,
+			     0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+#endif /* TEST */

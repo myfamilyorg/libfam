@@ -34,12 +34,9 @@
 
 IoUring *__global_iou__ = NULL;
 
-void yield(void) {
-#if defined(__x86_64__)
-	__asm__ __volatile__("pause" ::: "memory");
-#elif defined(__aarch64__)
-	__asm__ __volatile__("yield" ::: "memory");
-#endif
+STATIC i32 global_iou_init(void) {
+	__global_iou__ = NULL;
+	return iouring_init(&__global_iou__, 1);
 }
 
 PUBLIC i64 write(i32 fd, const void *buf, u64 len) {
@@ -49,12 +46,51 @@ PUBLIC i64 write(i32 fd, const void *buf, u64 len) {
 	if ((fd == 1 || fd == 2) && _debug_no_write) return len;
 #endif /* TEST */
 
-	if (!__global_iou__) iouring_init(&__global_iou__, 1);
-	if (!__global_iou__) return -1;
+	if (!__global_iou__)
+		if (global_iou_init() < 0) return -1;
 	res = iouring_init_write(__global_iou__, fd, buf, len, 0, U64_MAX);
 	if (res < 0) return -1;
 	if (iouring_submit(__global_iou__, 1) < 0) return -1;
 	return iouring_wait(__global_iou__, &id);
+}
+
+PUBLIC i32 open(const u8 *path, i32 flags, u32 mode) {
+	u64 id;
+	i64 res;
+
+	if (!__global_iou__)
+		if (global_iou_init() < 0) return -1;
+	res =
+	    iouring_init_openat(__global_iou__, AT_FDCWD, path, flags, mode, 0);
+	if (res < 0) return -1;
+	if (iouring_submit(__global_iou__, 1) < 0) return -1;
+	res = iouring_wait(__global_iou__, &id);
+	return res;
+}
+
+PUBLIC i32 close(i32 fd) {
+	u64 id;
+	i64 res;
+
+	if (!__global_iou__)
+		if (global_iou_init() < 0) return -1;
+	res = iouring_init_close(__global_iou__, fd, 0);
+	if (res < 0) return -1;
+	if (iouring_submit(__global_iou__, 1) < 0) return -1;
+	res = iouring_wait(__global_iou__, &id);
+	return res;
+}
+
+PUBLIC i32 fork(void) {
+	i32 ret = clone(SIGCHLD, 0);
+	if (!ret) __global_iou__ = NULL;
+	return ret;
+}
+
+PUBLIC i32 two(void) {
+	i32 ret = clone(CLONE_FILES | SIGCHLD, 0);
+	if (!ret) __global_iou__ = NULL;
+	return ret;
 }
 
 PUBLIC i64 micros(void) {
@@ -63,13 +99,11 @@ PUBLIC i64 micros(void) {
 	return (i64)ts.tv_sec * 1000000LL + (i64)(ts.tv_nsec / 1000);
 }
 
-PUBLIC i32 fork(void) {
-	i32 ret = clone(SIGCHLD, 0);
-	return (i32)ret;
-}
-
-PUBLIC i32 two(void) {
-	i32 ret = clone(CLONE_FILES | SIGCHLD, 0);
-	return (i32)ret;
+PUBLIC void yield(void) {
+#if defined(__x86_64__)
+	__asm__ __volatile__("pause" ::: "memory");
+#elif defined(__aarch64__)
+	__asm__ __volatile__("yield" ::: "memory");
+#endif
 }
 

@@ -31,7 +31,7 @@
 #if TEST == 1
 extern bool _debug_no_exit;
 extern bool _debug_no_write;
-extern bool _debug_fail_clone3;
+extern bool _debug_fail_clone;
 #endif /* TEST */
 
 #endif /* _DEBUG_H */
