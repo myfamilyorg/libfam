@@ -163,7 +163,6 @@ i32 iouring_submit(IoUring *iou, u32 count);
 i32 iouring_spin(IoUring *iou, u64 *id);
 
 i32 iouring_wait(IoUring *iou, u64 *id);
-i32 iouring_register_stdio(IoUring *iou);
 
 /*
  * Function: iouring_destroy

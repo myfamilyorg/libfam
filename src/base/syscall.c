@@ -62,7 +62,7 @@
 #endif /* __x86_64__ */
 
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
-	i64 result;
+	i64 result = 0;
 #ifdef __aarch64__
 	__asm__ volatile(
 	    "mov x8, %1\n"

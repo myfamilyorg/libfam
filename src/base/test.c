@@ -554,15 +554,17 @@ Test(iouring_cov) {
 
 	iouring_submit(iou, 1);
 	iouring_spin(iou, &id);
+	ASSERT_EQ(id, U64_MAX, "u64 max");
 
 	ASSERT(iouring_ring_fd(iou) > 0, "ring_fd");
+
 	iouring_destroy(iou);
 }
 
 Test(iouring_slowspin) {
 	u64 id, size = 4097;
 	IoUring *iou = NULL;
-	i32 res, fd;
+	i32 res = 0, fd = 0;
 
 	unlinkat(AT_FDCWD, "/tmp/slowspin.dat", 0);
 	errno = 0;
@@ -574,7 +576,12 @@ Test(iouring_slowspin) {
 	ASSERT_EQ(lseek(fd, 0, SEEK_END), size, "size");
 
 	iouring_init(&iou, 2);
-	ASSERT(!iouring_init_pwrite(iou, fd, "abc", 3, 0, U64_MAX), "pwrite");
+	u8 buf[1024] = {0};
+	buf[0] = 'a';
+	buf[1] = 'b';
+	buf[2] = 'c';
+	io_uring_register(fd, IORING_REGISTER_BUFFERS, buf, 1);
+	ASSERT(!iouring_init_pwrite(iou, fd, buf, 3, 0, U64_MAX), "pwrite");
 	ASSERT(!iouring_init_fsync(iou, fd, U64_MAX - 1), "fsync");
 	iouring_submit(iou, 2);
 	res = iouring_spin(iou, &id);
