@@ -604,27 +604,34 @@ Test(settime) {
 }
 
 bool sig_recv = false;
+u64 *val = NULL;
 void test_handler(i32 sig) {
 	ASSERT_EQ(sig, SIGUSR1, "sigusr1");
+	__aadd64(val, 1);
 	sig_recv = true;
 }
-#define SIGSET_T_SIZE 8
 
 Test(signal) {
+	val = mmap(NULL, sizeof(u64), PROT_READ | PROT_WRITE,
+		   MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+	ASSERT(val, "mmap");
+	*val = 0;
+
 	u8 buf[1024] = {0};
 	struct rt_sigaction act = {0};
 	i32 pid;
 	act.k_sa_handler = test_handler;
 	act.k_sa_flags = SA_RESTORER;
 	act.k_sa_restorer = restorer;
-	ASSERT(!rt_sigaction(SIGUSR1, &act, NULL, SIGSET_T_SIZE),
-	       "rt_sigaction");
-	if ((pid = fork())) {
+	ASSERT(!rt_sigaction(SIGUSR1, &act, NULL, sizeof(act)), "rt_sigaction");
+	if ((pid = fork()))
 		kill(pid, SIGUSR1);
-	} else {
+	else {
 		while (!sig_recv) yield();
 		_exit(0);
 	}
-	ASSERT(!waitid(P_PID, pid, buf, WEXITED), "waitid");
+	ASSERT(!waitid(P_PID, pid, &buf, WEXITED), "waitid");
+	ASSERT_EQ(*val, 1, "val=1");
+	munmap(val, sizeof(u64));
 }
 
