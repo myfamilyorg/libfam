@@ -39,8 +39,8 @@
 #define SYS_munmap 215
 #define SYS_clone 220
 #define SYS_mmap 222
-#define SYS_clock_settime 262
-#define SYS_clock_gettime 263
+#define SYS_clock_settime 112
+#define SYS_clock_gettime 113
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
