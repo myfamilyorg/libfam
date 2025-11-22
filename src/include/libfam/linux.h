@@ -416,4 +416,10 @@ struct timezone {
 #define SEEK_HOLE 4 /* seek to the next hole */
 #define SEEK_MAX SEEK_HOLE
 
+/* SA_RESTORER - rt_sigaction */
+#define SA_RESTORER 0x04000000
+
+#define P_PID 1
+#define WEXITED 4
+
 #endif /* _LINUX_H */

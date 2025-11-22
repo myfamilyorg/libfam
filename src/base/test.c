@@ -602,3 +602,28 @@ Test(settime) {
 	i32 res = clock_settime(CLOCK_REALTIME, &ts);
 	ASSERT(res == 0 || (res < 0 && errno == EPERM), "settime");
 }
+
+bool sig_recv = false;
+void test_handler(i32 sig) {
+	ASSERT_EQ(sig, SIGUSR1, "sigusr1");
+	sig_recv = true;
+}
+#define SIGSET_T_SIZE 8
+
+Test(signal) {
+	struct rt_sigaction act = {0};
+	i32 pid;
+	act.k_sa_handler = test_handler;
+	act.k_sa_flags = SA_RESTORER;
+	act.k_sa_restorer = restorer;
+	ASSERT(!rt_sigaction(SIGUSR1, &act, NULL, SIGSET_T_SIZE),
+	       "rt_sigaction");
+	if ((pid = fork())) {
+		kill(pid, SIGUSR1);
+	} else {
+		while (!sig_recv) yield();
+		_exit(0);
+	}
+	ASSERT(!waitid(1, pid, NULL, 4), "waitid");
+}
+

@@ -277,6 +277,32 @@ CLEANUP:
 	RETURN;
 }
 
+#ifdef __aarch64__
+#define SYSCALL_RESTORER     \
+	__asm__ volatile(    \
+	    "mov x8, #139\n" \
+	    "svc #0\n" ::    \
+		: "x8", "memory");
+#elif defined(__x86_64__)
+#define SYSCALL_RESTORER        \
+	__asm__ volatile(       \
+	    "movq $15, %%rax\n" \
+	    "syscall\n"         \
+	    :                   \
+	    :                   \
+	    : "%rax", "%rcx", "%r11", "memory");
+#else
+#error "Unsupported platform"
+#endif /* ARCH */
+
+#ifdef __aarch64__
+PUBLIC void restorer(void) { SYSCALL_RESTORER; }
+#elif defined(__x86_64__)
+PUBLIC __attribute__((naked)) void restorer(void) { SYSCALL_RESTORER; }
+#else
+#error "Unsupported platform"
+#endif /* ARCH */
+
 #if TEST == 1
 i32 unlinkat(i32 dfd, const char *path, i32 flags) {
 	i32 v;
