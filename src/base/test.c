@@ -27,6 +27,7 @@
 #include <libfam/builtin.h>
 #include <libfam/debug.h>
 #include <libfam/env.h>
+#include <libfam/iouring.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/rbtree.h>
@@ -516,3 +517,74 @@ Test(open1) {
 	unlinkat(AT_FDCWD, "/tmp/open2.dat", 0);
 }
 
+Test(iouring_cov) {
+	u64 id;
+	IoUring *iou = NULL;
+	struct open_how how = {.flags = O_RDONLY, .mode = 0600};
+	iouring_init(&iou, 1);
+	iouring_init_openat(iou, AT_FDCWD, "/tmp/blah", &how, U64_MAX);
+
+	errno = 0;
+	ASSERT_EQ(iouring_init_pread(iou, -1, NULL, 0, 0, U64_MAX), -1,
+		  "queue full");
+	ASSERT_EQ(errno, EBUSY, "ebusy");
+
+	errno = 0;
+	ASSERT_EQ(iouring_init_pwrite(iou, -1, NULL, 0, 0, U64_MAX), -1,
+		  "queue full");
+	ASSERT_EQ(errno, EBUSY, "ebusy");
+
+	errno = 0;
+	ASSERT_EQ(iouring_init_openat(iou, -1, NULL, NULL, U64_MAX), -1,
+		  "queue full");
+	ASSERT_EQ(errno, EBUSY, "ebusy");
+
+	errno = 0;
+	ASSERT_EQ(iouring_init_close(iou, -1, U64_MAX), -1, "queue full");
+	ASSERT_EQ(errno, EBUSY, "ebusy");
+
+	errno = 0;
+	ASSERT_EQ(iouring_init_fallocate(iou, -1, 1, U64_MAX), -1,
+		  "queue full");
+	ASSERT_EQ(errno, EBUSY, "ebusy");
+
+	errno = 0;
+	ASSERT_EQ(iouring_init_fsync(iou, -1, U64_MAX), -1, "queue full");
+	ASSERT_EQ(errno, EBUSY, "ebusy");
+
+	iouring_submit(iou, 1);
+	iouring_spin(iou, &id);
+
+	ASSERT(iouring_ring_fd(iou) > 0, "ring_fd");
+	iouring_destroy(iou);
+}
+
+Test(iouring_slowspin) {
+	u64 id, size = 4097;
+	IoUring *iou = NULL;
+	i32 res, fd;
+
+	unlinkat(AT_FDCWD, "/tmp/slowspin.dat", 0);
+	errno = 0;
+	fd = open("/tmp/slowspin.dat", O_RDWR | O_CREAT, 0600);
+	ASSERT(fd > 0, "fd>0 1");
+	ASSERT(!lseek(fd, 0, SEEK_END), "size=0");
+
+	ASSERT(!fallocate(fd, size), "fallocate");
+	ASSERT_EQ(lseek(fd, 0, SEEK_END), size, "size");
+
+	iouring_init(&iou, 2);
+	ASSERT(!iouring_init_pwrite(iou, fd, "abc", 3, 0, U64_MAX), "pwrite");
+	ASSERT(!iouring_init_fsync(iou, fd, U64_MAX - 1), "fsync");
+	iouring_submit(iou, 2);
+	res = iouring_spin(iou, &id);
+	ASSERT_EQ(id, U64_MAX, "pwrite");
+	ASSERT_EQ(res, 3, "res=3");
+	res = iouring_spin(iou, &id);
+	ASSERT_EQ(id, U64_MAX - 1, "fsync");
+	ASSERT_EQ(res, 0, "res=0");
+
+	iouring_destroy(iou);
+	close(fd);
+	unlinkat(AT_FDCWD, "/tmp/slowspin.dat", 0);
+}

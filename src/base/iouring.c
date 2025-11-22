@@ -51,56 +51,52 @@ struct IoUring {
 	u32 *cq_mask;
 };
 
-i32 iouring_init(IoUring **iou, u32 queue_depth) {
+i32 iouring_init(IoUring **res, u32 queue_depth) {
+	IoUring *iou = NULL;
 INIT:
-	*iou = NULL;
-	if (!(*iou = mmap(NULL, sizeof(IoUring), PROT_READ | PROT_WRITE,
-			  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)))
-		ERROR();
-	(*iou)->sq_ring = NULL;
-	(*iou)->cq_ring = NULL;
-	(*iou)->sqes = NULL;
-	(*iou)->ring_fd = io_uring_setup(queue_depth, &(*iou)->params);
-	if ((*iou)->ring_fd < 0) ERROR();
+	iou = mmap(NULL, sizeof(IoUring), PROT_READ | PROT_WRITE,
+		   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	if (!iou) ERROR();
+	(iou)->sq_ring = NULL;
+	(iou)->cq_ring = NULL;
+	(iou)->sqes = NULL;
+	(iou)->ring_fd = io_uring_setup(queue_depth, &(iou)->params);
+	if ((iou)->ring_fd < 0) ERROR();
 
-	(*iou)->sq_ring_size = (*iou)->params.sq_off.array +
-			       (*iou)->params.sq_entries * sizeof(u32);
-	(*iou)->cq_ring_size =
-	    (*iou)->params.cq_off.cqes +
-	    (*iou)->params.cq_entries * sizeof(struct io_uring_cqe);
-	(*iou)->sqes_size =
-	    (*iou)->params.sq_entries * sizeof(struct io_uring_sqe);
-	(*iou)->sq_ring =
-	    mmap(NULL, (*iou)->sq_ring_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-		 (*iou)->ring_fd, IORING_OFF_SQ_RING);
-	if ((*iou)->sq_ring == MAP_FAILED) ERROR();
-	(*iou)->cq_ring =
-	    mmap(NULL, (*iou)->cq_ring_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-		 (*iou)->ring_fd, IORING_OFF_CQ_RING);
-	if ((*iou)->cq_ring == MAP_FAILED) ERROR();
-	(*iou)->sqes = mmap(NULL, (*iou)->sqes_size, PROT_READ | PROT_WRITE,
-			    MAP_SHARED, (*iou)->ring_fd, IORING_OFF_SQES);
-	if ((*iou)->sqes == MAP_FAILED) ERROR();
+	(iou)->sq_ring_size =
+	    (iou)->params.sq_off.array + (iou)->params.sq_entries * sizeof(u32);
+	(iou)->cq_ring_size =
+	    (iou)->params.cq_off.cqes +
+	    (iou)->params.cq_entries * sizeof(struct io_uring_cqe);
+	(iou)->sqes_size =
+	    (iou)->params.sq_entries * sizeof(struct io_uring_sqe);
+	(iou)->sq_ring = mmap(NULL, (iou)->sq_ring_size, PROT_READ | PROT_WRITE,
+			      MAP_SHARED, (iou)->ring_fd, IORING_OFF_SQ_RING);
+	if ((iou)->sq_ring == MAP_FAILED) ERROR();
+	(iou)->cq_ring = mmap(NULL, (iou)->cq_ring_size, PROT_READ | PROT_WRITE,
+			      MAP_SHARED, (iou)->ring_fd, IORING_OFF_CQ_RING);
+	if ((iou)->cq_ring == MAP_FAILED) ERROR();
+	(iou)->sqes = mmap(NULL, (iou)->sqes_size, PROT_READ | PROT_WRITE,
+			   MAP_SHARED, (iou)->ring_fd, IORING_OFF_SQES);
+	if ((iou)->sqes == MAP_FAILED) ERROR();
 
-	(*iou)->sq_tail = (u32 *)((*iou)->sq_ring + (*iou)->params.sq_off.tail);
-	(*iou)->sq_array =
-	    (u32 *)((*iou)->sq_ring + (*iou)->params.sq_off.array);
-	(*iou)->cq_head = (u32 *)((*iou)->cq_ring + (*iou)->params.cq_off.head);
-	(*iou)->cq_tail = (u32 *)((*iou)->cq_ring + (*iou)->params.cq_off.tail);
-	(*iou)->sq_mask =
-	    (u32 *)((*iou)->sq_ring + (*iou)->params.sq_off.ring_mask);
+	(iou)->sq_tail = (u32 *)((iou)->sq_ring + (iou)->params.sq_off.tail);
+	(iou)->sq_array = (u32 *)((iou)->sq_ring + (iou)->params.sq_off.array);
+	(iou)->cq_head = (u32 *)((iou)->cq_ring + (iou)->params.cq_off.head);
+	(iou)->cq_tail = (u32 *)((iou)->cq_ring + (iou)->params.cq_off.tail);
+	(iou)->sq_mask =
+	    (u32 *)((iou)->sq_ring + (iou)->params.sq_off.ring_mask);
 
-	(*iou)->cq_mask =
-	    (u32 *)((*iou)->cq_ring + (*iou)->params.cq_off.ring_mask);
-	(*iou)->cqes = (struct io_uring_cqe *)((*iou)->cq_ring +
-					       (*iou)->params.cq_off.cqes);
+	(iou)->cq_mask =
+	    (u32 *)((iou)->cq_ring + (iou)->params.cq_off.ring_mask);
+	(iou)->cqes =
+	    (struct io_uring_cqe *)((iou)->cq_ring + (iou)->params.cq_off.cqes);
 
-	(*iou)->queue_depth = queue_depth;
+	(iou)->queue_depth = queue_depth;
+
+	*res = iou;
 CLEANUP:
-	if (!IS_OK) {
-		iouring_destroy(*iou);
-		*iou = NULL;
-	}
+	if (!IS_OK) iouring_destroy(iou);
 	RETURN;
 }
 
@@ -147,7 +143,7 @@ i32 iouring_init_pwrite(IoUring *iou, i32 fd, const void *buf, u64 len,
 	memset(sqe, 0, sizeof(*sqe));
 
 	sqe->opcode = IORING_OP_WRITE;
-	sqe->flags = 0;
+	sqe->flags = IOSQE_IO_LINK;
 	sqe->fd = fd;
 	sqe->addr = (u64)buf;
 	sqe->len = len;
@@ -225,7 +221,7 @@ i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id) {
 
 	sqe->opcode = IORING_OP_FSYNC;
 	sqe->fd = fd;
-	sqe->flags = IOSQE_IO_DRAIN;
+	sqe->flags = IOSQE_IO_DRAIN | IOSQE_IO_HARDLINK;
 	sqe->user_data = id;
 
 	__aadd32(iou->sq_tail, 1);
