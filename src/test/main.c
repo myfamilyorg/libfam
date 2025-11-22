@@ -33,6 +33,8 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
+#define TEST_COMPLETE "/tmp/test_complete"
+
 const u8 *SUCCESS_PATH = "/tmp/libfam_test_success";
 const u8 *SPACER =
     "------------------------------------------------------------------"
@@ -106,6 +108,8 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 
 	(void)argc;
 	(void)argv;
+
+	unlinkat(AT_FDCWD, TEST_COMPLETE, 0);
 
 	if (init_environ(envp) < 0) {
 		perror("init_environ");
@@ -184,6 +188,8 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	pwrite(STDERR_FD, buf, strlen(buf), 0);
 	pwrite(STDERR_FD, " ms]\n", 5, 0);
 	pwrite(STDERR_FD, RESET, strlen(RESET), 0);
+
+	open(TEST_COMPLETE, O_RDONLY | O_CREAT, 0600);
 
 	_exit(0);
 	return 0;

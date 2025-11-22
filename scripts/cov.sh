@@ -55,6 +55,11 @@ ${COMMAND} || exit 1;
 export TEST_PATTERN="*";
 LD_LIBRARY_PATH=${LIB_OUTPUT_DIR} ${TEST_BIN} || { echo "tests failed!"; exit $?; }
 
+if [ ! -e /tmp/test_complete ]; then
+	echo "tests failed!";
+	exit 1;
+fi
+
 for DIR in ${SUB_DIRS}; do
 	cp ./src/${DIR}/*.c ./target/cobjs/${DIR}/
 	touch ./target/cobjs/${DIR}/*
