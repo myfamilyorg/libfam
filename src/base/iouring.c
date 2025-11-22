@@ -96,8 +96,6 @@ INIT:
 					       (*iou)->params.cq_off.cqes);
 
 	(*iou)->queue_depth = queue_depth;
-	/*
-	if (iouring_register_stdio(*iou) < 0) ERROR();*/
 CLEANUP:
 	if (!IS_OK) {
 		iouring_destroy(*iou);
@@ -236,11 +234,6 @@ i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id) {
 
 i32 iouring_submit(IoUring *iou, u32 count) {
 	return io_uring_enter2(iou->ring_fd, count, 0, 0, NULL, 0);
-}
-
-i32 iouring_register_stdio(IoUring *iou) {
-	i32 fds[3] = {0, 1, 2};
-	return io_uring_register(iou->ring_fd, IORING_REGISTER_FILES, fds, 3);
 }
 
 i32 iouring_spin(IoUring *iou, u64 *id) {

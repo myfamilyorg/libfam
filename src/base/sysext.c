@@ -84,7 +84,7 @@ i32 close(i32 fd) {
 	i64 res;
 
 	if (global_iou_init() < 0) return -1;
-	res = iouring_init_close(__global_iou__, fd, 0);
+	res = iouring_init_close(__global_iou__, fd, U64_MAX);
 	if (res < 0) return -1;
 	if (iouring_submit(__global_iou__, 1) < 0) return -1;
 	res = iouring_wait(__global_iou__, &id);
@@ -96,7 +96,19 @@ i32 fallocate(i32 fd, u64 new_size) {
 	i64 res;
 
 	if (global_iou_init() < 0) return -1;
-	res = iouring_init_fallocate(__global_iou__, fd, new_size, 0);
+	res = iouring_init_fallocate(__global_iou__, fd, new_size, U64_MAX);
+	if (res < 0) return -1;
+	if (iouring_submit(__global_iou__, 1) < 0) return -1;
+	res = iouring_wait(__global_iou__, &id);
+	return res;
+}
+
+i32 fsync(i32 fd) {
+	u64 id;
+	i64 res;
+
+	if (global_iou_init() < 0) return -1;
+	res = iouring_init_fsync(__global_iou__, fd, U64_MAX);
 	if (res < 0) return -1;
 	if (iouring_submit(__global_iou__, 1) < 0) return -1;
 	res = iouring_wait(__global_iou__, &id);

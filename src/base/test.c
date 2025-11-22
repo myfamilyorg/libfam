@@ -499,6 +499,7 @@ Test(open1) {
 	ASSERT_EQ(lseek(fd, 0, SEEK_END), size, "size");
 
 	pwrite(fd, "abc", 3, 5);
+	fsync(fd);
 	u8 buf[4] = {0};
 	u8 cmp[4] = {0};
 	cmp[1] = 'a';
