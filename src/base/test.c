@@ -575,12 +575,18 @@ Test(iouring_slowspin) {
 	ASSERT(!fallocate(fd, size), "fallocate");
 	ASSERT_EQ(lseek(fd, 0, SEEK_END), size, "size");
 
-	iouring_init(&iou, 2);
-	u8 buf[1024] = {0};
+	ASSERT(!iouring_init(&iou, 2), "iouring_init");
+	u8 *buf = mmap(NULL, 16384, PROT_READ | PROT_WRITE,
+		       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+	struct iovec v1 = {.iov_base = buf, .iov_len = 16384};
 	buf[0] = 'a';
 	buf[1] = 'b';
 	buf[2] = 'c';
-	io_uring_register(fd, IORING_REGISTER_BUFFERS, buf, 1);
+	errno = 0;
+	res = io_uring_register(iouring_ring_fd(iou), IORING_REGISTER_BUFFERS,
+				&v1, 1);
+	ASSERT(!res, "io_uring_register");
 	ASSERT(!iouring_init_pwrite(iou, fd, buf, 3, 0, U64_MAX), "pwrite");
 	ASSERT(!iouring_init_fsync(iou, fd, U64_MAX - 1), "fsync");
 	iouring_submit(iou, 2);
@@ -594,6 +600,7 @@ Test(iouring_slowspin) {
 	iouring_destroy(iou);
 	close(fd);
 	unlinkat(AT_FDCWD, "/tmp/slowspin.dat", 0);
+	munmap(buf, 4096);
 }
 
 Test(settime) {
