@@ -623,7 +623,8 @@ Test(signal) {
 	act.k_sa_handler = test_handler;
 	act.k_sa_flags = SA_RESTORER;
 	act.k_sa_restorer = restorer;
-	ASSERT(!rt_sigaction(SIGUSR1, &act, NULL, sizeof(act)), "rt_sigaction");
+	i32 v = rt_sigaction(SIGUSR1, &act, NULL, 8);
+	ASSERT(!v, "rt_sigaction");
 	if ((pid = fork()))
 		kill(pid, SIGUSR1);
 	else {
