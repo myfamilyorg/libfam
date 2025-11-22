@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./build cov
+sudo ./build cov
