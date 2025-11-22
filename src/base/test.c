@@ -588,3 +588,17 @@ Test(iouring_slowspin) {
 	close(fd);
 	unlinkat(AT_FDCWD, "/tmp/slowspin.dat", 0);
 }
+
+Test(settime) {
+	struct timespec ts = {0};
+
+	errno = 0;
+	ASSERT_EQ(clock_settime(CLOCK_MONOTONIC, &ts), -1, "set monotonic");
+	ASSERT_EQ(errno, EINVAL, "einval");
+
+	ASSERT_EQ(clock_gettime(CLOCK_REALTIME, &ts), 0, "gettime");
+
+	errno = 0;
+	i32 res = clock_settime(CLOCK_REALTIME, &ts);
+	ASSERT(res == 0 || (res < 0 && errno == EPERM), "settime");
+}

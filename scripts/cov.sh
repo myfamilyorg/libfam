@@ -108,5 +108,6 @@ echo "Coverage: ${CODECOV}% [${COVEREDSUM} / ${LINESUM}]";
 TIMESTAMP=`date +%s`
 echo "$CODECOV" > /tmp/cc_final;
 echo "$TIMESTAMP $CODECOV $COVEREDSUM $LINESUM" > /tmp/cc.txt
+chmod 777 /tmp/cc_final /tmp/cc.txt
 
 
