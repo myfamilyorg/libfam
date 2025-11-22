@@ -485,38 +485,6 @@ Test(clone) {
 	munmap(val, sizeof(u64));
 }
 
-Test(clone2) {
-	i32 pid, pid2;
-
-	if (getenv("VALGRIND")) return;
-
-	u64 *val = mmap(NULL, sizeof(u64), PROT_READ | PROT_WRITE,
-			MAP_ANONYMOUS | MAP_SHARED, -1, 0);
-	ASSERT(val, "mmap");
-	*val = 0;
-
-	pid = two();
-	ASSERT(pid >= 0, "two");
-	if (!pid) {
-		__aadd64(val, 1);
-		while (1) yield();
-	} else {
-	}
-
-	pid2 = two();
-	ASSERT(pid2 >= 0, "two2");
-	if (!pid2) {
-		__aadd64(val, 1);
-		while (1) yield();
-	} else {
-	}
-
-	while (__aload64(val) != 2) yield();
-	kill(pid, SIGKILL);
-	kill(pid2, SIGKILL);
-	munmap(val, sizeof(u64));
-}
-
 Test(open1) {
 	u64 size = 4097;
 	unlinkat(AT_FDCWD, "/tmp/open1.dat", 0);
@@ -529,6 +497,15 @@ Test(open1) {
 
 	ASSERT(!fallocate(fd, size), "fallocate");
 	ASSERT_EQ(lseek(fd, 0, SEEK_END), size, "size");
+
+	pwrite(fd, "abc", 3, 5);
+	u8 buf[4] = {0};
+	u8 cmp[4] = {0};
+	cmp[1] = 'a';
+	cmp[2] = 'b';
+	cmp[3] = 'c';
+	pread(fd, buf, 4, 4);
+	ASSERT(!memcmp(buf, cmp, 4), "equal");
 
 	close(fd);
 	fd = open("/tmp/open2.dat", O_RDWR | O_CREAT, 0600);

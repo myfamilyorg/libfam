@@ -36,7 +36,6 @@ i32 fallocate(i32 fd, u64 new_size);
 i64 fsize(i32 fd);
 i32 close(i32 fd);
 i64 micros(void);
-i32 two(void);
 i32 fork(void);
 
 #endif /* _SYSEXT_H */

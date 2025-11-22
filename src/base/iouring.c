@@ -51,7 +51,7 @@ struct IoUring {
 	u32 *cq_mask;
 };
 
-PUBLIC i32 iouring_init(IoUring **iou, u32 queue_depth) {
+i32 iouring_init(IoUring **iou, u32 queue_depth) {
 INIT:
 	*iou = NULL;
 	if (!(*iou = mmap(NULL, sizeof(IoUring), PROT_READ | PROT_WRITE,
@@ -238,7 +238,7 @@ i32 iouring_submit(IoUring *iou, u32 count) {
 	return io_uring_enter2(iou->ring_fd, count, 0, 0, NULL, 0);
 }
 
-PUBLIC i32 iouring_register_stdio(IoUring *iou) {
+i32 iouring_register_stdio(IoUring *iou) {
 	i32 fds[3] = {0, 1, 2};
 	return io_uring_register(iou->ring_fd, IORING_REGISTER_FILES, fds, 3);
 }
@@ -285,7 +285,7 @@ i32 iouring_wait(IoUring *iou, u64 *id) {
 	return res;
 }
 
-PUBLIC void iouring_destroy(IoUring *iou) {
+void iouring_destroy(IoUring *iou) {
 	if (!iou) return;
 	if (iou->sq_ring) munmap(iou->sq_ring, iou->sq_ring_size);
 	if (iou->cq_ring) munmap(iou->cq_ring, iou->cq_ring_size);

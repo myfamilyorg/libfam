@@ -28,45 +28,45 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
-PUBLIC u64 strlen(const char *x) {
+u64 strlen(const char *x) {
 	const char *y = x;
 	while (*x) x++;
 	return x - y;
 }
 
-PUBLIC i32 strcmp(const char *x, const char *y) {
+i32 strcmp(const char *x, const char *y) {
 	while (*x == *y && *x) x++, y++;
 	return *x > *y ? 1 : *y > *x ? -1 : 0;
 }
 
-PUBLIC char *strcpy(char *dest, const char *src) {
+char *strcpy(char *dest, const char *src) {
 	char *ptr = dest;
 	while ((*ptr++ = *src++));
 	return dest;
 }
 
-PUBLIC char *strncpy(char *dest, const char *src, u64 n) {
+char *strncpy(char *dest, const char *src, u64 n) {
 	u64 i;
 	for (i = 0; i < n && src[i] != '\0'; i++) dest[i] = src[i];
 	for (; i < n; i++) dest[i] = '\0';
 	return dest;
 }
 
-PUBLIC char *strcat(char *dest, const char *src) {
+char *strcat(char *dest, const char *src) {
 	char *ptr = dest;
 	while (*ptr) ptr++;
 	while ((*ptr++ = *src++));
 	return dest;
 }
 
-PUBLIC char *strchr(const char *s, i32 c) {
+char *strchr(const char *s, i32 c) {
 	do
 		if (*s == c) return (char *)s;
 	while (*s++);
 	return !c ? (char *)s : NULL;
 }
 
-PUBLIC i32 strncmp(const char *x, const char *y, u64 n) {
+i32 strncmp(const char *x, const char *y, u64 n) {
 	while (n > 0 && *x == *y && *x) x++, y++, n--;
 	if (n == 0) return 0;
 	return (char)*x - (char)*y;
@@ -85,7 +85,7 @@ PUBLIC void *memcpy(void *dest, const void *src, u64 n) {
 	return dest;
 }
 
-PUBLIC i32 memcmp(const void *s1, const void *s2, u64 n) {
+i32 memcmp(const void *s1, const void *s2, u64 n) {
 	const u8 *p1 = (void *)s1;
 	const u8 *p2 = (void *)s2;
 	while (n--) {
@@ -102,8 +102,8 @@ PUBLIC void *memmove(void *dest, const void *src, u64 n) {
 	return dest;
 }
 
-PUBLIC u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
-			bool commas) {
+u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
+		 bool commas) {
 	u64 pos = 0;
 	i32 is_negative;
 	u64 int_part;

@@ -30,10 +30,10 @@
 #include <libfam/utils.h>
 
 i32 __err_value = 0;
-PUBLIC i32 *__error(void) { return &__err_value; }
+i32 *__error(void) { return &__err_value; }
 i32 *__err_location(void) { return &__err_value; }
 
-PUBLIC void perror(const char *s) {
+void perror(const char *s) {
 	const u8 *err_msg;
 	i32 __attribute__((unused)) _v;
 	if (s) {
@@ -46,7 +46,7 @@ PUBLIC void perror(const char *s) {
 	_v = pwrite(STDERR_FD, "\n", 1, 0);
 }
 
-PUBLIC char *strerror(i32 err_code) {
+char *strerror(i32 err_code) {
 	switch (err_code) {
 		case SUCCESS:
 			return "Success";

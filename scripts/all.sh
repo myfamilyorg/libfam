@@ -2,6 +2,9 @@
 
 . ./scripts/common.sh
 
+LDFLAGS="${LDFLAGS} -fvisibility=hidden";
+CFLAGS="${CFLAGS} -fvisibility=hidden";
+
 OBJECTS="";
 CDEFS="-DSTATIC=static -DTEST=0";
 LIB_NAME="${LIB_OUTPUT_DIR}/libfam.so";

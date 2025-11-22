@@ -125,7 +125,7 @@ void __gcov_dump(void);
 	SYSCALL_EXIT
 #endif /* COVERAGE */
 
-PUBLIC void _exit(i32 status){
+void _exit(i32 status){
 #ifdef COVERAGE
     SYSCALL_EXIT_COV
 #else
@@ -278,7 +278,7 @@ CLEANUP:
 }
 
 #if TEST == 1
-PUBLIC i32 unlinkat(i32 dfd, const char *path, i32 flags) {
+i32 unlinkat(i32 dfd, const char *path, i32 flags) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_unlinkat, (i64)dfd, (i64)path, (i64)flags, 0,
