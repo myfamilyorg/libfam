@@ -611,6 +611,7 @@ void test_handler(i32 sig) {
 #define SIGSET_T_SIZE 8
 
 Test(signal) {
+	u8 buf[1024] = {0};
 	struct rt_sigaction act = {0};
 	i32 pid;
 	act.k_sa_handler = test_handler;
@@ -624,6 +625,6 @@ Test(signal) {
 		while (!sig_recv) yield();
 		_exit(0);
 	}
-	ASSERT(!waitid(1, pid, NULL, 4), "waitid");
+	ASSERT(!waitid(P_PID, pid, buf, WEXITED), "waitid");
 }
 

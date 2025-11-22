@@ -419,6 +419,7 @@ struct timezone {
 /* SA_RESTORER - rt_sigaction */
 #define SA_RESTORER 0x04000000
 
+/* waitid consts */
 #define P_PID 1
 #define WEXITED 4
 
