@@ -199,30 +199,6 @@ i32 iouring_init_close(IoUring *iou, i32 fd, u64 id);
  */
 i32 iouring_init_fallocate(IoUring *iou, i32 fd, u64 new_size, u64 id);
 
-#ifndef COVERAGE
-/*
- * Function: iouring_init_sleep
- * Queues an asynchronous sleep
- *
- * inputs:
- *         IoUring *iou         - initialized io_uring handle.
- *         u64 nsec             - nano seconds to sleep.
- *         u64 id               - user-defined
- * identifier for the operation.
- *
- * return value: i32 - 0 on success, -1 on error with errno set.
- *
- * errors:
- *         EINVAL         - if iou is NULL, fd invalid, or unsupported flags.
- *         EBUSY          - if too many requests have been queued.
- *
- * notes:
- *         Operation is queued but not submitted until iouring_submit() is
- * called. id must be unique among pending operations.
- */
-i32 iouring_init_sleep(IoUring *iou, u64 nsec, u64 id);
-#endif /* !COVERAGE */
-
 /*
  * Function: iouring_submit
  * Submits queued operations to the kernel.

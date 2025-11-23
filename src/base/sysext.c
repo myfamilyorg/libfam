@@ -116,21 +116,9 @@ i32 fsync(i32 fd) {
 }
 
 i32 nsleep(u64 nsec) {
-#ifdef COVERAGE
 	struct timespec ts = {.tv_sec = (nsec / 1000000000ULL),
 			      .tv_nsec = (nsec % 1000000000ULL)};
 	return nanosleep(&ts, &ts);
-#else
-	u64 id;
-	i64 res;
-
-	if (global_iou_init() < 0) return -1;
-	res = iouring_init_sleep(__global_iou__, nsec, U64_MAX);
-	if (res < 0) return -1;
-	if (iouring_submit(__global_iou__, 1) < 0) return -1;
-	res = iouring_spin(__global_iou__, &id);
-	return res;
-#endif /* !COVERAGE */
 }
 
 i32 usleep(u64 usec) { return nsleep(usec * 1000); }
