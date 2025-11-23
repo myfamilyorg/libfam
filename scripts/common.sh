@@ -75,7 +75,7 @@ else
 fi
 
 INCDIR="src/include";
-SUB_DIRS="base";
+SUB_DIRS="base crypto";
 LIB_OUTPUT_DIR="./target/lib";
 BIN_DIR="./target/bin";
 

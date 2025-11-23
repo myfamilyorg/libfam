@@ -28,6 +28,7 @@
 
 #include <libfam/colors.h>
 #include <libfam/string.h>
+#include <libfam/syscall.h>
 #include <libfam/sysext.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>

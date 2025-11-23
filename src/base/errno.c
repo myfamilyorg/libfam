@@ -30,8 +30,8 @@
 #include <libfam/utils.h>
 
 i32 __err_value = 0;
-i32 *__error(void) { return &__err_value; }
-i32 *__err_location(void) { return &__err_value; }
+PUBLIC i32 *__error(void) { return &__err_value; }
+PUBLIC i32 *__err_location(void) { return &__err_value; }
 
 void perror(const char *s) {
 	const u8 *err_msg;

@@ -23,43 +23,29 @@
  *
  *******************************************************************************/
 
-#include <libfam/format.h>
-#include <libfam/memory.h>
+#include <libfam/main.h>
+#include <libfam/sha3.h>
 #include <libfam/sysext.h>
+#include <libfam/test_base.h>
 #include <libfam/types.h>
-#include <stdlib.h>
 
-#define ALLOC_COUNT 1024
-#define ALLOC_SIZE 128
+#define SIZE (1024 * 1024 * 4)
 
-i32 main(i32 argc, char **argv) {
-	u64 i;
-	init_global_allocator(64);
-	u8 **arr;
-	bool use_libc = false;
-	if (argc >= 2 && !strcmp(argv[1], "--libc")) use_libc = true;
+i32 main(i32 argc, u8 **argv, u8 **envp) {
+	u8 ptr[SIZE] = {0};
+	Sha3Context ctx;
+	ptr[0] = 1;
 
-	arr = map(sizeof(u8 *) * ALLOC_COUNT);
-
+	sha3_init256(&ctx);
 	i64 timer = micros();
-	for (i = 0; i < ALLOC_COUNT; i++) {
-		if (use_libc)
-			arr[i] = malloc(ALLOC_SIZE);
-		else
-			arr[i] = alloc(ALLOC_SIZE);
-	}
-
-	for (i = 0; i < ALLOC_COUNT; i++) {
-		if (use_libc)
-			free(arr[i]);
-		else
-			release(arr[i]);
-	}
+	sha3_update(&ctx, ptr, SIZE);
 	timer = micros() - timer;
-	println("use_libc={},elapsed_time={}µs,ALLOC_COUNT={},ALLOC_SIZE={}",
-		use_libc, timer, ALLOC_COUNT, ALLOC_SIZE);
 
-	munmap(arr, sizeof(u8 *) * ALLOC_COUNT);
+	const u8 *out = sha3_finalize(&ctx);
+	pwrite(2, out, 32, 0);
+	pwrite(2, "\n", 1, 0);
+	write_num(2, timer);
+	pwrite(2, "\n", 1, 0);
 
 	return 0;
 }

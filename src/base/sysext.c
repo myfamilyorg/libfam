@@ -115,21 +115,21 @@ i32 fsync(i32 fd) {
 	return res;
 }
 
-i32 nsleep(u64 nsec) {
+PUBLIC i32 nsleep(u64 nsec) {
 	struct timespec ts = {.tv_sec = (nsec / 1000000000ULL),
 			      .tv_nsec = (nsec % 1000000000ULL)};
 	return nanosleep(&ts, &ts);
 }
 
-i32 usleep(u64 usec) { return nsleep(usec * 1000); }
+PUBLIC i32 usleep(u64 usec) { return nsleep(usec * 1000); }
 
-i32 fork(void) {
+PUBLIC i32 fork(void) {
 	i32 ret = clone(SIGCHLD, 0);
 	if (!ret) __global_iou__ = NULL;
 	return ret;
 }
 
-i64 micros(void) {
+PUBLIC i64 micros(void) {
 	struct timespec ts;
 	if (clock_gettime(CLOCK_REALTIME, &ts) < 0) return -1;
 	return (i64)ts.tv_sec * 1000000LL + (i64)(ts.tv_nsec / 1000);
