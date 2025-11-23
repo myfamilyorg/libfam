@@ -133,6 +133,8 @@ i32 nsleep(u64 nsec) {
 #endif /* !COVERAGE */
 }
 
+i32 usleep(u64 usec) { return nsleep(usec * 1000); }
+
 i32 fork(void) {
 	i32 ret = clone(SIGCHLD, 0);
 	if (!ret) __global_iou__ = NULL;

@@ -38,6 +38,7 @@ i64 fsize(i32 fd);
 i32 close(i32 fd);
 i64 micros(void);
 i32 nsleep(u64 nsec);
+i32 usleep(u64 usec);
 i32 fork(void);
 
 #endif /* _SYSEXT_H */
