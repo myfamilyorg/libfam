@@ -279,6 +279,16 @@ CLEANUP:
 	RETURN;
 }
 
+i32 nanosleep(const struct timespec *duration, struct timespec *rem) {
+	i32 v;
+INIT:
+	v = raw_syscall(SYS_nanosleep, (i64)duration, (i64)rem, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
 #ifdef __aarch64__
 #define SYSCALL_RESTORER     \
 	__asm__ volatile(    \
@@ -311,16 +321,6 @@ i32 unlinkat(i32 dfd, const char *path, i32 flags) {
 INIT:
 	v = (i32)raw_syscall(SYS_unlinkat, (i64)dfd, (i64)path, (i64)flags, 0,
 			     0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
-i32 nanosleep(const struct timespec *duration, struct timespec *rem) {
-	i32 v;
-INIT:
-	v = raw_syscall(SYS_nanosleep, (i64)duration, (i64)rem, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:
