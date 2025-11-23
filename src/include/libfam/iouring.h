@@ -37,6 +37,10 @@
  *         to check completion.
  */
 typedef struct IoUring IoUring;
+
+/*
+ * required type for the open system call.
+ */
 struct open_how;
 
 /*
@@ -69,11 +73,11 @@ i32 iouring_init(IoUring **iou, u32 queue_depth);
  * return value: i32 - 0 on success, -1 on error with errno set.
  * errors:
  *         EINVAL         - if iou is null, fd invalid, or len == 0.
- *         EFAULT         - if buf is null or inaccessible.
+ *         EBUSY          - if too many requests have been queued.
  * notes:
  *         Operation is queued but not submitted until iouring_submit.
  *         id must be unique among pending operations.
- *         Use iouring_pending or iouring_spin to check completion.
+ *         Use iouring_wait or iouring_spin to check completion.
  *         On completion, len bytes are read into buf (or fewer on EOF).
  */
 i32 iouring_init_pread(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
@@ -92,11 +96,11 @@ i32 iouring_init_pread(IoUring *iou, i32 fd, void *buf, u64 len, u64 foffset,
  * return value: i32 - 0 on success, -1 on error with errno set.
  * errors:
  *         EINVAL         - if iou is null, fd invalid, or len == 0.
- *         EFAULT         - if buf is null or inaccessible.
+ *         EBUSY          - if too many requests have been queued.
  * notes:
  *         Operation is queued but not submitted until iouring_submit.
  *         id must be unique among pending operations.
- *         Use iouring_pending or iouring_spin to check completion.
+ *         Use iouring_wait or iouring_spin to check completion.
  *         On completion, len bytes are written from buf (or fewer on error).
  */
 i32 iouring_init_pwrite(IoUring *iou, i32 fd, const void *buf, u64 len,
@@ -112,19 +116,87 @@ i32 iouring_init_pwrite(IoUring *iou, i32 fd, const void *buf, u64 len,
  * return value: i32 - 0 on success, -1 on error with errno set.
  * errors:
  *         EINVAL         - if iou is null, fd invalid.
+ *         EBUSY          - if too many requests have been queued.
  * notes:
  *         Operation is queued but not submitted until iouring_submit.
  *         id must be unique among pending operations.
- *         Use iouring_pending or iouring_spin to check completion.
+ *         Use iouring_wait or iouring_spin to check completion.
  *         On completion, file is fsynced.
  */
-
 i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id);
 
+/*
+ * Function: iouring_init_openat
+ * Queues an asynchronous openat operation using the extended open_how
+ * interface.
+ *
+ * inputs:
+ *         IoUring *iou         - initialized io_uring handle.
+ *         i32 dirfd            - directory file descriptor (or AT_FDCWD).
+ *         const char *path     - pathname relative to dirfd.
+ *         struct open_how *how - pointer to struct open_how specifying flags,
+ * mode, resolve flags, etc. u64 id               - user-defined identifier for
+ * the operation.
+ *
+ * return value: i32 - 0 on success, -1 on error with errno set.
+ *
+ * errors:
+ *         EINVAL         - if iou is NULL, path is NULL, how is NULL, or
+ * invalid parameters.
+ *         EBUSY          - if too many requests have been queued.
+ *
+ * notes:
+ *         Operation is queued but not submitted until iouring_submit() is
+ * called. id must be unique among pending operations.
+ * Use iouring_wait or iouring_spin to retrieve the completion.
+ */
 i32 iouring_init_openat(IoUring *iou, i32 dirfd, const char *path,
 			struct open_how *how, u64 id);
 
+/*
+ * Function: iouring_init_close
+ * Queues an asynchronous close operation for a file descriptor.
+ *
+ * inputs:
+ *         IoUring *iou         - initialized io_uring handle.
+ *         i32 fd               - file descriptor to close.
+ *         u64 id               - user-defined identifier for the operation.
+ *
+ * return value: i32 - 0 on success, -1 on error with errno set.
+ *
+ * errors:
+ *         EINVAL         - if iou is NULL or fd is negative.
+ *         EBUSY          - if too many requests have been queued.
+ *
+ * notes:
+ *         Operation is queued but not submitted until iouring_submit() is
+ * called. id must be unique among pending operations.
+ * Use iouring_wait or iouring_spin to check completion.
+ */
 i32 iouring_init_close(IoUring *iou, i32 fd, u64 id);
+
+/*
+ * Function: iouring_init_fallocate
+ * Queues an asynchronous fallocate operation to preallocate or deallocate
+ * space.
+ *
+ * inputs:
+ *         IoUring *iou         - initialized io_uring handle.
+ *         i32 fd               - open file descriptor (must be seekable).
+ *         u64 new_size         - desired new file size in bytes (used with
+ * FALLOC_FL_KEEP_SIZE or as length). u64 id               - user-defined
+ * identifier for the operation.
+ *
+ * return value: i32 - 0 on success, -1 on error with errno set.
+ *
+ * errors:
+ *         EINVAL         - if iou is NULL, fd invalid, or unsupported flags.
+ *         EBUSY          - if too many requests have been queued.
+ *
+ * notes:
+ *         Operation is queued but not submitted until iouring_submit() is
+ * called. id must be unique among pending operations. Uses IORING_OP_FALLOCATE.
+ */
 i32 iouring_init_fallocate(IoUring *iou, i32 fd, u64 new_size, u64 id);
 
 /*
@@ -140,7 +212,7 @@ i32 iouring_init_fallocate(IoUring *iou, i32 fd, u64 new_size, u64 id);
  * notes:
  *         Returns the actual number of operations submitted.
  *         Must be called after iouring_init_read/write and before checking
- *         completion with iouring_spin or iouring_pending.
+ *         completion with iouring_spin or iouring_wait.
  */
 i32 iouring_submit(IoUring *iou, u32 count);
 
@@ -162,6 +234,23 @@ i32 iouring_submit(IoUring *iou, u32 count);
  */
 i32 iouring_spin(IoUring *iou, u64 *id);
 
+/*
+ * Function: iouring_wait
+ * Waits for and returns the id of a completed operation. Identical to
+ * iouring_spin, except that it blocks instead of spin/yield.
+ * inputs:
+ *         IoUring *iou         - initialized io_uring handle.
+ *         u64 *id              - pointer to store the completed operation id.
+ * return value: i32 - 0 on success, -1 on error with errno set.
+ * errors:
+ *         EINVAL         - if iou or id is null.
+ *         EIO            - if kernel completion queue error.
+ * notes:
+ *         Waits until at least one operation completes.
+ *         On success, *id is set to the user-defined id of the completed op.
+ *         The result (success/failure) of the operation is not returned here.
+ *         Call repeatedly to drain all completions.
+ */
 i32 iouring_wait(IoUring *iou, u64 *id);
 
 /*
