@@ -52,6 +52,7 @@ void restorer(void);
 
 #if TEST == 1
 i32 unlinkat(i32 dfd, const char *path, i32 flags);
+i32 nanosleep(const struct timespec *duration, struct timespec *rem);
 #endif /* TEST */
 
 #endif /* _SYSCALL_H */

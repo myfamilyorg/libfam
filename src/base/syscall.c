@@ -33,6 +33,7 @@
 #define SYS_unlinkat 35
 #define SYS_lseek 62
 #define SYS_waitid 95
+#define SYS_nanosleep 101
 #define SYS_kill 129
 #define SYS_rt_sigaction 134
 #define SYS_getpid 172
@@ -49,6 +50,7 @@
 #define SYS_mmap 9
 #define SYS_munmap 11
 #define SYS_rt_sigaction 13
+#define SYS_nanosleep 35
 #define SYS_getpid 39
 #define SYS_clone 56
 #define SYS_kill 62
@@ -309,6 +311,16 @@ i32 unlinkat(i32 dfd, const char *path, i32 flags) {
 INIT:
 	v = (i32)raw_syscall(SYS_unlinkat, (i64)dfd, (i64)path, (i64)flags, 0,
 			     0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 nanosleep(const struct timespec *duration, struct timespec *rem) {
+	i32 v;
+INIT:
+	v = raw_syscall(SYS_nanosleep, (i64)duration, (i64)rem, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:

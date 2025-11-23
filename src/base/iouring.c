@@ -228,6 +228,36 @@ i32 iouring_init_fsync(IoUring *iou, i32 fd, u64 id) {
 	return 0;
 }
 
+#ifndef COVERAGE
+i32 iouring_init_sleep(IoUring *iou, u64 nsec_from_now, u64 id) {
+	struct io_uring_sqe *sqe = iouring_get_sqe(iou);
+	if (!sqe) {
+		errno = EBUSY;
+		return -1;
+	}
+
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+
+	u64 sec = nsec_from_now / 1000000000ULL;
+	u64 nsec = nsec_from_now % 1000000000ULL;
+
+	struct timespec ts = {
+	    .tv_sec = now.tv_sec + sec + (now.tv_nsec + nsec) / 1000000000ULL,
+	    .tv_nsec = (now.tv_nsec + nsec) % 1000000000ULL};
+
+	memset(sqe, 0, sizeof(*sqe));
+	sqe->opcode = IORING_OP_TIMEOUT;
+	sqe->addr = (u64)&ts;
+	sqe->len = 1;
+	sqe->user_data = id;
+	sqe->timeout_flags = IORING_TIMEOUT_ABS;
+
+	__aadd32(iou->sq_tail, 1);
+	return 0;
+}
+#endif /* COVERAGE */
+
 i32 iouring_submit(IoUring *iou, u32 count) {
 	return io_uring_enter2(iou->ring_fd, count, 0, 0, NULL, 0);
 }

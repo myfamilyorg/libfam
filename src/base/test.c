@@ -907,3 +907,5 @@ Test(signal) {
 	munmap(val, sizeof(u64));
 }
 
+Test(nanosleep) { nsleep(150000000); }
+
