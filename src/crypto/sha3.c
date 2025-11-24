@@ -74,9 +74,81 @@ static const u32 keccakf_piln[24] = {10, 7,  11, 17, 18, 3,  5,	 16,
 				     8,	 21, 24, 4,  15, 23, 19, 13,
 				     12, 2,  20, 14, 22, 9,  6,	 1};
 
+#ifdef __AVX2__
+static void keccakf(__attribute__((aligned(32))) u64 s[25]) {
+	i32 i, j, round;
+	u64 t;
+	__m256i bc0;
+	u64 bc4;
+
+	for (round = 0; round < KECCAK_ROUNDS; round++) {
+		/* Theta */
+		bc0 = _mm256_xor_si256(
+		    _mm256_loadu_si256((const __m256i *)s),
+		    _mm256_xor_si256(
+			_mm256_loadu_si256((const __m256i *)(s + 5)),
+			_mm256_xor_si256(
+			    _mm256_loadu_si256((const __m256i *)(s + 10)),
+			    _mm256_xor_si256(
+				_mm256_loadu_si256((const __m256i *)(s + 15)),
+				_mm256_loadu_si256(
+				    (const __m256i *)(s + 20))))));
+		bc4 = s[4] ^ s[9] ^ s[14] ^ s[19] ^ s[24];
+
+		for (i = 0; i < 5; i++) {
+			u64 bca, bcb;
+			u8 ai = (i + 4) % 5;
+			u8 bi = (i + 1) % 5;
+			if (ai < 4)
+				bca = ((u64 *)(&bc0))[ai];
+			else
+				bca = bc4;
+			if (bi < 4)
+				bcb = ((u64 *)(&bc0))[bi];
+			else
+				bcb = bc4;
+			t = bca ^ SHA3_ROTL64(bcb, 1);
+			for (j = 0; j < 25; j += 5) s[j + i] ^= t;
+		}
+
+		/* Rho Pi */
+		t = s[1];
+		for (i = 0; i < 24; i++) {
+			j = keccakf_piln[i];
+			((u64 *)&bc0)[0] = s[j];
+			s[j] = SHA3_ROTL64(t, keccakf_rotc[i]);
+			t = ((u64 *)&bc0)[0];
+		}
+
+		/* Chi */
+		for (j = 0; j < 25; j += 5) {
+			for (i = 0; i < 4; i++) ((u64 *)&bc0)[i] = s[j + i];
+			bc4 = s[j + 4];
+			for (i = 0; i < 5; i++) {
+				u8 i1 = (i + 1) % 5;
+				u8 i2 = (i + 2) % 5;
+				u64 b1, b2;
+				if (i1 < 4)
+					b1 = ~(((u64 *)&bc0)[i1]);
+				else
+					b1 = ~bc4;
+				if (i2 < 4)
+					b2 = ((u64 *)&bc0)[i2];
+				else
+					b2 = bc4;
+				s[j + i] ^= b1 & b2;
+			}
+		}
+
+		/* Iota */
+		s[0] ^= keccakf_rndc[round];
+	}
+}
+#else
 static void keccakf(u64 s[25]) {
 	i32 i, j, round;
 	u64 t, bc[5];
+#define KECCAK_ROUNDS 24
 
 	for (round = 0; round < KECCAK_ROUNDS; round++) {
 		/* Theta */
@@ -110,6 +182,7 @@ static void keccakf(u64 s[25]) {
 		s[0] ^= keccakf_rndc[round];
 	}
 }
+#endif /* !__AVX2__ */
 
 /* *************************** Public Inteface ************************ */
 
