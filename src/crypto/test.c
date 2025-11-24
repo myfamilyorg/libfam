@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <libfam/bible_hash.h>
 #include <libfam/sha3.h>
 #include <libfam/string.h>
 #include <libfam/test_base.h>
@@ -182,3 +183,42 @@ Test(sha3) {
 	    "DD6BB3580224B4D6138706FC6E80597B528051230B00621CC2B22999EAA205");
 }
 
+void bible_hash_check(const u8* in, u8* expected) {
+	BibleHash ctx = {0};
+	u8 buf[4096] = {0};
+	u64 len = strlen(in);
+
+	hex_to_bytes(in, buf);
+	bible_hash_init(&ctx);
+	bible_hash_update(&ctx, buf, len / 2);
+	const u8* out = bible_hash_finalize(&ctx);
+	for (u32 i = 0; i < 32; i++) {
+		u8 buf[1];
+		buf[0] = out[i];
+	}
+	ASSERT(hex_byte_check(expected, out, 32), in);
+	bible_hash_update(&ctx, buf, len);
+}
+
+Test(bible_hash) {
+	/*
+	bible_hash_check(
+	    "",
+	    "FA0901D2A4E7830900AB3A4C902E3E0AF2C8194AB4C7A59D92EB2A5C048F3C9E");
+	bible_hash_check(
+	    "CC",
+	    "E9F3CBB36E6DA80B6D4316F2556AB5AE86D7410A6FCF8A2B6BF69EE937E29726");
+	    */
+	/*
+    bible_hash_check(
+	"3A3A819C48EFDE2AD914FBF00E18AB6BC4F14513AB27D0C178A188B61431E7F562"
+	"3CB66B23346775D386B50E982C493ADBBFC54B9A3CD383382336A1A0B2150A1535"
+	"8F336D03AE18F666C7573D55C4FD181C29E6CCFDE63EA35F0ADF5885CFC0A3D84A"
+	"2B2E4DD24496DB789E663170CEF74798AA1BBCD4574EA0BBA40489D764B2F83AAD"
+	"C66B148B4A0CD95246C127D5871C4F11418690A5DDF01246A0C80A43C70088B618"
+	"3639DCFDA4125BD113A8F49EE23ED306FAAC576C3FB0C1E256671D817FC2534A52"
+	"F5B439F72E424DE376F4C565CCA82307DD9EF76DA5B7C4EB7E085172E328807C02"
+	"D011FFBF33785378D79DC266F6A5BE6BB0E4A92ECEEBAEB1",
+	"C11F3522A8FB7B3532D80B6D40023A92B489ADDAD93BF5D64B23F35E9663521C");
+	*/
+}

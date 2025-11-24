@@ -23,12 +23,9 @@
  *
  *******************************************************************************/
 
+#include <libfam/bible.h>
 #include <libfam/bible_hash.h>
 #include <libfam/string.h>
-
-#define SHA3_ASSERT(x)
-#define SHA3_TRACE(format, ...)
-#define SHA3_TRACE_BUF(format, buf, l)
 
 enum SHA3_FLAGS { SHA3_FLAGS_NONE = 0, SHA3_FLAGS_KECCAK = 1 };
 
@@ -47,6 +44,8 @@ enum SHA3_FLAGS { SHA3_FLAGS_NONE = 0, SHA3_FLAGS_KECCAK = 1 };
 #ifndef SHA3_ROTL64
 #define SHA3_ROTL64(x, y) (((x) << (y)) | ((x) >> ((sizeof(u64) * 8) - (y))))
 #endif
+
+#define LOOKUP_COUNT 48
 
 static const u64 keccakf_rndc[24] = {
     SHA3_CONST(0x0000000000000001UL), SHA3_CONST(0x0000000000008082UL),
@@ -74,6 +73,7 @@ static void bkeccakf(u64 s[24]) {
 	i32 i, j, round;
 	u64 t, bc[4];
 #define KECCAK_ROUNDS 24
+	const Bible *bible_dat = bible();
 
 	for (round = 0; round < KECCAK_ROUNDS; round++) {
 		/* Theta */
@@ -93,6 +93,16 @@ static void bkeccakf(u64 s[24]) {
 			bc[0] = s[j];
 			s[j] = SHA3_ROTL64(t, keccakf_rotc[i]);
 			t = bc[0];
+		}
+
+		for (u32 i = 0; i < LOOKUP_COUNT; i++) {
+			__attribute__((aligned(32))) u8 out[32];
+			bible_lookup(bible_dat, s[i % 24], out);
+			u64 v1 = *(u64 *)out;
+			u64 v2 = *(u64 *)(out + 8);
+			u64 v3 = *(u64 *)(out + 16);
+			u64 v4 = *(u64 *)(out + 24);
+			s[(i + 1) % 24] ^= v1 ^ v2 ^ v3 ^ v4;
 		}
 
 		/* Chi */
@@ -125,25 +135,16 @@ void bible_hash_update(BibleHash *ctx, void const *bufIn, u64 len) {
 
 	const u8 *buf = bufIn;
 
-	SHA3_TRACE_BUF("called to update with:", buf, len);
-
-	SHA3_ASSERT(ctx->byteIndex < 8);
-	SHA3_ASSERT(ctx->wordIndex < sizeof(ctx->u.s) / sizeof(ctx->u.s[0]));
-
 	if (len < old_tail) { /* have no complete word or haven't started
 			       * the word yet */
-		SHA3_TRACE("because %d<%d, store it and return", (u32)len,
-			   (u32)old_tail);
 		/* endian-independent code follows: */
 		while (len--)
 			ctx->saved |= (u64)(*(buf++))
 				      << ((ctx->byteIndex++) * 8);
-		SHA3_ASSERT(ctx->byteIndex < 8);
 		return;
 	}
 
 	if (old_tail) { /* will have one word to process */
-		SHA3_TRACE("completing one word with %d u8s", (u32)old_tail);
 		/* endian-independent code follows: */
 		len -= old_tail;
 		while (old_tail--)
@@ -152,7 +153,6 @@ void bible_hash_update(BibleHash *ctx, void const *bufIn, u64 len) {
 
 		/* now ready to add saved to the sponge */
 		ctx->u.s[ctx->wordIndex] ^= ctx->saved;
-		SHA3_ASSERT(ctx->byteIndex == 8);
 		ctx->byteIndex = 0;
 		ctx->saved = 0;
 		if (++ctx->wordIndex ==
@@ -164,12 +164,8 @@ void bible_hash_update(BibleHash *ctx, void const *bufIn, u64 len) {
 
 	/* now work in full words directly from input */
 
-	SHA3_ASSERT(ctx->byteIndex == 0);
-
 	words = len / sizeof(u64);
 	tail = len - words * sizeof(u64);
-
-	SHA3_TRACE("have %d full words to process", (u32)words);
 
 	for (i = 0; i < words; i++, buf += sizeof(u64)) {
 		const u64 t =
@@ -177,9 +173,6 @@ void bible_hash_update(BibleHash *ctx, void const *bufIn, u64 len) {
 		    ((u64)(buf[2]) << 8 * 2) | ((u64)(buf[3]) << 8 * 3) |
 		    ((u64)(buf[4]) << 8 * 4) | ((u64)(buf[5]) << 8 * 5) |
 		    ((u64)(buf[6]) << 8 * 6) | ((u64)(buf[7]) << 8 * 7);
-#if defined(__x86_64__) || defined(__i386__)
-		SHA3_ASSERT(memcmp(&t, buf, 8) == 0);
-#endif
 		ctx->u.s[ctx->wordIndex] ^= t;
 		if (++ctx->wordIndex ==
 		    (SPONGE_WORDS - SHA3_CW(ctx->capacityWords))) {
@@ -188,22 +181,22 @@ void bible_hash_update(BibleHash *ctx, void const *bufIn, u64 len) {
 		}
 	}
 
-	SHA3_TRACE("have %d u8s left to process, save them", (u32)tail);
-
 	/* finally, save the partial word */
-	SHA3_ASSERT(ctx->byteIndex == 0 && tail < 8);
-	while (tail--) {
-		SHA3_TRACE("Store u8 %02x '%c'", *buf, *buf);
+	while (tail--)
 		ctx->saved |= (u64)(*(buf++)) << ((ctx->byteIndex++) * 8);
-	}
-	SHA3_ASSERT(ctx->byteIndex < 8);
-	SHA3_TRACE("Have saved=0x%016" PRIx64 " at the end", ctx->saved);
 }
 
+#include <libfam/sysext.h>
+#include <libfam/test_base.h>
+
 void const *bible_hash_finalize(BibleHash *ctx) {
-	SHA3_TRACE("called with %d u8s in the buffer", ctx->byteIndex);
 	u64 t = (u64)(((u64)(0x02 | (1 << 2))) << ((ctx->byteIndex) * 8));
 	ctx->u.s[ctx->wordIndex] ^= ctx->saved ^ t;
+	write_num(2, SPONGE_WORDS - SHA3_CW(ctx->capacityWords) - 1);
+	pwrite(2, "\n", 1, 0);
+	write_num(2, SPONGE_WORDS);
+	pwrite(2, "\n", 1, 0);
+
 	ctx->u.s[SPONGE_WORDS - SHA3_CW(ctx->capacityWords) - 1] ^=
 	    SHA3_CONST(0x8000000000000000UL);
 	bkeccakf(ctx->u.s);
@@ -223,8 +216,6 @@ void const *bible_hash_finalize(BibleHash *ctx) {
 			ctx->u.sb[i * 8 + 7] = (u8)(t2 >> 24);
 		}
 	}
-
-	SHA3_TRACE_BUF("Hash: (first 32 u8s)", ctx->u.sb, 256 / 8);
 
 	return (ctx->u.sb);
 }

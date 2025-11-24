@@ -28,7 +28,7 @@
 
 #include <libfam/types.h>
 
-#define BIBLE_HASH_DATA_SIZE 1534
+#define BIBLE_HASH_DATA_SIZE 1600
 #define SPONGE_WORDS (((BIBLE_HASH_DATA_SIZE) / 8) / sizeof(u64))
 
 typedef struct {
