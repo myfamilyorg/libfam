@@ -12,7 +12,8 @@ void print_hex(const u8 *data, u64 size, FILE *out, const u8 *file,
 	       const u8 *namespace) {
 	u8 buf[strlen(file) + 100];
 
-	snprintf(buf, strlen(file) + 100, "u8 %sxxdir_file_%i[] = {\n",
+	snprintf(buf, strlen(file) + 100,
+		 "__attribute__((aligned(32))) u8 %sxxdir_file_%i[] = {\n",
 		 namespace, file_count);
 	for (i32 i = 0; i < strlen(buf); i++)
 		if (buf[i] == '.') buf[i] = '_';
