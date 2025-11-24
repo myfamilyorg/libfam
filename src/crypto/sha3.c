@@ -23,12 +23,16 @@
  *
  *******************************************************************************/
 
+#ifdef __AVX2__
+#include <immintrin.h>
+#endif /* __AVX2__ */
+
 #include <libfam/sha3.h>
 #include <libfam/string.h>
+#include <libfam/test_base.h>
+#include <libfam/utils.h>
 
-#define SHA3_ASSERT(x)
-#define SHA3_TRACE(format, ...)
-#define SHA3_TRACE_BUF(format, buf, l)
+#define KECCAK_ROUNDS 24
 
 enum SHA3_FLAGS { SHA3_FLAGS_NONE = 0, SHA3_FLAGS_KECCAK = 1 };
 
@@ -70,13 +74,9 @@ static const u32 keccakf_piln[24] = {10, 7,  11, 17, 18, 3,  5,	 16,
 				     8,	 21, 24, 4,  15, 23, 19, 13,
 				     12, 2,  20, 14, 22, 9,  6,	 1};
 
-/* generally called after SHA3_KECCAK_SPONGE_WORDS-ctx->capacityWords words
- * are XORed into the state s
- */
 static void keccakf(u64 s[25]) {
 	i32 i, j, round;
 	u64 t, bc[5];
-#define KECCAK_ROUNDS 24
 
 	for (round = 0; round < KECCAK_ROUNDS; round++) {
 		/* Theta */
@@ -113,7 +113,7 @@ static void keccakf(u64 s[25]) {
 
 /* *************************** Public Inteface ************************ */
 
-i32 sha3_init(void *priv, u32 bitSize) {
+PUBLIC i32 sha3_init(void *priv, u32 bitSize) {
 	Sha3Context *ctx = (Sha3Context *)priv;
 	if (bitSize < 256 || bitSize > 736 || bitSize % 32 != 0) return -1;
 	memset((u8 *)ctx, 0, sizeof(*ctx));
@@ -121,7 +121,7 @@ i32 sha3_init(void *priv, u32 bitSize) {
 	return 0;
 }
 
-enum SHA3_FLAGS sha3_setflags(void *priv, enum SHA3_FLAGS flags) {
+PUBLIC enum SHA3_FLAGS sha3_setflags(void *priv, enum SHA3_FLAGS flags) {
 	Sha3Context *ctx = (Sha3Context *)priv;
 	flags &= SHA3_FLAGS_KECCAK;
 	ctx->capacityWords |=
@@ -129,61 +129,43 @@ enum SHA3_FLAGS sha3_setflags(void *priv, enum SHA3_FLAGS flags) {
 	return flags;
 }
 
-void sha3_init256(void *priv) {
+PUBLIC void sha3_init256(void *priv) {
 	sha3_init(priv, 256);
 	sha3_setflags(priv, SHA3_FLAGS_NONE);
 }
 
-void sha3_init384(void *priv) {
+PUBLIC void sha3_init384(void *priv) {
 	sha3_init(priv, 384);
 	sha3_setflags(priv, SHA3_FLAGS_NONE);
 }
 
-void sha3_init512(void *priv) {
+PUBLIC void sha3_init512(void *priv) {
 	sha3_init(priv, 512);
 	sha3_setflags(priv, SHA3_FLAGS_NONE);
 }
 
-void sha3_update(void *priv, void const *bufIn, u64 len) {
+PUBLIC void sha3_update(void *priv, void const *bufIn, u64 len) {
 	Sha3Context *ctx = (Sha3Context *)priv;
-
-	/* 0...7 -- how much is needed to have a word */
 	u32 old_tail = (8 - ctx->byteIndex) & 7;
-
 	u64 words;
 	u32 tail;
 	u64 i;
-
 	const u8 *buf = bufIn;
 
-	SHA3_TRACE_BUF("called to update with:", buf, len);
-
-	SHA3_ASSERT(ctx->byteIndex < 8);
-	SHA3_ASSERT(ctx->wordIndex < sizeof(ctx->u.s) / sizeof(ctx->u.s[0]));
-
-	if (len < old_tail) { /* have no complete word or haven't started
-			       * the word yet */
-		SHA3_TRACE("because %d<%d, store it and return", (u32)len,
-			   (u32)old_tail);
-		/* endian-independent code follows: */
+	if (len < old_tail) {
 		while (len--)
 			ctx->saved |= (u64)(*(buf++))
 				      << ((ctx->byteIndex++) * 8);
-		SHA3_ASSERT(ctx->byteIndex < 8);
 		return;
 	}
 
-	if (old_tail) { /* will have one word to process */
-		SHA3_TRACE("completing one word with %d u8s", (u32)old_tail);
-		/* endian-independent code follows: */
+	if (old_tail) {
 		len -= old_tail;
 		while (old_tail--)
 			ctx->saved |= (u64)(*(buf++))
 				      << ((ctx->byteIndex++) * 8);
 
-		/* now ready to add saved to the sponge */
 		ctx->u.s[ctx->wordIndex] ^= ctx->saved;
-		SHA3_ASSERT(ctx->byteIndex == 8);
 		ctx->byteIndex = 0;
 		ctx->saved = 0;
 		if (++ctx->wordIndex ==
@@ -193,14 +175,8 @@ void sha3_update(void *priv, void const *bufIn, u64 len) {
 		}
 	}
 
-	/* now work in full words directly from input */
-
-	SHA3_ASSERT(ctx->byteIndex == 0);
-
 	words = len / sizeof(u64);
 	tail = len - words * sizeof(u64);
-
-	SHA3_TRACE("have %d full words to process", (u32)words);
 
 	for (i = 0; i < words; i++, buf += sizeof(u64)) {
 		const u64 t =
@@ -208,9 +184,6 @@ void sha3_update(void *priv, void const *bufIn, u64 len) {
 		    ((u64)(buf[2]) << 8 * 2) | ((u64)(buf[3]) << 8 * 3) |
 		    ((u64)(buf[4]) << 8 * 4) | ((u64)(buf[5]) << 8 * 5) |
 		    ((u64)(buf[6]) << 8 * 6) | ((u64)(buf[7]) << 8 * 7);
-#if defined(__x86_64__) || defined(__i386__)
-		SHA3_ASSERT(memcmp(&t, buf, 8) == 0);
-#endif
 		ctx->u.s[ctx->wordIndex] ^= t;
 		if (++ctx->wordIndex ==
 		    (SHA3_KECCAK_SPONGE_WORDS - SHA3_CW(ctx->capacityWords))) {
@@ -219,22 +192,12 @@ void sha3_update(void *priv, void const *bufIn, u64 len) {
 		}
 	}
 
-	SHA3_TRACE("have %d u8s left to process, save them", (u32)tail);
-
-	/* finally, save the partial word */
-	SHA3_ASSERT(ctx->byteIndex == 0 && tail < 8);
-	while (tail--) {
-		SHA3_TRACE("Store u8 %02x '%c'", *buf, *buf);
+	while (tail--)
 		ctx->saved |= (u64)(*(buf++)) << ((ctx->byteIndex++) * 8);
-	}
-	SHA3_ASSERT(ctx->byteIndex < 8);
-	SHA3_TRACE("Have saved=0x%016" PRIx64 " at the end", ctx->saved);
 }
 
-void const *sha3_finalize(void *priv) {
+PUBLIC void const *sha3_finalize(void *priv) {
 	Sha3Context *ctx = (Sha3Context *)priv;
-
-	SHA3_TRACE("called with %d u8s in the buffer", ctx->byteIndex);
 	u64 t = (u64)(((u64)(0x02 | (1 << 2))) << ((ctx->byteIndex) * 8));
 	ctx->u.s[ctx->wordIndex] ^= ctx->saved ^ t;
 	ctx->u.s[SHA3_KECCAK_SPONGE_WORDS - SHA3_CW(ctx->capacityWords) - 1] ^=
@@ -256,8 +219,6 @@ void const *sha3_finalize(void *priv) {
 			ctx->u.sb[i * 8 + 7] = (u8)(t2 >> 24);
 		}
 	}
-
-	SHA3_TRACE_BUF("Hash: (first 32 u8s)", ctx->u.sb, 256 / 8);
 
 	return (ctx->u.sb);
 }

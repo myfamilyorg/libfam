@@ -35,7 +35,7 @@
  *         Derived from 1600-bit state: (1600 / 8) / sizeof(u64) = 25.
  *         Fixed for all SHA-3 variants.
  */
-#define SHA3_KECCAK_SPONGE_WORDS (((1600) / 8 /*bits to byte*/) / sizeof(u64))
+#define SHA3_KECCAK_SPONGE_WORDS (((1600) / 8) / sizeof(u64))
 
 /*
  * Type: Sha3Context
@@ -53,7 +53,7 @@
  *         Must be initialized with sha3_init* before use.
  *         Supports streaming via sha3_update.
  */
-typedef struct Sha3Context_ {
+typedef struct {
 	u64 saved; /* the portion of the input message that we
 		    * didn't consume yet */
 	union {	   /* Keccak's state */
