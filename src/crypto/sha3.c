@@ -80,8 +80,6 @@ static inline __attribute__((always_inline)) void keccakf(u64 s[25]) {
 	u64 t, bc4;
 	__m256i bc0;
 
-#pragma clang loop unroll(full)
-#pragma clang loop vectorize(enable)
 	for (round = 0; round < KECCAK_ROUNDS; round++) {
 		/* Theta */
 		__m256i tmp0 = _mm256_loadu_si256((const __m256i *)&s[0]);
