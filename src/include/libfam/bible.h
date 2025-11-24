@@ -26,10 +26,6 @@
 #ifndef _BIBLE_H
 #define _BIBLE_H
 
-#ifdef __AVX2__
-#include <immintrin.h>
-#endif /* __AVX2__ */
-
 #include <libfam/types.h>
 
 #define BIBLE_LOOKUP_SIZE 32
@@ -42,16 +38,10 @@ typedef struct {
 
 const Bible *bible(void);
 
-// Note: out must be aligned to 32 bytes
 static inline void bible_lookup(const Bible *bible, u64 r,
 				u8 out[BIBLE_LOOKUP_SIZE]) {
 	r = (r % BIBLE_INDICES) << 5;
-#ifdef __AVX2__
-	*((__m256i *)out) =
-	    _mm256_load_si256((const __m256i *)(bible->text + r));
-#else
 	__builtin_memcpy(out, bible->text + r, BIBLE_LOOKUP_SIZE);
-#endif /* !__AVX2__ */
 }
 
 #endif /* _BIBLE_H */

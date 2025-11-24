@@ -26,24 +26,30 @@
 #ifndef _BIBLE_HASH_H
 #define _BIBLE_HASH_H
 
+#include <libfam/bible.h>
 #include <libfam/types.h>
 
-#define BIBLE_HASH_DATA_SIZE 1600
-#define SPONGE_WORDS (((BIBLE_HASH_DATA_SIZE) / 8) / sizeof(u64))
+#define GOLDEN_PRIME 0x517cc1b727220a95ULL
 
-typedef struct {
-	u64 saved;
-	union {
-		u64 s[SPONGE_WORDS];
-		u8 sb[SPONGE_WORDS * 8];
-	} u;
-	u32 byteIndex;
-	u32 wordIndex;
-	u32 capacityWords;
-} BibleHash;
+static inline void bible_pow_hash(const Bible *b, const u8 *input,
+				  u64 input_len, u8 out[32]) {
+	__attribute__((aligned(32))) u8 s[32] = {0};
+	__attribute__((aligned(32))) u8 bdata[32];
+	u64 v1, v2, v3, v4;
 
-void bible_hash_init(BibleHash *ctx);
-void bible_hash_update(BibleHash *ctx, void const *in, u64 len);
-const void *bible_hash_finalize(BibleHash *ctx);
+	for (u64 i = 0; i < input_len; i++) s[i & 31] ^= input[i];
+	for (u8 i = 0; i < 32;) {
+		bible_lookup(b, s[i & 31], bdata);
+		v1 = *(u64 *)bdata;
+		v2 = *(u64 *)(bdata + 8);
+		v3 = *(u64 *)(bdata + 16);
+		v4 = *(u64 *)(bdata + 24);
+		i++;
+		s[i & 31] ^= v1 ^ v2 ^ v3 ^ v4;
+		s[i & 31] *= GOLDEN_PRIME;
+	}
+
+	__builtin_memcpy(out, s, 32);
+}
 
 #endif /* _BIBLE_HASH_H */
