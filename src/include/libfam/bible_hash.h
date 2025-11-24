@@ -38,7 +38,7 @@ static inline void bible_pow_hash(const Bible *b, const u8 *input,
 	u64 v1, v2, v3, v4;
 
 	for (u64 i = 0; i < input_len; i++) s[i & 31] ^= input[i];
-	for (u8 i = 0; i < 32;) {
+	for (u16 i = 0; i < 8192;) {
 		bible_lookup(b, s[i & 31], bdata);
 		v1 = *(u64 *)bdata;
 		v2 = *(u64 *)(bdata + 8);
