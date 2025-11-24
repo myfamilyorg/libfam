@@ -195,6 +195,7 @@ void bible_hash_check(const u8* in, u8* expected) {
 	for (u32 i = 0; i < 32; i++) {
 		u8 buf[1];
 		buf[0] = out[i];
+		(void)buf;
 	}
 	ASSERT(hex_byte_check(expected, out, 32), in);
 	bible_hash_update(&ctx, buf, len);
