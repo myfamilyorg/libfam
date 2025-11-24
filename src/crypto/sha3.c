@@ -75,7 +75,7 @@ static const u32 keccakf_piln[24] = {10, 7,  11, 17, 18, 3,  5,	 16,
 				     12, 2,  20, 14, 22, 9,  6,	 1};
 
 #ifdef __AVX2__
-static void keccakf(__attribute__((aligned(32))) u64 s[25]) {
+static void keccakf(u64 s[25]) {
 	i32 i, j, round;
 	u64 t;
 	__m256i bc0;
@@ -113,11 +113,13 @@ static void keccakf(__attribute__((aligned(32))) u64 s[25]) {
 
 		/* Rho Pi */
 		t = s[1];
+
 		for (i = 0; i < 24; i++) {
+			u64 tmp;
 			j = keccakf_piln[i];
-			((u64 *)&bc0)[0] = s[j];
+			tmp = s[j];
 			s[j] = SHA3_ROTL64(t, keccakf_rotc[i]);
-			t = ((u64 *)&bc0)[0];
+			t = tmp;
 		}
 
 		/* Chi */
