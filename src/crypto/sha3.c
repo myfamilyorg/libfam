@@ -75,24 +75,26 @@ static const u32 keccakf_piln[24] = {10, 7,  11, 17, 18, 3,  5,	 16,
 				     12, 2,  20, 14, 22, 9,  6,	 1};
 
 #ifdef __AVX2__
-static void keccakf(u64 s[25]) {
+static inline __attribute__((always_inline)) void keccakf(u64 s[25]) {
 	i32 i, j, round;
-	u64 t;
+	u64 t, bc4;
 	__m256i bc0;
-	u64 bc4;
 
+#pragma clang loop unroll(full)
+#pragma clang loop vectorize(enable)
 	for (round = 0; round < KECCAK_ROUNDS; round++) {
 		/* Theta */
-		bc0 = _mm256_xor_si256(
-		    _mm256_loadu_si256((const __m256i *)s),
-		    _mm256_xor_si256(
-			_mm256_loadu_si256((const __m256i *)(s + 5)),
-			_mm256_xor_si256(
-			    _mm256_loadu_si256((const __m256i *)(s + 10)),
-			    _mm256_xor_si256(
-				_mm256_loadu_si256((const __m256i *)(s + 15)),
-				_mm256_loadu_si256(
-				    (const __m256i *)(s + 20))))));
+		__m256i tmp0 = _mm256_loadu_si256((const __m256i *)&s[0]);
+		__m256i tmp1 = _mm256_loadu_si256((const __m256i *)&s[5]);
+		__m256i tmp2 = _mm256_loadu_si256((const __m256i *)&s[10]);
+		__m256i tmp3 = _mm256_loadu_si256((const __m256i *)&s[15]);
+		__m256i tmp4 = _mm256_loadu_si256((const __m256i *)&s[20]);
+
+		bc0 = _mm256_xor_si256(tmp0, tmp1);
+		bc0 = _mm256_xor_si256(bc0, tmp2);
+		bc0 = _mm256_xor_si256(bc0, tmp3);
+		bc0 = _mm256_xor_si256(bc0, tmp4);
+
 		bc4 = s[4] ^ s[9] ^ s[14] ^ s[19] ^ s[24];
 
 		for (i = 0; i < 5; i++) {

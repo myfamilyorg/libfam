@@ -38,7 +38,7 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 
 	sha3_init256(&ctx);
 	i64 timer = micros();
-	sha3_update(&ctx, ptr, SIZE);
+	for (u32 i = 0; i < 1000; i++) sha3_update(&ctx, ptr, SIZE);
 	timer = micros() - timer;
 
 	const u8 *out = sha3_finalize(&ctx);
