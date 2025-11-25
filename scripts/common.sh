@@ -96,6 +96,7 @@ CFLAGS="${CFLAGS} \
 	-fno-builtin \
         -Wno-pointer-sign \
         -march=${MARCH} \
+	-maes \
 	-mtune=native";
 if [ "$FLTO" = "1" ]; then
         CFLAGS="${CFLAGS} -flto=auto";
