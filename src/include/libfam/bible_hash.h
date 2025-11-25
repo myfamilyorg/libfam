@@ -34,13 +34,13 @@
 
 static inline void bible_pow_hash(const Bible *b, const u8 *input,
 				  u64 input_len, u8 out[32],
-				  u256 outer_iterations) {
+				  u128 outer_iterations) {
 	__attribute__((aligned(32))) u8 s[32] = {0};
 	__attribute__((aligned(32))) u8 bdata[32];
 	u64 v1, v2, v3, v4;
 
 	for (u64 i = 0; i < input_len; i++) s[i & 31] ^= input[i];
-	for (u256 i = 0; i < outer_iterations; i++) {
+	for (u128 i = 0; i < outer_iterations; i++) {
 		for (u64 j = 0; j < ITERATIONS;) {
 			bible_lookup(b, s[j & 31], bdata);
 			v1 = *(u64 *)bdata;
