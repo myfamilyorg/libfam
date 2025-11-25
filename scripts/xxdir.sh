@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 XXDIR_SRC=./etc/xxdir.c
 XXDIR_OUT_DIR=./target/bin

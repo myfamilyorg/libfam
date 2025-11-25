@@ -109,6 +109,12 @@ typedef unsigned long u64;
 typedef __uint128_t u128;
 
 /*
+ * Type: u256
+ * 256-bit unsigned integer.
+ */
+typedef unsigned _BitInt(256) u256;
+
+/*
  * Type: f64
  * 64-bit IEEE 754 floating-point.
  */
