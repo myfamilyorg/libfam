@@ -30,27 +30,24 @@
 #include <libfam/types.h>
 
 #define GOLDEN_PRIME 0x517cc1b727220a95ULL
-#define ITERATIONS (1024 * 1024)
+#define PHI_PRIME 0x9e3779b97f4a7c15ULL
+#define LANE1_SALT 0x123456789abcdef0LL
+#define LANE2_SALT 0xfedcba9876543210LL
+#define LOOKUP_ROUNDS 16
 
 static inline void bible_pow_hash(const Bible *b, const u8 *input,
-				  u64 input_len, u8 out[32],
-				  u128 outer_iterations) {
-	__attribute__((aligned(32))) u8 s[32] = {0};
-	__attribute__((aligned(32))) u8 bdata[32];
-	u64 v1, v2, v3, v4;
+				  u64 input_len, u8 out[32]) {
+	u8 bdata[32];
+	u64 h = input_len ^ GOLDEN_PRIME;
+	for (u64 i = 0; i < input_len; i++) h = (h ^ input[i]) * PHI_PRIME;
+	u64 s[4] = {h, h ^ LANE1_SALT, h ^ LANE2_SALT, h};
 
-	for (u64 i = 0; i < input_len; i++) s[i & 31] ^= input[i];
-	for (u128 i = 0; i < outer_iterations; i++) {
-		for (u64 j = 0; j < ITERATIONS;) {
-			bible_lookup(b, s[j & 31], bdata);
-			v1 = *(u64 *)bdata;
-			v2 = *(u64 *)(bdata + 8);
-			v3 = *(u64 *)(bdata + 16);
-			v4 = *(u64 *)(bdata + 24);
-			j++;
-			s[j & 31] ^= v1 ^ v2 ^ v3 ^ v4;
-			s[j & 31] *= GOLDEN_PRIME;
-		}
+	for (u64 i = 0; i < LOOKUP_ROUNDS; i++) {
+		bible_extended_lookup(b, s[0] ^ s[1] ^ s[2] ^ s[3], bdata);
+		s[0] = (s[0] ^ *(u64 *)bdata) * GOLDEN_PRIME;
+		s[1] ^= (s[1] ^ *(u64 *)(bdata + 8)) * GOLDEN_PRIME;
+		s[2] ^= (s[2] ^ *(u64 *)(bdata + 16)) * GOLDEN_PRIME;
+		s[3] ^= (s[3] ^ *(u64 *)(bdata + 24)) * GOLDEN_PRIME;
 	}
 
 	__builtin_memcpy(out, s, 32);

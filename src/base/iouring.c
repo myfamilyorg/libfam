@@ -56,7 +56,7 @@ i32 iouring_init(IoUring **res, u32 queue_depth) {
 INIT:
 	iou = mmap(NULL, sizeof(IoUring), PROT_READ | PROT_WRITE,
 		   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	if (!iou) ERROR();
+	if (iou == MAP_FAILED) ERROR();
 	(iou)->sq_ring = NULL;
 	(iou)->cq_ring = NULL;
 	(iou)->sqes = NULL;

@@ -31,16 +31,25 @@
 #define BIBLE_LOOKUP_SIZE 32
 #define BIBLE_SIZE 4634240
 #define BIBLE_INDICES (BIBLE_SIZE >> 5)
+#define EXTENDED_BIBLE_SIZE (256 * 1024 * 1024)
+#define BIBLE_EXTENDED_INDICES (EXTENDED_BIBLE_SIZE >> 5)
 
 typedef struct {
 	u8 *text;
 } Bible;
 
 const Bible *bible(void);
+void bible_extend(void);
 
 static inline void bible_lookup(const Bible *bible, u64 r,
 				u8 out[BIBLE_LOOKUP_SIZE]) {
 	r = (r % BIBLE_INDICES) << 5;
+	__builtin_memcpy(out, bible->text + r, BIBLE_LOOKUP_SIZE);
+}
+
+static inline void bible_extended_lookup(const Bible *bible, u64 r,
+					 u8 out[BIBLE_LOOKUP_SIZE]) {
+	r = (r % BIBLE_EXTENDED_INDICES) << 5;
 	__builtin_memcpy(out, bible->text + r, BIBLE_LOOKUP_SIZE);
 }
 
