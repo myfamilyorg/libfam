@@ -23,7 +23,7 @@ CFLAGS="-O0 \
 	-fno-builtin \
 	-Wno-pointer-sign \
 	-march=${MARCH} \
-	-maes \
+	${MARCH_EXT} \
 	--coverage"
 
 # Always build clean for coverage

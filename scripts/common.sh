@@ -86,8 +86,10 @@ fi
 ARCH=`uname -i`;
 if [ "${ARCH}" = "x86_64" ]; then
 	MARCH="haswell";
+	MARCH_EXT="-maes";
 else
 	MARCH="armv8.1-a";
+	MARCH_EXT="";
 fi
 
 CFLAGS="${CFLAGS} \
@@ -96,7 +98,7 @@ CFLAGS="${CFLAGS} \
 	-fno-builtin \
         -Wno-pointer-sign \
         -march=${MARCH} \
-	-maes \
+	${MARCH_EXT} \
 	-mtune=native";
 if [ "$FLTO" = "1" ]; then
         CFLAGS="${CFLAGS} -flto=auto";
