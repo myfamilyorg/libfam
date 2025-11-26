@@ -3,7 +3,7 @@
 . ./scripts/common.sh
 
 CDEFS="-DSTATIC= -DTEST=1 -DCOVERAGE";
-COV_CFLAGS="-fno-builtin -Wno-pointer-sign -lc -lgcc --coverage";
+COV_CFLAGS="-Wno-pointer-sign -lc -lgcc --coverage";
 OBJECTS="";
 
 LIB_NAME="${LIB_OUTPUT_DIR}/libfamtest.so";
@@ -20,7 +20,6 @@ CFLAGS="-O0 \
 	-fvisibility=hidden \
 	-fno-pie \
 	-fPIC \
-	-fno-builtin \
 	-Wno-pointer-sign \
 	-march=${MARCH} \
 	${MARCH_EXT} \
@@ -31,7 +30,7 @@ rm -rf ./target/cobjs
 mkdir -p ${LIB_OUTPUT_DIR};
 mkdir -p "${BIN_DIR}";
 
-. ./scripts/xxdir.sh
+. ./scripts/xxdir.sh || exit $?;
 
 for DIR in $SUB_DIRS; do
         build_dir ${DIR} 1 cobjs || exit 1;

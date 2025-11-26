@@ -37,5 +37,5 @@ if needs_linking "$LIB_NAME" $OBJECTS; then
 	fi
 fi
 
-# . ./scripts/czip.sh || exit $?;
-# . ./scripts/abench.sh || exit $?;
+. ./scripts/gen_bible.sh || exit $?;
+

@@ -28,29 +28,13 @@
 
 #include <libfam/types.h>
 
-#define BIBLE_LOOKUP_SIZE 32
-#define BIBLE_SIZE 4634240
-#define BIBLE_INDICES (BIBLE_SIZE >> 5)
-#define EXTENDED_BIBLE_SIZE (256 * 1024 * 1024)
-#define BIBLE_EXTENDED_INDICES (EXTENDED_BIBLE_SIZE >> 5)
+typedef struct Bible Bible;
 
-typedef struct {
-	u8 *text;
-} Bible;
+const Bible *bible_gen(void);
+const Bible *bible_load(const u8 *path);
+i32 bible_store(const Bible *b, const u8 *path);
 
-const Bible *bible(void);
-void bible_extend(void);
-
-static inline void bible_lookup(const Bible *bible, u64 r,
-				u8 out[BIBLE_LOOKUP_SIZE]) {
-	r = (r % BIBLE_INDICES) << 5;
-	__builtin_memcpy(out, bible->text + r, BIBLE_LOOKUP_SIZE);
-}
-
-static inline void bible_extended_lookup(const Bible *bible, u64 r,
-					 u8 out[BIBLE_LOOKUP_SIZE]) {
-	r = (r % BIBLE_EXTENDED_INDICES) << 5;
-	__builtin_memcpy(out, bible->text + r, BIBLE_LOOKUP_SIZE);
-}
+void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len, u8 out[32]);
+void bible_destroy(const Bible *b);
 
 #endif /* _BIBLE_H */

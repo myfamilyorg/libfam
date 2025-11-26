@@ -2,3 +2,4 @@
 target
 src/include/libfam/xxdir_dat.h
 src/include/libfam/version.h
+resources/bible.dat

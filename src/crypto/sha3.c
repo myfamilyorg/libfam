@@ -29,7 +29,6 @@
 
 #include <libfam/sha3.h>
 #include <libfam/string.h>
-#include <libfam/test_base.h>
 #include <libfam/utils.h>
 
 #define KECCAK_ROUNDS 24

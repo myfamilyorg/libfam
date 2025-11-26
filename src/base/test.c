@@ -195,7 +195,8 @@ Test(strcmp) {
 
 Test(strncpy) {
 	u8 x[1024] = {0};
-	strncpy(x, "abcd", 3);
+	u8 *in1 = "abcd";
+	strncpy(x, in1, 3);
 	ASSERT_EQ(x[0], 'a', "a");
 	ASSERT_EQ(x[1], 'b', "b");
 	ASSERT_EQ(x[2], 'c', "c");

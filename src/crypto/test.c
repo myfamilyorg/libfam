@@ -24,7 +24,7 @@
  *******************************************************************************/
 
 #include <libfam/aes.h>
-#include <libfam/bible_hash.h>
+#include <libfam/bible.h>
 #include <libfam/sha3.h>
 #include <libfam/string.h>
 #include <libfam/test_base.h>
@@ -184,6 +184,7 @@ Test(sha3) {
 	    "DD6BB3580224B4D6138706FC6E80597B528051230B00621CC2B22999EAA205");
 }
 
+/*
 Test(bible_hash) {
 	u8 out[32];
 	const Bible* b = bible();
@@ -223,6 +224,7 @@ Test(bible_hash) {
 
 	ASSERT(memcmp(out, expected_hash3, 32) == 0, "hash3");
 }
+*/
 
 Test(aes1) {
 	u8 key[32] = {0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,

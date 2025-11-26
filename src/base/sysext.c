@@ -29,7 +29,6 @@
 #include <libfam/linux.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
-#include <libfam/test_base.h>
 #include <libfam/utils.h>
 
 IoUring *__global_iou__ = NULL;
@@ -70,11 +69,11 @@ i32 open(const u8 *path, i32 flags, u32 mode) {
 	struct open_how how = {.flags = flags, .mode = mode};
 	i64 res;
 
-	if (global_iou_init() < 0) return -2;
+	if (global_iou_init() < 0) return -1;
 	res =
 	    iouring_init_openat(__global_iou__, AT_FDCWD, path, &how, U64_MAX);
-	if (res < 0) return -3;
-	if (iouring_submit(__global_iou__, 1) < 0) return -4;
+	if (res < 0) return -1;
+	if (iouring_submit(__global_iou__, 1) < 0) return -1;
 	res = iouring_wait(__global_iou__, &id);
 	return res;
 }

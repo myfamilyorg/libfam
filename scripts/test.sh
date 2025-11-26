@@ -11,7 +11,8 @@ OBJECTS="";
 
 mkdir -p ${LIB_OUTPUT_DIR};
 mkdir -p ${BIN_DIR};
-. ./scripts/xxdir.sh
+. ./scripts/xxdir.sh || exit $?;
+
 for DIR in ${SUB_DIRS}; do
         build_dir ${DIR} 1 tobjs || exit $?;
 done
@@ -33,6 +34,8 @@ if needs_linking "$LIB_NAME" $OBJECTS; then
         	${COMMAND} || exit $?;
 	fi
 fi
+
+. ./scripts/gen_bible_test.sh || exit $?;
 
 if [ ! -e target/bin/runtests ] || [ src/test/main.c -nt target/bin/runtests ]; then
         mkdir -p target/bin;

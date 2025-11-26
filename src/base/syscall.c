@@ -25,7 +25,6 @@
 
 #include <libfam/debug.h>
 #include <libfam/linux.h>
-#include <libfam/test_base.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>
 

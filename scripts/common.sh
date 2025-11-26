@@ -95,7 +95,6 @@ fi
 CFLAGS="${CFLAGS} \
         -fno-pie \
         -fPIC \
-	-fno-builtin \
         -Wno-pointer-sign \
         -march=${MARCH} \
 	${MARCH_EXT} \
