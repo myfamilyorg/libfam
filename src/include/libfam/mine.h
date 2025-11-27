@@ -23,58 +23,26 @@
  *
  *******************************************************************************/
 
+#ifndef _MINE_H
+#define _MINE_H
+
 #include <libfam/bible.h>
-#include <libfam/limits.h>
-#include <libfam/linux.h>
-#include <libfam/mine.h>
+#include <libfam/string.h>
 #include <libfam/test_base.h>
+#include <libfam/types.h>
 
-#define BDAT_PATH "resources/bible.dat"
+#define HEADER_LEN 128
 
-const Bible *b = NULL;
-static void init_bible(void) {
-	i32 fd;
-	if (b) return;
-
-	fd = open(BDAT_PATH, O_RDONLY, 0);
-	if (fd < 0) {
-		b = bible_gen();
-		bible_store(b, BDAT_PATH);
-	} else
-		b = bible_load(BDAT_PATH);
-	if (fd > 0) close(fd);
+static inline void mine_block(const Bible *bible, const u8 header[HEADER_LEN],
+			      const u8 target[32], u8 out[32], u64 *nonce,
+			      u64 max_iter) {
+	u8 header_copy[HEADER_LEN];
+	*nonce = 0;
+	memcpy(header_copy, header, HEADER_LEN);
+	do {
+		((u64 *)header_copy)[15] = ++(*nonce);
+		bible_pow_hash(bible, header_copy, HEADER_LEN, out);
+	} while (memcmp(target, out, 32) < 0 && *nonce < max_iter);
 }
 
-Test(bible1) {
-	u8 out[32];
-
-	init_bible();
-
-	bible_pow_hash(b, "", 0, out);
-	u8 exp1[] = {106, 189, 246, 61,	 164, 204, 113, 221, 254, 23,  31,
-		     163, 12,  190, 142, 203, 121, 98,	239, 212, 200, 205,
-		     190, 67,  65,  196, 204, 56,  249, 21,  161, 185};
-	ASSERT(!memcmp(exp1, out, 32), "hash1");
-
-	bible_pow_hash(b, "1", 1, out);
-	u8 exp2[] = {101, 170, 46,  185, 51,  240, 38, 249, 251, 184, 169,
-		     44,  8,   102, 178, 8,   183, 91, 98,  247, 57,  156,
-		     254, 207, 49,  188, 218, 173, 58, 0,   24,	 140};
-
-	ASSERT(!memcmp(exp2, out, 32), "hash2");
-	bible_destroy(b);
-	b = NULL;
-}
-
-Test(mine1) {
-	u64 nonce;
-	u8 h1[HEADER_LEN] = {6};
-	u8 t1[32], out[32];
-	memset(t1, 0xFF, 32);
-	t1[0] = 0x00;
-	t1[1] = 0x00;
-	init_bible();
-	mine_block(b, h1, t1, out, &nonce, U64_MAX);
-	bible_destroy(b);
-	b = NULL;
-}
+#endif /* _MINE_H */
