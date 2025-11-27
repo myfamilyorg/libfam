@@ -1,4 +1,1 @@
-- [Build Instructions](https://myfamilyorg.github.io/libfam/build_instructions)
-- [Alloc](https://myfamilyorg.github.io/libfam/alloc)
-- [Formatting](https://myfamilyorg.github.io/libfam/formatting)
-- [czip](https://myfamilyorg.github.io/libfam/czip)
+TBD
