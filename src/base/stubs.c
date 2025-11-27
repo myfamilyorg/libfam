@@ -30,14 +30,14 @@
 
 PUBLIC void __stack_chk_fail(void) {
 	i32 __attribute__((unused)) _v;
-	const u8 *msg = (u8 *)"STACK_CHK_FAIL\n";
-	_v = pwrite(STDERR_FD, msg, strlen((void *)msg), 0);
+	const u8 *msg = "STACK_CHK_FAIL\n";
+	_v = pwrite(STDERR_FD, msg, strlen(msg), 0);
 	_exit(-1);
 }
 
 PUBLIC void __stack_chk_guard(void) {
 	i32 __attribute__((unused)) _v;
-	const u8 *msg = (u8 *)"STACK_CHK_GUARD\n";
-	_v = pwrite(STDERR_FD, msg, strlen((void *)msg), 0);
+	const u8 *msg = "STACK_CHK_GUARD\n";
+	_v = pwrite(STDERR_FD, msg, strlen(msg), 0);
 	_exit(-1);
 }
