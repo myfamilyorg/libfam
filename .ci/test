@@ -2,6 +2,8 @@
 
 ARCH=$(uname -m)
 
+./build clean test --novalgrind
+
 ./build clean test --cflags="-g -std=c11" $1 || exit $?;
 
 ./build clean test --cc=clang $1 || exit $?;
