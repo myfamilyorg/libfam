@@ -23,18 +23,18 @@
  *
  *******************************************************************************/
 
-#include <libfam/types.h>
-#include <libfam/utils.h>
+#ifndef _BIBLE_H
+#define _BIBLE_H
 
-STATIC_ASSERT(sizeof(u8) == 1, u8_sizes_match);
-STATIC_ASSERT(sizeof(i8) == 1, i8_sizes_match);
-STATIC_ASSERT(sizeof(u16) == 2, u16_sizes_match);
-STATIC_ASSERT(sizeof(i16) == 2, i16_sizes_match);
-STATIC_ASSERT(sizeof(u32) == 4, u32_sizes_match);
-STATIC_ASSERT(sizeof(i32) == 4, i32_sizes_match);
-STATIC_ASSERT(sizeof(u64) == 8, u64_sizes_match);
-STATIC_ASSERT(sizeof(i64) == 8, i64_sizes_match);
-STATIC_ASSERT(sizeof(u128) == 16, u128_sizes_match);
-STATIC_ASSERT(sizeof(i128) == 16, i128_sizes_match);
-STATIC_ASSERT(sizeof(f64) == 8, f64_sizes_match);
-STATIC_ASSERT(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, little_endian);
+#include <libfam/types.h>
+
+typedef struct Bible Bible;
+
+const Bible *bible_gen(void);
+const Bible *bible_load(const u8 *path);
+i32 bible_store(const Bible *b, const u8 *path);
+
+void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len, u8 out[32]);
+void bible_destroy(const Bible *b);
+
+#endif /* _BIBLE_H */

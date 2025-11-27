@@ -23,18 +23,22 @@
  *
  *******************************************************************************/
 
-#include <libfam/types.h>
-#include <libfam/utils.h>
+#ifndef _SYSEXT_H
+#define _SYSEXT_H
 
-STATIC_ASSERT(sizeof(u8) == 1, u8_sizes_match);
-STATIC_ASSERT(sizeof(i8) == 1, i8_sizes_match);
-STATIC_ASSERT(sizeof(u16) == 2, u16_sizes_match);
-STATIC_ASSERT(sizeof(i16) == 2, i16_sizes_match);
-STATIC_ASSERT(sizeof(u32) == 4, u32_sizes_match);
-STATIC_ASSERT(sizeof(i32) == 4, i32_sizes_match);
-STATIC_ASSERT(sizeof(u64) == 8, u64_sizes_match);
-STATIC_ASSERT(sizeof(i64) == 8, i64_sizes_match);
-STATIC_ASSERT(sizeof(u128) == 16, u128_sizes_match);
-STATIC_ASSERT(sizeof(i128) == 16, i128_sizes_match);
-STATIC_ASSERT(sizeof(f64) == 8, f64_sizes_match);
-STATIC_ASSERT(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, little_endian);
+#include <libfam/types.h>
+
+void yield(void);
+i64 pwrite(i32 fd, const void *buf, u64 len, u64 offset);
+i64 pread(i32 fd, void *buf, u64 len, u64 offset);
+i32 open(const u8 *path, i32 flags, u32 mode);
+i32 fallocate(i32 fd, u64 new_size);
+i32 fsync(i32 fd);
+i64 fsize(i32 fd);
+i32 close(i32 fd);
+i64 micros(void);
+i32 nsleep(u64 nsec);
+i32 usleep(u64 usec);
+i32 fork(void);
+
+#endif /* _SYSEXT_H */

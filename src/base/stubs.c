@@ -23,18 +23,21 @@
  *
  *******************************************************************************/
 
-#include <libfam/types.h>
+#include <libfam/string.h>
+#include <libfam/syscall.h>
+#include <libfam/sysext.h>
 #include <libfam/utils.h>
 
-STATIC_ASSERT(sizeof(u8) == 1, u8_sizes_match);
-STATIC_ASSERT(sizeof(i8) == 1, i8_sizes_match);
-STATIC_ASSERT(sizeof(u16) == 2, u16_sizes_match);
-STATIC_ASSERT(sizeof(i16) == 2, i16_sizes_match);
-STATIC_ASSERT(sizeof(u32) == 4, u32_sizes_match);
-STATIC_ASSERT(sizeof(i32) == 4, i32_sizes_match);
-STATIC_ASSERT(sizeof(u64) == 8, u64_sizes_match);
-STATIC_ASSERT(sizeof(i64) == 8, i64_sizes_match);
-STATIC_ASSERT(sizeof(u128) == 16, u128_sizes_match);
-STATIC_ASSERT(sizeof(i128) == 16, i128_sizes_match);
-STATIC_ASSERT(sizeof(f64) == 8, f64_sizes_match);
-STATIC_ASSERT(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, little_endian);
+PUBLIC void __stack_chk_fail(void) {
+	i32 __attribute__((unused)) _v;
+	const u8 *msg = (u8 *)"STACK_CHK_FAIL\n";
+	_v = pwrite(STDERR_FD, msg, strlen((void *)msg), 0);
+	_exit(-1);
+}
+
+PUBLIC void __stack_chk_guard(void) {
+	i32 __attribute__((unused)) _v;
+	const u8 *msg = (u8 *)"STACK_CHK_GUARD\n";
+	_v = pwrite(STDERR_FD, msg, strlen((void *)msg), 0);
+	_exit(-1);
+}

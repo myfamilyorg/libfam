@@ -23,18 +23,36 @@
  *
  *******************************************************************************/
 
-#include <libfam/types.h>
-#include <libfam/utils.h>
+#ifndef _SYSCALL_H
+#define _SYSCALL_H
 
-STATIC_ASSERT(sizeof(u8) == 1, u8_sizes_match);
-STATIC_ASSERT(sizeof(i8) == 1, i8_sizes_match);
-STATIC_ASSERT(sizeof(u16) == 2, u16_sizes_match);
-STATIC_ASSERT(sizeof(i16) == 2, i16_sizes_match);
-STATIC_ASSERT(sizeof(u32) == 4, u32_sizes_match);
-STATIC_ASSERT(sizeof(i32) == 4, i32_sizes_match);
-STATIC_ASSERT(sizeof(u64) == 8, u64_sizes_match);
-STATIC_ASSERT(sizeof(i64) == 8, i64_sizes_match);
-STATIC_ASSERT(sizeof(u128) == 16, u128_sizes_match);
-STATIC_ASSERT(sizeof(i128) == 16, i128_sizes_match);
-STATIC_ASSERT(sizeof(f64) == 8, f64_sizes_match);
-STATIC_ASSERT(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, little_endian);
+#include <libfam/types.h>
+
+struct rt_sigaction;
+struct io_uring_params;
+struct timespec;
+
+i32 clock_gettime(i32 clockid, struct timespec *tp);
+i32 clock_settime(i32 clockid, const struct timespec *tp);
+i32 getpid(void);
+i32 waitid(i32 idtype, i32 id, void *infop, i32 options);
+i32 kill(i32 pid, i32 signal);
+void *mmap(void *addr, u64 length, i32 prot, i32 flags, i32 fd, i64 offset);
+i32 munmap(void *addr, u64 len);
+i32 clone(i64 flags, void *sp);
+i32 rt_sigaction(i32 signum, const struct rt_sigaction *act,
+		 struct rt_sigaction *oldact, u64 sigsetsize);
+void _exit(i32 status);
+i32 io_uring_setup(u32 entries, struct io_uring_params *params);
+i32 io_uring_enter2(u32 fd, u32 to_submit, u32 min_complete, u32 flags,
+		    void *arg, u64 sz);
+i32 io_uring_register(u32 fd, u32 opcode, void *arg, u32 nr_args);
+i64 lseek(i32 fd, i64 offset, i32 whence);
+i32 nanosleep(const struct timespec *duration, struct timespec *rem);
+void restorer(void);
+
+#if TEST == 1
+i32 unlinkat(i32 dfd, const char *path, i32 flags);
+#endif /* TEST */
+
+#endif /* _SYSCALL_H */

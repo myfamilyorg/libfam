@@ -1,3 +1,5 @@
 #!/bin/sh
 
-echo "made clean";
+. "$PROJECT_DIR/scripts/config.sh"
+
+rm -rf $OUTDIR;

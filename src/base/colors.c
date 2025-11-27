@@ -23,18 +23,19 @@
  *
  *******************************************************************************/
 
+#include <libfam/env.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
-STATIC_ASSERT(sizeof(u8) == 1, u8_sizes_match);
-STATIC_ASSERT(sizeof(i8) == 1, i8_sizes_match);
-STATIC_ASSERT(sizeof(u16) == 2, u16_sizes_match);
-STATIC_ASSERT(sizeof(i16) == 2, i16_sizes_match);
-STATIC_ASSERT(sizeof(u32) == 4, u32_sizes_match);
-STATIC_ASSERT(sizeof(i32) == 4, i32_sizes_match);
-STATIC_ASSERT(sizeof(u64) == 8, u64_sizes_match);
-STATIC_ASSERT(sizeof(i64) == 8, i64_sizes_match);
-STATIC_ASSERT(sizeof(u128) == 16, u128_sizes_match);
-STATIC_ASSERT(sizeof(i128) == 16, i128_sizes_match);
-STATIC_ASSERT(sizeof(f64) == 8, f64_sizes_match);
-STATIC_ASSERT(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, little_endian);
+i32 no_color(void) { return getenv("NO_COLOR") != NULL; }
+const u8 *get_dimmed(void) { return (void *)(no_color() ? "" : "\x1b[2m"); }
+const u8 *get_red(void) { return (void *)(no_color() ? "" : "\x1b[31m"); }
+const u8 *get_bright_red(void) {
+	return (void *)(no_color() ? "" : "\x1b[91m");
+}
+const u8 *get_green(void) { return (void *)(no_color() ? "" : "\x1b[32m"); }
+const u8 *get_yellow(void) { return (void *)(no_color() ? "" : "\x1b[33m"); }
+const u8 *get_cyan(void) { return (void *)(no_color() ? "" : "\x1b[36m"); }
+const u8 *get_magenta(void) { return (void *)(no_color() ? "" : "\x1b[35m"); }
+const u8 *get_blue(void) { return (void *)(no_color() ? "" : "\x1b[34m"); }
+const u8 *get_reset(void) { return (void *)(no_color() ? "" : "\x1b[0m"); }

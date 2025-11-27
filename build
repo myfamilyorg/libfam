@@ -33,9 +33,6 @@ for arg in "$@"; do
         --cc=*)
             CC="${arg#--cc=}"
             ;;
-        --cxx=*)
-            CXX="${arg#--cxx=}"
-            ;;
         --f=*)
             FILTER="${arg#--f=}"
             ;;
