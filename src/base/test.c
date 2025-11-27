@@ -746,11 +746,17 @@ Test(clone) {
 
 Test(open1) {
 	u64 size = 4097;
+	i32 fd;
 	unlinkat(AT_FDCWD, "/tmp/open1.dat", 0);
 	unlinkat(AT_FDCWD, "/tmp/open2.dat", 0);
 
+	fd = open("/tmp/open1.dat", O_RDONLY, 0);
+	ASSERT(fd < 0, "open1.dat O_RDONLY doesn't exist");
+	fd = open("/tmp/open1.dat", O_RDWR, 0);
+	ASSERT(fd < 0, "open1.dat O_RDWR doesn't exist");
+
 	errno = 0;
-	i32 fd = open("/tmp/open1.dat", O_RDWR | O_CREAT, 0600);
+	fd = open("/tmp/open1.dat", O_RDWR | O_CREAT, 0600);
 	ASSERT(fd > 0, "fd>0 1");
 	ASSERT(!lseek(fd, 0, SEEK_END), "size=0");
 
@@ -768,6 +774,10 @@ Test(open1) {
 	ASSERT(!memcmp(buf, cmp, 4), "equal");
 
 	close(fd);
+
+	fd = open("/tmp/open1.dat", O_RDONLY, 0);
+	ASSERT(fd > 0, "open1.dat O_RDONLY");
+
 	fd = open("/tmp/open2.dat", O_RDWR | O_CREAT, 0600);
 	ASSERT(fd > 0, "fd>0 2");
 	close(fd);
