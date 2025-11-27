@@ -10,7 +10,7 @@ case "${BUILD_MODE:-all}" in
         OBJDIR="target/objs"
         ;;
     test)
-        OUTDIR="target/test"
+        OUTDIR="target"
         OBJDIR="target/test/objs"
         ;;
     cov)
@@ -38,7 +38,7 @@ export BINDIR="$OUTDIR/bin"
 CC="${CC:-clang}"
 
 BASE_CFLAGS="-Werror -Wall -funroll-loops -fstack-protector-strong -std=c11"
-BASE_LDFLAGS="-shared -fstack-protector-strong -nostdlib -ffreestanding"
+BASE_LDFLAGS="-shared -fstack-protector-strong -ffreestanding -nostdlib"
 
 # ------------------------------------------------------------------
 # 3. Mode-specific flags
@@ -56,7 +56,7 @@ case "$BUILD_MODE" in
         CFLAGS="$BASE_CFLAGS -O0 -g3"
         LDFLAGS="$BASE_LDFLAGS -g3"
         VISIBILITY=""
-        CDEFS="-DTEST=1"
+        CDEFS="-DTEST=1 -DSTATIC="
         COVERAGE=""
         [ "$BUILD_MODE" = "cov" ] && COVERAGE="--coverage" && LDFLAGS="$LDFLAGS --coverage"
         LTO=""
@@ -75,7 +75,8 @@ esac
 # ------------------------------------------------------------------
 # 4. Architecture-specific flags
 # ------------------------------------------------------------------
-case "$(uname -m)" in
+ARCH=$(uname -m);
+case "${ARCH}" in
     x86_64)
         MARCH="haswell"
         MARCH_EXTRA="-maes"
@@ -98,8 +99,8 @@ esac
 
 # Clang vs GCC quirks
 case "$CC" in
-    *clang*) COMPILER_FIXES="-fno-builtin" ;;
-    *gcc*|*g++) COMPILER_FIXES="-fno-builtin" ;;
+    *clang*) COMPILER_FIXES="-fno-builtin -Wno-pointer-sign" ;;
+    *gcc*|*g++) COMPILER_FIXES="-fno-builtin -Wno-pointer-sign" ;;
     *) COMPILER_FIXES="" ;;
 esac
 

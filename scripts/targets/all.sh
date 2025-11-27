@@ -1,12 +1,12 @@
 #!/bin/sh
 
-. "$PROJECT_DIR/scripts/core.sh"   # this sources config.sh + all build logic
+. "$PROJECT_DIR/scripts/core.sh"
 
 mkdir -p ${LIB_DIR};
 mkdir -p ${BIN_DIR};
 
 for DIR in $SUB_DIRS; do
-        build_subdir ${DIR} 0 objs || exit $?;
+        build_subdir ${DIR} 0 || exit $?;
 done
 
 OBJECTS=$(collect_objects)

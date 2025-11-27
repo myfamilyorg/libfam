@@ -14,9 +14,12 @@ printf '#define LIBFAM_VERSION "%s"\n' "$TAG" > "$PROJECT_DIR/src/include/libfam
 # 3. Global constants
 SUB_DIRS="base bible"
 INCDIR="src/include"
-LIB_DIR=${OUTDIR}/lib
+LIB_DIR="${OUTDIR}/lib"
 LIB_NAME="${LIB_DIR}/libfam.so";
-BIN_DIR=${OUTDIR}/bin
+TEST_LIB_NAME="${LIB_DIR}/libfamtest.so";
+BIN_DIR="${OUTDIR}/bin";
+TEST_BIN="${BIN_DIR}/runtests";
+TEST_SRC="src/test/main.c";
 
 # 4. Helper functions
 build_subdir() {

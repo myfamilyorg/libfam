@@ -1,0 +1,207 @@
+/********************************************************************************
+ * MIT License
+ *
+ * Copyright (c) 2025 Christopher Gilliard
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+
+#include <libfam/env.h>
+#include <libfam/errno.h>
+#include <libfam/linux.h>
+#include <libfam/string.h>
+#include <libfam/syscall.h>
+#include <libfam/sysext.h>
+#include <libfam/test_base.h>
+#include <libfam/types.h>
+#include <libfam/utils.h>
+
+#define TEST_COMPLETE "/tmp/test_complete"
+
+const u8 *SUCCESS_PATH = (void *)"/tmp/libfam_test_success";
+const u8 *SPACER =(void*)
+    "------------------------------------------------------------------"
+    "--------------------------\n";
+
+i32 cur_tests = 0;
+i32 exe_test = 0;
+
+TestEntry tests[MAX_TESTS];
+
+void add_test_fn(void (*test_fn)(void), const u8 *name) {
+	if (strlen((void *)name) > MAX_TEST_NAME) {
+		const u8 *msg = (void *)"test name too long!\n";
+		pwrite(STDERR_FD, msg, strlen((void *)msg), 0);
+		_exit(-1);
+	}
+	if (cur_tests >= MAX_TESTS) {
+		const u8 *msg = (void *)"too many tests!";
+		pwrite(STDERR_FD, msg, strlen((void *)msg), 0);
+		_exit(-1);
+	}
+	tests[cur_tests].test_fn = test_fn;
+	memset(tests[cur_tests].name, 0, MAX_TEST_NAME);
+	strcpy((void *)tests[cur_tests].name, (void *)name);
+	cur_tests++;
+}
+
+#ifndef COVERAGE
+#ifdef __aarch64__
+__asm__(
+    ".section .text\n"
+    ".global _start\n"
+    "_start:\n"
+    "    ldr x0, [sp]\n"
+    "    add x1, sp, #8\n"
+    "    add x3, x0, #1\n"
+    "    lsl x3, x3, #3\n"
+    "    add x2, x1, x3\n"
+    "    mov x4, sp\n"
+    "    bic x4, x4, #15\n"
+    "    mov sp, x4\n"
+    "    bl main\n"
+    "    mov x0, x0\n"
+    "    mov x8, #93\n"
+    "    svc #0\n");
+#elif defined(__x86_64__)
+__asm__(
+    ".section .text\n"
+    ".global _start\n"
+    "_start:\n"
+    "    movq (%rsp), %rdi\n"
+    "    lea 8(%rsp), %rsi\n"
+    "    mov %rdi, %rcx\n"
+    "    add $1, %rcx\n"
+    "    shl $3, %rcx\n"
+    "    lea (%rsi, %rcx), %rdx\n"
+    "    mov %rsp, %rcx\n"
+    "    and $-16, %rsp\n"
+    "    call main\n"
+    "    mov %rax, %rdi\n"
+    "    mov $60, %rax\n"
+    "    syscall\n");
+#endif /* __x86_64__ */
+#endif /* COVERAGE */
+
+i32 main(i32 argc, u8 **argv, u8 **envp) {
+	u8 *pattern;
+	u64 total, len, test_count = 0;
+	f64 ms;
+	u8 buf[64];
+
+	(void)argc;
+	(void)argv;
+
+	unlinkat(AT_FDCWD, TEST_COMPLETE, 0);
+
+	if (init_environ(envp) < 0) {
+		perror("init_environ");
+		const u8 *msg = (void *)"Too many environment variables!\n";
+		pwrite(STDERR_FD, msg, strlen((void *)msg), 0);
+		_exit(-1);
+	}
+
+	pattern = (void *)getenv("TEST_PATTERN");
+
+	pwrite(STDERR_FD, (void *)CYAN, strlen((void *)CYAN), 0);
+	if (!pattern || !strcmp((void *)pattern, (void *)"*")) {
+		pwrite(STDERR_FD, (void *)"Running ",
+		       strlen((void *)"Running "), 0);
+		write_num(STDERR_FD, cur_tests);
+		pwrite(STDERR_FD, (void *)" tests", strlen((void *)" tests"),
+		       0);
+		pwrite(STDERR_FD, (void *)RESET, strlen((void *)RESET), 0);
+		pwrite(STDERR_FD, (void *)"...\n", 4, 0);
+	} else {
+		pwrite(STDERR_FD, (void *)"Running test",
+		       strlen((void *)"Running test"), 0);
+		pwrite(STDERR_FD, (void *)RESET, strlen((void *)RESET), 0);
+		pwrite(STDERR_FD, (void *)": '", 3, 0);
+		pwrite(STDERR_FD, (void *)pattern, strlen((void *)pattern), 0);
+		pwrite(STDERR_FD, "' ...\n", 6, 0);
+	}
+
+	pwrite(STDERR_FD, (void *)SPACER, strlen((void *)SPACER), 0);
+
+	total = micros();
+
+	for (exe_test = 0; exe_test < cur_tests; exe_test++) {
+		if (!pattern || !strcmp((void *)pattern, (void *)"*") ||
+		    !strcmp((void *)pattern, (void *)tests[exe_test].name)) {
+			i64 start = micros();
+			pwrite(STDERR_FD, (void *)YELLOW,
+			       strlen((void *)YELLOW), 0);
+			pwrite(STDERR_FD, (void *)"Running test",
+			       strlen((void *)"Running test"), 0);
+			pwrite(STDERR_FD, (void *)RESET, strlen((void *)RESET),
+			       0);
+			pwrite(STDERR_FD, (void *)" ", 1, 0);
+			write_num(STDERR_FD, ++test_count);
+			pwrite(STDERR_FD, " [", 2, 0);
+			pwrite(STDERR_FD, (void *)DIMMED,
+			       strlen((void *)DIMMED), 0);
+			pwrite(STDERR_FD, tests[exe_test].name,
+			       strlen((void *)tests[exe_test].name), 0);
+			pwrite(STDERR_FD, (void *)RESET, strlen((void *)RESET),
+			       0);
+
+			pwrite(STDERR_FD, (void *)"] ", 2, 0);
+
+			tests[exe_test].test_fn();
+
+			pwrite(STDERR_FD, (void *)GREEN, strlen((void *)GREEN),
+			       0);
+			pwrite(STDERR_FD, "[", 1, 0);
+			write_num(STDERR_FD, (i64)(micros() - start));
+			pwrite(STDERR_FD, (void *)"µs", strlen((void *)"µs"),
+			       0);
+			pwrite(STDERR_FD, "]\n", 2, 0);
+			pwrite(STDERR_FD, (void *)RESET, strlen((void *)RESET),
+			       0);
+		}
+	}
+
+	ms = (f64)(micros() - total) / (f64)1000;
+	len = f64_to_string(buf, ms, 3, false);
+	buf[len] = 0;
+
+	pwrite(STDERR_FD, (void *)SPACER, strlen((void *)SPACER), 0);
+
+	pwrite(STDERR_FD, (void *)GREEN, strlen((void *)GREEN), 0);
+	pwrite(STDERR_FD, (void *)"Success", strlen((void *)"Success"), 0);
+	pwrite(STDERR_FD, (void *)RESET, strlen((void *)RESET), 0);
+	pwrite(STDERR_FD, (void *)"! ", 2, 0);
+	write_num(STDERR_FD, test_count);
+	pwrite(STDERR_FD, (void *)" ", 1, 0);
+	pwrite(STDERR_FD, (void *)CYAN, strlen((void *)CYAN), 0);
+	pwrite(STDERR_FD, (void *)"tests passed!",
+	       strlen((void *)"tests passed!"), 0);
+	pwrite(STDERR_FD, (void *)RESET, strlen((void *)RESET), 0);
+	pwrite(STDERR_FD, (void *)GREEN, strlen((void *)GREEN), 0);
+	pwrite(STDERR_FD, " [", 2, 0);
+	pwrite(STDERR_FD, (void *)buf, strlen((void *)buf), 0);
+	pwrite(STDERR_FD, " ms]\n", 5, 0);
+	pwrite(STDERR_FD, (void *)RESET, strlen((void *)RESET), 0);
+
+	open((void *)TEST_COMPLETE, O_RDONLY | O_CREAT, 0600);
+
+	_exit(0);
+	return 0;
+}
