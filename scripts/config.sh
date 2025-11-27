@@ -58,7 +58,7 @@ case "$BUILD_MODE" in
         VISIBILITY=""
         CDEFS="-DTEST=1 -DSTATIC="
         COVERAGE=""
-        [ "$BUILD_MODE" = "cov" ] && COVERAGE="--coverage" && LDFLAGS="$LDFLAGS --coverage"
+        [ "$BUILD_MODE" = "cov" ] && COVERAGE="--coverage -DCOVERAGE" && LDFLAGS="$LDFLAGS"
         LTO=""
         ;;
     *)
