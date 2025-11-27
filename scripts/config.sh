@@ -37,8 +37,12 @@ export BINDIR="$OUTDIR/bin"
 # ------------------------------------------------------------------
 CC="${CC:-clang}"
 
-if [ "$BASE_CFLAGS" = "" ]; then
-	BASE_CFLAGS="-Werror -Wall -funroll-loops -fstack-protector-strong -std=c11 -O3"
+if [ "${BASE_CFLAGS}" = "" ]; then
+	if [ "${BUILD_MODE}" = "cov" ]; then
+		BASE_CFLAGS="-Werror -Wall -funroll-loops -fstack-protector-strong -std=c11"
+	else
+		BASE_CFLAGS="-Werror -Wall -funroll-loops -fstack-protector-strong -std=c11 -O3"
+	fi
 fi
 BASE_LDFLAGS="-shared -fstack-protector-strong -ffreestanding -nostdlib"
 

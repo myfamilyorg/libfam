@@ -11,7 +11,7 @@ PROJECT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
 # Defaults
 : "${CC:=clang}"
-: "${BASE_CFLAGS:=-O3}"
+: "${BASE_CFLAGS:=}"
 : "${VALGRIND:=1}"
 : "${FILTER:=*}"
 : "${SILENT:=0}"

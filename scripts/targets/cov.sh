@@ -27,9 +27,6 @@ fi
 COMMAND="${CC} -DCOVERAGE ${CDEFS} -fno-builtin -lc -lgcc --coverage -I${INCDIR} -o ${TEST_BIN} ${TEST_SRC} ${OBJECTS}";
 echo ${COMMAND};
 
-#gcc -DSTATIC= -DTEST=1 -DCOVERAGE -fno-builtin -Wno-pointer-sign -lc -lgcc --coverage -Isrc/include -o ./target/bin/runtests src/test/main.c target/cov/objs/base/*.o
-
-
 if [ "$SILENT" != "1" ]; then
 	echo ${COMMAND};
 fi
