@@ -252,6 +252,12 @@ i32 iouring_spin(IoUring *iou, u64 *id) {
 		user_data = iou->cqes[cqe_idx].user_data;
 	} while (!__cas32(iou->cq_head, &hval, hval + 1));
 	*id = user_data;
+
+	if (res < 0) {
+		errno = -res;
+		return -1;
+	}
+
 	return res;
 }
 
@@ -270,6 +276,11 @@ i32 iouring_wait(IoUring *iou, u64 *id) {
 	i32 res = iou->cqes[idx].res;
 	*id = iou->cqes[idx].user_data;
 	__astore32(iou->cq_head, head + 1);
+
+	if (res < 0) {
+		errno = -res;
+		return -1;
+	}
 
 	return res;
 }
