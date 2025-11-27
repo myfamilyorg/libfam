@@ -67,14 +67,14 @@ Test(bible1) {
 }
 
 Test(mine1) {
-	u64 nonce;
-	u8 h1[HEADER_LEN] = {6};
+	u32 nonce;
+	u8 h1[HEADER_LEN] = {37};
 	u8 t1[32], out[32];
 	memset(t1, 0xFF, 32);
 	t1[0] = 0x00;
-	t1[1] = 0x00;
+	t1[1] = 0x0F;
 	init_bible();
-	mine_block(b, h1, t1, out, &nonce, U64_MAX);
+	mine_block(b, h1, t1, out, &nonce, U32_MAX);
 	bible_destroy(b);
 	b = NULL;
 }

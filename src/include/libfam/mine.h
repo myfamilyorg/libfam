@@ -33,16 +33,17 @@
 
 #define HEADER_LEN 128
 
-static inline void mine_block(const Bible *bible, const u8 header[HEADER_LEN],
-			      const u8 target[32], u8 out[32], u64 *nonce,
-			      u64 max_iter) {
+static inline i32 mine_block(const Bible *bible, const u8 header[HEADER_LEN],
+			     const u8 target[32], u8 out[32], u32 *nonce,
+			     u32 max_iter) {
 	u8 header_copy[HEADER_LEN];
 	*nonce = 0;
 	memcpy(header_copy, header, HEADER_LEN);
 	do {
-		((u64 *)header_copy)[15] = ++(*nonce);
+		((u32 *)header_copy)[31] = *nonce;
 		bible_pow_hash(bible, header_copy, HEADER_LEN, out);
-	} while (memcmp(target, out, 32) < 0 && *nonce < max_iter);
+	} while (memcmp(target, out, 32) < 0 && ++(*nonce) < max_iter);
+	return *nonce == max_iter ? -1 : 0;
 }
 
 #endif /* _MINE_H */
