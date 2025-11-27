@@ -31,7 +31,7 @@
  * Controls test mode for the library.
  * notes:
  *         Default: 0 (disabled).
- *         Set to 1 to enable test-only features (e.g., rng_test_seed).
+ *         Set to 1 to enable test-only features.
  *         Example: gcc -DTEST=1 ...
  */
 #ifndef TEST

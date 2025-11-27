@@ -1,8 +1,88 @@
 #!/bin/sh
+# build – final, rock-solid version (no shift explosions, ever)
 
-usage() {
-        echo "TBD";
-        exit 1;
-}
+# Resolve real project directory (works with symlinks and /usr/local/bin)
+SCRIPT_PATH="$0"
+while [ -h "$SCRIPT_PATH" ]; do
+    DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    case "$SCRIPT_PATH" in /*) ;; *) SCRIPT_PATH="$DIR/$SCRIPT_PATH" ;; esac
+done
+PROJECT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
-usage
+# ------------------------------------------------------------------
+# Default values – these are the ONLY defaults in the entire system
+# ------------------------------------------------------------------
+: "${CC:=clang}"
+: "${VALGRIND:=1}"
+: "${FILTER:=*}"
+: "${SILENT:=0}"
+: "${MEM_TRACKING:=0}"
+: "${NO_LTO:=0}"
+
+# ------------------------------------------------------------------
+# Parse arguments exactly like your old script did
+# ------------------------------------------------------------------
+TARGET="all"                    # default target
+for arg in "$@"; do
+    case "$arg" in
+        all|test|cov|clean|install)
+            TARGET="$arg"
+            ;;
+        --novalgrind)
+            VALGRIND=0
+            ;;
+        --quick)
+            NO_LTO=1
+            ;;
+        --cc=*)
+            CC="${arg#--cc=}"
+            ;;
+        --cxx=*)
+            CXX="${arg#--cxx=}"
+            ;;
+        --f=*)
+            FILTER="${arg#--f=}"
+            ;;
+        -s|--silent)
+            SILENT=1
+            ;;
+        --mem_tracking)
+            MEM_TRACKING=1
+            ;;
+        help|-h|--help)
+            cat <<EOF
+Usage: build [target] [options...]
+
+Targets: all (default), test, cov, clean, install
+Options: --novalgrind  --quick  --cxx=...  --cc=...  --f=...  -s  --mem_tracking
+EOF
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument: $arg"
+            "$PROJECT_DIR/build" help
+            exit 1
+            ;;
+    esac
+done
+
+# ------------------------------------------------------------------
+# Set the mode that config.sh will read
+# ------------------------------------------------------------------
+case "$TARGET" in
+    all)      BUILD_MODE=all ;;
+    test)     BUILD_MODE=test ;;
+    cov)      BUILD_MODE=cov ;;
+    clean)    BUILD_MODE=clean ;;
+    install)  BUILD_MODE=install ;;
+esac
+
+# Export everything
+export BUILD_MODE PROJECT_DIR
+export CC CXX VALGRIND FILTER SILENT MEM_TRACKING NO_LTO
+
+# ------------------------------------------------------------------
+# Run the real target
+# ------------------------------------------------------------------
+exec "$PROJECT_DIR/scripts/targets/$TARGET.sh"
