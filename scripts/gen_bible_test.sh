@@ -6,7 +6,7 @@ GEN_BIN=${GEN_OUT_DIR}/gen_bible
 GEN_DAT_LOCATION=./resources/bible.dat
 LIB_DIR=./target/lib
 INCLUDE_DIR=./src/include
-GENCFLAGS="-ffreestanding -nostdlib -O3 -flto=auto"
+GENCFLAGS="-ffreestanding -nostdlib -O3"
 if [ "${CC}" = "" ]; then
         CC=clang
 fi
@@ -16,7 +16,7 @@ mkdir -p ${GEN_OUT_DIR};
 
 # build xxdir and create header
 if [ ! -e ${GEN_BIN} ] || [ ${GEN_SRC} -nt  ${GEN_BIN} ]; then
-        COMMAND="${CC} -I${INCLUDE_DIR} ${GENCFLAGS} -DTEST=1 -lfamtest -L${LIB_DIR} -o ${GEN_BIN} ${GEN_SRC}";
+        COMMAND="${CC} -I${INCLUDE_DIR} ${GENCFLAGS} -DTEST=1 -L${LIB_DIR} -o ${GEN_BIN} ${GEN_SRC} -lfamtest";
         if [ "$SILENT" != "1" ]; then
                 echo "${COMMAND}";
         fi

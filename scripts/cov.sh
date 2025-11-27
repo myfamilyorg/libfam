@@ -3,7 +3,7 @@
 . ./scripts/common.sh
 
 CDEFS="-DSTATIC= -DTEST=1 -DCOVERAGE";
-COV_CFLAGS="-Wno-pointer-sign -lc -lgcc --coverage";
+COV_CFLAGS="-fno-builtin -Wno-pointer-sign -lc -lgcc --coverage";
 OBJECTS="";
 
 LIB_NAME="${LIB_OUTPUT_DIR}/libfamtest.so";
@@ -20,6 +20,7 @@ CFLAGS="-O0 \
 	-fvisibility=hidden \
 	-fno-pie \
 	-fPIC \
+	-fno-builtin \
 	-Wno-pointer-sign \
 	-march=${MARCH} \
 	${MARCH_EXT} \

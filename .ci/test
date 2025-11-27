@@ -2,18 +2,18 @@
 
 ARCH=$(uname -m)
 
-./build clean test --cflags=-g $1 || exit $?;
+./build clean test --cflags="-g -std=c11" $1 || exit $?;
 
 ./build clean test --cc=clang $1 || exit $?;
 
 ./build clean test --cc=gcc $1 || exit $?;
 
-./build clean test --cc=clang $1 --quick --cflags="-O0" || exit $?;
+./build clean test --cc=clang $1 --quick --cflags="-O0 -std=c11" || exit $?;
 
 if [[ "${ARCH}" = "aarch64" ]]; then
-./build clean test --cc=gcc $1 --quick --cflags="-O0 -mno-outline-atomics" || exit $?;
+./build clean test --cc=gcc $1 --quick --cflags="-O0 -mno-outline-atomics -std=c11" || exit $?;
 else
-	./build clean test --cc=gcc $1 --quick --cflags="-O0" || exit $?;
+	./build clean test --cc=gcc $1 --quick --cflags="-O0 -std=c11" || exit $?;
 fi
 
 echo "All tests successfully completed!";
