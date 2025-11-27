@@ -37,7 +37,9 @@ export BINDIR="$OUTDIR/bin"
 # ------------------------------------------------------------------
 CC="${CC:-clang}"
 
-BASE_CFLAGS="-Werror -Wall -funroll-loops -fstack-protector-strong -std=c11"
+if [ "$BASE_CFLAGS" = "" ]; then
+	BASE_CFLAGS="-Werror -Wall -funroll-loops -fstack-protector-strong -std=c11 -O3"
+fi
 BASE_LDFLAGS="-shared -fstack-protector-strong -ffreestanding -nostdlib"
 
 # ------------------------------------------------------------------
@@ -45,16 +47,16 @@ BASE_LDFLAGS="-shared -fstack-protector-strong -ffreestanding -nostdlib"
 # ------------------------------------------------------------------
 case "$BUILD_MODE" in
     all)
-        CFLAGS="$BASE_CFLAGS -O3"
-        LDFLAGS="$BASE_LDFLAGS -O3"
+        CFLAGS="$BASE_CFLAGS"
+        LDFLAGS="$BASE_LDFLAGS"
         VISIBILITY="-fvisibility=hidden"
         CDEFS="-DSTATIC=static -DTEST=0"
         COVERAGE=""
         LTO="-flto=auto"
         ;;
     test|cov)
-        CFLAGS="$BASE_CFLAGS -O0 -g3"
-        LDFLAGS="$BASE_LDFLAGS -g3"
+        CFLAGS="$BASE_CFLAGS"
+        LDFLAGS="$BASE_LDFLAGS"
         VISIBILITY=""
         CDEFS="-DTEST=1 -DSTATIC="
         COVERAGE=""
@@ -63,7 +65,7 @@ case "$BUILD_MODE" in
         ;;
     *)
         # clean/install – minimal flags (won't be used anyway)
-        CFLAGS="$BASE_CFLAGS -O3"
+        CFLAGS="$BASE_CFLAGS"
         LDFLAGS="$BASE_LDFLAGS"
         VISIBILITY="-fvisibility=hidden"
         CDEFS="-DSTATIC=static -DTEST=0"
