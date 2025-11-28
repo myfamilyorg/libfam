@@ -67,10 +67,10 @@ PUBLIC const Bible *bible_gen(void) {
 	if (ret == MAP_FAILED) return NULL;
 
 	ret->flags = 0;
-	__builtin_memcpy(ret->data, xxdir_file_0, xxdir_file_size_0);
+	fastmemcpy(ret->data, xxdir_file_0, xxdir_file_size_0);
 	sha3_init256(&ctx);
 	sha3_update(&ctx, xxdir_file_0, xxdir_file_size_0);
-	__builtin_memcpy(seed, sha3_finalize(&ctx), sizeof(seed));
+	fastmemcpy(seed, sha3_finalize(&ctx), sizeof(seed));
 
 	for (u64 offset = xxdir_file_size_0; offset < EXTENDED_BIBLE_SIZE;
 	     offset += 32) {
@@ -79,10 +79,8 @@ PUBLIC const Bible *bible_gen(void) {
 			sha3_init256(&ctx);
 			sha3_update(&ctx, &counter, sizeof(counter));
 			sha3_update(&ctx, seed, sizeof(seed));
-			__builtin_memcpy(ret->data + offset,
-					 sha3_finalize(&ctx), 32);
-			__builtin_memcpy(seed, ret->data + offset,
-					 sizeof(seed));
+			fastmemcpy(ret->data + offset, sha3_finalize(&ctx), 32);
+			fastmemcpy(seed, ret->data + offset, sizeof(seed));
 			counter++;
 		}
 	}
@@ -124,8 +122,8 @@ CLEANUP:
 	RETURN;
 }
 
-void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len,
-		    u8 out[32]) {
+PUBLIC void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len,
+			   u8 out[32]) {
 	u64 d[4];
 	u64 h = input_len ^ GOLDEN_PRIME;
 	for (u64 i = 0; i < input_len; i++) h = (h ^ input[i]) * PHI_PRIME;
@@ -136,7 +134,7 @@ void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len,
 		u64 r =
 		    (u64)b->data +
 		    (((s[0] ^ s[1] ^ s[2] ^ s[3]) & BIBLE_EXTENDED_MASK) << 5);
-		__builtin_memcpy(d, (void *)r, 32);
+		fastmemcpy(d, (void *)r, 32);
 
 		s[0] = (s[0] ^ d[0]) * GOLDEN_PRIME;
 		s[1] = (s[1] ^ d[1]) * GOLDEN_PRIME;
@@ -144,7 +142,7 @@ void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len,
 		s[3] = (s[3] ^ d[3]) * GOLDEN_PRIME;
 	}
 
-	__builtin_memcpy(out, s, 32);
+	fastmemcpy(out, s, 32);
 }
 
 void bible_destroy(const Bible *b) {

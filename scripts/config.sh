@@ -116,7 +116,7 @@ esac
 export CFLAGS="$CFLAGS \
     -fno-pie -fPIC \
     $VISIBILITY $LTO \
-    -march=$MARCH $MARCH_EXTRA -mtune=native \
+    -march=$MARCH $MARCH_EXTRA \
     $COMPILER_FIXES $COVERAGE \
     $EXTRA_CFLAGS"
 

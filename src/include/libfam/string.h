@@ -317,4 +317,9 @@ u8 i128_to_string(u8 buf[MAX_I128_STRING_LEN], i128 value, Int128DisplayType t);
  */
 u8 u128_to_string(u8 buf[MAX_U128_STRING_LEN], u128 value, Int128DisplayType t);
 
+/*
+ * Macro to call builtin memcpy
+ */
+#define fastmemcpy(dst, src, n) __builtin_memcpy((dst), (src), (n))
+
 #endif /* _LFAM_STRING_H */
