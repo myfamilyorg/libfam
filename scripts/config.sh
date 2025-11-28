@@ -84,7 +84,7 @@ esac
 ARCH=$(uname -m);
 case "${ARCH}" in
     x86_64)
-        MARCH="native"
+        MARCH="haswell"
         MARCH_EXTRA="-maes"
         ;;
     aarch64)
