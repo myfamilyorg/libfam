@@ -56,12 +56,6 @@ struct Bible {
 	u8 data[];
 };
 
-STATIC void bible_extended_lookup(const Bible *bible, u64 r, u8 out[32]) {
-	r &= BIBLE_EXTENDED_MASK;
-	r <<= 5;
-	__builtin_memcpy(out, bible->data + r, 32);
-}
-
 PUBLIC const Bible *bible_gen(void) {
 	u8 seed[32];
 	Sha3Context ctx;
@@ -132,15 +126,18 @@ CLEANUP:
 
 void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len,
 		    u8 out[32]) {
-	u8 bdata[32];
+	u64 d[4];
 	u64 h = input_len ^ GOLDEN_PRIME;
 	for (u64 i = 0; i < input_len; i++) h = (h ^ input[i]) * PHI_PRIME;
 	u64 s[4] = {h ^ PHI_PRIME, h ^ LANE1_SALT, h ^ LANE2_SALT,
 		    h ^ GOLDEN_PRIME};
 
 	for (u64 i = 0; i < LOOKUP_ROUNDS; i++) {
-		bible_extended_lookup(b, s[0] ^ s[1] ^ s[2] ^ s[3], bdata);
-		u64 *d = (void *)bdata;
+		u64 r =
+		    (u64)b->data +
+		    (((s[0] ^ s[1] ^ s[2] ^ s[3]) & BIBLE_EXTENDED_MASK) << 5);
+		__builtin_memcpy(d, (void *)r, 32);
+
 		s[0] = (s[0] ^ d[0]) * GOLDEN_PRIME;
 		s[1] = (s[1] ^ d[1]) * GOLDEN_PRIME;
 		s[2] = (s[2] ^ d[2]) * GOLDEN_PRIME;

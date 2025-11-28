@@ -36,6 +36,7 @@
 static inline i32 mine_block(const Bible *bible, const u8 header[HEADER_LEN],
 			     const u8 target[32], u8 out[32], u32 *nonce,
 			     u32 max_iter) {
+	if (max_iter == 0) return -1;
 	u8 header_copy[HEADER_LEN];
 	*nonce = 0;
 	memcpy(header_copy, header, HEADER_LEN);

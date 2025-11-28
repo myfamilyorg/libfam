@@ -68,13 +68,23 @@ Test(bible1) {
 
 Test(mine1) {
 	u32 nonce;
-	u8 h1[HEADER_LEN] = {37};
+	u8 h1[HEADER_LEN] = {38};
 	u8 t1[32], out[32];
 	memset(t1, 0xFF, 32);
 	t1[0] = 0x00;
 	t1[1] = 0x0F;
 	init_bible();
+	i64 timer = micros();
 	mine_block(b, h1, t1, out, &nonce, U32_MAX);
+	timer = micros() - timer;
+	(void)timer;
+	/*
+	write_num(2, timer);
+	pwrite(2, "\n", 1, 0);
+	write_num(2, nonce);
+	pwrite(2, "\n", 1, 0);
+	*/
+
 	bible_destroy(b);
 	b = NULL;
 }
