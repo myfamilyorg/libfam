@@ -23,26 +23,37 @@
  *
  *******************************************************************************/
 
-#ifndef _DEBUG_H
-#define _DEBUG_H
+#include <libfam/errno.h>
+#include <libfam/linux.h>
+#include <libfam/rng.h>
+#include <libfam/string.h>
+#include <libfam/sysext.h>
+#include <libfam/utils.h>
 
-#include <libfam/types.h>
+void rng_init(Rng *rng, const void *opt_entropy) {
+	u8 iv[32], key[32];
+	random(key);
+	if (opt_entropy) random_stir(key, opt_entropy);
+	random(iv);
+	if (opt_entropy) random_stir(iv, opt_entropy);
+	aes_init(&rng->ctx, key, iv);
+	memset(iv, 0, sizeof(iv));
+	memset(key, 0, sizeof(key));
+}
+
+void rng_reseed(Rng *rng, const void *opt_entropy) {
+	rng_init(rng, opt_entropy);
+}
+
+void rng_gen(Rng *rng, void *v, u64 size) {
+	aes_ctr_xcrypt_buffer(&rng->ctx, (u8 *)v, size);
+}
 
 #if TEST == 1
-extern bool _debug_no_write;
-extern bool _debug_no_exit;
-extern bool _debug_fail_getsockbyname;
-extern bool _debug_fail_pipe2;
-extern bool _debug_fail_listen;
-extern bool _debug_fail_setsockopt;
-extern bool _debug_fail_fcntl;
-extern bool _debug_fail_epoll_create1;
-extern bool _debug_fail_clone;
-extern bool _debug_alloc_init_failure;
-extern u64 _debug_alloc_cas_loop;
-extern bool _debug_bible_invalid_hash;
-extern bool _debug_alloc_failure;
+void rng_test_seed(Rng *rng, u8 key[32], u8 iv[16]) {
+	u8 v0[1] = {0};
+	aes_init(&rng->ctx, key, iv);
+	rng_gen(rng, &v0, 1);
+}
 #endif /* TEST */
-
-#endif /* _DEBUG_H */
 

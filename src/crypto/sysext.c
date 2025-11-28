@@ -23,26 +23,45 @@
  *
  *******************************************************************************/
 
-#ifndef _DEBUG_H
-#define _DEBUG_H
+#include <libfam/atomic.h>
+#include <libfam/sha3.h>
+#include <libfam/string.h>
 
-#include <libfam/types.h>
+static inline u64 read_cycle_counter(void) {
+#if defined(__x86_64__)
+	u32 lo, hi;
+	__asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+	return ((u64)hi << 32) | lo;
 
-#if TEST == 1
-extern bool _debug_no_write;
-extern bool _debug_no_exit;
-extern bool _debug_fail_getsockbyname;
-extern bool _debug_fail_pipe2;
-extern bool _debug_fail_listen;
-extern bool _debug_fail_setsockopt;
-extern bool _debug_fail_fcntl;
-extern bool _debug_fail_epoll_create1;
-extern bool _debug_fail_clone;
-extern bool _debug_alloc_init_failure;
-extern u64 _debug_alloc_cas_loop;
-extern bool _debug_bible_invalid_hash;
-extern bool _debug_alloc_failure;
-#endif /* TEST */
+#elif defined(__aarch64__)
+	u64 cnt;
+	__asm__ __volatile__("isb" : : : "memory");
+	__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(cnt));
+	return cnt;
+#else
+#error "Unsupported architecture"
+#endif
+}
 
-#endif /* _DEBUG_H */
+static u64 global_entropy_counter = 1;
+
+void random(u8 out[32]) {
+	Sha3Context ctx;
+	u64 x[4];
+	x[0] = read_cycle_counter();
+	x[1] = (u64)__builtin_return_address(0);
+	x[2] = (u64)__builtin_frame_address(0);
+	x[3] = __aadd64(&global_entropy_counter, 1);
+	sha3_init256(&ctx);
+	sha3_update(&ctx, x, sizeof(x));
+	fastmemcpy(out, sha3_finalize(&ctx), 32);
+}
+
+void random_stir(u8 current[32], const u8 stir_in[32]) {
+	Sha3Context ctx;
+	sha3_init256(&ctx);
+	sha3_update(&ctx, current, 32);
+	sha3_update(&ctx, stir_in, 32);
+	fastmemcpy(current, sha3_finalize(&ctx), 32);
+}
 

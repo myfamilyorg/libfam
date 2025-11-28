@@ -60,7 +60,7 @@
  *         IV is updated internally during CTR mode operations.
  */
 typedef struct {
-	u8 RoundKey[AES_KEYEXPSIZE];
+	__attribute__((aligned(16))) u8 RoundKey[AES_KEYEXPSIZE];
 	u8 Iv[AES_BLOCKLEN];
 } AesContext;
 

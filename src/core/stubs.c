@@ -23,26 +23,61 @@
  *
  *******************************************************************************/
 
-#ifndef _DEBUG_H
-#define _DEBUG_H
-
+#include <libfam/builtin.h>
 #include <libfam/types.h>
+#include <libfam/utils.h>
 
-#if TEST == 1
-extern bool _debug_no_write;
-extern bool _debug_no_exit;
-extern bool _debug_fail_getsockbyname;
-extern bool _debug_fail_pipe2;
-extern bool _debug_fail_listen;
-extern bool _debug_fail_setsockopt;
-extern bool _debug_fail_fcntl;
-extern bool _debug_fail_epoll_create1;
-extern bool _debug_fail_clone;
-extern bool _debug_alloc_init_failure;
-extern u64 _debug_alloc_cas_loop;
-extern bool _debug_bible_invalid_hash;
-extern bool _debug_alloc_failure;
-#endif /* TEST */
+PUBLIC u128 __umodti3(u128 a, u128 b) {
+	u64 a_hi, a_lo, b_lo;
+	u128 rem;
+	i32 shift;
 
-#endif /* _DEBUG_H */
+	if (!b) trap();
+	if (a < b) return a;
+	if (!(b >> 64)) {
+		b_lo = (u64)b;
+		a_hi = (u64)(a >> 64);
+		a_lo = (u64)a;
+		if (!a_hi) return a_lo % b_lo;
+		rem = a_hi % b_lo;
+		rem = (rem << 32) | (a_lo >> 32);
+		rem = rem % b_lo;
+		rem = (rem << 32) | (a_lo & 0xffffffff);
+		rem = (u64)rem % b_lo;
+		return rem;
+	}
 
+	rem = a;
+	shift = (i32)clz_u128(b) - (i32)clz_u128(rem);
+	if (shift < 0) shift = 0;
+	b <<= shift;
+	while (shift >= 0) {
+		if (rem >= b) rem -= b;
+		b >>= 1;
+		shift--;
+	}
+	return rem;
+}
+
+PUBLIC u128 __udivti3(u128 a, u128 b) {
+	i32 shift;
+	u128 quot, rem;
+	if (!b) trap();
+	if (a < b) return 0;
+	quot = 0;
+	rem = a;
+	shift = (i32)clz_u128(b) - (i32)clz_u128(rem);
+	if (shift < 0) shift = 0;
+
+	b <<= shift;
+
+	while (shift >= 0) {
+		if (rem >= b) {
+			rem -= b;
+			quot |= ((u128)1 << shift);
+		}
+		b >>= 1;
+		shift--;
+	}
+	return quot;
+}

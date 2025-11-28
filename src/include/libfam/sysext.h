@@ -31,6 +31,7 @@
 void yield(void);
 i64 pwrite(i32 fd, const void *buf, u64 len, u64 offset);
 i64 pread(i32 fd, void *buf, u64 len, u64 offset);
+i32 await(i32 pid);
 i32 open(const u8 *path, i32 flags, u32 mode);
 i32 fallocate(i32 fd, u64 new_size);
 i32 fsync(i32 fd);
@@ -40,5 +41,10 @@ i64 micros(void);
 i32 nsleep(u64 nsec);
 i32 usleep(u64 usec);
 i32 fork(void);
+void random(u8 buf[32]);
+void random_stir(u8 current[32], const u8 stir_in[32]);
+void *map(u64 length);
+void *fmap(i32 fd, i64 size, i64 offset);
+void *smap(u64 length);
 
 #endif /* _SYSEXT_H */

@@ -23,26 +23,46 @@
  *
  *******************************************************************************/
 
-#ifndef _DEBUG_H
-#define _DEBUG_H
+#include <libfam/alloc.h>
+#include <libfam/atomic.h>
+#include <libfam/debug.h>
+#include <libfam/env.h>
+#include <libfam/errno.h>
+#include <libfam/memory.h>
+#include <libfam/string.h>
+#include <libfam/syscall.h>
+#include <libfam/utils.h>
 
-#include <libfam/types.h>
+Alloc *global_allocator = NULL;
 
-#if TEST == 1
-extern bool _debug_no_write;
-extern bool _debug_no_exit;
-extern bool _debug_fail_getsockbyname;
-extern bool _debug_fail_pipe2;
-extern bool _debug_fail_listen;
-extern bool _debug_fail_setsockopt;
-extern bool _debug_fail_fcntl;
-extern bool _debug_fail_epoll_create1;
-extern bool _debug_fail_clone;
-extern bool _debug_alloc_init_failure;
-extern u64 _debug_alloc_cas_loop;
-extern bool _debug_bible_invalid_hash;
-extern bool _debug_alloc_failure;
-#endif /* TEST */
+STATIC i32 try_set_global_allocator(Alloc *allocator) {
+	u64 *expected = NULL;
+	i32 cas_res = __cas64((void *)&global_allocator, (void *)&expected,
+			      (u64)allocator);
+	return cas_res ? 0 : -1;
+}
 
-#endif /* _DEBUG_H */
+PUBLIC i32 init_global_allocator(u64 chunks) {
+	if (__aload64((u64 *)&global_allocator)) return -1;
+	Alloc *allocator = alloc_init(AllocSmap, chunks);
+	if (!allocator) return -1;
+
+	i32 cas_res = try_set_global_allocator(allocator);
+	if (cas_res < 0) alloc_destroy(allocator);
+	return cas_res;
+}
+
+PUBLIC void *alloc(u64 size) { return balloc(global_allocator, size); }
+PUBLIC void *resize(void *ptr, u64 new_size) {
+	return bresize(global_allocator, ptr, new_size);
+}
+PUBLIC void release(void *ptr) { brelease(global_allocator, ptr); }
+
+PUBLIC u64 allocated_bytes(void) {
+	return alloc_allocated_bytes(global_allocator);
+}
+
+PUBLIC void reset_allocated_bytes(void) {
+	alloc_reset_allocated_bytes(global_allocator);
+}
 

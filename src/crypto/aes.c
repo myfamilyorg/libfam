@@ -217,6 +217,7 @@ static void MixColumns(state_t* state) {
 	 ((y >> 4 & 1) * xtime(xtime(xtime(xtime(x))))))
 
 static void Cipher(state_t* state, const u8* RoundKey) {
+	// g_have_aes_ni = false;
 	if (g_have_aes_ni) {
 #ifdef __AVX__
 		__m128i* rk = (__m128i*)RoundKey;
