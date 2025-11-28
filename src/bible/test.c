@@ -29,7 +29,7 @@
 #include <libfam/mine.h>
 #include <libfam/test_base.h>
 
-#define BDAT_PATH "resources/bible.dat"
+#define BDAT_PATH "resources/test_bible.dat"
 
 const Bible *b = NULL;
 static void init_bible(void) {

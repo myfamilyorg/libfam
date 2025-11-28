@@ -22,8 +22,8 @@ if [ ! -e ${GEN_BIN} ] || [ ${GEN_SRC} -nt  ${GEN_BIN} ]; then
         ${COMMAND} || exit $?;
 fi
 
-if [ ! -e ${GEN_BIN} ] || [ ! -e ${GEN_DAT_LOCATION} ]; then
-        COMMAND="${GEN_BIN} ${GEN_DAT_LOCATION}"
-        LD_LIBRARY_PATH=${LIB_DIR} ${COMMAND}
-fi
+#if [ ! -e ${GEN_BIN} ] || [ ! -e ${GEN_DAT_LOCATION} ]; then
+#        COMMAND="${GEN_BIN} ${GEN_DAT_LOCATION}"
+#        LD_LIBRARY_PATH=${LIB_DIR} ${COMMAND}
+#fi
 
