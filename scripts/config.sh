@@ -82,6 +82,20 @@ esac
 # 4. Architecture-specific flags
 # ------------------------------------------------------------------
 ARCH=$(uname -m);
+case "${ARCH}" in
+    x86_64)
+        MARCH="native"
+        MARCH_EXTRA="-maes"
+        ;;
+    aarch64)
+        MARCH="armv8.1-a"
+        MARCH_EXTRA=""
+        ;;
+    *)
+        MARCH="native"
+        MARCH_EXTRA=""
+        ;;
+esac
 
 # ------------------------------------------------------------------
 # 5. Global user overrides and quirks
@@ -102,6 +116,7 @@ esac
 export CFLAGS="$CFLAGS \
     -fno-pie -fPIC \
     $VISIBILITY $LTO \
+    -march=$MARCH $MARCH_EXTRA -mtune=native \
     $COMPILER_FIXES $COVERAGE \
     $EXTRA_CFLAGS"
 
