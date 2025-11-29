@@ -29,7 +29,6 @@
 #include <libfam/format.h>
 #include <libfam/iouring.h>
 #include <libfam/linux.h>
-#include <libfam/linux_time.h>
 #include <libfam/memory.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
