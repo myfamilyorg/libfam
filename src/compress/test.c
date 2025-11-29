@@ -35,8 +35,6 @@
 #define PERF_SIZE 2000
 #define PERF_ITER (128)
 
-i32 file(const u8 *path) { return open(path, O_RDWR | O_CREAT, 0600); }
-
 Test(bitstream_perf) {
 	u64 len_sum = 0;
 	u8 lengths[PERF_SIZE] = {0};
