@@ -31,6 +31,8 @@
 struct rt_sigaction;
 struct io_uring_params;
 struct timespec;
+struct timeval;
+struct stat;
 
 i32 clock_gettime(i32 clockid, struct timespec *tp);
 i32 clock_settime(i32 clockid, const struct timespec *tp);
@@ -51,8 +53,13 @@ i64 lseek(i32 fd, i64 offset, i32 whence);
 i32 nanosleep(const struct timespec *duration, struct timespec *rem);
 void restorer(void);
 
-#if TEST == 1
 i32 unlinkat(i32 dfd, const char *path, i32 flags);
-#endif /* TEST */
+i32 utimesat(i32 dirfd, const u8 *path, const struct timeval *times, i32 flags);
+i32 fstat(i32 fd, struct stat *buf);
+i32 fchmod(i32 fd, u32 mode);
+
+/* Temporary */
+i64 read(i32 fd, void *buf, u64 len);
+i64 write(i32 fd, const void *buf, u64 len);
 
 #endif /* _SYSCALL_H */

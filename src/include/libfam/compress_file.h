@@ -23,29 +23,26 @@
  *
  *******************************************************************************/
 
-#ifndef _SYSEXT_H
-#define _SYSEXT_H
+#define MAGIC 0xC3161337
+#define VERSION 1
 
-#include <libfam/types.h>
+#include <libfam/compress.h>
 
-void yield(void);
-i64 pwrite(i32 fd, const void *buf, u64 len, u64 offset);
-i64 pread(i32 fd, void *buf, u64 len, u64 offset);
-i32 await(i32 pid);
-i32 open(const u8 *path, i32 flags, u32 mode);
-i32 fallocate(i32 fd, u64 new_size);
-i32 fsync(i32 fd);
-i64 fsize(i32 fd);
-i32 close(i32 fd);
-i64 micros(void);
-i32 nsleep(u64 nsec);
-i32 usleep(u64 usec);
-i32 fork(void);
-i32 unlink(const u8 *path);
-void random(u8 buf[32]);
-void random_stir(u8 current[32], const u8 stir_in[32]);
-void *map(u64 length);
-void *fmap(i32 fd, i64 size, i64 offset);
-void *smap(u64 length);
+#define CHUNK_SIZE (1 << 18)
+#define MAX_COMPRESSED_SIZE (CHUNK_SIZE + 3 + sizeof(ChunkHeader))
 
-#endif /* _SYSEXT_H */
+#define STREAM_FLAG_HAS_PERMISSIONS (0x1 << 0)
+#define STREAM_FLAG_HAS_MTIME (0x1 << 1)
+#define STREAM_FLAG_HAS_ATIME (0x1 << 2)
+#define STREAM_FLAG_HAS_FILE_NAME (0x1 << 3)
+
+typedef struct {
+	u16 permissions;
+	u64 mtime;
+	u64 atime;
+	u8 *filename;
+} CompressFileHeader;
+
+typedef struct {
+	u32 size;
+} ChunkHeader;

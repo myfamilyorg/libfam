@@ -285,6 +285,20 @@ i32 iouring_wait(IoUring *iou, u64 *id) {
 	return res;
 }
 
+bool iouring_pending(IoUring *iou, u64 id) {
+	u32 hval = __aload32(iou->cq_head);
+	u32 tval = __aload32(iou->sq_tail);
+	u32 mask = *iou->sq_mask;
+	u32 index = hval;
+	while (index < tval) {
+		u32 sqe_idx = iou->sq_array[index & mask];
+		if (iou->sqes[sqe_idx].user_data == id) return true;
+		index++;
+	}
+
+	return false;
+}
+
 void iouring_destroy(IoUring *iou) {
 	if (!iou) return;
 	if (iou->sq_ring) munmap(iou->sq_ring, iou->sq_ring_size);

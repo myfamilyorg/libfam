@@ -30,7 +30,12 @@
 
 #ifdef __aarch64__
 #define SYS_unlinkat 35
+#define SYS_fchmod 52
 #define SYS_lseek 62
+#define SYS_read 63
+#define SYS_write 64
+#define SYS_fstat 80
+#define SYS_utimesat 88
 #define SYS_waitid 95
 #define SYS_nanosleep 101
 #define SYS_kill 129
@@ -45,6 +50,9 @@
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
 #elif defined(__x86_64__)
+#define SYS_read 0
+#define SYS_write 1
+#define SYS_fstat 5
 #define SYS_lseek 8
 #define SYS_mmap 9
 #define SYS_munmap 11
@@ -53,9 +61,11 @@
 #define SYS_getpid 39
 #define SYS_clone 56
 #define SYS_kill 62
+#define SYS_fchmod 91
 #define SYS_clock_settime 227
 #define SYS_clock_gettime 228
 #define SYS_waitid 247
+#define SYS_utimesat 261
 #define SYS_unlinkat 263
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
@@ -288,6 +298,61 @@ CLEANUP:
 	RETURN;
 }
 
+i32 fchmod(i32 fd, u32 mode) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_fchmod, (i64)fd, (i64)mode, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 utimesat(i32 dirfd, const u8 *pathname, const struct timeval *times,
+	     i32 flags) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_utimesat, (i64)dirfd, (i64)pathname,
+			     (i64)times, (i64)flags, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 fstat(i32 fd, struct stat *buf) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_fstat, (i64)fd, (i64)buf, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+PUBLIC i64 write(i32 fd, const void *buf, u64 count) {
+	i64 v;
+INIT:
+#if TEST == 1
+	if ((fd == 1 || fd == 2) && _debug_no_write) return count;
+#endif /* TEST */
+	v = raw_syscall(SYS_write, (i64)fd, (i64)buf, (i64)count, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i64 read(i32 fd, void *buf, u64 count) {
+	i64 v;
+INIT:
+	v = raw_syscall(SYS_read, (i64)fd, (i64)buf, (i64)count, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
 #ifdef __aarch64__
 #define SYSCALL_RESTORER     \
 	__asm__ volatile(    \
@@ -314,7 +379,6 @@ PUBLIC __attribute__((naked)) void restorer(void) { SYSCALL_RESTORER; }
 #error "Unsupported platform"
 #endif /* ARCH */
 
-#if TEST == 1
 i32 unlinkat(i32 dfd, const char *path, i32 flags) {
 	i32 v;
 INIT:
@@ -325,4 +389,3 @@ INIT:
 CLEANUP:
 	RETURN;
 }
-#endif /* TEST */

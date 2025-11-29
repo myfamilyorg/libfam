@@ -159,6 +159,10 @@ i32 await(i32 pid) {
 	return waitid(P_PID, P_PID, buf, WEXITED);
 }
 
+i64 fsize(i32 fd) { return lseek(fd, 0, SEEK_END); }
+
+PUBLIC i32 unlink(const u8 *path) { return unlinkat(AT_FDCWD, path, 0); }
+
 void yield(void) {
 #if defined(__x86_64__)
 	__asm__ __volatile__("pause" ::: "memory");

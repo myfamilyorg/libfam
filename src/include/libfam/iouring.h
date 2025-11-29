@@ -211,7 +211,7 @@ i32 iouring_init_fallocate(IoUring *iou, i32 fd, u64 new_size, u64 id);
  *         EIO            - if kernel submission fails.
  * notes:
  *         Returns the actual number of operations submitted.
- *         Must be called after iouring_init_read/write and before checking
+ *         Must be called after iouring_init_pread/pwrite and before checking
  *         completion with iouring_spin or iouring_wait.
  */
 i32 iouring_submit(IoUring *iou, u32 count);
@@ -277,5 +277,7 @@ void iouring_destroy(IoUring *iou);
  * errors: None.
  */
 i32 iouring_ring_fd(IoUring *iou);
+
+bool iouring_pending(IoUring *iou, u64 id);
 
 #endif /* _IO_URING_H */
