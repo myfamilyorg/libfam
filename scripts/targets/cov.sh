@@ -54,7 +54,6 @@ cd ./target/cov/objs
 for DIR in *; do
     # Skip if not a directory (in case of files in objs/)
     [ -d "$DIR" ] || continue
-
     cd "$DIR" || continue
 
     for FILE in *.c; do
@@ -86,7 +85,7 @@ for DIR in *; do
             "${COVERED}" \
             "${LINES}"
     done
-
+    cd ..;
 done
 
 cd ../../..
