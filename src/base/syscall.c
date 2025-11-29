@@ -136,7 +136,7 @@ void __gcov_dump(void);
 	SYSCALL_EXIT
 #endif /* COVERAGE */
 
-void _exit(i32 status){
+PUBLIC void _exit(i32 status){
 #ifdef COVERAGE
     SYSCALL_EXIT_COV
 #else
@@ -298,7 +298,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 fchmod(i32 fd, u32 mode) {
+PUBLIC i32 fchmod(i32 fd, u32 mode) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_fchmod, (i64)fd, (i64)mode, 0, 0, 0, 0);
@@ -320,7 +320,7 @@ CLEANUP:
 	RETURN;
 }
 
-i32 fstat(i32 fd, struct stat *buf) {
+PUBLIC i32 fstat(i32 fd, struct stat *buf) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_fstat, (i64)fd, (i64)buf, 0, 0, 0, 0);

@@ -358,7 +358,6 @@ INIT:
 		next_write--;
 	}
 
-	// while (iouring_pending_all(iou)) iouring_spin(iou, &next_write);
 	struct timeval ts[2] = {0};
 	if (fchmod(out_fd, header.permissions & 0777) < 0) ERROR();
 	ts[0].tv_sec = header.atime;
@@ -453,8 +452,6 @@ INIT:
 		}
 		next_write--;
 	}
-
-	// while (iouring_pending_all(iou)) iouring_spin(iou, &next_write);
 
 CLEANUP:
 	if (iou) iouring_destroy(iou);

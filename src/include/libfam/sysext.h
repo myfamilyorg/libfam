@@ -47,5 +47,7 @@ void random_stir(u8 current[32], const u8 stir_in[32]);
 void *map(u64 length);
 void *fmap(i32 fd, i64 size, i64 offset);
 void *smap(u64 length);
+i32 file(const u8 *path);
+i32 exists(const u8 *path);
 
 #endif /* _SYSEXT_H */

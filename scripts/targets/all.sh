@@ -22,4 +22,4 @@ if needs_rebuild "$LIB_NAME" $OBJECTS; then
 fi
 
 . "$PROJECT_DIR/scripts/gen_bible.sh"
-
+. "$PROJECT_DIR/scripts/czip.sh"

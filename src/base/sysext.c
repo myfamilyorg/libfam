@@ -78,7 +78,7 @@ i32 open(const u8 *path, i32 flags, u32 mode) {
 	return res;
 }
 
-i32 close(i32 fd) {
+PUBLIC i32 close(i32 fd) {
 	u64 id;
 	i64 res;
 
@@ -159,9 +159,20 @@ i32 await(i32 pid) {
 	return waitid(P_PID, P_PID, buf, WEXITED);
 }
 
-i64 fsize(i32 fd) { return lseek(fd, 0, SEEK_END); }
+PUBLIC i64 fsize(i32 fd) { return lseek(fd, 0, SEEK_END); }
 
 PUBLIC i32 unlink(const u8 *path) { return unlinkat(AT_FDCWD, path, 0); }
+
+PUBLIC i32 file(const u8 *path) { return open(path, O_CREAT | O_RDWR, 0600); }
+
+PUBLIC i32 exists(const u8 *path) {
+	i32 fd = open(path, O_RDWR, 0);
+	if (fd > 0) {
+		close(fd);
+		return 1;
+	}
+	return 0;
+}
 
 void yield(void) {
 #if defined(__x86_64__)

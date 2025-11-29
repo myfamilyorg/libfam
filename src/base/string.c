@@ -28,13 +28,13 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
-u64 strlen(const char *x) {
+PUBLIC u64 strlen(const char *x) {
 	const char *y = x;
 	while (*x) x++;
 	return x - y;
 }
 
-i32 strcmp(const char *x, const char *y) {
+PUBLIC i32 strcmp(const char *x, const char *y) {
 	while (*x == *y && *x) x++, y++;
 	return *x > *y ? 1 : *y > *x ? -1 : 0;
 }
@@ -45,7 +45,7 @@ char *strcpy(char *dest, const char *src) {
 	return dest;
 }
 
-char *strncpy(char *dest, const char *src, u64 n) {
+PUBLIC char *strncpy(char *dest, const char *src, u64 n) {
 	u64 i;
 	for (i = 0; i < n && src[i] != '\0'; i++) dest[i] = src[i];
 	for (; i < n; i++) dest[i] = '\0';
@@ -66,7 +66,7 @@ char *strchr(const char *s, i32 c) {
 	return !c ? (char *)s : NULL;
 }
 
-i32 strncmp(const char *x, const char *y, u64 n) {
+PUBLIC i32 strncmp(const char *x, const char *y, u64 n) {
 	while (n > 0 && *x == *y && *x) x++, y++, n--;
 	if (n == 0) return 0;
 	return (char)*x - (char)*y;
