@@ -308,6 +308,6 @@ PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
 PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
 				       u8 out[128]) {
 	fastmemcpy(out, in, 128);
-	aes_ctr_xcrypt_buffer(ctx, out);
+	aes_ctr_xcrypt_buffer(ctx, out, 128);
 }
 #endif
