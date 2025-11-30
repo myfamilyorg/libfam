@@ -114,4 +114,9 @@ void aes_set_iv(AesContext *ctx, const u8 *iv);
  */
 void aes_ctr_xcrypt_buffer(AesContext *ctx, void *buf, u64 length);
 
+/*
+ * Fast aes (uses SIMD)
+ */
+void aes256_ctr_encrypt_8blocks(AesContext *ctx, const u8 in[128], u8 out[128]);
+
 #endif /* _AES_H */

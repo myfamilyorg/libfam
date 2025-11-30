@@ -26,6 +26,9 @@
 #ifdef __AVX__
 #include <wmmintrin.h>
 #endif /* __AVX__ */
+#ifdef __aarch64__
+#include <arm_neon.h>
+#endif
 
 #include <libfam/aes.h>
 #include <libfam/string.h>
@@ -217,7 +220,6 @@ static void MixColumns(state_t* state) {
 	 ((y >> 4 & 1) * xtime(xtime(xtime(xtime(x))))))
 
 static void Cipher(state_t* state, const u8* RoundKey) {
-	// g_have_aes_ni = false;
 	if (g_have_aes_ni) {
 #ifdef __AVX__
 		__m128i* rk = (__m128i*)RoundKey;
@@ -262,16 +264,10 @@ PUBLIC void aes_ctr_xcrypt_buffer(AesContext* ctx, void* buf_in, u64 length) {
 			memcpy(buffer, ctx->Iv, AES_BLOCKLEN);
 			Cipher((state_t*)buffer, ctx->RoundKey);
 
-			/* Increment Iv and handle overflow */
-			for (bi = (AES_BLOCKLEN - 1); bi >= 0; --bi) {
-				/* inc will overflow */
-				if (ctx->Iv[bi] == 255) {
-					ctx->Iv[bi] = 0;
-					continue;
-				}
-				ctx->Iv[bi] += 1;
-				break;
-			}
+			// use little-endian for AES-NI compatibility
+			for (bi = 0; bi < AES_BLOCKLEN; bi++)
+				if (++ctx->Iv[bi]) break;
+
 			bi = 0;
 		}
 
@@ -279,3 +275,84 @@ PUBLIC void aes_ctr_xcrypt_buffer(AesContext* ctx, void* buf_in, u64 length) {
 	}
 }
 
+#ifdef __AVX2__
+PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
+				       u8 out[128]) {
+	const __m128i* rk = (const __m128i*)ctx->RoundKey;
+	__m128i counter = _mm_load_si128((const __m128i*)ctx->Iv);
+	__m128i one = _mm_set_epi64x(0, 1);
+
+	__m128i c[8] = {counter,
+			_mm_add_epi64(counter, one),
+			_mm_add_epi64(counter, _mm_set_epi64x(0, 2)),
+			_mm_add_epi64(counter, _mm_set_epi64x(0, 3)),
+			_mm_add_epi64(counter, _mm_set_epi64x(0, 4)),
+			_mm_add_epi64(counter, _mm_set_epi64x(0, 5)),
+			_mm_add_epi64(counter, _mm_set_epi64x(0, 6)),
+			_mm_add_epi64(counter, _mm_set_epi64x(0, 7))};
+
+	__m128i b[8];
+	for (u8 i = 0; i < 8; i++)
+		b[i] = _mm_loadu_si128((const __m128i*)(in + i * 16));
+
+	for (u8 i = 0; i < 8; i++) c[i] = _mm_xor_si128(c[i], rk[0]);
+	for (u8 r = 1; r < 14; r++)
+		for (u8 i = 0; i < 8; i++) c[i] = _mm_aesenc_si128(c[i], rk[r]);
+	for (u8 i = 0; i < 8; i++) c[i] = _mm_aesenclast_si128(c[i], rk[14]);
+
+	for (u8 i = 0; i < 8; i++)
+		_mm_storeu_si128((__m128i*)(out + i * 16),
+				 _mm_xor_si128(b[i], c[i]));
+
+	__m128i final = _mm_add_epi64(counter, _mm_set_epi64x(0, 8));
+	_mm_store_si128((__m128i*)ctx->Iv, final);
+}
+#elif defined(__aarch64__)
+PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
+				       u8 out[128]) {
+	const uint8x16_t* rk = (const uint8x16_t*)ctx->RoundKey;
+	uint8x16_t counter = vld1q_u8(ctx->Iv);
+
+	uint8x16_t counters[8];
+	counters[0] = counter;
+	uint64x2_t incr = {1, 0};
+	for (u8 i = 1; i < 8; i++) {
+		uint64x2_t c = vreinterpretq_u64_u8(counters[i - 1]);
+		c = vaddq_u64(c, incr);
+		counters[i] = vreinterpretq_u8_u64(c);
+	}
+
+	uint8x16_t plaintext[8];
+	for (u8 i = 0; i < 8; i++) plaintext[i] = vld1q_u8(in + i * 16);
+
+	for (u8 i = 0; i < 8; i++)
+		counters[i] = vaesq_u8(counters[i], vdupq_n_u8(0));
+
+	uint8x16_t rk0 = rk[0];
+	for (u8 i = 0; i < 8; i++) counters[i] = veorq_u8(counters[i], rk0);
+
+	for (u8 r = 1; r < 14; r++) {
+		uint8x16_t key = rk[r];
+		for (u8 i = 0; i < 8; i++)
+			counters[i] = vaeseq_u8(counters[i], key);
+	}
+
+	for (u8 i = 0; i < 8; i++) counters[i] = vaesmcq_u8(counters[i]);
+	for (u8 i = 0; i < 8; i++) counters[i] = veorq_u8(counters[i], rk[14]);
+
+	for (u8 i = 0; i < 8; i++) {
+		uint8x16_t ct = veorq_u8(plaintext[i], counters[i]);
+		vst1q_u8(out + i * 16, ct);
+	}
+
+	uint64x2_t final =
+	    vaddq_u64(vreinterpretq_u64_u8(counter), vdupq_n_u64(8));
+	vst1q_u8(ctx->Iv, vreinterpretq_u8_u64(final));
+}
+#else
+PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
+				       u8 out[128]) {
+	fastmemcpy(out, in, 128);
+	aes_ctr_xcrypt_buffer(ctx, out);
+}
+#endif
