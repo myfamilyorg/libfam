@@ -310,41 +310,46 @@ PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
 #elif defined(__aarch64__)
 PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
 				       u8 out[128]) {
-	const uint8x16_t* rk = (const uint8x16_t*)ctx->RoundKey;
+	const uint8x16_t* rk =
+	    (const uint8x16_t*)ctx->RoundKey;  // 15 × 128-bit round keys
 	uint8x16_t counter = vld1q_u8(ctx->Iv);
 
+	// Generate 8 sequential counters: counter, counter+1, ..., counter+7
 	uint8x16_t counters[8];
 	counters[0] = counter;
+
 	uint64x2_t incr = {1, 0};
-	for (u8 i = 1; i < 8; i++) {
+	for (u32 i = 1; i < 8; i++) {
 		uint64x2_t c = vreinterpretq_u64_u8(counters[i - 1]);
 		c = vaddq_u64(c, incr);
 		counters[i] = vreinterpretq_u8_u64(c);
 	}
 
-	uint8x16_t plaintext[8];
-	for (u8 i = 0; i < 8; i++) plaintext[i] = vld1q_u8(in + i * 16);
+	// Load plaintext
+	uint8x16_t pt[8];
+	for (u32 i = 0; i < 8; i++) pt[i] = vld1q_u8(in + i * 16);
 
-	for (u8 i = 0; i < 8; i++)
-		counters[i] = vaesq_u8(counters[i], vdupq_n_u8(0));
+	// Initial AddRoundKey
+	uint8x16_t k0 = rk[0];
+	for (u32 i = 0; i < 8; i++) counters[i] = veorq_u8(counters[i], k0);
 
-	uint8x16_t rk0 = rk[0];
-	for (u8 i = 0; i < 8; i++) counters[i] = veorq_u8(counters[i], rk0);
-
-	for (u8 r = 1; r < 14; r++) {
+	// 13 full rounds (AES-256 has 14 rounds total)
+	for (u32 r = 1; r < 14; r++) {
 		uint8x16_t key = rk[r];
-		for (u8 i = 0; i < 8; i++)
+		for (u32 i = 0; i < 8; i++)
 			counters[i] = vaeseq_u8(counters[i], key);
 	}
 
-	for (u8 i = 0; i < 8; i++) counters[i] = vaesmcq_u8(counters[i]);
-	for (u8 i = 0; i < 8; i++) counters[i] = veorq_u8(counters[i], rk[14]);
+	// Final round — no MixColumns
+	for (u32 i = 0; i < 8; i++) counters[i] = veorq_u8(counters[i], rk[14]);
 
-	for (u8 i = 0; i < 8; i++) {
-		uint8x16_t ct = veorq_u8(plaintext[i], counters[i]);
+	// XOR with plaintext
+	for (u32 i = 0; i < 8; i++) {
+		uint8x16_t ct = veorq_u8(pt[i], counters[i]);
 		vst1q_u8(out + i * 16, ct);
 	}
 
+	// Advance counter by 8 (little-endian)
 	uint64x2_t final =
 	    vaddq_u64(vreinterpretq_u64_u8(counter), vdupq_n_u64(8));
 	vst1q_u8(ctx->Iv, vreinterpretq_u8_u64(final));
