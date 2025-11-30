@@ -139,6 +139,8 @@ i32 compress_file(i32 in_fd, i32 out_fd, const u8 *filename);
  */
 i32 decompress_file(i32 in_fd, i32 out_fd);
 
+i32 decompress_file2(i32 in_fd, i32 out_fd);
+
 /*
  * Function: decompress_get_filename
  * Retrieves the filename stored in a compressed file.

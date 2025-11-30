@@ -327,7 +327,6 @@ Test(bitstream_partial_masks) {
 	}
 }
 
-/*
 Test(compress_file_errors) {
 	if (getenv("VALGRIND")) return;
 
@@ -675,4 +674,30 @@ Test(decomp_fuzz2) {
 	close(fd);
 	munmap(inmap, file_size);
 }
-*/
+
+Test(compress_file2_impl) {
+	unlink("/tmp/1.cz");
+	unlink("/tmp/1cmp.txt");
+
+	const u8 *fname = "resources/akjv5.txt";
+	i32 in_fd = file(fname);
+	i32 out_fd = file("/tmp/1.cz");
+	ASSERT(!compress_file(in_fd, out_fd, "test.txt"), "compress_file");
+	close(in_fd);
+	close(out_fd);
+
+	in_fd = file("/tmp/1.cz");
+	out_fd = file("/tmp/1cmp.txt");
+	i64 timer = micros();
+	decompress_file2(in_fd, out_fd);
+	timer = micros() - timer;
+	// println("timer={}", timer);
+
+	close(in_fd);
+	close(out_fd);
+
+	ASSERT_BYTES(0);
+	unlink("/tmp/1.cz");
+	unlink("/tmp/1cmp.txt");
+}
+

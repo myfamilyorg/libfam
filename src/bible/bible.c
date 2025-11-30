@@ -38,13 +38,13 @@
 #define PHI_PRIME 0x9e3779b97f4a7c15ULL
 #define LANE1_SALT (PHI_PRIME - 1)
 #define LANE2_SALT (PHI_PRIME + 1)
-#define LOOKUP_ROUNDS 4096
+#define LOOKUP_ROUNDS 16384
 
 #if TEST == 1
 #define SHA3_ITER 128
 #define EXTENDED_BIBLE_SIZE (8 * 1024 * 1024)
 #else
-#define SHA3_ITER 4096
+#define SHA3_ITER LOOKUP_ROUNDS
 #define EXTENDED_BIBLE_SIZE (256 * 1024 * 1024)
 #endif
 #define BIBLE_EXTENDED_INDICES (EXTENDED_BIBLE_SIZE >> 5)
@@ -122,8 +122,19 @@ CLEANUP:
 	RETURN;
 }
 
+PUBLIC void generate_sbox8_64(u64 sbox[256]) {
+	u64 s = GOLDEN_PRIME;
+	for (u32 i = 0; i < 256; i++) {
+		Sha3Context ctx;
+		sha3_init256(&ctx);
+		sha3_update(&ctx, &s, sizeof(u64));
+		memcpy(&s, sha3_finalize(&ctx), sizeof(u64));
+		sbox[i] = s;
+	}
+}
+
 PUBLIC void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len,
-			   u8 out[32]) {
+			   u8 out[32], const u64 sbox[256]) {
 	u64 d[4];
 	u64 h = input_len ^ GOLDEN_PRIME;
 	for (u64 i = 0; i < input_len; i++) h = (h ^ input[i]) * PHI_PRIME;
@@ -135,11 +146,15 @@ PUBLIC void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len,
 		    (u64)b->data +
 		    (((s[0] ^ s[1] ^ s[2] ^ s[3]) & BIBLE_EXTENDED_MASK) << 5);
 		fastmemcpy(d, (void *)r, 32);
+		const u8 *in = (const u8 *)d;
 
-		s[0] = (s[0] ^ d[0]) * GOLDEN_PRIME;
-		s[1] = (s[1] ^ d[1]) * GOLDEN_PRIME;
-		s[2] = (s[2] ^ d[2]) * GOLDEN_PRIME;
-		s[3] = (s[3] ^ d[3]) * GOLDEN_PRIME;
+		for (i32 lane = 0; lane < 4; lane++) {
+			u8 idx = in[lane] ^ in[lane + 4] ^ in[lane + 8] ^
+				 in[lane + 12] ^ in[lane + 16] ^ in[lane + 20] ^
+				 in[lane + 24] ^ in[lane + 28];
+
+			s[lane] ^= sbox[idx];
+		}
 	}
 
 	fastmemcpy(out, s, 32);

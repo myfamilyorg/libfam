@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <libfam/atomic.h>
 #include <libfam/compress.h>
 #include <libfam/compress_file.h>
 #include <libfam/compress_impl.h>
@@ -34,6 +35,8 @@
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
+
+#define MAX_PROCS 32
 
 STATIC i32 compress_write_header(i32 out_fd, i16 permissions, i64 mtime,
 				 i64 atime, const u8 *filename) {
@@ -286,6 +289,7 @@ INIT:
 	if (in_is_regular_file)
 		if (lseek(in_fd, 0, SEEK_SET) < 0) ERROR();
 	if ((roffset = compress_read_header(in_fd, &header)) < 0) ERROR();
+	if (lseek(in_fd, roffset, SEEK_SET) < 0) ERROR();
 
 	if (!in_is_regular_file || !out_is_regular_file) {
 		if (header.filename) release(header.filename);
@@ -473,5 +477,204 @@ INIT:
 	}
 CLEANUP:
 	if (header.filename) release(header.filename);
+	RETURN;
+}
+
+STATIC i32 compress_read_header2(i32 in_fd, CompressFileHeader *header) {
+	u8 buffer[1024] = {0}, flags;
+	u16 total = 0, offset = 0;
+	u64 needed = sizeof(u32) + sizeof(u8) * 2, cur;
+INIT:
+	while (total < needed) {
+		i64 value = pread(in_fd, buffer + total, needed - total, total);
+		if (value < 0) ERROR();
+		total += value;
+		if (value == 0) ERROR(EPROTO);
+	}
+	cur = total;
+	if (((u32 *)buffer)[0] != MAGIC) ERROR(EPROTO);
+	if (buffer[4] != VERSION) ERROR(EPROTO);
+	flags = buffer[5];
+	needed = 0;
+	total = 0;
+	if (flags & STREAM_FLAG_HAS_PERMISSIONS) needed += 2;
+	if (flags & STREAM_FLAG_HAS_MTIME) needed += 8;
+	if (flags & STREAM_FLAG_HAS_ATIME) needed += 8;
+	if (flags & STREAM_FLAG_HAS_FILE_NAME) needed += MAX_FILE_NAME + 1;
+
+	while (total < needed) {
+		u8 flag;
+		i64 value =
+		    pread(in_fd, buffer + total, needed - total, cur + total);
+		if (value < 0) ERROR();
+		if (value == 0) ERROR(EPROTO);
+		total += value;
+		offset = 0;
+
+		flag = flags & STREAM_FLAG_HAS_PERMISSIONS;
+		if (flag && !(total - offset >= sizeof(u16))) continue;
+		if (flag && total - offset >= sizeof(u16)) {
+			memcpy(&header->permissions, buffer + offset,
+			       sizeof(u16));
+			offset += sizeof(u16);
+		}
+
+		flag = flags & STREAM_FLAG_HAS_MTIME;
+		if (flag && !(total - offset >= sizeof(u64))) continue;
+		if (flag && total - offset >= sizeof(u64)) {
+			memcpy(&header->mtime, buffer + offset, sizeof(u64));
+			offset += sizeof(u64);
+		}
+
+		flag = flags & STREAM_FLAG_HAS_ATIME;
+		if (flag && !(total - offset >= sizeof(u64))) continue;
+		if (flag && total - offset >= sizeof(u64)) {
+			memcpy(&header->atime, buffer + offset, sizeof(u64));
+			offset += sizeof(u64);
+		}
+
+		if (flags & STREAM_FLAG_HAS_FILE_NAME && total - offset > 0) {
+			u64 len = strlen((char *)(buffer + offset));
+			if (len > MAX_FILE_NAME) ERROR(EPROTO);
+			if (!(len < total - offset)) continue;
+			if (len < total - offset) {
+				header->filename = alloc(len + 1);
+				if (!header->filename) ERROR();
+				strcpy((char *)header->filename,
+				       (char *)(buffer + offset));
+				offset += len + 1;
+			}
+		}
+
+		break;
+	}
+	OK(offset + 6);
+CLEANUP:
+	RETURN;
+}
+
+typedef struct {
+	u64 chunks_discovered;
+	u64 chunk_sizes[500];
+} DecompressState;
+
+i32 decompress_file2(i32 in_fd, i32 out_fd) {
+	IoUring *iou = NULL;
+	CompressFileHeader header = {0};
+	ChunkHeader cheader = {0};
+	i64 roffset, woffset = 0;
+	u8 rbuf[2][MAX_COMPRESSED_SIZE] = {0};
+	u8 wbuf[2][CHUNK_SIZE + 1024] = {0};
+	i32 res = 0;
+	u64 next_read = 0, next_write = U64_MAX;
+	u64 expected_bytes, bytes_consumed;
+	bool read_pending = true, fin = false;
+	ChunkHeader *ch = NULL;
+	bool out_is_regular_file, in_is_regular_file;
+	struct stat st;
+	i32 sched_val;
+	DecompressState *state = NULL;
+	i32 proc_count = 6;
+INIT:
+	if (fstat(out_fd, &st) < 0) ERROR();
+	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
+		ERROR(EINVAL);
+	out_is_regular_file = S_ISREG(st.st_mode);
+
+	if (fstat(in_fd, &st) < 0) ERROR();
+	if (S_ISLNK(st.st_mode) || S_ISDIR(st.st_mode) || S_ISBLK(st.st_mode))
+		ERROR(EINVAL);
+	in_is_regular_file = S_ISREG(st.st_mode);
+
+	if (in_is_regular_file)
+		if (lseek(in_fd, 0, SEEK_SET) < 0) ERROR();
+	if ((roffset = compress_read_header2(in_fd, &header)) < 0) ERROR();
+	if (lseek(in_fd, roffset, SEEK_SET) < 0) ERROR();
+
+	if (!in_is_regular_file || !out_is_regular_file) {
+		if (header.filename) release(header.filename);
+		return decompress_file_sync(in_fd, out_fd, rbuf, wbuf);
+	}
+
+	/*
+	println("roffset={},name={},mtime={},atime={}", roffset,
+		header.filename, header.mtime, header.atime);
+		*/
+	state = smap(sizeof(DecompressState));
+	if (!state) ERROR();
+
+	i32 pid = fork();
+	if (pid < 0) ERROR();
+	if (pid) {
+		while (true) {
+			ChunkHeader chunk;
+			i32 res =
+			    pread(in_fd, &chunk, sizeof(ChunkHeader), roffset);
+			if (res != sizeof(ChunkHeader)) break;
+			/*println("size={},res={}", chunk.size, res);*/
+			__astore64(
+			    &state->chunk_sizes[state->chunks_discovered],
+			    roffset + sizeof(ChunkHeader));
+			roffset += chunk.size + sizeof(ChunkHeader);
+
+			__aadd64(&state->chunks_discovered, 1);
+		}
+		for (i32 i = 0; i < proc_count; i++) {
+			__astore64(
+			    &state->chunk_sizes[state->chunks_discovered],
+			    U64_MAX);
+			__aadd64(&state->chunks_discovered, 1);
+		}
+		// println("found all chunks");
+		await(pid);
+	} else {
+		i32 pids[MAX_PROCS] = {0};
+		for (i32 i = 0; i < proc_count; i++) {
+			pids[i] = fork();
+			if (pids[i] < 0) panic("Could not fork worker!");
+			if (!pids[i]) {
+				u32 offset = i;
+				while (true) {
+					while (__aload64(
+						   &state->chunks_discovered) <=
+					       offset);
+					u64 boffset = __aload64(
+					    &state->chunk_sizes[offset]);
+
+					/*
+					println("proc block {},offt={}", offset,
+						boffset);
+						*/
+					if (boffset == U64_MAX) break;
+					offset += proc_count;
+				}
+				// println("end {}", i);
+				_exit(0);
+			}
+		}
+		for (i32 i = 0; i < proc_count; i++) await(pids[i]);
+		_exit(0);
+	}
+
+	(void)fin;
+	(void)ch;
+	(void)sched_val;
+	(void)out_is_regular_file;
+	(void)read_pending;
+	(void)next_read;
+	(void)res;
+	(void)rbuf;
+	(void)wbuf;
+	(void)cheader;
+	(void)woffset;
+	(void)iou;
+	(void)next_write;
+	(void)expected_bytes;
+	(void)bytes_consumed;
+CLEANUP:
+	if (header.filename) release(header.filename);
+	if (iou) iouring_destroy(iou);
+	if (state) munmap(state, sizeof(DecompressState));
+
 	RETURN;
 }

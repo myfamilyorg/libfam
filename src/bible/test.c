@@ -47,21 +47,23 @@ static void init_bible(void) {
 
 Test(bible1) {
 	u8 out[32];
+	u64 sbox[256];
 
+	generate_sbox8_64(sbox);
 	init_bible();
 
-	bible_pow_hash(b, "", 0, out);
-	u8 exp1[] = {106, 189, 246, 61,	 164, 204, 113, 221, 254, 23,  31,
-		     163, 12,  190, 142, 203, 121, 98,	239, 212, 200, 205,
-		     190, 67,  65,  196, 204, 56,  249, 21,  161, 185};
+	bible_pow_hash(b, "", 0, out, sbox);
+	u8 exp1[] = {203, 5,   87,  183, 8,   170, 190, 181, 213, 77,  229,
+		     105, 122, 22,  239, 188, 79,  183, 233, 207, 236, 1,
+		     15,  159, 223, 74,	 247, 13,  199, 73,  219, 179, 215,
+		     196, 209, 49,  233, 23,  66,  146, 201, 140, 99,  239,
+		     155, 171, 19,  155, 83,  118, 111, 73,  13,  188, 243,
+		     184, 195, 139, 113, 139, 38,  244, 39,  148};
+
 	ASSERT(!memcmp(exp1, out, 32), "hash1");
+	bible_pow_hash(b, "1", 1, out, sbox);
 
-	bible_pow_hash(b, "1", 1, out);
-	u8 exp2[] = {101, 170, 46,  185, 51,  240, 38, 249, 251, 184, 169,
-		     44,  8,   102, 178, 8,   183, 91, 98,  247, 57,  156,
-		     254, 207, 49,  188, 218, 173, 58, 0,   24,	 140};
-
-	ASSERT(!memcmp(exp2, out, 32), "hash2");
+	ASSERT(!memcmp(exp1 + 32, out, 32), "hash2");
 	bible_destroy(b);
 	b = NULL;
 }
@@ -70,14 +72,18 @@ Test(mine1) {
 	u32 nonce;
 	u8 h1[HEADER_LEN] = {38};
 	u8 t1[32], out[32];
+	u64 sbox[256];
+
+	generate_sbox8_64(sbox);
+
 	memset(t1, 0xFF, 32);
 	t1[0] = 0x00;
-	t1[1] = 0x0F;
 	init_bible();
 	i64 timer = micros();
-	mine_block(b, h1, t1, out, &nonce, U32_MAX);
+	mine_block(b, h1, t1, out, &nonce, U32_MAX, sbox);
 	timer = micros() - timer;
 	(void)timer;
+
 	/*
 	write_num(2, timer);
 	pwrite(2, "\n", 1, 0);

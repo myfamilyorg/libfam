@@ -156,7 +156,7 @@ PUBLIC void *smap(u64 length) {
 
 i32 await(i32 pid) {
 	u8 buf[1024] = {0};
-	return waitid(P_PID, P_PID, buf, WEXITED);
+	return waitid(P_PID, pid, buf, WEXITED);
 }
 
 PUBLIC i64 fsize(i32 fd) { return lseek(fd, 0, SEEK_END); }

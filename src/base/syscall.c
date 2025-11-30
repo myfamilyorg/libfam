@@ -31,6 +31,7 @@
 #ifdef __aarch64__
 #define SYS_unlinkat 35
 #define SYS_fchmod 52
+#define SYS_pipe2 59
 #define SYS_lseek 62
 #define SYS_read 63
 #define SYS_write 64
@@ -67,6 +68,7 @@
 #define SYS_waitid 247
 #define SYS_utimesat 261
 #define SYS_unlinkat 263
+#define SYS_pipe2 293
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
@@ -324,6 +326,19 @@ PUBLIC i32 fstat(i32 fd, struct stat *buf) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_fstat, (i64)fd, (i64)buf, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+i32 pipe(i32 fds[2], i32 flags) {
+	i32 v;
+INIT:
+#if TEST == 1
+	if (_debug_fail_pipe2) ERROR();
+#endif /* TEST */
+	v = (i32)raw_syscall(SYS_pipe2, (i64)fds, (i64)flags, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:
