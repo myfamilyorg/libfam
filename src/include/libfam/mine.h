@@ -31,18 +31,17 @@
 #include <libfam/test_base.h>
 #include <libfam/types.h>
 
-#define HEADER_LEN 128
-
-static inline i32 mine_block(const Bible *bible, const u8 header[HEADER_LEN],
+static inline i32 mine_block(const Bible *bible,
+			     const u8 header[HASH_INPUT_LEN],
 			     const u8 target[32], u8 out[32], u32 *nonce,
 			     u32 max_iter, u64 sbox[256]) {
 	if (max_iter == 0) return -1;
-	u8 header_copy[HEADER_LEN];
+	u8 header_copy[HASH_INPUT_LEN];
 	*nonce = 0;
-	memcpy(header_copy, header, HEADER_LEN);
+	memcpy(header_copy, header, HASH_INPUT_LEN);
 	do {
 		((u32 *)header_copy)[31] = *nonce;
-		bible_pow_hash(bible, header_copy, HEADER_LEN, out, sbox);
+		bible_pow_hash(bible, header_copy, out, sbox);
 	} while (memcmp(target, out, 32) < 0 && ++(*nonce) < max_iter);
 	return *nonce == max_iter ? -1 : 0;
 }

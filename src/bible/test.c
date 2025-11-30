@@ -24,6 +24,7 @@
  *******************************************************************************/
 
 #include <libfam/bible.h>
+#include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/mine.h>
@@ -48,20 +49,26 @@ static void init_bible(void) {
 Test(bible1) {
 	u8 out[32];
 	u64 sbox[256];
+	u8 input1[HASH_INPUT_LEN] = {0};
+	u8 input2[HASH_INPUT_LEN] = {1};
 
 	generate_sbox8_64(sbox);
 	init_bible();
 
-	bible_pow_hash(b, "", 0, out, sbox);
-	u8 exp1[] = {203, 5,   87,  183, 8,   170, 190, 181, 213, 77,  229,
-		     105, 122, 22,  239, 188, 79,  183, 233, 207, 236, 1,
-		     15,  159, 223, 74,	 247, 13,  199, 73,  219, 179, 215,
-		     196, 209, 49,  233, 23,  66,  146, 201, 140, 99,  239,
-		     155, 171, 19,  155, 83,  118, 111, 73,  13,  188, 243,
-		     184, 195, 139, 113, 139, 38,  244, 39,  148};
+	bible_pow_hash(b, input1, out, sbox);
+	u8 exp1[] = {93,  192, 82,  73,	 103, 135, 226, 211, 137, 214, 57,
+		     51,  222, 181, 72,	 247, 118, 139, 239, 0,	  249, 247,
+		     254, 141, 32,  11,	 205, 182, 15,	194, 59,  200, 15,
+		     198, 14,  212, 95,	 104, 119, 126, 42,  193, 101, 219,
+		     27,  22,  44,  92,	 111, 161, 160, 5,   74,  45,  123,
+		     176, 66,  158, 188, 117, 88,  84,	177, 131};
 
 	ASSERT(!memcmp(exp1, out, 32), "hash1");
-	bible_pow_hash(b, "1", 1, out, sbox);
+
+	// for (u32 i = 0; i < 32; i++) println("{},", out[i]);
+
+	bible_pow_hash(b, input2, out, sbox);
+	// for (u32 i = 0; i < 32; i++) println("{},", out[i]);
 
 	ASSERT(!memcmp(exp1 + 32, out, 32), "hash2");
 	bible_destroy(b);
@@ -70,7 +77,7 @@ Test(bible1) {
 
 Test(mine1) {
 	u32 nonce;
-	u8 h1[HEADER_LEN] = {38};
+	u8 h1[HASH_INPUT_LEN] = {38};
 	u8 t1[32], out[32];
 	u64 sbox[256];
 
@@ -78,6 +85,7 @@ Test(mine1) {
 
 	memset(t1, 0xFF, 32);
 	t1[0] = 0x00;
+	t1[1] = 0x00;
 	init_bible();
 	i64 timer = micros();
 	mine_block(b, h1, t1, out, &nonce, U32_MAX, sbox);

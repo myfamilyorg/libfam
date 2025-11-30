@@ -28,13 +28,15 @@
 
 #include <libfam/types.h>
 
+#define HASH_INPUT_LEN 128
+
 typedef struct Bible Bible;
 
 const Bible *bible_gen(void);
 const Bible *bible_load(const u8 *path);
 i32 bible_store(const Bible *b, const u8 *path);
 void generate_sbox8_64(u64 sbox[256]);
-void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len, u8 out[32],
+void bible_pow_hash(const Bible *b, const u8 input[HASH_INPUT_LEN], u8 out[32],
 		    const u64 sbox[256]);
 void bible_destroy(const Bible *b);
 

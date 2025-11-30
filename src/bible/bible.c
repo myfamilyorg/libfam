@@ -36,23 +36,20 @@
 #define WYHASH_P2 0xc4ceb9fe1a85ec53ULL
 #define GOLDEN_PRIME 0x517cc1b727220a95ULL
 #define PHI_PRIME 0x9e3779b97f4a7c15ULL
-#define LANE1_SALT (PHI_PRIME - 1)
-#define LANE2_SALT (PHI_PRIME + 1)
-#define LOOKUP_ROUNDS 16384
+#define LOOKUP_ROUNDS 32
+#define SHA3_ITER LOOKUP_ROUNDS
 
 #if TEST == 1
-#define SHA3_ITER 128
 #define EXTENDED_BIBLE_SIZE (8 * 1024 * 1024)
 #else
-#define SHA3_ITER LOOKUP_ROUNDS
 #define EXTENDED_BIBLE_SIZE (256 * 1024 * 1024)
 #endif
 #define BIBLE_EXTENDED_INDICES (EXTENDED_BIBLE_SIZE >> 5)
 #define BIBLE_EXTENDED_MASK (BIBLE_EXTENDED_INDICES - 1)
 
-struct Bible {
+struct __attribute__((aligned(64))) Bible {
 	u64 flags;
-	u64 padding[3];
+	u64 padding[7];
 	u8 data[];
 };
 
@@ -133,20 +130,38 @@ PUBLIC void generate_sbox8_64(u64 sbox[256]) {
 	}
 }
 
-PUBLIC void bible_pow_hash(const Bible *b, const u8 *input, u64 input_len,
+PUBLIC void bible_pow_hash(const Bible *b, const u8 input[HASH_INPUT_LEN],
 			   u8 out[32], const u64 sbox[256]) {
 	u64 d[4];
-	u64 h = input_len ^ GOLDEN_PRIME;
-	for (u64 i = 0; i < input_len; i++) h = (h ^ input[i]) * PHI_PRIME;
-	u64 s[4] = {h ^ PHI_PRIME, h ^ LANE1_SALT, h ^ LANE2_SALT,
-		    h ^ GOLDEN_PRIME};
+	u64 s[4] = {GOLDEN_PRIME, PHI_PRIME, WYHASH_P1, WYHASH_P2};
+
+	for (u64 quarter = 0; quarter < 4; quarter++) {
+		u64 r =
+		    (u64)b->data +
+		    (((s[0] ^ s[1] ^ s[2] ^ s[3]) & BIBLE_EXTENDED_MASK) << 5);
+		const u8 *quarter_data = input + quarter * 32;
+		const u8 *in = (const u8 *)d;
+
+		fastmemcpy(d, (void *)r, 32);
+		d[0] ^= ((u64 *)quarter_data)[0];
+		d[1] ^= ((u64 *)quarter_data)[1];
+		d[2] ^= ((u64 *)quarter_data)[2];
+		d[3] ^= ((u64 *)quarter_data)[3];
+
+		for (int lane = 0; lane < 4; lane++) {
+			u8 idx = in[lane] ^ in[lane + 4] ^ in[lane + 8] ^
+				 in[lane + 12] ^ in[lane + 16] ^ in[lane + 20] ^
+				 in[lane + 24] ^ in[lane + 28];
+			s[lane] ^= sbox[idx];
+		}
+	}
 
 	for (u64 i = 0; i < LOOKUP_ROUNDS; i++) {
 		u64 r =
 		    (u64)b->data +
 		    (((s[0] ^ s[1] ^ s[2] ^ s[3]) & BIBLE_EXTENDED_MASK) << 5);
-		fastmemcpy(d, (void *)r, 32);
 		const u8 *in = (const u8 *)d;
+		fastmemcpy(d, (void *)r, 32);
 
 		for (i32 lane = 0; lane < 4; lane++) {
 			u8 idx = in[lane] ^ in[lane + 4] ^ in[lane + 8] ^
