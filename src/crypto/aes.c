@@ -28,6 +28,7 @@
 #endif /* __AVX__ */
 
 #include <libfam/aes.h>
+#include <libfam/debug.h>
 #include <libfam/string.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>
@@ -67,7 +68,7 @@ static const u8 Rcon[11] = {0x8d, 0x01, 0x02, 0x04, 0x08, 0x10,
 
 #define getSBoxValue(num) (sbox[(num)])
 
-static volatile int g_have_aes_ni = 0;
+static volatile bool g_have_aes_ni = false;
 
 void __attribute__((constructor)) detect_aes_ni(void) {
 #ifdef __AVX__
@@ -76,7 +77,7 @@ void __attribute__((constructor)) detect_aes_ni(void) {
 			 : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
 			 : "a"(1)
 			 : "cc");
-	g_have_aes_ni = (ecx & (1U << 25)) ? 1 : 0;
+	g_have_aes_ni = (ecx & (1U << 25)) ? true : false;
 #endif /* __AVX__ */
 }
 
@@ -217,7 +218,12 @@ static void MixColumns(state_t* state) {
 	 ((y >> 4 & 1) * xtime(xtime(xtime(xtime(x))))))
 
 static void Cipher(state_t* state, const u8* RoundKey) {
-	if (g_have_aes_ni) {
+#if TEST == 1
+	bool aesni = g_have_aes_ni && !_debug_no_aesni;
+#else
+	bool aesni = g_have_aes_ni;
+#endif
+	if (aesni) {
 #ifdef __AVX__
 		__m128i* rk = (__m128i*)RoundKey;
 		__m128i s = _mm_loadu_si128((__m128i*)state);
