@@ -299,7 +299,9 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash("ab", 2, 0);	  // input: 0x61 0x62
-	println("h1={x},h2={x}", h1, h2);
+					  // println("h1={x},h2={x}", h1, h2);
+
+	ASSERT(h1 != h2, "twobyte");
 }
 
 Test(aighthash_original_fails_this) {
@@ -309,8 +311,8 @@ Test(aighthash_original_fails_this) {
 	u32 h1 = aighthash("abc", 3, 0);   // bytes: 0x61 0x62 0x63
 	u32 h2 = aighthash("ab\0", 3, 0);  // bytes: 0x61 0x62 0x00
 
-	println("h_abc = 0x{x}", h1);
-	println("h_ab0 = 0x{x}", h2);
+	// println("h_abc = 0x{x}", h1);
+	// println("h_ab0 = 0x{x}", h2);
 
 	// With your original code → COLLISION (same hash)
 	ASSERT(h1 != h2, "3-byte collision: \"abc\" vs \"ab\\0\"");

@@ -84,17 +84,13 @@ PUBLIC const Bible *bible_gen(void) {
 const Bible *bible_load(const u8 *path) {
 	const Bible *ret = NULL;
 	i32 fd = -1;
-	fd = open(path, O_RDWR | O_CREAT, 0600);
-	if (fd < 0) goto cleanup;
+	fd = open(path, O_RDWR, 0);
 
-	ret = mmap(NULL, sizeof(Bible) + EXTENDED_BIBLE_SIZE,
-		   PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (ret == MAP_FAILED) {
-		ret = NULL;
-		goto cleanup;
+	if (fd >= 0) {
+		ret = fmap(fd, sizeof(Bible) + EXTENDED_BIBLE_SIZE, 0);
+		close(fd);
 	}
-cleanup:
-	if (fd >= 0) close(fd);
+
 	return ret;
 }
 
