@@ -42,7 +42,7 @@ i32 nsleep(u64 nsec);
 i32 usleep(u64 usec);
 i32 fork(void);
 i32 unlink(const u8 *path);
-void random(u8 buf[32]);
+void random32(u8 buf[32]);
 void random_stir(u8 current[32], const u8 stir_in[32]);
 void *map(u64 length);
 void *fmap(i32 fd, i64 size, i64 offset);

@@ -45,7 +45,7 @@ static inline u64 read_cycle_counter(void) {
 
 static u64 global_entropy_counter = 1;
 
-void random(u8 out[32]) {
+void random32(u8 out[32]) {
 	Sha3Context ctx;
 	u64 x[4];
 	x[0] = read_cycle_counter();

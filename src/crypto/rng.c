@@ -32,9 +32,9 @@
 
 void rng_init(Rng *rng, const void *opt_entropy) {
 	u8 iv[32], key[32];
-	random(key);
+	random32(key);
 	if (opt_entropy) random_stir(key, opt_entropy);
-	random(iv);
+	random32(iv);
 	if (opt_entropy) random_stir(iv, opt_entropy);
 	aes_init(&rng->ctx, key, iv);
 	memset(iv, 0, sizeof(iv));

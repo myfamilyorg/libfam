@@ -23,10 +23,10 @@
  *
  *******************************************************************************/
 
-#include <libfam/checksum.h>
+#include <libfam/okhash.h>
 #include <libfam/utils.h>
 
-u32 checksum32(const void* data, u64 len, u32 seed) {
+u32 okhash(const void* data, u64 len, u32 seed) {
 	const u8* p = (const u8*)data;
 	u32 tail = 0, h = seed ^ 0x9E3779B9U;
 
