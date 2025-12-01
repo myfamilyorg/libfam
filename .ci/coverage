@@ -1,6 +1,4 @@
 #!/bin/sh
 
-# call this to build the bible dataset faster
-./build test --novalgrind
 sudo ./build cov
 
