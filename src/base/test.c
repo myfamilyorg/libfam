@@ -861,6 +861,18 @@ Test(iouring_slowspin) {
 	munmap(buf, 4096);
 }
 
+Test(iouring_wait_err) {
+	u64 id;
+	IoUring *iou = NULL;
+	struct open_how how = {.flags = O_RDONLY, .mode = 0600};
+	iouring_init(&iou, 1);
+	iouring_init_openat(iou, AT_FDCWD, "/tmp/doesnotexist", &how, U64_MAX);
+	iouring_submit(iou, 1);
+	i32 res = iouring_wait(iou, &id);
+	ASSERT_EQ(res, -1, "open file fail");
+	iouring_destroy(iou);
+}
+
 Test(settime) {
 	struct timespec ts = {0};
 
@@ -906,6 +918,11 @@ Test(signal) {
 	ASSERT(!waitid(P_PID, pid, &buf, WEXITED), "waitid");
 	ASSERT_EQ(*val, 1, "val=1");
 	munmap(val, sizeof(u64));
+}
+
+Test(exists) {
+	ASSERT(exists("resources/akjv5.txt"), "akvj5.txt");
+	ASSERT(!exists("resources/blah.txt"), "blah.txt");
 }
 
 Test(nanosleep) {

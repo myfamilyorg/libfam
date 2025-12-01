@@ -171,6 +171,20 @@ PUBLIC void bible_pow_hash(const Bible *b, const u8 input[HASH_INPUT_LEN],
 	fastmemcpy(out, s, 32);
 }
 
+i32 mine_block(const Bible *bible, const u8 header[HASH_INPUT_LEN],
+	       const u8 target[32], u8 out[32], u32 *nonce, u32 max_iter,
+	       u64 sbox[256]) {
+	if (max_iter == 0) return -1;
+	u8 header_copy[HASH_INPUT_LEN];
+	*nonce = 0;
+	fastmemcpy(header_copy, header, HASH_INPUT_LEN);
+	do {
+		((u32 *)header_copy)[31] = *nonce;
+		bible_pow_hash(bible, header_copy, out, sbox);
+	} while (memcmp(target, out, 32) < 0 && ++(*nonce) < max_iter);
+	return *nonce == max_iter ? -1 : 0;
+}
+
 void bible_destroy(const Bible *b) {
 	munmap((void *)b, sizeof(Bible) + EXTENDED_BIBLE_SIZE);
 }

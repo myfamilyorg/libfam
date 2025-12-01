@@ -27,7 +27,6 @@
 #include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
-#include <libfam/mine.h>
 #include <libfam/test_base.h>
 
 #define BDAT_PATH "resources/test_bible.dat"

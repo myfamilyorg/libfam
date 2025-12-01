@@ -38,6 +38,9 @@ i32 bible_store(const Bible *b, const u8 *path);
 void generate_sbox8_64(u64 sbox[256]);
 void bible_pow_hash(const Bible *b, const u8 input[HASH_INPUT_LEN], u8 out[32],
 		    const u64 sbox[256]);
+i32 mine_block(const Bible *bible, const u8 header[HASH_INPUT_LEN],
+	       const u8 target[32], u8 out[32], u32 *nonce, u32 max_iter,
+	       u64 sbox[256]);
 void bible_destroy(const Bible *b);
 
 #endif /* _BIBLE_H */
