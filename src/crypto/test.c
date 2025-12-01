@@ -284,7 +284,7 @@ Test(aes2) {
 	ASSERT(!memcmp(out, in, 128), "equal");
 }
 
-#include <libfam/format.h>
+// #include <libfam/format.h>
 
 Test(aes3) {
 	AesContext ctx;
@@ -314,5 +314,5 @@ Test(aes3) {
 		aes256_ctr_encrypt_8blocks(&ctx, in, dummy);
 	}
 	timer = micros() - timer;
-	println("{}", timer);
+	// println("{}", timer);
 }
