@@ -62,6 +62,8 @@
 typedef struct {
 	__attribute__((aligned(16))) u8 RoundKey[AES_KEYEXPSIZE];
 	u8 Iv[AES_BLOCKLEN];
+	u8 tag[AES_BLOCKLEN];
+	u8 H[AES_BLOCKLEN];
 } AesContext;
 
 /*

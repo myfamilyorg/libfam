@@ -284,6 +284,8 @@ Test(aes2) {
 	ASSERT(!memcmp(out, in, 128), "equal");
 }
 
+#include <libfam/format.h>
+
 Test(aes3) {
 	AesContext ctx;
 	u8 key[32] = {0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
@@ -307,7 +309,10 @@ Test(aes3) {
 	aes_set_iv(&ctx, iv);
 
 	u8 dummy[128];
+	i64 timer = micros();
 	for (u32 i = 0; i < 1024 * 100; i++) {
 		aes256_ctr_encrypt_8blocks(&ctx, in, dummy);
 	}
+	timer = micros() - timer;
+	println("{}", timer);
 }

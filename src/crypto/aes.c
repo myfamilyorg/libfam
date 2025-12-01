@@ -38,6 +38,34 @@
 
 typedef u8 state_t[4][4];
 
+#ifdef __AVX2__
+static inline void ghash_block(AesContext* ctx, u8 state[16],
+			       const u8 block[16]) {
+	u128 X = ((u128*)state)[0] ^ ((u128*)block)[0];
+	u128 H = ((u128*)ctx->H)[0];
+
+	__m128i X1 = _mm_loadu_si128((const __m128i*)&X);
+	__m128i H1 = _mm_loadu_si128((const __m128i*)&H);
+
+	__m128i L = _mm_clmulepi64_si128(X1, H1, 0x00);
+	__m128i Hh = _mm_clmulepi64_si128(X1, H1, 0x11);
+	__m128i M = _mm_clmulepi64_si128(X1, H1, 0x10);
+	M = _mm_xor_si128(M, _mm_xor_si128(L, Hh));
+
+	__m128i T = _mm_srli_si128(M, 8);
+	L = _mm_xor_si128(L, T);
+	T = _mm_slli_si128(M, 8);
+	Hh = _mm_xor_si128(Hh, T);
+
+	__m128i P =
+	    _mm_clmulepi64_si128(L, _mm_set_epi64x(0, 0xe1ULL << 56), 0x00);
+	__m128i result = _mm_xor_si128(L, P);
+	result = _mm_xor_si128(result, Hh);
+
+	_mm_storeu_si128((__m128i*)state, result);
+}
+#endif /* __AVX2__ */
+
 static const u8 sbox[256] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,
     0xfe, 0xd7, 0xab, 0x76, 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
@@ -309,9 +337,12 @@ PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
 	for (int i = 0; i < 8; i++)
 		counters[i] = _mm_aesenclast_si128(counters[i], rk[14]);
 
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++) {
 		_mm_storeu_si128((__m128i*)(out + i * 16),
 				 _mm_xor_si128(b[i], counters[i]));
+
+		ghash_block(ctx, ctx->tag, out + i * 16);
+	}
 
 	// Update IV to counter+8 (big-endian)
 	__m128i final = counters[7];
@@ -328,3 +359,4 @@ PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
 	aes_ctr_xcrypt_buffer(ctx, out, 128);
 }
 #endif
+
