@@ -913,3 +913,23 @@ Test(nanosleep) {
 	usleep(100000);
 }
 
+Test(pipefork) {
+	u8 buf[10] = {0};
+	i32 pid;
+	i32 fds[2];
+	ASSERT(!pipe(fds), "pipe");
+	if ((pid = fork())) {
+		close(fds[1]);
+		i32 len = read(fds[0], buf, sizeof(buf));
+		ASSERT_EQ(len, 3, "len=3");
+		ASSERT(!memcmp(buf, "abc", 3), "abc");
+	} else {
+		close(fds[0]);
+		strcpy(buf, "abc");
+		pwrite(fds[1], buf, 3, 0);
+		_exit(0);
+	}
+	await(pid);
+	close(fds[0]);
+}
+

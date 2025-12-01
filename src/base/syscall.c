@@ -332,13 +332,13 @@ CLEANUP:
 	RETURN;
 }
 
-i32 pipe(i32 fds[2], i32 flags) {
+i32 pipe(i32 fds[2]) {
 	i32 v;
 INIT:
 #if TEST == 1
 	if (_debug_fail_pipe2) ERROR();
 #endif /* TEST */
-	v = (i32)raw_syscall(SYS_pipe2, (i64)fds, (i64)flags, 0, 0, 0, 0);
+	v = (i32)raw_syscall(SYS_pipe2, (i64)fds, 0, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:
