@@ -279,5 +279,6 @@ void iouring_destroy(IoUring *iou);
 i32 iouring_ring_fd(IoUring *iou);
 
 bool iouring_pending(IoUring *iou, u64 id);
+bool iouring_pending_all(IoUring *iou);
 
 #endif /* _IO_URING_H */

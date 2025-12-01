@@ -305,8 +305,8 @@ Test(compress_file2) {
 
 	close(cmp_fd);
 	close(cmp_orig);
-	unlink("/tmp/2.cz");
-	unlink("/tmp/2cmp.txt");
+	// unlink("/tmp/2.cz");
+	// unlink("/tmp/2cmp.txt");
 }
 
 Test(bitstream_partial_masks) {

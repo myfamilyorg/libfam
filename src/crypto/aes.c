@@ -284,12 +284,10 @@ PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
 	const __m128i* rk = (const __m128i*)ctx->RoundKey;
 	__m128i counter = _mm_load_si128((const __m128i*)ctx->Iv);
 
-	// Generate 8 sequential counters using big-endian increment
 	__m128i counters[8];
 	counters[0] = counter;
 	for (int i = 1; i < 8; i++) {
 		__m128i c = counters[i - 1];
-		// Big-endian increment (only affects bytes 0–7, like tinyAES)
 		for (int j = 15; j >= 0; j--) {
 			u8* p = (u8*)&c + j;
 			if (++(*p)) break;

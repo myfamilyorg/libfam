@@ -310,4 +310,8 @@ void iouring_destroy(IoUring *iou) {
 	munmap(iou, sizeof(IoUring));
 }
 
+bool iouring_pending_all(IoUring *iou) {
+	return __aload32(iou->cq_head) != __aload32(iou->sq_tail);
+}
+
 i32 iouring_ring_fd(IoUring *iou) { return iou->ring_fd; }

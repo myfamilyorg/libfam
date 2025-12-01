@@ -25,9 +25,10 @@
 
 #include <libfam/aes.h>
 #include <libfam/bible.h>
+#include <libfam/checksum.h>
 #include <libfam/sha3.h>
 #include <libfam/string.h>
-#include <libfam/test_base.h>
+#include <libfam/test.h>
 
 u8 hex_to_nibble(u8 v1, u8 v2) {
 	u8 high;
@@ -315,4 +316,22 @@ Test(aes3) {
 	}
 	timer = micros() - timer;
 	// println("{}", timer);
+}
+
+#define COUNT (1024 * 1024)
+
+Test(checksum) {
+	i64 timer = micros();
+	u8 text[32] = {0};
+	u64* v = (void*)text;
+	u32 sum = 0;
+
+	for (u32 i = 0; i < COUNT; i++) {
+		u32 r = checksum32(text, 32, 0);
+		(*v)++;
+		sum += r;
+	}
+	timer = micros() - timer;
+	(void)sum;
+	// println("time={},r={},avg={}ns", timer, sum, (timer * 1000) / COUNT);
 }

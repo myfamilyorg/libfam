@@ -367,6 +367,9 @@ INIT:
 	ts[0].tv_sec = header.atime;
 	ts[1].tv_sec = header.mtime;
 	if (utimesat(out_fd, NULL, ts, 0) < 0) ERROR();
+
+	while (iouring_pending_all(iou)) iouring_spin(iou, &next_write);
+
 CLEANUP:
 	if (header.filename) release(header.filename);
 	if (iou) iouring_destroy(iou);
@@ -456,6 +459,8 @@ INIT:
 		}
 		next_write--;
 	}
+
+	while (iouring_pending_all(iou)) iouring_spin(iou, &next_write);
 
 CLEANUP:
 	if (iou) iouring_destroy(iou);
