@@ -261,9 +261,15 @@ PUBLIC void aes_ctr_xcrypt_buffer(AesContext* ctx, void* buf_in, u64 length) {
 			memcpy(buffer, ctx->Iv, AES_BLOCKLEN);
 			Cipher((state_t*)buffer, ctx->RoundKey);
 
-			// use little-endian for AES-NI compatibility
-			for (bi = 0; bi < AES_BLOCKLEN; bi++)
-				if (++ctx->Iv[bi]) break;
+			for (bi = (AES_BLOCKLEN - 1); bi >= 0; --bi) {
+				/* inc will overflow */
+				if (ctx->Iv[bi] == 255) {
+					ctx->Iv[bi] = 0;
+					continue;
+				}
+				ctx->Iv[bi] += 1;
+				break;
+			}
 
 			bi = 0;
 		}
@@ -277,31 +283,42 @@ PUBLIC void aes256_ctr_encrypt_8blocks(AesContext* ctx, const u8 in[128],
 				       u8 out[128]) {
 	const __m128i* rk = (const __m128i*)ctx->RoundKey;
 	__m128i counter = _mm_load_si128((const __m128i*)ctx->Iv);
-	__m128i one = _mm_set_epi64x(0, 1);
 
-	__m128i c[8] = {counter,
-			_mm_add_epi64(counter, one),
-			_mm_add_epi64(counter, _mm_set_epi64x(0, 2)),
-			_mm_add_epi64(counter, _mm_set_epi64x(0, 3)),
-			_mm_add_epi64(counter, _mm_set_epi64x(0, 4)),
-			_mm_add_epi64(counter, _mm_set_epi64x(0, 5)),
-			_mm_add_epi64(counter, _mm_set_epi64x(0, 6)),
-			_mm_add_epi64(counter, _mm_set_epi64x(0, 7))};
+	// Generate 8 sequential counters using big-endian increment
+	__m128i counters[8];
+	counters[0] = counter;
+	for (int i = 1; i < 8; i++) {
+		__m128i c = counters[i - 1];
+		// Big-endian increment (only affects bytes 0–7, like tinyAES)
+		for (int j = 15; j >= 0; j--) {
+			u8* p = (u8*)&c + j;
+			if (++(*p)) break;
+		}
+		counters[i] = c;
+	}
 
 	__m128i b[8];
-	for (u8 i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++)
 		b[i] = _mm_loadu_si128((const __m128i*)(in + i * 16));
 
-	for (u8 i = 0; i < 8; i++) c[i] = _mm_xor_si128(c[i], rk[0]);
-	for (u8 r = 1; r < 14; r++)
-		for (u8 i = 0; i < 8; i++) c[i] = _mm_aesenc_si128(c[i], rk[r]);
-	for (u8 i = 0; i < 8; i++) c[i] = _mm_aesenclast_si128(c[i], rk[14]);
+	for (int i = 0; i < 8; i++)
+		counters[i] = _mm_xor_si128(counters[i], rk[0]);
+	for (int r = 1; r < 14; r++)
+		for (int i = 0; i < 8; i++)
+			counters[i] = _mm_aesenc_si128(counters[i], rk[r]);
+	for (int i = 0; i < 8; i++)
+		counters[i] = _mm_aesenclast_si128(counters[i], rk[14]);
 
-	for (u8 i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++)
 		_mm_storeu_si128((__m128i*)(out + i * 16),
-				 _mm_xor_si128(b[i], c[i]));
+				 _mm_xor_si128(b[i], counters[i]));
 
-	__m128i final = _mm_add_epi64(counter, _mm_set_epi64x(0, 8));
+	// Update IV to counter+8 (big-endian)
+	__m128i final = counters[7];
+	for (int j = 15; j >= 0; j--) {
+		u8* p = (u8*)&final + j;
+		if (++(*p)) break;
+	}
 	_mm_store_si128((__m128i*)ctx->Iv, final);
 }
 #else
