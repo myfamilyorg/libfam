@@ -23,11 +23,11 @@
  *
  *******************************************************************************/
 
-#ifndef _OKHASH_H
-#define _OKHASH_H
+#ifndef _AIGHTHASH_H
+#define _AIGHTHASH_H
 
 #include <libfam/types.h>
 
-u32 okhash(const void* input, u64 len, u32 seed);
+u32 aighthash(const void* input, u64 len, u32 seed);
 
-#endif /* _OKHASH_H */
+#endif /* _AIGHTHASH_H */

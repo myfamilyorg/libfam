@@ -24,8 +24,8 @@
  *******************************************************************************/
 
 #include <libfam/aes.h>
+#include <libfam/aighthash.h>
 #include <libfam/bible.h>
-#include <libfam/okhash.h>
 #include <libfam/sha3.h>
 #include <libfam/string.h>
 #include <libfam/test.h>
@@ -320,14 +320,14 @@ Test(aes3) {
 
 #define COUNT (1024 * 1024)
 
-Test(okhash) {
+Test(aighthash) {
 	i64 timer = micros();
 	u8 text[32] = {0};
 	u64* v = (void*)text;
 	u32 sum = 0;
 
 	for (u32 i = 0; i < COUNT; i++) {
-		u32 r = okhash(text, 32, 0);
+		u32 r = aighthash(text, 32, 0);
 		(*v)++;
 		sum += r;
 	}
