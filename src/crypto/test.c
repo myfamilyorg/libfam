@@ -330,6 +330,7 @@ Test(aighthash) {
 		u32 r = aighthash(text, 32, 0);
 		(*v)++;
 		sum += r;
+		// println("{X}", r);
 	}
 	timer = micros() - timer;
 	(void)sum;
