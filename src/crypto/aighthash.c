@@ -26,17 +26,30 @@
 #include <libfam/aighthash.h>
 #include <libfam/utils.h>
 
-#define P1 0x9E3779B9U
-#define P2 0x85EBCA6BU
+#define AIGHT_INIT 0x9E3779B9U
+#define AIGHT_P1 0xc2b2ae35u
+#define AIGHT_P2 0x85ebca6bu
 
 u32 aighthash(const void* data, u64 len, u32 seed) {
 	const u8* p = (const u8*)data;
-	u32 w, tail = 0, h = seed ^ P1;
-	while (len >= 4)
-		w = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24),
-		h = (h ^ w) * P2, h = (h << 13) | (h >> 19), p += 4, len -= 4;
+	u32 h = seed ^ AIGHT_INIT, tail = 0;
+
+	while (len >= 8) {
+		u64 v = (u64)p[0] | ((u64)p[1] << 8) | ((u64)p[2] << 16) |
+			((u64)p[3] << 24) | ((u64)p[4] << 32) |
+			((u64)p[5] << 40) | ((u64)p[6] << 48) |
+			((u64)p[7] << 56);
+
+		h = (h ^ (u32)v) * AIGHT_P2;
+		h ^= h >> 16;
+		h = (h ^ (u32)(v >> 32)) * AIGHT_P1;
+		h ^= h >> 15;
+
+		p += 8;
+		len -= 8;
+	}
 	while (len--) tail = (tail << 8) | *p++;
 	h = (h + (u32)len) ^ tail;
-	h = (h ^ (h >> 16)) * P2;
+	h = (h ^ (h >> 16)) * AIGHT_P2;
 	return h ^ (h >> 15);
 }

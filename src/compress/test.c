@@ -38,7 +38,8 @@ Test(compress1) {
 		    compress_block(in, MAX_COMPRESS_LEN, out, sizeof(out)) > 0,
 		    "compress_block");
 	timer = micros() - timer;
-	println("ms={}", timer);
+	// println("ms={}", timer);
+	(void)timer;
 
 	munmap(in, MAX_COMPRESS_LEN);
 	close(fd);

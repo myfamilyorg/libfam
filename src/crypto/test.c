@@ -370,55 +370,71 @@ Test(aighthash_longneighbors) {
 	u8 a[SIZE] = {0};
 	u8 b[SIZE] = {0};
 
-	// PASSES ~90% of the time, so we set specific seed.
 	rng_test_seed(&rng, (u8[32]){0}, (u8[32]){0});
 
-	for (u64 i = 0; i < size; ++i)
-		a[i] = b[i] = (u8)(i ^ (i >> 8) ^ (i >> 16));
+	int total_fail = 0;
+	(void)total_fail;
+	int iter = 1;
+	for (u32 i = 0; i < iter; i++) {
+		for (u64 i = 0; i < size; ++i)
+			a[i] = b[i] = (u8)(i ^ (i >> 8) ^ (i >> 16));
 
-	int total_tests = 0;
-	int bias[32] = {0};
+		int total_tests = 0;
+		int bias[32] = {0};
+		u32 seed = i;
 
-	for (int trial = 0; trial < 500; ++trial) {
-		memcpy(b, a, size);
+		for (int trial = 0; trial < 500; ++trial) {
+			memcpy(b, a, size);
 
-		u64 byte_pos = 0;
-		rng_gen(&rng, &byte_pos, sizeof(u64));
-		byte_pos %= size;
-		u8 bit_pos = 0;
-		rng_gen(&rng, &bit_pos, sizeof(u8));
-		bit_pos %= 8;
+			u64 byte_pos = 0;
+			rng_gen(&rng, &byte_pos, sizeof(u64));
+			byte_pos %= size;
+			u8 bit_pos = 0;
+			rng_gen(&rng, &bit_pos, sizeof(u8));
+			bit_pos %= 8;
 
-		b[byte_pos] ^= (u8)(1 << bit_pos);
+			b[byte_pos] ^= (u8)(1 << bit_pos);
 
-		u32 ha = aighthash(a, size, 0);
-		u32 hb = aighthash(b, size, 0);
-		u32 diff = ha ^ hb;
+			u32 ha = aighthash(a, size, seed);
+			u32 hb = aighthash(b, size, seed);
+			u32 diff = ha ^ hb;
 
+			for (int bit = 0; bit < 32; ++bit) {
+				if (diff & (1u << bit)) {
+					bias[bit]++;
+				}
+			}
+			total_tests++;
+		}
+
+		/*
+		println(
+		    "LongNeighbors (seed={}) — 500 single-bit diffs in 128KB "
+		    "keys:",
+		    seed);
+		    */
 		for (int bit = 0; bit < 32; ++bit) {
-			if (diff & (1u << bit)) {
-				bias[bit]++;
+			f64 percent = 100.0 * bias[bit] / total_tests;
+			/*println("  bit {}: {} flips → {}", bit, bias[bit],
+				percent);*/
+			(void)percent;
+		}
+
+		int failed = 0;
+		for (int bit = 0; bit < 32; ++bit) {
+			double p = 100.0 * bias[bit] / total_tests;
+			if (p < 44.0 || p > 56.0) {
+				failed++;
 			}
 		}
-		total_tests++;
-	}
 
-	// println("LongNeighbors — 500 single-bit diffs in 128KB keys:");
-	for (int bit = 0; bit < 32; ++bit) {
-		f64 percent = 100.0 * bias[bit] / total_tests;
-		(void)percent;
-		// println("  bit {}: {} flips → {}", bit, bias[bit], percent);
+		total_fail += failed != 0;
+		ASSERT(failed == 0,
+		       "LongNeighbors bias detected ({} bits out of range)",
+		       failed);
+		//	rng_reseed(&rng, NULL);
 	}
-
-	int failed = 0;
-	for (int bit = 0; bit < 32; ++bit) {
-		double p = 100.0 * bias[bit] / total_tests;
-		if (p < 44.0 || p > 56.0) {
-			failed++;
-		}
-	}
-
-	ASSERT(failed == 0,
-	       "LongNeighbors bias detected ({} bits out of range)", failed);
+	// println("total_failed={}/{}", total_fail, iter);
 	rng_reseed(&rng, NULL);
 }
+
