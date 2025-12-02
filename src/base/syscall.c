@@ -33,8 +33,6 @@
 #define SYS_fchmod 52
 #define SYS_pipe2 59
 #define SYS_lseek 62
-#define SYS_read 63
-#define SYS_write 64
 #define SYS_fstat 80
 #define SYS_utimesat 88
 #define SYS_waitid 95
@@ -51,8 +49,6 @@
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
 #elif defined(__x86_64__)
-#define SYS_read 0
-#define SYS_write 1
 #define SYS_fstat 5
 #define SYS_lseek 8
 #define SYS_mmap 9
@@ -339,29 +335,6 @@ INIT:
 	if (_debug_fail_pipe2) ERROR();
 #endif /* TEST */
 	v = (i32)raw_syscall(SYS_pipe2, (i64)fds, 0, 0, 0, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
-PUBLIC i64 write(i32 fd, const void *buf, u64 count) {
-	i64 v;
-INIT:
-#if TEST == 1
-	if ((fd == 1 || fd == 2) && _debug_no_write) return count;
-#endif /* TEST */
-	v = raw_syscall(SYS_write, (i64)fd, (i64)buf, (i64)count, 0, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
-i64 read(i32 fd, void *buf, u64 count) {
-	i64 v;
-INIT:
-	v = raw_syscall(SYS_read, (i64)fd, (i64)buf, (i64)count, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:

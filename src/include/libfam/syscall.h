@@ -59,8 +59,4 @@ i32 fstat(i32 fd, struct stat *buf);
 i32 fchmod(i32 fd, u32 mode);
 i32 pipe(i32 fds[2]);
 
-/* Temporary */
-i64 read(i32 fd, void *buf, u64 len);
-i64 write(i32 fd, const void *buf, u64 len);
-
 #endif /* _SYSCALL_H */

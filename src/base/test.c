@@ -746,16 +746,24 @@ Test(clone) {
 
 Test(open1) {
 	u64 size = 4097;
-	unlinkat(AT_FDCWD, "/tmp/open1.dat", 0);
-	unlinkat(AT_FDCWD, "/tmp/open2.dat", 0);
+	unlink("/tmp/open1.dat");
+	unlink("/tmp/open2.dat");
 
 	errno = 0;
-	i32 fd = open("/tmp/open1.dat", O_RDWR | O_CREAT, 0600);
+	i32 fd = file("/tmp/open1.dat");
 	ASSERT(fd > 0, "fd>0 1");
+	ASSERT(!fsize(fd), "size=0");
 	ASSERT(!lseek(fd, 0, SEEK_END), "size=0");
+	struct stat st;
+	ASSERT(!fstat(fd, &st), "fstat");
+	ASSERT_EQ(st.st_size, 0, "st_size=0");
 
 	ASSERT(!fallocate(fd, size), "fallocate");
 	ASSERT_EQ(lseek(fd, 0, SEEK_END), size, "size");
+	struct timeval ts[2] = {0};
+	ts[0].tv_sec = 0;
+	ts[1].tv_sec = 0;
+	utimesat(fd, NULL, (void *)&ts, 0);
 
 	pwrite(fd, "abc", 3, 5);
 	fsync(fd);
@@ -770,9 +778,11 @@ Test(open1) {
 	close(fd);
 	fd = open("/tmp/open2.dat", O_RDWR | O_CREAT, 0600);
 	ASSERT(fd > 0, "fd>0 2");
+	fchmod(fd, 0700);
+
 	close(fd);
-	unlinkat(AT_FDCWD, "/tmp/open1.dat", 0);
-	unlinkat(AT_FDCWD, "/tmp/open2.dat", 0);
+	unlink("/tmp/open1.dat");
+	unlink("/tmp/open2.dat");
 }
 
 Test(iouring_cov) {
@@ -824,7 +834,7 @@ Test(iouring_slowspin) {
 	IoUring *iou = NULL;
 	i32 res = 0, fd = 0;
 
-	unlinkat(AT_FDCWD, "/tmp/slowspin.dat", 0);
+	unlink("/tmp/slowspin.dat");
 	errno = 0;
 	fd = open("/tmp/slowspin.dat", O_RDWR | O_CREAT, 0600);
 	ASSERT(fd > 0, "fd>0 1");
@@ -857,7 +867,7 @@ Test(iouring_slowspin) {
 
 	iouring_destroy(iou);
 	close(fd);
-	unlinkat(AT_FDCWD, "/tmp/slowspin.dat", 0);
+	unlink("/tmp/slowspin.dat");
 	munmap(buf, 4096);
 }
 
@@ -865,11 +875,22 @@ Test(iouring_wait_err) {
 	u64 id;
 	IoUring *iou = NULL;
 	struct open_how how = {.flags = O_RDONLY, .mode = 0600};
-	iouring_init(&iou, 1);
+	iouring_init(&iou, 2);
 	iouring_init_openat(iou, AT_FDCWD, "/tmp/doesnotexist", &how, U64_MAX);
-	iouring_submit(iou, 1);
+	iouring_init_openat(iou, AT_FDCWD, "/tmp/doesnotexist", &how,
+			    U64_MAX - 1);
+
+	iouring_submit(iou, 2);
+	ASSERT(iouring_pending(iou, U64_MAX), "pending");
+	ASSERT(iouring_pending(iou, U64_MAX - 1), "pending");
+
 	i32 res = iouring_wait(iou, &id);
 	ASSERT_EQ(res, -1, "open file fail");
+	res = iouring_wait(iou, &id);
+	ASSERT_EQ(res, -1, "open file fail");
+
+	ASSERT(!iouring_pending(iou, 0), "!pending");
+	ASSERT(!iouring_pending_all(iou), "!pending_all");
 	iouring_destroy(iou);
 }
 
@@ -937,7 +958,7 @@ Test(pipefork) {
 	ASSERT(!pipe(fds), "pipe");
 	if ((pid = fork())) {
 		close(fds[1]);
-		i32 len = read(fds[0], buf, sizeof(buf));
+		i32 len = pread(fds[0], buf, sizeof(buf), 0);
 		ASSERT_EQ(len, 3, "len=3");
 		ASSERT(!memcmp(buf, "abc", 3), "abc");
 	} else {
