@@ -74,6 +74,17 @@
 		bitstream_writer_push(strm, (value), (bits)); \
 	} while (0);
 
+#define TRY_READ(strm, bits)                                                   \
+	({                                                                     \
+		if ((strm)->bits_in_buffer < (bits)) {                         \
+			bitstream_reader_load(strm);                           \
+			if ((strm)->bits_in_buffer < (bits)) ERROR(EOVERFLOW); \
+		}                                                              \
+		i32 _ret__ = bitstream_reader_read((strm), (bits));            \
+		bitstream_reader_clear((strm), (bits));                        \
+		_ret__;                                                        \
+	})
+
 typedef struct {
 	u16 table[LZ_HASH_ENTRIES];
 } LzHash;

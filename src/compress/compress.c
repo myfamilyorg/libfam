@@ -70,7 +70,7 @@ STATIC void lz_hash_set(LzHash *restrict hash, const u8 *restrict text,
 	hash->table[(key * HASH_CONSTANT) >> HASH_SHIFT] = (u16)cpos;
 }
 
-PUBLIC void compress_find_matches(BitStreamWriter *strm, const u8 *in, u32 len,
+STATIC void compress_find_matches(BitStreamWriter *strm, const u8 *in, u32 len,
 				  u16 match_array[MAX_COMPRESS_LEN + 2],
 				  u32 frequencies[SYMBOL_COUNT]) {
 	u32 i = 0, max, out_itt = 0;
@@ -151,6 +151,11 @@ PUBLIC void compress_find_matches(BitStreamWriter *strm, const u8 *in, u32 len,
 		out_itt += 1;
 		i++;
 	}
+
+	bitstream_writer_flush(strm);
+	u32 offset = strm->bit_offset;
+	memcpy(strm->data, &offset, sizeof(u32));
+
 	match_array[out_itt++] = SYMBOL_TERM;
 	frequencies[SYMBOL_TERM]++;
 }
@@ -466,7 +471,7 @@ CLEANUP:
 	RETURN;
 }
 
-PUBLIC i32 compress_write(BitStreamWriter *strm,
+STATIC i32 compress_write(BitStreamWriter *strm,
 			  const CodeLength code_lengths[SYMBOL_COUNT],
 			  const CodeLength book[MAX_BOOK_CODES],
 			  const u16 match_array[MAX_COMPRESS_LEN + 2],
@@ -492,9 +497,200 @@ PUBLIC i32 compress_write(BitStreamWriter *strm,
 	return (strm->bit_offset + 7) / 8;
 }
 
-u64 compress_bound(u64 source_len) { return source_len + 3; }
+STATIC void compress_build_lookup_table(const CodeLength *code_lengths,
+					u16 count, HuffmanLookup *lookup_table,
+					u8 max_length) {
+	i32 i, j;
+	for (i = 0; i < count; i++) {
+		if (code_lengths[i].length) {
+			i32 index = code_lengths[i].code &
+				    ((1U << code_lengths[i].length) - 1);
+			i32 fill_depth =
+			    1U << (max_length - code_lengths[i].length);
+			for (j = 0; j < fill_depth; j++) {
+				lookup_table[index |
+					     (j << code_lengths[i].length)]
+				    .length = code_lengths[i].length;
+				lookup_table[index |
+					     (j << code_lengths[i].length)]
+				    .symbol = i;
+				if (i >= MATCH_OFFSET) {
+					u8 mc = i - MATCH_OFFSET;
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .dist_extra_bits =
+					    distance_extra_bits(mc);
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .len_extra_bits =
+					    length_extra_bits(mc);
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .base_dist = distance_base(mc);
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .base_len = length_base(mc) + 4;
+				}
+			}
+		}
+	}
+}
 
-i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
+STATIC i32 compress_read_lengths(BitStreamReader *strm,
+				 CodeLength code_lengths[SYMBOL_COUNT]) {
+	i32 i = 0, j;
+	u16 last_length = 0;
+	CodeLength book_code_lengths[SYMBOL_COUNT] = {0};
+	HuffmanLookup lookup_table[(1U << MAX_BOOK_CODE_LENGTH)] = {0};
+INIT:
+	TRY_READ(strm, 8); /* Skip over block type */
+	for (i = 0; i < MAX_BOOK_CODES; i++) {
+		book_code_lengths[i].length = TRY_READ(strm, 3);
+	}
+
+	compress_calculate_codes(book_code_lengths, MAX_BOOK_CODES);
+	compress_build_lookup_table(book_code_lengths, MAX_BOOK_CODES,
+				    lookup_table, MAX_BOOK_CODE_LENGTH);
+
+	i = 0;
+
+	while (i < SYMBOL_COUNT) {
+		if (strm->bits_in_buffer < 7)
+			if (bitstream_reader_load(strm) < 0) ERROR(EOVERFLOW);
+		u8 bits = bitstream_reader_read(strm, MAX_BOOK_CODE_LENGTH);
+		HuffmanLookup entry = lookup_table[bits];
+		u16 code = entry.symbol;
+		bitstream_reader_clear(strm, entry.length);
+		if (code < REPEAT_VALUE_INDEX) {
+			code_lengths[i++].length = code;
+			last_length = code;
+		} else if (code == REPEAT_VALUE_INDEX) {
+			if (i == 0 || last_length == 0) ERROR(EPROTO);
+			u8 repeat = TRY_READ(strm, 2) + 3;
+			if (i + repeat > SYMBOL_COUNT) ERROR(EPROTO);
+			for (j = 0; j < repeat; j++) {
+				code_lengths[i++].length = last_length;
+			}
+		} else if (code == REPEAT_ZERO_LONG_INDEX) {
+			u8 zeros = TRY_READ(strm, 7) + 11;
+			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
+			for (j = 0; j < zeros; j++)
+				code_lengths[i++].length = 0;
+		} else if (code == REPEAT_ZERO_SHORT_INDEX) {
+			u8 zeros = TRY_READ(strm, 3) + 3;
+			if (i + zeros > SYMBOL_COUNT) ERROR(EPROTO);
+			for (j = 0; j < zeros; j++)
+				code_lengths[i++].length = 0;
+		}
+	}
+
+CLEANUP:
+	RETURN;
+}
+
+#ifdef __AVX2__
+INLINE STATIC void copy_with_avx2(u8 *out_dest, const u8 *out_src,
+				  u64 actual_length) {
+	if (out_src + 32 <= out_dest) {
+		u64 chunks = (actual_length + 31) >> 5;
+		while (chunks--) {
+			__m256i vec = _mm256_loadu_si256((__m256i *)out_src);
+			_mm256_storeu_si256((__m256i *)out_dest, vec);
+			out_src += 32;
+			out_dest += 32;
+		}
+	} else {
+		u64 remainder = actual_length;
+		while (remainder--) {
+			*out_dest++ = *out_src++;
+		}
+	}
+}
+#endif /* __AVX2__ */
+
+INLINE static i32 compress_proc_match(BitStreamReader *strm, u8 *out,
+				      u32 capacity, HuffmanLookup *entry,
+				      u32 *itt) {
+	u8 len_extra;
+	u16 base_length, actual_length, base_dist, dist_extra, actual_distance;
+	u8 len_extra_bits = entry->len_extra_bits;
+	u8 dist_extra_bits = entry->dist_extra_bits;
+	base_length = entry->base_len;
+	base_dist = entry->base_dist;
+
+	len_extra = bitstream_reader_read(strm, len_extra_bits);
+	bitstream_reader_clear(strm, len_extra_bits);
+	dist_extra = bitstream_reader_read(strm, dist_extra_bits);
+	bitstream_reader_clear(strm, dist_extra_bits);
+
+	actual_length = base_length + len_extra;
+	actual_distance = base_dist + dist_extra;
+	if (__builtin_expect(
+		actual_length + 32 + *itt > capacity || actual_distance > *itt,
+		0)) {
+		errno = EOVERFLOW;
+		return -1;
+	}
+
+	u8 *out_dest = out + *itt;
+	u8 *out_src = out + *itt - actual_distance;
+	*itt += actual_length;
+
+#ifdef __AVX2__
+	copy_with_avx2(out_dest, out_src, actual_length);
+#else
+	while (actual_length--) *out_dest++ = *out_src++;
+#endif /* !__AVX2__ */
+	return 0;
+}
+
+STATIC i32 compress_read_symbols(BitStreamReader *strm,
+				 const CodeLength code_lengths[SYMBOL_COUNT],
+				 u8 *out, u32 capacity) {
+	BitStreamReader extras = {strm->data, strm->max_size, sizeof(u32)};
+	HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
+	u32 itt = 0;
+	u16 symbol = 0;
+	u8 load_threshold = MAX_CODE_LENGTH + 7 + 15;
+
+	extras.bit_offset = sizeof(u32);
+
+	compress_build_lookup_table(code_lengths, SYMBOL_COUNT, lookup_table,
+				    MAX_CODE_LENGTH);
+
+	while (true) {
+		if (__builtin_expect(strm->bits_in_buffer < load_threshold, 0))
+			bitstream_reader_load(strm);
+
+		u16 bits = bitstream_reader_read(strm, MAX_CODE_LENGTH);
+		HuffmanLookup entry = lookup_table[bits];
+		u8 length = entry.length;
+		symbol = entry.symbol;
+
+		bitstream_reader_clear(strm, length);
+		if (symbol < SYMBOL_TERM) {
+			// println("sym={c}", symbol);
+			if (__builtin_expect(itt >= capacity, 0)) {
+				errno = EOVERFLOW;
+				return -1;
+			}
+			out[itt++] = symbol;
+		} else if (symbol == SYMBOL_TERM) {
+			break;
+		} else if (compress_proc_match(&extras, out, capacity, &entry,
+					       &itt) < 0)
+			return -1;
+	}
+	return itt;
+}
+
+PUBLIC u64 compress_bound(u64 source_len) { return source_len + 3; }
+
+PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	BitStreamWriter strm = {out};
 	u32 frequencies[SYMBOL_COUNT] = {0};
 	u32 book_frequencies[MAX_BOOK_CODES] = {0};
@@ -546,5 +742,42 @@ i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	*/
 
 	return res;
+}
+
+PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
+	u32 bit_offset;
+	BitStreamReader strm = {in, len};
+	CodeLength code_lengths[SYMBOL_COUNT] = {0};
+	if (len <= sizeof(u32)) {
+		errno = EINVAL;
+		return -1;
+	}
+	memcpy(&bit_offset, in, sizeof(u32));
+	// println("bit_offset={}", bit_offset);
+	/*
+	if (in[0]) {
+	*/
+	// println("in[0]={}", in[0]);
+	/*
+	return compress_read_raw(in, len, out, capacity,
+				 bytes_consumed);
+				 */
+	// return -1;
+	//} else {
+	// println("1");
+	strm.bit_offset = bit_offset;
+	compress_read_lengths(&strm, code_lengths);
+	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
+
+	/*
+	for (u32 i = 0; i < SYMBOL_COUNT; i++) {
+		if (code_lengths[i].length)
+			println("{} -> {} {}", i, code_lengths[i].length,
+				code_lengths[i].code);
+	}
+	*/
+
+	return compress_read_symbols(&strm, code_lengths, out, capacity);
+	//}
 }
 

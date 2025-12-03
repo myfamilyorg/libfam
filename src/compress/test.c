@@ -33,7 +33,7 @@ Test(compress1) {
 	ASSERT(in, "fmap");
 
 	i64 timer = micros();
-	for (u32 i = 0; i < 100; i++)
+	for (u32 i = 0; i < 1000; i++)
 		ASSERT(
 		    compress_block(in, MAX_COMPRESS_LEN, out, sizeof(out)) > 0,
 		    "compress_block");
@@ -44,3 +44,40 @@ Test(compress1) {
 	munmap(in, MAX_COMPRESS_LEN);
 	close(fd);
 }
+
+Test(compress2) {
+	const u8 *path = "./resources/test_micro.txt";
+	i32 fd = file(path);
+	u64 file_size = min(fsize(fd), 128 * 1024);
+	u8 *in = fmap(fd, file_size, 0);
+	u64 bound = compress_bound(file_size);
+	u8 *out = alloc(bound);
+	u8 *verify = alloc(file_size);
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+	i64 comp_sum = 0, decomp_sum = 0;
+
+	i64 timer = micros();
+	i32 result = compress_block(in, file_size, out, bound);
+	timer = micros() - timer;
+	comp_sum += timer;
+
+	ASSERT(result > 0, "compress_block");
+	timer = micros();
+	result = decompress_block(out, result, verify, file_size);
+	timer = micros() - timer;
+	decomp_sum += timer;
+
+	// println("file_size={},result={}", file_size, result);
+	ASSERT_EQ(result, file_size, "file_size");
+	ASSERT(!memcmp(verify, in, file_size), "verify");
+
+	(void)comp_sum;
+	(void)decomp_sum;
+
+	munmap(in, file_size);
+	release(verify);
+	release(out);
+	close(fd);
+}
+

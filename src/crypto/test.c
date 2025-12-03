@@ -412,11 +412,13 @@ Test(aighthash_longneighbors) {
 		    "LongNeighbors (seed={}) — 500 single-bit diffs in 128KB "
 		    "keys:",
 		    seed);
-		    */
+		*/
 		for (int bit = 0; bit < 32; ++bit) {
 			f64 percent = 100.0 * bias[bit] / total_tests;
-			/*println("  bit {}: {} flips → {}", bit, bias[bit],
-				percent);*/
+			/*
+			println("  bit {}: {} flips → {}", bit, bias[bit],
+				percent);
+				*/
 			(void)percent;
 		}
 
