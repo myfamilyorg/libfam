@@ -30,6 +30,5 @@
 
 u32 aighthash32(const void* input, u64 len, u32 seed);
 u64 aighthash64(const void* input, u64 len, u64 seed);
-u64 aighthash_aes(const void* data, u64 len, u64 seed, u8 key[16]);
 
 #endif /* _AIGHTHASH_H */

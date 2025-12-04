@@ -90,12 +90,3 @@ u64 aighthash64(const void* data, u64 len, u64 seed) {
 	return h;
 }
 
-#include <libfam/xxhash.h>
-
-u64 aighthash_aes(const void* data, u64 len, u64 seed, u8 key[16]) {
-	const __m128i* simd_key = (void*)key;
-	u64 h = XXH3_64bits(data, len);
-	__m128i block = _mm_set_epi64x(seed, h);
-	block = _mm_aesenc_si128(block, *simd_key);
-	return _mm_cvtsi128_si64(block) ^ _mm_extract_epi64(block, 1);
-}
