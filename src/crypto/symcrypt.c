@@ -52,25 +52,48 @@ static inline snow_vec_t aes_dec_round(snow_vec_t x, snow_vec_t rk) {
 }
 
 #elif defined(__aarch64__)
-typedef uint8x16x4_t snow_vec_t;
+typedef uint8x16_t snow_vec_t[4];  // array of 4 × 128-bit vectors
 #define SNOW_LANES 4
+#define SNOW_BYTES (SNOW_LANES * 16)  // 64
 
-static inline snow_vec_t snow_zero(void) {
-	return vld1q_u8_x4((const uint8_t[64]){0});
+static inline snow_vec_t snow_load(const uint8_t *p) {
+	snow_vec_t v;
+	v[0] = vld1q_u8(p + 0);
+	v[1] = vld1q_u8(p + 16);
+	v[2] = vld1q_u8(p + 32);
+	v[3] = vld1q_u8(p + 48);
+	return v;
 }
-static inline snow_vec_t snow_load(const uint8_t *p) { return vld1q_u8_x4(p); }
-static inline void snow_store(uint8_t *p, snow_vec_t v) { vst1q_u8_x4(p, v); }
+static inline void snow_store(uint8_t *p, snow_vec_t v) {
+	vst1q_u8(p + 0, v[0]);
+	vst1q_u8(p + 16, v[1]);
+	vst1q_u8(p + 32, v[2]);
+	vst1q_u8(p + 48, v[3]);
+}
 static inline snow_vec_t snow_xor(snow_vec_t a, snow_vec_t b) {
-	return veorq_u8_x4(a, b);
+	snow_vec_t out;
+	out[0] = veorq_u8(a[0], b[0]);
+	out[1] = veorq_u8(a[1], b[1]);
+	out[2] = veorq_u8(a[2], b[2]);
+	out[3] = veorq_u8(a[3], b[3]);
+	return out;
 }
-
 static inline snow_vec_t aes_enc_round(snow_vec_t x, snow_vec_t rk) {
-	return vaesencq_u8_x4(x, rk);
+	snow_vec_t out;
+	out[0] = vaesencq_u8(x[0], rk[0]);
+	out[1] = vaesencq_u8(x[1], rk[1]);
+	out[2] = vaesencq_u8(x[2], rk[2]);
+	out[3] = vaesencq_u8(x[3], rk[3]);
+	return out;
 }
 static inline snow_vec_t aes_dec_round(snow_vec_t x, snow_vec_t rk) {
-	return vaesdecq_u8_x4(x, rk);
+	snow_vec_t out;
+	out[0] = vaesdecq_u8(x[0], rk[0]);
+	out[1] = vaesdecq_u8(x[1], rk[1]);
+	out[2] = vaesdecq_u8(x[2], rk[2]);
+	out[3] = vaesdecq_u8(x[3], rk[3]);
+	return out;
 }
-
 #else
 #error "No Supported SIMD backend"
 #endif
