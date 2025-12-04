@@ -211,6 +211,14 @@ static void MixColumns(state_t* state) {
 	}
 }
 
+PUBLIC void AesSingleRound(u8 state[16], const u8* RoundKey) {
+	state_t* s = (void*)state;
+	SubBytes(s);
+	ShiftRows(s);
+	MixColumns(s);
+	AddRoundKey(1, s, RoundKey);
+}
+
 #define Multiply(x, y)                               \
 	(((y & 1) * x) ^ ((y >> 1 & 1) * xtime(x)) ^ \
 	 ((y >> 2 & 1) * xtime(xtime(x))) ^          \
