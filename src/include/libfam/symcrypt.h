@@ -28,7 +28,13 @@
 
 #include <libfam/types.h>
 
+#ifdef __aarch64__
+#define SYMCRYPT_CONTEXT_SIZE 368
+#elif defined(__x86_64__)
 #define SYMCRYPT_CONTEXT_SIZE 544
+#else
+#error Unsupported Platform
+#endif
 
 typedef struct {
 	__attribute__((aligned(32))) u8 _data[SYMCRYPT_CONTEXT_SIZE];

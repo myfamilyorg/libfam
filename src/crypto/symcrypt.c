@@ -80,26 +80,6 @@ void sym_crypt_init(SymCryptContext *ctx, const u8 key[32],
 	s->ctr[1] = _mm256_add_epi64(base, inc_hi);
 
 #elif defined(__aarch64__)
-	uint8x16_t k = vld1q_u8(key);
-	s->rk[0] = k;
-
-	for (int i = 1; i < 15; ++i) {
-		uint8x16_t temp = vaeskeygenassistq_u8(k, 0);
-		k = veorq_u8(k, vshlq_n_u8(k, 4));
-		k = veorq_u8(k, vshlq_n_u8(k, 4));
-		k = veorq_u8(k, vshlq_n_u8(k, 4));
-		k = veorq_u8(k, vextq_u8(temp, temp, 12));
-		if (i % 2 == 1) {
-			temp = vaeskeygenassistq_u8(k, 0);
-			k = veorq_u8(k, vextq_u8(temp, temp, 11));
-		}
-		s->rk[i] = k;
-	}
-
-	uint8x16_t n = vld1q_u8(nonce);
-	for (int i = 0; i < 8; ++i) {
-		s->ctr[i] = vaddq_u32(n, vdupq_n_u32(i));
-	}
 #else
 #error Unsupported platform
 #endif
@@ -150,54 +130,6 @@ void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 block[128]) {
 	s->ctr[1] = _mm256_add_epi64(c1, _mm256_set1_epi64x(8));
 
 #elif defined(__aarch64__)
-	uint8x16_t c[8];
-	for (int i = 0; i < 8; ++i) c[i] = s->ctr[i];
-
-#define AESENC(round)                           \
-	c[0] = vaesencq_u8(c[0], s->rk[round]); \
-	c[1] = vaesencq_u8(c[1], s->rk[round]); \
-	c[2] = vaesencq_u8(c[2], s->rk[round]); \
-	c[3] = vaesencq_u8(c[3], s->rk[round]); \
-	c[4] = vaesencq_u8(c[4], s->rk[round]); \
-	c[5] = vaesencq_u8(c[5], s->rk[round]); \
-	c[6] = vaesencq_u8(c[6], s->rk[round]); \
-	c[7] = vaesencq_u8(c[7], s->rk[round]);
-
-	AESENC(0);
-	AESENC(1);
-	AESENC(2);
-	AESENC(3);
-	AESENC(4);
-	AESENC(5);
-	AESENC(6);
-	AESENC(7);
-	AESENC(8);
-	AESENC(9);
-	AESENC(10);
-	AESENC(11);
-	AESENC(12);
-	AESENC(13);
-
-#undef AESENC
-
-	c[0] = vaesenclastq_u8(c[0], s->rk[14]);
-	c[1] = vaesenclastq_u8(c[1], s->rk[14]);
-	c[2] = vaesenclastq_u8(c[2], s->rk[14]);
-	c[3] = vaesenclastq_u8(c[3], s->rk[14]);
-	c[4] = vaesenclastq_u8(c[4], s->rk[14]);
-	c[5] = vaesenclastq_u8(c[5], s->rk[14]);
-	c[6] = vaesenclastq_u8(c[6], s->rk[14]);
-	c[7] = vaesenclastq_u8(c[7], s->rk[14]);
-
-	for (int i = 0; i < 8; ++i) {
-		uint8x16_t p = vld1q_u8(block + i * 16);
-		uint8x16_t out = veorq_u8(p, c[i]);
-		vst1q_u8(block + i * 16, out);
-	}
-
-	for (int i = 0; i < 8; ++i) {
-		s->ctr[i] = vaddq_u64(s->ctr[i], vdupq_n_u64(8));
-	}
 #else
 #error Unsupported platform
 #endif
