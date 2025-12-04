@@ -2,7 +2,7 @@
 
 ARCH=$(uname -m)
 
-./build clean test --novalgrind
+./build clean test --novalgrind || exit $?;
 
 ./build clean test --cflags="-g -std=c11" $1 || exit $?;
 

@@ -474,8 +474,8 @@ Test(aighthash64_longneighbors) {
 
 			b[byte_pos] ^= (u8)(1 << bit_pos);
 
-			u64 ha = aighthash_aes(a, size, seed, key);
-			u64 hb = aighthash_aes(b, size, seed, key);
+			u64 ha = aighthash64(a, size, seed);
+			u64 hb = aighthash64(b, size, seed);
 			u64 diff = ha ^ hb;
 
 			for (int bit = 0; bit < 64; ++bit) {
