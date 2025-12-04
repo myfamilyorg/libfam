@@ -123,11 +123,13 @@ void sym_crypt_init(SymCryptContext *ctx, const u8 key[32], const u8 iv[16]) {
 
 	println("========================================");
 
+	/*
 	v = aes_enc_round(v, x);
 	for (u32 i = 0; i < 32; i++) {
 		println("v enc x[{}]={}", i, ((u8 *)&v)[i]);
 	}
 	println("========================================");
+	*/
 
 	x = aes_dec_round(v, x);
 	u8 *b = (void *)&x;
@@ -138,6 +140,7 @@ void sym_crypt_init(SymCryptContext *ctx, const u8 key[32], const u8 iv[16]) {
 
 	(void)snow_zero;
 	(void)snow_store;
+	(void)aes_enc_round;
 }
 
 void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[128]) {}
