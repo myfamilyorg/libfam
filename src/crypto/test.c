@@ -474,8 +474,6 @@ Test(compare_sym_crypt) {
 	u8 text[128] = {0};
 	SymCryptContext sym;
 
-	if (getenv("VALGRIND")) return;
-
 	sym_crypt_init(&sym, (u8[32]){0}, (u8[16]){0});
 
 	sym_crypt_xcrypt_buffer(&sym, text);
