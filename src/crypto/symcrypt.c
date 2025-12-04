@@ -43,6 +43,7 @@ typedef struct {
 typedef struct {
 	uint8x16_t rk[15];
 	uint8x16_t ctr[8];
+	u8 pad[16];
 } symcrypt_internal;
 #else
 #error Unsupported Platform
@@ -80,6 +81,7 @@ void sym_crypt_init(SymCryptContext *ctx, const u8 key[32],
 	s->ctr[1] = _mm256_add_epi64(base, inc_hi);
 
 #elif defined(__aarch64__)
+	(void)s;
 #else
 #error Unsupported platform
 #endif
@@ -130,6 +132,7 @@ void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 block[128]) {
 	s->ctr[1] = _mm256_add_epi64(c1, _mm256_set1_epi64x(8));
 
 #elif defined(__aarch64__)
+	(void)s;
 #else
 #error Unsupported platform
 #endif
