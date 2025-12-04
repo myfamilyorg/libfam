@@ -85,7 +85,7 @@ ARCH=$(uname -m);
 case "${ARCH}" in
     x86_64)
         MARCH="haswell"
-        MARCH_EXTRA="-mvaes"
+        MARCH_EXTRA="-mvaes -maes"
         ;;
     aarch64)
         MARCH="armv8.1-a"
