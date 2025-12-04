@@ -452,7 +452,7 @@ Test(sym_crypt_perf) {
 	SymCryptContext ctx;
 	u64 sum = 0;
 
-	if (getenv("VALGRIND")) return;
+	// if (getenv("VALGRIND")) return;
 
 	sym_crypt_init(&ctx, (u8[32]){0}, (u8[16]){0});
 
