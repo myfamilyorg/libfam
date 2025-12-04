@@ -52,50 +52,41 @@ static inline snow_vec_t aes_dec_round(snow_vec_t x, snow_vec_t rk) {
 }
 
 #elif defined(__aarch64__)
-typedef struct {
-	uint8x16_t lane[4];
-} snow_vec_t;
+typedef uint8x16_t snow_vec_t[4];
 
-static inline snow_vec_t snow_zero(void) {
+static inline snow_vec_t snow_load(const uint8_t *p) {
 	snow_vec_t v;
-	v.lane[0] = v.lane[1] = v.lane[2] = v.lane[3] = vdupq_n_u8(0);
+	v[0] = vld1q_u8(p + 0);
+	v[1] = vld1q_u8(p + 16);
+	v[2] = vld1q_u8(p + 32);
+	v[3] = vld1q_u8(p + 48);
 	return v;
 }
 
-static inline snow_vec_t snow_load(const u8 *p) {
-	snow_vec_t v;
-	v.lane[0] = vld1q_u8(p + 0);
-	v.lane[1] = vld1q_u8(p + 16);
-	v.lane[2] = vld1q_u8(p + 32);
-	v.lane[3] = vld1q_u8(p + 48);
-	return v;
-}
-
-static inline void snow_store(u8 *p, snow_vec_t v) {
-	vst1q_u8(p + 0, v.lane[0]);
-	vst1q_u8(p + 16, v.lane[1]);
-	vst1q_u8(p + 32, v.lane[2]);
-	vst1q_u8(p + 48, v.lane[3]);
+static inline void snow_store(uint8_t *p, snow_vec_t v) {
+	vst1q_u8(p + 0, v[0]);
+	vst1q_u8(p + 16, v[1]);
+	vst1q_u8(p + 32, v[2]);
+	vst1q_u8(p + 48, v[3]);
 }
 
 static inline snow_vec_t aes_enc_round(snow_vec_t x, snow_vec_t rk) {
 	snow_vec_t out;
-	out.lane[0] = vaesmcq_u8(vaeseq_u8(x.lane[0], rk.lane[0]));
-	out.lane[1] = vaesmcq_u8(vaeseq_u8(x.lane[1], rk.lane[1]));
-	out.lane[2] = vaesmcq_u8(vaeseq_u8(x.lane[2], rk.lane[2]));
-	out.lane[3] = vaesmcq_u8(vaeseq_u8(x.lane[3], rk.lane[3]));
+	out[0] = vaesencq_u8(x[0], rk[0]);
+	out[1] = vaesencq_u8(x[1], rk[1]);
+	out[2] = vaesencq_u8(x[2], rk[2]);
+	out[3] = vaesencq_u8(x[3], rk[3]);
 	return out;
 }
 
 static inline snow_vec_t aes_dec_round(snow_vec_t x, snow_vec_t rk) {
 	snow_vec_t out;
-	out.lane[0] = vaesdq_u8(x.lane[0], rk.lane[0]);
-	out.lane[1] = vaesdq_u8(x.lane[1], rk.lane[1]);
-	out.lane[2] = vaesdq_u8(x.lane[2], rk.lane[2]);
-	out.lane[3] = vaesdq_u8(x.lane[3], rk.lane[3]);
+	out[0] = vaesdecq_u8(x[0], rk[0]);
+	out[1] = vaesdecq_u8(x[1], rk[1]);
+	out[2] = vaesdecq_u8(x[2], rk[2]);
+	out[3] = vaesdecq_u8(x[3], rk[3]);
 	return out;
 }
-
 #else
 #error "No Supported SIMD backend"
 #endif
