@@ -27,6 +27,7 @@
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/debug.h>
+#include <libfam/env.h>
 #include <libfam/rng.h>
 #include <libfam/sha3.h>
 #include <libfam/string.h>
@@ -450,6 +451,8 @@ Test(sym_crypt_perf) {
 	u64* v = (void*)text;
 	SymCryptContext ctx;
 	u64 sum = 0;
+
+	if (getenv("VALGRIND")) return;
 
 	sym_crypt_init(&ctx, (u8[32]){0}, (u8[16]){0});
 
