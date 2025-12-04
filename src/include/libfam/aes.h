@@ -119,4 +119,6 @@ void aes_ctr_xcrypt_buffer(AesContext *ctx, void *buf, u64 length);
  */
 void aes256_ctr_encrypt_8blocks(AesContext *ctx, const u8 in[128], u8 out[128]);
 
+void AesSingleRound(u8 state[16], const u8 *RoundKey);
+
 #endif /* _AES_H */

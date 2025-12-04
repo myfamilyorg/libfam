@@ -33,6 +33,7 @@
 #include <libfam/string.h>
 #include <libfam/symcrypt.h>
 #include <libfam/test.h>
+#include <libfam/xxhash.h>
 
 u8 hex_to_nibble(u8 v1, u8 v2) {
 	u8 high;
@@ -322,20 +323,20 @@ Test(aighthash) {
 	u32 sum = 0;
 
 	for (u32 i = 0; i < COUNT; i++) {
-		u32 r = aighthash(text, 32, 0);
+		u32 r = aighthash64(text, 32, 0);
 		(*v)++;
 		sum += r;
 		// println("{X}", r);
 	}
 	timer = micros() - timer;
 	(void)sum;
-	// println("time={},r={},avg={}ns", timer, sum, (timer * 1000) / COUNT);
+	println("time={},r={},avg={}ns", timer, sum, (timer * 1000) / COUNT);
 }
 
 Test(twobytefails) {
-	u32 h1 = aighthash("a\0", 2, 0);  // input: 0x61 0x00
-	u32 h2 = aighthash("ab", 2, 0);	  // input: 0x61 0x62
-					  // println("h1={x},h2={x}", h1, h2);
+	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
+	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -344,8 +345,8 @@ Test(aighthash_original_fails_this) {
 	// These two inputs are 3 bytes each, differ only in last byte
 	// Your tail handling accumulates big-endian → same low 16 bits → weak
 	// final mix can't save it
-	u32 h1 = aighthash("abc", 3, 0);   // bytes: 0x61 0x62 0x63
-	u32 h2 = aighthash("ab\0", 3, 0);  // bytes: 0x61 0x62 0x00
+	u32 h1 = aighthash32("abc", 3, 0);   // bytes: 0x61 0x62 0x63
+	u32 h2 = aighthash32("ab\0", 3, 0);  // bytes: 0x61 0x62 0x00
 
 	// println("h_abc = 0x{x}", h1);
 	// println("h_ab0 = 0x{x}", h2);
@@ -397,8 +398,8 @@ Test(aighthash_longneighbors) {
 
 			b[byte_pos] ^= (u8)(1 << bit_pos);
 
-			u32 ha = aighthash(a, size, seed);
-			u32 hb = aighthash(b, size, seed);
+			u32 ha = aighthash32(a, size, seed);
+			u32 hb = aighthash32(b, size, seed);
 			u32 diff = ha ^ hb;
 
 			for (int bit = 0; bit < 32; ++bit) {
@@ -409,17 +410,14 @@ Test(aighthash_longneighbors) {
 			total_tests++;
 		}
 
-		/*
 		println(
 		    "LongNeighbors (seed={}) — 500 single-bit diffs in 128KB "
 		    "keys:",
 		    seed);
-		    */
 		for (int bit = 0; bit < 32; ++bit) {
 			f64 percent = 100.0 * bias[bit] / total_tests;
-			/*println("  bit {}: {} flips → {}", bit, bias[bit],
+			println("  bit {}: {} flips → {}", bit, bias[bit],
 				percent);
-				*/
 			(void)percent;
 		}
 
@@ -430,24 +428,88 @@ Test(aighthash_longneighbors) {
 				failed++;
 			}
 		}
+		(void)failed;
 
 		total_fail += failed != 0;
-		/*
-		ASSERT(failed == 0,
-		       "LongNeighbors bias detected ({} bits out of range)",
-		       failed);
-		       */
-		//	rng_reseed(&rng, NULL);
 	}
-	// println("total_failed={}/{}", total_fail, iter);
-	rng_reseed(&rng, NULL);
+	println("total_failed={}/{}", total_fail, iter);
 }
 
-#define SYMCRYPT_COUNT (1000000000 / 128)
+Test(aighthash64_longneighbors) {
+	Rng rng;
+	int size = SIZE;
+	u8 a[SIZE] = {0};
+	u8 b[SIZE] = {0};
+
+	rng_test_seed(&rng, (u8[32]){0}, (u8[32]){0});
+	u8 key[16];
+	rng_gen(&rng, key, 16);
+
+	int total_fail = 0;
+	int iter = 1000;
+
+	for (u32 i = 0; i < iter; i++) {
+		for (u64 j = 0; j < size; ++j)
+			a[j] = b[j] =
+			    (u8)(j ^ (j >> 8) ^ (j >> 16) ^ (j >> 32));
+
+		int total_tests = 0;
+		int bias[64] = {0};  // now 64 bits
+		u64 seed = i;
+
+		for (int trial = 0; trial < 500; ++trial) {
+			fastmemcpy(b, a, size);
+
+			u64 byte_pos = 0;
+			rng_gen(&rng, &byte_pos, sizeof(u64));
+			byte_pos %= size;
+			u8 bit_pos = 0;
+			rng_gen(&rng, &bit_pos, sizeof(u8));
+			bit_pos %= 8;
+
+			b[byte_pos] ^= (u8)(1 << bit_pos);
+
+			u64 ha = aighthash_aes(a, size, seed, key);
+			u64 hb = aighthash_aes(b, size, seed, key);
+			u64 diff = ha ^ hb;
+
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[bit]++;
+				}
+			}
+			total_tests++;
+		}
+
+		println(
+		    "LongNeighbors64 (seed={}) — 500 single-bit diffs in 128KB "
+		    "keys:",
+		    seed);
+		for (int bit = 0; bit < 64; ++bit) {
+			f64 percent = 100.0 * bias[bit] / total_tests;
+			println("  bit {:2}: {:3} flips → {:5.2}", bit,
+				bias[bit], percent);
+		}
+
+		int failed = 0;
+		for (int bit = 0; bit < 64; ++bit) {
+			f64 p = 100.0 * bias[bit] / total_tests;
+			if (p < 44.0 || p > 56.0) {
+				failed++;
+			}
+		}
+
+		total_fail += (failed != 0);
+	}
+
+	println("total_failed={}/{}", total_fail, iter);
+}
+
+#define SYMCRYPT_COUNT (1000000000 / 32)
 
 Test(sym_crypt_perf) {
 	i64 timer;
-	u8 text[128] = {0};
+	u8 text[32] = {0};
 	u64* v = (void*)text;
 	SymCryptContext ctx;
 	u64 sum = 0;
@@ -464,10 +526,8 @@ Test(sym_crypt_perf) {
 	}
 	timer = micros() - timer;
 	(void)sum;
-	/*
 	println("time={},r={},avg={}ns", timer, sum,
 		(timer * 1000) / SYMCRYPT_COUNT);
-		*/
 }
 
 Test(compare_sym_crypt) {
@@ -478,4 +538,120 @@ Test(compare_sym_crypt) {
 
 	sym_crypt_xcrypt_buffer(&sym, text);
 	// for (u32 i = 0; i < 16; i++) println("{}", text[i]);
+}
+
+#include <libfam/string.h>
+#include <wmmintrin.h>
+
+Test(comp_crypto) {
+	u8 state[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+			0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+	u8 rk[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+	u8 scalar[16], hw[16];
+	memcpy(scalar, state, 16);
+	memcpy(hw, state, 16);
+
+	AesSingleRound(scalar, rk);  // your scalar version
+	__m128i v = _mm_loadu_si128((__m128i*)hw);
+	v = _mm_aesenc_si128(
+	    v, _mm_loadu_si128((__m128i*)rk));	// hardware version
+	_mm_storeu_si128((__m128i*)hw, v);
+
+	println("{}", memcmp(scalar, hw, 16) == 0 ? 1 : 0);
+}
+
+Test(sym_crypt1) {
+	SymCryptContext ctx;
+	u8 out[32] = {0};
+	const u8 key[32] = {0};
+	const u8 iv_zero[16] = {0};
+
+	const u8 expected_out[] = {0x36, 0x1f, 0xe6, 0x70, 0x4c, 0x42,
+				   0xb5, 0x3f, 0xed, 0x3f, 0xc3, 0x0,
+				   0xf6, 0xfc, 0xd0, 0x23, 0xbc, 0x74,
+				   0x8b, 0xf4, 0xe4, 0xab, 0xeb, 0x0};
+	(void)expected_out;
+
+	sym_crypt_init(&ctx, key, iv_zero);
+	sym_crypt_xcrypt_buffer(&ctx, out);
+	for (u32 i = 0; i < 32; i++) print("{x}, ", out[i]);
+	// ASSERT(!memcmp(out, expected_first_128, 128), "sym_crypt");
+}
+
+Test(symcrypt_longneighbors) {
+	Rng rng;
+	SymCryptContext ctx;
+	AesContext aes;
+	bool use_aes = false;
+	(void)ctx;
+	(void)aes;
+	u8 a[32] __attribute__((aligned(32))) = {0};
+	u8 b[32] __attribute__((aligned(32))) = {0};
+	u8 key[32] = {0};
+	u8 iv[16] = {0};
+	u32 iter = 1000;
+	u32 trials = 10000;
+	u32 total_fail = 0;
+
+	rng_init(&rng, NULL);
+	rng_test_seed(&rng, (u8[32]){2}, (u8[32]){0});
+
+	for (u32 i = 0; i < iter; i++) {
+		rng_gen(&rng, key, 32);
+		rng_gen(&rng, iv, 16);
+		if (!use_aes)
+			sym_crypt_init(&ctx, key, iv);
+		else
+			aes_init(&aes, key, iv);
+		u64 zeros[256] = {0};
+		u64 ones[256] = {0};
+
+		for (u32 j = 0; j < trials; j++) {
+			fastmemcpy(b, a, 32);
+			if (!use_aes)
+				sym_crypt_xcrypt_buffer(&ctx, a);
+			else
+				aes_ctr_xcrypt_buffer(&aes, a, 32);
+
+			u64 byte_pos = 0;
+			rng_gen(&rng, &byte_pos, sizeof(u64));
+			byte_pos %= 32;
+			u8 bit_pos = 0;
+			rng_gen(&rng, &bit_pos, sizeof(u8));
+			bit_pos %= 8;
+
+			b[byte_pos] ^= (u8)(1 << bit_pos);
+
+			if (!use_aes)
+				sym_crypt_xcrypt_buffer(&ctx, b);
+			else
+				aes_ctr_xcrypt_buffer(&aes, b, 32);
+
+			for (u32 k = 0; k < 32; k++) {
+				u8 diff = a[k] ^ b[k];
+				for (u32 bit = 0; bit < 8; bit++) {
+					if (diff & (1 << bit)) {
+						ones[k * 8 + bit]++;
+					} else {
+						zeros[k * 8 + bit]++;
+					}
+				}
+			}
+		}
+
+		for (u32 j = 0; j < 256; j++) {
+			f64 avg = (zeros[j] * 1000) / (zeros[j] + ones[j]);
+			avg /= 10.0;
+			if (avg > 55.0 || avg < 45.0) {
+				total_fail++;
+				/*println("bias[{}]={}", j, avg);*/
+			}
+		}
+	}
+	if (use_aes)
+		println("total_failed(aes)={}/{}", total_fail, iter * 256);
+	else
+		println("total_failed(sym_crypt)={}/{}", total_fail,
+			iter * 256);
 }

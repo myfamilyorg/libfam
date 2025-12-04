@@ -216,7 +216,7 @@ PUBLIC void AesSingleRound(u8 state[16], const u8* RoundKey) {
 	SubBytes(s);
 	ShiftRows(s);
 	MixColumns(s);
-	AddRoundKey(1, s, RoundKey);
+	AddRoundKey(0, s, RoundKey);
 }
 
 #define Multiply(x, y)                               \

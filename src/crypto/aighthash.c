@@ -23,16 +23,21 @@
  *
  *******************************************************************************/
 
+#ifdef __AVX2__
+#include <immintrin.h>
+#endif /* __AVX2__ */
+
 #include <libfam/aighthash.h>
 #include <libfam/utils.h>
 
-#define AIGHT_INIT 0x9E3779B9U
+#define AIGHT64_INIT 0x9E3779B97F4A7C15ULL
+#define AIGHT32_INIT 0x9E3779B9U
 #define AIGHT_P1 0xc2b2ae35u
 #define AIGHT_P2 0x85ebca6bu
 
-u32 aighthash(const void* data, u64 len, u32 seed) {
+u32 aighthash32(const void* data, u64 len, u32 seed) {
 	const u8* p = (const u8*)data;
-	u32 h = seed ^ AIGHT_INIT, tail = 0;
+	u32 h = seed ^ AIGHT32_INIT, tail = 0;
 
 	while (len >= 8) {
 		u64 v = (u64)p[0] | ((u64)p[1] << 8) | ((u64)p[2] << 16) |
@@ -52,4 +57,45 @@ u32 aighthash(const void* data, u64 len, u32 seed) {
 	h = (h + (u32)len) ^ tail;
 	h = (h ^ (h >> 16)) * AIGHT_P2;
 	return h ^ (h >> 15);
+}
+
+u64 aighthash64(const void* data, u64 len, u64 seed) {
+	const u8* p = (const u8*)data;
+	u64 h = seed ^ AIGHT64_INIT;
+
+	while (len >= 16) {
+		u64 v1 = *(u64*)p;
+		u64 v2 = *(u64*)(p + 8);
+
+		h ^= v1;
+		h *= AIGHT_P2;
+		h ^= h >> 33;
+		h ^= v2;
+		h *= AIGHT_P1;
+		h ^= h >> 29;
+
+		p += 16;
+		len -= 16;
+	}
+
+	u64 tail = 0;
+	while (len--) tail ^= (u64)*p++ << (8 * (len & 7));
+
+	h ^= tail;
+	h ^= len;
+	h *= AIGHT_P2;
+	h ^= h >> 29;
+	h *= AIGHT_P1;
+
+	return h;
+}
+
+#include <libfam/xxhash.h>
+
+u64 aighthash_aes(const void* data, u64 len, u64 seed, u8 key[16]) {
+	const __m128i* simd_key = (void*)key;
+	u64 h = XXH3_64bits(data, len);
+	__m128i block = _mm_set_epi64x(seed, h);
+	block = _mm_aesenc_si128(block, *simd_key);
+	return _mm_cvtsi128_si64(block) ^ _mm_extract_epi64(block, 1);
 }

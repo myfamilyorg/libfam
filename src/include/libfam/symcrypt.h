@@ -28,19 +28,13 @@
 
 #include <libfam/types.h>
 
-#ifdef __aarch64__
-#define SYMCRYPT_CONTEXT_SIZE 384
-#elif defined(__x86_64__)
-#define SYMCRYPT_CONTEXT_SIZE 544
-#else
-#error Unsupported Platform
-#endif
+#define SYMCRYPT_CONTEXT_SIZE 176
 
 typedef struct {
 	__attribute__((aligned(32))) u8 _data[SYMCRYPT_CONTEXT_SIZE];
 } SymCryptContext;
 
 void sym_crypt_init(SymCryptContext *ctx, const u8 key[32], const u8 iv[16]);
-void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[128]);
+void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[32]);
 
 #endif /* _SYM_CRYPT_H */

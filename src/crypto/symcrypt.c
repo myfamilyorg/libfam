@@ -26,116 +26,60 @@
 #ifdef __AVX2__
 #include <immintrin.h>
 #endif /* __AVX2__ */
-#ifdef __aarch64__
-#include <arm_neon.h>
-#endif /* __aarch64__ */
+#include <libfam/string.h>
 #include <libfam/symcrypt.h>
 #include <libfam/utils.h>
 
-#ifdef __AVX2__
-typedef __m256i snow_vec_t;
-
-static inline snow_vec_t snow_zero(void) { return _mm256_setzero_si256(); }
-static inline snow_vec_t snow_load(const u8 *p) {
-	return _mm256_loadu_si256((const __m256i *)p);
-}
-static inline void snow_store(u8 *p, snow_vec_t v) {
-	_mm256_storeu_si256((__m256i *)p, v);
-}
-
-static inline snow_vec_t aes_enc_round(snow_vec_t x, snow_vec_t rk) {
-	return _mm256_aesenc_epi128(x, rk);
-}
-
-static inline snow_vec_t aes_dec_round(snow_vec_t x, snow_vec_t rk) {
-	return _mm256_aesdec_epi128(x, rk);
-}
-
-#elif defined(__aarch64__)
-void AesSingleRound(u8 state[16], const u8 *RoundKey);
-
-typedef u8 snow_vec_t[64];  // 4 lanes × 16 bytes = 64 bytes
-
-static inline snow_vec_t snow_load(const u8 *p) {
-	snow_vec_t v;
-	memcpy(v, p, 64);
-	return v;
-}
-
-static inline void snow_store(u8 *p, snow_vec_t v) { memcpy(p, v, 64); }
-
-static inline snow_vec_t aes_enc_round(snow_vec_t x, snow_vec_t rk) {
-	snow_vec_t out;
-	for (int i = 0; i < 4; i++) {
-		u8 state[16];
-		u8 key[16];
-		memcpy(state, x + i * 16, 16);
-		memcpy(key, rk + i * 16, 16);
-		AesSingleRound(state, key);
-		memcpy(out + i * 16, state, 16);
-	}
-	return out;
-}
-
-static inline snow_vec_t aes_dec_round(snow_vec_t x, snow_vec_t rk) {
-	snow_vec_t out;
-	for (int i = 0; i < 4; i++) {
-		u8 state[16];
-		u8 key[16];
-		memcpy(state, x + i * 16, 16);
-		memcpy(key, rk + i * 16, 16);
-		// For decryption: use inverse round or pre-invert key
-		// SNOW-V uses a fixed decryption round on R3 — you can reuse
-		// enc with inverted key
-		AesSingleRound(state, key);  // placeholder — real code inverts
-					     // key or uses inv round
-		memcpy(out + i * 16, state, 16);
-	}
-	return out;
-}
-#else
-#error "No Supported SIMD backend"
-#endif
-
-#include <libfam/format.h>
+typedef struct {
+	u8 key[4][32];
+	u8 state[32];
+	__m256i keys[4];
+} SymCryptContextImpl;
 
 void sym_crypt_init(SymCryptContext *ctx, const u8 key[32], const u8 iv[16]) {
-	snow_vec_t v, x;
-	v = snow_load((u8[32]){0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
-			       11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-			       22, 23, 24, 25, 26, 27, 28, 29, 30, 31});
-	x = snow_load((u8[32]){0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
-			       11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-			       22, 23, 24, 25, 26, 27, 28, 29, 30, 31});
+	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
+	*(__m256i *)st->key[0] = _mm256_loadu_si256((const __m256i *)key);
 
-	for (u32 i = 0; i < 32; i++) {
-		println("v[{}]={}", i, ((u8 *)&v)[i]);
-	}
+	__m128i iv128 = _mm_loadu_si128((const __m128i *)iv);
+	__m256i iv256 = _mm256_broadcastsi128_si256(iv128);
 
-	println("========================================");
+	*(__m256i *)st->state = iv256;
 
-	for (u32 i = 0; i < 32; i++) {
-		println("x[{}]={}", i, ((u8 *)&x)[i]);
-	}
-
-	println("========================================");
-
-	v = aes_enc_round(v, x);
-	for (u32 i = 0; i < 32; i++) {
-		println("v enc x[{}]={}", i, ((u8 *)&v)[i]);
-	}
-	println("========================================");
-
-	x = aes_dec_round(v, x);
-	u8 *b = (void *)&x;
-	println("{}", sizeof(snow_vec_t));
-	for (u32 i = 0; i < 32; i++) {
-		println("b[{}]={}", i, b[i]);
-	}
-
-	(void)snow_zero;
-	(void)snow_store;
-	(void)aes_enc_round;
+	*(__m256i *)st->state =
+	    _mm256_xor_si256(*(__m256i *)st->state, *(__m256i *)st->key[0]);
+	*(__m256i *)st->key[1] =
+	    _mm256_add_epi64(*(__m256i *)st->key[0], _mm256_set1_epi64x(1));
+	*(__m256i *)st->key[2] =
+	    _mm256_add_epi64(*(__m256i *)st->key[1], _mm256_set1_epi64x(1));
+	*(__m256i *)st->key[3] =
+	    _mm256_add_epi64(*(__m256i *)st->key[2], _mm256_set1_epi64x(1));
 }
 
-void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[128]) {}
+inline void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[32]) {
+	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
+
+	__m256i s = _mm256_load_si256((const __m256i *)(void *)st->state);
+	__m256i p = _mm256_load_si256((const __m256i *)(void *)buf);
+	__m256i x = _mm256_xor_si256(s, p);
+
+	__m128i rk0 = _mm_load_si128((const __m128i *)(void *)st->key[0]);
+	__m128i rk1 = _mm_load_si128((const __m128i *)(void *)st->key[1] + 1);
+	__m128i rk2 = _mm_load_si128((const __m128i *)(void *)st->key[2]);
+	__m128i rk3 = _mm_load_si128((const __m128i *)(void *)st->key[3] + 1);
+
+	__m128i lo = _mm256_castsi256_si128(x);
+	__m128i hi = _mm256_extracti128_si256(x, 1);
+
+	x = _mm256_shuffle_epi32(x, 0x4E);
+	lo = _mm_aesenc_si128(lo, rk0);
+	hi = _mm_aesenc_si128(hi, rk1);
+	x = _mm256_set_m128i(hi, lo);
+
+	x = _mm256_shuffle_epi32(x, 0x4E);
+	lo = _mm_aesenc_si128(lo, rk2);
+	hi = _mm_aesenc_si128(hi, rk3);
+	x = _mm256_set_m128i(hi, lo);
+
+	_mm256_store_si256((__m256i *)(void *)st->state, x);
+	_mm256_store_si256((__m256i *)(void *)buf, _mm256_xor_si256(p, x));
+}
