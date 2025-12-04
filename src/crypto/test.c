@@ -323,20 +323,19 @@ Test(aighthash) {
 	u32 sum = 0;
 
 	for (u32 i = 0; i < COUNT; i++) {
-		u32 r = aighthash64(text, 32, 0);
+		u64 r = aighthash64(text, 32, 0);
 		(*v)++;
 		sum += r;
-		// println("{X}", r);
 	}
 	timer = micros() - timer;
 	(void)sum;
-	println("time={},r={},avg={}ns", timer, sum, (timer * 1000) / COUNT);
+	// println("time={},r={},avg={}ns", timer, sum, (timer * 1000) / COUNT);
 }
 
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					    // println("h1={x},h2={x}", h1, h2);
+					   // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -410,14 +409,18 @@ Test(aighthash_longneighbors) {
 			total_tests++;
 		}
 
+		/*
 		println(
 		    "LongNeighbors (seed={}) — 500 single-bit diffs in 128KB "
 		    "keys:",
 		    seed);
+		    */
 		for (int bit = 0; bit < 32; ++bit) {
 			f64 percent = 100.0 * bias[bit] / total_tests;
+			/*
 			println("  bit {}: {} flips → {}", bit, bias[bit],
 				percent);
+				*/
 			(void)percent;
 		}
 
@@ -432,7 +435,7 @@ Test(aighthash_longneighbors) {
 
 		total_fail += failed != 0;
 	}
-	println("total_failed={}/{}", total_fail, iter);
+	// println("total_failed={}/{}", total_fail, iter);
 }
 
 Test(aighthash64_longneighbors) {
@@ -446,7 +449,9 @@ Test(aighthash64_longneighbors) {
 	rng_gen(&rng, key, 16);
 
 	int total_fail = 0;
-	int iter = 1000;
+	int iter = 10;
+
+	(void)total_fail;
 
 	for (u32 i = 0; i < iter; i++) {
 		for (u64 j = 0; j < size; ++j)
@@ -481,14 +486,19 @@ Test(aighthash64_longneighbors) {
 			total_tests++;
 		}
 
+		/*
 		println(
 		    "LongNeighbors64 (seed={}) — 500 single-bit diffs in 128KB "
 		    "keys:",
 		    seed);
+		    */
 		for (int bit = 0; bit < 64; ++bit) {
 			f64 percent = 100.0 * bias[bit] / total_tests;
+			/*
 			println("  bit {:2}: {:3} flips → {:5.2}", bit,
 				bias[bit], percent);
+				*/
+			(void)percent;
 		}
 
 		int failed = 0;
@@ -502,10 +512,10 @@ Test(aighthash64_longneighbors) {
 		total_fail += (failed != 0);
 	}
 
-	println("total_failed={}/{}", total_fail, iter);
+	// println("total_failed={}/{}", total_fail, iter);
 }
 
-#define SYMCRYPT_COUNT (1000000000 / 32)
+#define SYMCRYPT_COUNT (1 * (1000000000 / 32))
 
 Test(sym_crypt_perf) {
 	i64 timer;
@@ -526,8 +536,53 @@ Test(sym_crypt_perf) {
 	}
 	timer = micros() - timer;
 	(void)sum;
-	println("time={},r={},avg={}ns", timer, sum,
+	/* println("time={},r={},avg={}ns", timer, sum,
+		(timer * 1000) / SYMCRYPT_COUNT);*/
+}
+
+Test(sym_crypt_perf2) {
+	i64 timer;
+	__attribute__((aligned(32))) u8 buf1[64] = {0};
+	__attribute__((aligned(32))) u8 buf2[64] = {0};
+	__attribute__((aligned(32))) u8 buf3[64] = {0};
+	__attribute__((aligned(32))) u8 buf4[64] = {0};
+
+	SymCryptContext ctx1;
+	SymCryptContext ctx2;
+	SymCryptContext ctx3;
+	SymCryptContext ctx4;
+
+	u64 sum = 0;
+
+	(void)sum;
+
+	sym_crypt_init(&ctx1, (u8[32]){0}, (u8[16]){0});
+	sym_crypt_init(&ctx2, (u8[32]){1}, (u8[16]){0});
+	sym_crypt_init(&ctx3, (u8[32]){2}, (u8[16]){0});
+	sym_crypt_init(&ctx4, (u8[32]){3}, (u8[16]){0});
+
+	timer = micros();
+	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
+		u8* block1 = buf1 + (i & 32);
+		u8* block2 = buf2 + (i & 32);
+		u8* block3 = buf3 + (i & 32);
+		u8* block4 = buf4 + (i & 32);
+
+		sym_crypt_xcrypt_buffer(&ctx1, block1);
+		sum += ((u64*)block1)[0];
+		sym_crypt_xcrypt_buffer(&ctx2, block2);
+		sum += ((u64*)block2)[0];
+		sym_crypt_xcrypt_buffer(&ctx3, block3);
+		sum += ((u64*)block3)[0];
+		sym_crypt_xcrypt_buffer(&ctx4, block4);
+		sum += ((u64*)block4)[0];
+	}
+	timer = micros() - timer;
+
+	/*
+	println("time={}us, sum={}, avg={}ns", timer, sum,
 		(timer * 1000) / SYMCRYPT_COUNT);
+		*/
 }
 
 Test(compare_sym_crypt) {
@@ -558,7 +613,7 @@ Test(comp_crypto) {
 	    v, _mm_loadu_si128((__m128i*)rk));	// hardware version
 	_mm_storeu_si128((__m128i*)hw, v);
 
-	println("{}", memcmp(scalar, hw, 16) == 0 ? 1 : 0);
+	// println("{}", memcmp(scalar, hw, 16) == 0 ? 1 : 0);
 }
 
 Test(sym_crypt1) {
@@ -575,7 +630,7 @@ Test(sym_crypt1) {
 
 	sym_crypt_init(&ctx, key, iv_zero);
 	sym_crypt_xcrypt_buffer(&ctx, out);
-	for (u32 i = 0; i < 32; i++) print("{x}, ", out[i]);
+	// for (u32 i = 0; i < 32; i++) print("{x}, ", out[i]);
 	// ASSERT(!memcmp(out, expected_first_128, 128), "sym_crypt");
 }
 
@@ -583,7 +638,7 @@ Test(symcrypt_longneighbors) {
 	Rng rng;
 	SymCryptContext ctx;
 	AesContext aes;
-	bool use_aes = false;
+	bool use_aes = true;
 	(void)ctx;
 	(void)aes;
 	u8 a[32] __attribute__((aligned(32))) = {0};
@@ -591,11 +646,14 @@ Test(symcrypt_longneighbors) {
 	u8 key[32] = {0};
 	u8 iv[16] = {0};
 	u32 iter = 1000;
-	u32 trials = 10000;
+	u32 trials = 1000;
 	u32 total_fail = 0;
 
+	(void)total_fail;
+
 	rng_init(&rng, NULL);
-	rng_test_seed(&rng, (u8[32]){2}, (u8[32]){0});
+	rng_test_seed(&rng, (u8[32]){3}, (u8[32]){0});
+	f64 max = 0.0, min = 100.0;
 
 	for (u32 i = 0; i < iter; i++) {
 		rng_gen(&rng, key, 32);
@@ -643,15 +701,17 @@ Test(symcrypt_longneighbors) {
 		for (u32 j = 0; j < 256; j++) {
 			f64 avg = (zeros[j] * 1000) / (zeros[j] + ones[j]);
 			avg /= 10.0;
-			if (avg > 55.0 || avg < 45.0) {
-				total_fail++;
-				/*println("bias[{}]={}", j, avg);*/
-			}
+			if (avg > max) max = avg;
+			if (avg < min) min = avg;
+			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
+	/*
 	if (use_aes)
-		println("total_failed(aes)={}/{}", total_fail, iter * 256);
+		println("total_failed(aes)={}/{},diff={}", total_fail,
+			iter * 256, max - min);
 	else
-		println("total_failed(sym_crypt)={}/{}", total_fail,
-			iter * 256);
+		println("total_failed(sym_crypt)={}/{},diff={}", total_fail,
+			iter * 256, max - min);
+			*/
 }

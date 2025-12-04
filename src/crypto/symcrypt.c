@@ -24,62 +24,80 @@
  *******************************************************************************/
 
 #ifdef __AVX2__
-#include <immintrin.h>
+#define USE_AVX2
 #endif /* __AVX2__ */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
 #include <libfam/string.h>
 #include <libfam/symcrypt.h>
 #include <libfam/utils.h>
 
 typedef struct {
-	u8 key[4][32];
-	u8 state[32];
-	__m256i keys[4];
+#ifdef USE_AVX2
+	__m256i state;
+	__m128i rk_lo[4];
+	__m128i rk_hi[4];
+#endif /* USE_AVX2 */
 } SymCryptContextImpl;
 
-void sym_crypt_init(SymCryptContext *ctx, const u8 key[32], const u8 iv[16]) {
+#ifdef USE_AVX2
+STATIC void sym_crypt_init_avx2(SymCryptContext *ctx, const u8 mkey[32],
+				const u8 iv[16]) {
 	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
-	*(__m256i *)st->key[0] = _mm256_loadu_si256((const __m256i *)key);
+	__m256i key = _mm256_loadu_si256((const __m256i_u *)mkey);
+	__m256i iv256 =
+	    _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i_u *)iv));
 
-	__m128i iv128 = _mm_loadu_si128((const __m128i *)iv);
-	__m256i iv256 = _mm256_broadcastsi128_si256(iv128);
+	st->state = _mm256_xor_si256(iv256, key);
 
-	*(__m256i *)st->state = iv256;
+	__m256i k = key;
+	const __m256i ONE4 = _mm256_set_epi64x(1, 0, 1, 0);
 
-	*(__m256i *)st->state =
-	    _mm256_xor_si256(*(__m256i *)st->state, *(__m256i *)st->key[0]);
-	*(__m256i *)st->key[1] =
-	    _mm256_add_epi64(*(__m256i *)st->key[0], _mm256_set1_epi64x(1));
-	*(__m256i *)st->key[2] =
-	    _mm256_add_epi64(*(__m256i *)st->key[1], _mm256_set1_epi64x(1));
-	*(__m256i *)st->key[3] =
-	    _mm256_add_epi64(*(__m256i *)st->key[2], _mm256_set1_epi64x(1));
+	for (int i = 0; i < 4; i++) {
+		st->rk_lo[i] = _mm256_castsi256_si128(k);
+		st->rk_hi[i] = _mm256_extracti128_si256(k, 1);
+		k = _mm256_add_epi64(k, ONE4);
+	}
 }
 
-inline void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[32]) {
+STATIC void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx, u8 buf[32]) {
 	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
 
-	__m256i s = _mm256_load_si256((const __m256i *)(void *)st->state);
+	__m256i x = st->state;
+	__m128i kl0 = st->rk_lo[0];
+	__m128i kh1 = st->rk_hi[1];
+	__m128i kl2 = st->rk_lo[2];
+	__m128i kh3 = st->rk_hi[3];
 	__m256i p = _mm256_load_si256((const __m256i *)(void *)buf);
-	__m256i x = _mm256_xor_si256(s, p);
 
-	__m128i rk0 = _mm_load_si128((const __m128i *)(void *)st->key[0]);
-	__m128i rk1 = _mm_load_si128((const __m128i *)(void *)st->key[1] + 1);
-	__m128i rk2 = _mm_load_si128((const __m128i *)(void *)st->key[2]);
-	__m128i rk3 = _mm_load_si128((const __m128i *)(void *)st->key[3] + 1);
-
+	x = _mm256_xor_si256(x, p);
 	__m128i lo = _mm256_castsi256_si128(x);
 	__m128i hi = _mm256_extracti128_si256(x, 1);
 
-	x = _mm256_shuffle_epi32(x, 0x4E);
-	lo = _mm_aesenc_si128(lo, rk0);
-	hi = _mm_aesenc_si128(hi, rk1);
+	lo = _mm_aesenc_si128(lo, kl0);
+	hi = _mm_aesenc_si128(hi, kh1);
 	x = _mm256_set_m128i(hi, lo);
 
-	x = _mm256_shuffle_epi32(x, 0x4E);
-	lo = _mm_aesenc_si128(lo, rk2);
-	hi = _mm_aesenc_si128(hi, rk3);
+	lo = _mm_aesenc_si128(lo, kl2);
+	hi = _mm_aesenc_si128(hi, kh3);
 	x = _mm256_set_m128i(hi, lo);
 
-	_mm256_store_si256((__m256i *)(void *)st->state, x);
+	st->state = x;
 	_mm256_store_si256((__m256i *)(void *)buf, _mm256_xor_si256(p, x));
+}
+#endif /* USE_AVX2 */
+
+PUBLIC void sym_crypt_init(SymCryptContext *ctx, const u8 key[32],
+			   const u8 iv[16]) {
+#ifdef USE_AVX2
+	sym_crypt_init_avx2(ctx, key, iv);
+#endif /* USE_AVX2 */
+}
+
+PUBLIC void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[32]) {
+#ifdef USE_AVX2
+	sym_crypt_xcrypt_buffer_avx2(ctx, buf);
+#endif /* USE_AVX2 */
 }

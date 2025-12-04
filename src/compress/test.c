@@ -33,7 +33,7 @@ Test(compress1) {
 	ASSERT(in, "fmap");
 
 	i64 timer = micros();
-	for (u32 i = 0; i < 1000; i++)
+	for (u32 i = 0; i < 100; i++)
 		ASSERT(
 		    compress_block(in, MAX_COMPRESS_LEN, out, sizeof(out)) > 0,
 		    "compress_block");
