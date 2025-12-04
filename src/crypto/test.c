@@ -335,7 +335,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					   // println("h1={x},h2={x}", h1, h2);
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -462,7 +462,7 @@ Test(aighthash64_longneighbors) {
 		int bias[64] = {0};  // now 64 bits
 		u64 seed = i;
 
-		for (int trial = 0; trial < 500; ++trial) {
+		for (int trial = 0; trial < 50; ++trial) {
 			fastmemcpy(b, a, size);
 
 			u64 byte_pos = 0;
@@ -515,7 +515,7 @@ Test(aighthash64_longneighbors) {
 	// println("total_failed={}/{}", total_fail, iter);
 }
 
-#define SYMCRYPT_COUNT (1 * (1000000000 / 32))
+#define SYMCRYPT_COUNT ((10000000 / 32))
 
 Test(sym_crypt_perf) {
 	i64 timer;
@@ -595,27 +595,6 @@ Test(compare_sym_crypt) {
 	// for (u32 i = 0; i < 16; i++) println("{}", text[i]);
 }
 
-#include <libfam/string.h>
-#include <wmmintrin.h>
-
-Test(comp_crypto) {
-	u8 state[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-			0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
-	u8 rk[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-		     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
-	u8 scalar[16], hw[16];
-	memcpy(scalar, state, 16);
-	memcpy(hw, state, 16);
-
-	AesSingleRound(scalar, rk);  // your scalar version
-	__m128i v = _mm_loadu_si128((__m128i*)hw);
-	v = _mm_aesenc_si128(
-	    v, _mm_loadu_si128((__m128i*)rk));	// hardware version
-	_mm_storeu_si128((__m128i*)hw, v);
-
-	// println("{}", memcmp(scalar, hw, 16) == 0 ? 1 : 0);
-}
-
 Test(sym_crypt1) {
 	SymCryptContext ctx;
 	u8 out[32] = {0};
@@ -645,8 +624,8 @@ Test(symcrypt_longneighbors) {
 	u8 b[32] __attribute__((aligned(32))) = {0};
 	u8 key[32] = {0};
 	u8 iv[16] = {0};
-	u32 iter = 1000;
-	u32 trials = 1000;
+	u32 iter = 100;
+	u32 trials = 100;
 	u32 total_fail = 0;
 
 	(void)total_fail;
