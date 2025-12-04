@@ -27,7 +27,6 @@
 #include <immintrin.h>
 #endif /* __AVX2__ */
 #ifdef __aarch64__
-#include <arm_acle.h>
 #include <arm_neon.h>
 #endif /* __aarch64__ */
 #include <libfam/symcrypt.h>
