@@ -26,6 +26,10 @@
 #ifdef __AVX2__
 #include <immintrin.h>
 #endif /* __AVX2__ */
+#ifdef __aarch64__
+#include <arm_acle.h>
+#include <arm_neon.h>
+#endif /* __aarch64__ */
 #include <libfam/symcrypt.h>
 #include <libfam/utils.h>
 
@@ -48,7 +52,7 @@ static inline snow_vec_t aes_dec_round(snow_vec_t x, snow_vec_t rk) {
 	return _mm256_aesdec_epi128(x, rk);
 }
 
-#elif defined(__aarch64__) && defined(__ARM_FEATURE_CRYPTO)
+#elif defined(__aarch64__)
 typedef struct {
 	uint8x16_t lane[4];
 } snow_vec_t;
@@ -77,19 +81,19 @@ static inline void snow_store(u8 *p, snow_vec_t v) {
 
 static inline snow_vec_t aes_enc_round(snow_vec_t x, snow_vec_t rk) {
 	snow_vec_t out;
-	out.lane[0] = vaesencq_u8(x.lane[0], rk.lane[0]);
-	out.lane[1] = vaesencq_u8(x.lane[1], rk.lane[1]);
-	out.lane[2] = vaesencq_u8(x.lane[2], rk.lane[2]);
-	out.lane[3] = vaesencq_u8(x.lane[3], rk.lane[3]);
+	out.lane[0] = vaesmcq_u8(vaeseq_u8(x.lane[0], rk.lane[0]));
+	out.lane[1] = vaesmcq_u8(vaeseq_u8(x.lane[1], rk.lane[1]));
+	out.lane[2] = vaesmcq_u8(vaeseq_u8(x.lane[2], rk.lane[2]));
+	out.lane[3] = vaesmcq_u8(vaeseq_u8(x.lane[3], rk.lane[3]));
 	return out;
 }
 
 static inline snow_vec_t aes_dec_round(snow_vec_t x, snow_vec_t rk) {
 	snow_vec_t out;
-	out.lane[0] = vaesdecq_u8(x.lane[0], rk.lane[0]);
-	out.lane[1] = vaesdecq_u8(x.lane[1], rk.lane[1]);
-	out.lane[2] = vaesdecq_u8(x.lane[2], rk.lane[2]);
-	out.lane[3] = vaesdecq_u8(x.lane[3], rk.lane[3]);
+	out.lane[0] = vaesdq_u8(x.lane[0], rk.lane[0]);
+	out.lane[1] = vaesdq_u8(x.lane[1], rk.lane[1]);
+	out.lane[2] = vaesdq_u8(x.lane[2], rk.lane[2]);
+	out.lane[3] = vaesdq_u8(x.lane[3], rk.lane[3]);
 	return out;
 }
 #else

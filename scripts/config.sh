@@ -88,8 +88,8 @@ case "${ARCH}" in
         MARCH_EXTRA="-mvaes -maes"
         ;;
     aarch64)
-        MARCH="armv8.1-a"
-        MARCH_EXTRA=""
+        MARCH="armv8-a+crypto"
+        MARCH_EXTRA="-mno-outline-atomics"
         ;;
     *)
         MARCH="native"
