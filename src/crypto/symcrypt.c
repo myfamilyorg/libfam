@@ -90,10 +90,10 @@ static inline snow_vec_t aes_enc_round(snow_vec_t x, snow_vec_t rk) {
 
 static inline snow_vec_t aes_dec_round(snow_vec_t x, snow_vec_t rk) {
 	snow_vec_t out;
-	out.lane[0] = vaesdq_u8(x.lane[0], rk.lane[0]);
-	out.lane[1] = vaesdq_u8(x.lane[1], rk.lane[1]);
-	out.lane[2] = vaesdq_u8(x.lane[2], rk.lane[2]);
-	out.lane[3] = vaesdq_u8(x.lane[3], rk.lane[3]);
+	out.lane[0] = vaesimcq_u8(vaesdq_u8(x.lane[0], rk.lane[0]));
+	out.lane[1] = vaesimcq_u8(vaesdq_u8(x.lane[1], rk.lane[1]));
+	out.lane[2] = vaesimcq_u8(vaesdq_u8(x.lane[2], rk.lane[2]));
+	out.lane[3] = vaesimcq_u8(vaesdq_u8(x.lane[3], rk.lane[3]));
 	return out;
 }
 #else
