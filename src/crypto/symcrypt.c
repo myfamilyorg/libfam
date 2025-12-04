@@ -112,7 +112,13 @@ void sym_crypt_init(SymCryptContext *ctx, const u8 key[32], const u8 iv[16]) {
 			       22, 23, 24, 25, 26, 27, 28, 29, 30, 31});
 
 	for (u32 i = 0; i < 32; i++) {
-		println("b[{}]={}", i, ((u8 *)&v)[i]);
+		println("v[{}]={}", i, ((u8 *)&v)[i]);
+	}
+
+	println("========================================");
+
+	for (u32 i = 0; i < 32; i++) {
+		println("x[{}]={}", i, ((u8 *)&x)[i]);
 	}
 
 	println("========================================");
