@@ -39,4 +39,8 @@
 #define XXH_STATIC_LINKING_ONLY /* access advanced declarations */
 #define XXH_IMPLEMENTATION	/* access definitions */
 
+#include <libfam/types.h>
 #include <libfam/xxhash.h>
+
+void *malloc(u64 size) { return NULL; }
+void free(void *v) {}
