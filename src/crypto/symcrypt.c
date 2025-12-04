@@ -81,7 +81,29 @@ void sym_crypt_init(SymCryptContext *ctx, const u8 key[32],
 	s->ctr[1] = _mm256_add_epi64(base, inc_hi);
 
 #elif defined(__aarch64__)
-	(void)s;
+	uint8x16_t k = vld1q_u8(key);
+	s->rk[0] = k;
+
+	for (int i = 1; i < 15; ++i) {
+		uint8x16_t temp = vaeseq_u8(k, vdupq_n_u8(0));
+		temp = vextq_u8(temp, temp, 12);  // shuffle for 0xff
+		k = veorq_u8(k, vshlq_n_u8(k, 4));
+		k = veorq_u8(k, vshlq_n_u8(k, 4));
+		k = veorq_u8(k, vshlq_n_u8(k, 4));
+		k = veorq_u8(k, temp);
+
+		if (i % 2 == 1) {
+			temp = vaeseq_u8(k, vdupq_n_u8(0));
+			temp = vextq_u8(temp, temp, 11);  // shuffle for 0xaa
+			k = veorq_u8(k, temp);
+		}
+		s->rk[i] = k;
+	}
+
+	uint8x16_t n = vld1q_u8(nonce);
+	for (int i = 0; i < 8; ++i) {
+		s->ctr[i] = vaddq_u32(n, vdupq_n_u32(i));
+	}
 #else
 #error Unsupported platform
 #endif
@@ -132,7 +154,38 @@ void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 block[128]) {
 	s->ctr[1] = _mm256_add_epi64(c1, _mm256_set1_epi64x(8));
 
 #elif defined(__aarch64__)
-	(void)s;
+	uint8x16_t c[8];
+	for (int i = 0; i < 8; ++i) c[i] = s->ctr[i];
+
+	for (int r = 0; r < 14; ++r) {
+		c[0] = vaesencq_u8(c[0], s->rk[r]);
+		c[1] = vaesencq_u8(c[1], s->rk[r]);
+		c[2] = vaesencq_u8(c[2], s->rk[r]);
+		c[3] = vaesencq_u8(c[3], s->rk[r]);
+		c[4] = vaesencq_u8(c[4], s->rk[r]);
+		c[5] = vaesencq_u8(c[5], s->rk[r]);
+		c[6] = vaesencq_u8(c[6], s->rk[r]);
+		c[7] = vaesencq_u8(c[7], s->rk[r]);
+	}
+
+	c[0] = vaesenclastq_u8(c[0], s->rk[14]);
+	c[1] = vaesenclastq_u8(c[1], s->rk[14]);
+	c[2] = vaesenclastq_u8(c[2], s->rk[14]);
+	c[3] = vaesenclastq_u8(c[3], s->rk[14]);
+	c[4] = vaesenclastq_u8(c[4], s->rk[14]);
+	c[5] = vaesenclastq_u8(c[5], s->rk[14]);
+	c[6] = vaesenclastq_u8(c[6], s->rk[14]);
+	c[7] = vaesenclastq_u8(c[7], s->rk[14]);
+
+	for (int i = 0; i < 8; ++i) {
+		uint8x16_t p = vld1q_u8(block + i * 16);
+		uint8x16_t out = veorq_u8(p, c[i]);
+		vst1q_u8(block + i * 16, out);
+	}
+
+	for (int i = 0; i < 8; ++i) {
+		s->ctr[i] = vaddq_u64(s->ctr[i], vdupq_n_u64(8));
+	}
 #else
 #error Unsupported platform
 #endif
