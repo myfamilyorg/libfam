@@ -29,7 +29,7 @@
 #include <libfam/types.h>
 
 #ifdef __aarch64__
-#define SYMCRYPT_CONTEXT_SIZE 368
+#define SYMCRYPT_CONTEXT_SIZE 384
 #elif defined(__x86_64__)
 #define SYMCRYPT_CONTEXT_SIZE 544
 #else
