@@ -90,11 +90,11 @@ STATIC inline void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx,
 }
 #endif /* USE_AVX2 */
 
-STATIC inline void sym_crypt_init_scalar(SymCryptContext *ctx,
-					 const u8 mkey[32], const u8 iv[16]) {}
+STATIC __attribute__((unused)) inline void sym_crypt_init_scalar(
+    SymCryptContext *ctx, const u8 mkey[32], const u8 iv[16]) {}
 
-STATIC inline void sym_crypt_xcrypt_buffer_scalar(SymCryptContext *ctx,
-						  u8 buf[32]) {}
+STATIC __attribute__((unused)) inline void sym_crypt_xcrypt_buffer_scalar(
+    SymCryptContext *ctx, u8 buf[32]) {}
 
 PUBLIC void sym_crypt_init(SymCryptContext *ctx, const u8 key[32],
 			   const u8 iv[16]) {
