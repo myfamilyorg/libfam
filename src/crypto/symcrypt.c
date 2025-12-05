@@ -53,18 +53,18 @@ typedef struct {
 } SymCryptContextImpl;
 
 STATIC void sym_crypt_mix(SymCryptContextImpl *st, const u8 mkey[32]) {
-	u64 seed = ((u64 *)mkey)[0] ^ ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2] ^
-		   ((u64 *)mkey)[3];
+	u64 seed1 = ((u64 *)mkey)[0] ^ ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2];
+	u64 seed2 = ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2] ^ ((u64 *)mkey)[3];
 	u64 *lanes = (u64 *)&st->state;
 	u64 h;
 
-	h = aighthash64(&lanes[0], 8, seed);
+	h = aighthash64(&lanes[0], 8, seed1);
 	lanes[0] ^= h;
-	h = aighthash64(&lanes[1], 8, seed ^ P1);
+	h = aighthash64(&lanes[1], 8, seed1 ^ P1);
 	lanes[1] ^= h;
-	h = aighthash64(&lanes[2], 8, seed ^ P2);
+	h = aighthash64(&lanes[2], 8, seed2 ^ P2);
 	lanes[2] ^= h;
-	h = aighthash64(&lanes[3], 8, seed);
+	h = aighthash64(&lanes[3], 8, seed2);
 	lanes[3] ^= h;
 }
 
