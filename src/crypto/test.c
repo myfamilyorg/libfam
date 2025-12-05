@@ -334,7 +334,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					   // println("h1={x},h2={x}", h1, h2);
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -592,7 +592,7 @@ Test(storm_longneighbors) {
 	Rng rng;
 	StormContext ctx;
 	AesContext aes;
-	bool use_aes = false;
+	bool use_aes = true;
 	(void)ctx;
 	(void)aes;
 	u8 a[32] __attribute__((aligned(32))) = {0};
@@ -685,10 +685,10 @@ Test(storm_vector) {
 	storm_init(&ctx, key);
 	storm_xcrypt_buffer(&ctx, buf);
 
-	u8 expected[32] = {254, 31,  57,  153, 55,  154, 202, 14,
-			   120, 119, 113, 166, 233, 188, 177, 210,
-			   2,	212, 28,  154, 140, 200, 154, 73,
-			   206, 137, 219, 174, 65,  140, 34,  137};
+	u8 expected[32] = {191, 181, 189, 245, 101, 185, 79, 114,
+			   160, 91,  102, 186, 230, 40,	 35, 141,
+			   191, 181, 189, 245, 101, 185, 79, 114,
+			   160, 91,  102, 186, 230, 40,	 35, 141};
 
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
 	ASSERT(!memcmp(buf, expected, 32), "0 vector");
@@ -696,10 +696,9 @@ Test(storm_vector) {
 	storm_xcrypt_buffer(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) print("{},", buf[i]);
 
-	u8 expected2[32] = {26,	 74,  47,  39,	61,  221, 237, 29,
-			    108, 153, 216, 192, 149, 53,  233, 73,
-			    169, 59,  61,  38,	176, 41,  203, 23,
-			    2,	 57,  168, 44,	231, 172, 82,  67};
+	u8 expected2[32] = {43, 147, 169, 156, 213, 41, 60,  166, 144, 71,  180,
+			    20, 41,  254, 163, 226, 43, 147, 169, 156, 213, 41,
+			    60, 166, 144, 71,  180, 20, 41,  254, 163, 226};
 	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 }
 
