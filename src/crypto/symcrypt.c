@@ -52,21 +52,6 @@ typedef struct {
 #endif /* !USE_AVX2 */
 } SymCryptContextImpl;
 
-/*
-STATIC void sym_crypt_mix(SymCryptContextImpl *st, const u8 mkey[32]) {
-	u64 h, seed = ((u64 *)mkey)[0] ^ ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2] ^
-		      ((u64 *)mkey)[3];
-	h = aighthash64(&((u64 *)&st->state)[0], 8, seed);
-	((u64 *)&st->state)[0] ^= h;
-	h = aighthash64(&((u64 *)&st->state)[1], 8, seed ^ P1);
-	((u64 *)&st->state)[1] ^= h;
-	h = aighthash64(&((u64 *)&st->state)[2], 8, seed ^ P2);
-	((u64 *)&st->state)[2] ^= h;
-	h = aighthash64(&((u64 *)&st->state)[3], 8, seed);
-	((u64 *)&st->state)[3] ^= h;
-}
-*/
-
 STATIC void sym_crypt_mix(SymCryptContextImpl *st, const u8 mkey[32]) {
 	u64 seed = ((u64 *)mkey)[0] ^ ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2] ^
 		   ((u64 *)mkey)[3];
@@ -75,13 +60,10 @@ STATIC void sym_crypt_mix(SymCryptContextImpl *st, const u8 mkey[32]) {
 
 	h = aighthash64(&lanes[0], 8, seed);
 	lanes[0] ^= h;
-
-	h = aighthash64(&lanes[1], 8, seed ^ 0x9e3779b97f4a7c15ULL);
+	h = aighthash64(&lanes[1], 8, seed ^ P1);
 	lanes[1] ^= h;
-
-	h = aighthash64(&lanes[2], 8, seed ^ 0x517cc1b727220a95ULL);
+	h = aighthash64(&lanes[2], 8, seed ^ P2);
 	lanes[2] ^= h;
-
 	h = aighthash64(&lanes[3], 8, seed);
 	lanes[3] ^= h;
 }
