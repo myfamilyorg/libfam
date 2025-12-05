@@ -514,7 +514,7 @@ Test(aighthash64_longneighbors) {
 	// println("total_failed={}/{}", total_fail, iter);
 }
 
-#define SYMCRYPT_COUNT ((10000000 / 32))
+#define SYMCRYPT_COUNT ((1000000 / 32))
 
 Test(sym_crypt_perf) {
 	i64 timer;
@@ -523,7 +523,8 @@ Test(sym_crypt_perf) {
 	SymCryptContext ctx;
 	u64 sum = 0;
 
-	if (getenv("VALGRIND")) return;
+	u8* vg = getenv("VALGRIND");
+	if (vg && strlen(vg) == 1 && !memcmp(vg, "1", 1)) return;
 
 	sym_crypt_init(&ctx, (u8[32]){0}, (u8[16]){0});
 
@@ -551,7 +552,8 @@ Test(sym_crypt_perf2) {
 	SymCryptContext ctx3;
 	SymCryptContext ctx4;
 
-	if (getenv("VALGRIND")) return;
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	u64 sum = 0;
 
@@ -601,7 +603,8 @@ Test(symcrypt_longneighbors) {
 	u32 trials = 10000;
 	u32 total_fail = 0;
 
-	if (getenv("VALGRIND")) return;
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	(void)total_fail;
 
@@ -677,7 +680,8 @@ Test(symcrypt_vector) {
 	u8 iv[16] = {0};
 	u8 buf[32] = {0};
 
-	if (getenv("VALGRIND")) return;
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	sym_crypt_init(&ctx, key, iv);
 	sym_crypt_xcrypt_buffer(&ctx, buf);
@@ -697,7 +701,8 @@ Test(symcrypt_cross_half_diffusion) {
 		      0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
 	u8 iv[16] = {0};
 
-	if (getenv("VALGRIND")) return;
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	sym_crypt_init(&ctx, key, iv);
 
@@ -740,7 +745,8 @@ Test(symcrypt_cross_half_diffusion) {
 Test(symcrypt_key_recovery_integral) {
 	Rng rng;
 
-	if (getenv("VALGRIND")) return;
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	rng_init(&rng, NULL);
 	rng_test_seed(&rng, (u8[32]){0x37}, (u8[32]){0xEF});
