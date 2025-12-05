@@ -334,7 +334,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					    // println("h1={x},h2={x}", h1, h2);
+					   // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -584,34 +584,6 @@ Test(sym_crypt_perf2) {
 		*/
 }
 
-Test(compare_sym_crypt) {
-	u8 text[128] = {0};
-	SymCryptContext sym;
-
-	sym_crypt_init(&sym, (u8[32]){0}, (u8[16]){0});
-
-	sym_crypt_xcrypt_buffer(&sym, text);
-	// for (u32 i = 0; i < 16; i++) println("{}", text[i]);
-}
-
-Test(sym_crypt1) {
-	SymCryptContext ctx;
-	u8 out[32] = {0};
-	const u8 key[32] = {0};
-	const u8 iv_zero[16] = {0};
-
-	const u8 expected_out[] = {0x36, 0x1f, 0xe6, 0x70, 0x4c, 0x42,
-				   0xb5, 0x3f, 0xed, 0x3f, 0xc3, 0x0,
-				   0xf6, 0xfc, 0xd0, 0x23, 0xbc, 0x74,
-				   0x8b, 0xf4, 0xe4, 0xab, 0xeb, 0x0};
-	(void)expected_out;
-
-	sym_crypt_init(&ctx, key, iv_zero);
-	sym_crypt_xcrypt_buffer(&ctx, out);
-	// for (u32 i = 0; i < 32; i++) print("{x}, ", out[i]);
-	// ASSERT(!memcmp(out, expected_first_128, 128), "sym_crypt");
-}
-
 Test(symcrypt_longneighbors) {
 	Rng rng;
 	SymCryptContext ctx;
@@ -623,9 +595,11 @@ Test(symcrypt_longneighbors) {
 	u8 b[32] __attribute__((aligned(32))) = {0};
 	u8 key[32] = {0};
 	u8 iv[16] = {0};
-	u32 iter = 100;
+	u32 iter = 1000;
 	u32 trials = 10000;
 	u32 total_fail = 0;
+
+	if (getenv("VALGRIND")) return;
 
 	(void)total_fail;
 
@@ -684,6 +658,7 @@ Test(symcrypt_longneighbors) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
+
 	/*
 	if (use_aes)
 		println("total_failed(aes)={}/{},diff={}", total_fail,
@@ -699,6 +674,9 @@ Test(symcrypt_vector) {
 	u8 key[32] = {0};
 	u8 iv[16] = {0};
 	u8 buf[32] = {0};
+
+	if (getenv("VALGRIND")) return;
+
 	sym_crypt_init(&ctx, key, iv);
 	sym_crypt_xcrypt_buffer(&ctx, buf);
 
@@ -707,4 +685,114 @@ Test(symcrypt_vector) {
 			   0xf,	 0x82, 0x38, 0xcb, 0x58, 0x57, 0xe8, 0x8f,
 			   0x53, 0x7f, 0xb8, 0x81, 0x9e, 0xeb, 0x8f, 0x9e};
 	ASSERT(!memcmp(buf, expected, 32), "0 vector");
+}
+
+Test(symcrypt_cross_half_diffusion) {
+	SymCryptContext ctx;
+	u8 key[32] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+		      0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00,
+		      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+		      0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
+	u8 iv[16] = {0};
+
+	if (getenv("VALGRIND")) return;
+
+	sym_crypt_init(&ctx, key, iv);
+
+	u8 first_high[16];
+	int total_diff = 0;
+	int runs = 0;
+
+	for (int test = 1; test <= 255; test++) {
+		u8 block[32] = {0};
+		block[0] = (u8)test;
+
+		u8 ct[32];
+		memcpy(ct, block, 32);
+		sym_crypt_xcrypt_buffer(&ctx, ct);
+
+		u8* high = ct + 16;
+
+		if (test == 1) {
+			memcpy(first_high, high, 16);
+			continue;
+		}
+
+		int diff_bits = 0;
+		for (int i = 0; i < 16; i++)
+			diff_bits +=
+			    __builtin_popcount(high[i] ^ first_high[i]);
+
+		total_diff += diff_bits;
+		runs++;
+
+		// Perfectly normal range for 2-round AES lanes
+		ASSERT(diff_bits >= 40 && diff_bits <= 90,
+		       "Cross-half diffusion out of range: {} bits (test={})",
+		       diff_bits, test);
+	}
+
+	double avg = (double)total_diff / runs;
+	ASSERT(avg >= 58 && avg <= 70, "Average diffusion too weak");
+}
+Test(symcrypt_key_recovery_integral) {
+	Rng rng;
+
+	if (getenv("VALGRIND")) return;
+
+	rng_init(&rng, NULL);
+	rng_test_seed(&rng, (u8[32]){0x37}, (u8[32]){0xEF});
+
+	SymCryptContext ctx;
+	u8 key[32];
+	u8 iv[16] = {0};
+	rng_gen(&rng, key, 32);
+
+	sym_crypt_init(&ctx, key, iv);
+
+	const int N = 1 << 24;
+	u8* ct = map(N * 32);
+	ASSERT(ct, "alloc");
+
+	for (u32 i = 0; i < N; i++) {
+		memset(ct + i * 32, 0, 32);
+		u8 val = i;
+		u8 val2 = i >> 8;
+		u8 val3 = i >> 16;
+		ct[i * 32 + 0] = val;
+		ct[i * 32 + 5] = val;
+		ct[i * 32 + 10] = val;
+		ct[i * 32 + 15] = val;
+
+		ct[i * 32 + 0] ^= val2;
+		ct[i * 32 + 5] ^= val2;
+		ct[i * 32 + 10] ^= val2;
+		ct[i * 32 + 15] ^= val2;
+
+		ct[i * 32 + 0] ^= val3;
+		ct[i * 32 + 5] ^= val3;
+		ct[i * 32 + 10] ^= val3;
+		ct[i * 32 + 15] ^= val3;
+	}
+
+	for (u32 i = 0; i < N; i++) {
+		__attribute__((aligned(32))) u8 block[32];
+		memcpy(block, ct + i * 32, 32);
+		sym_crypt_xcrypt_buffer(&ctx, block);
+		memcpy(ct + i * 32, block, 32);
+	}
+
+	u64 xor0 = 0, xor5 = 0, xor10 = 0, xor15 = 0;
+	for (u32 i = 0; i < N; i++) {
+		xor0 ^= ct[i * 32 + 0];
+		xor5 ^= ct[i * 32 + 5];
+		xor10 ^= ct[i * 32 + 10];
+		xor15 ^= ct[i * 32 + 15];
+	}
+
+	u32 active_xor = (u32)xor0 ^ (u32)xor5 ^ (u32)xor10 ^ (u32)xor15;
+
+	ASSERT(active_xor, "active_xor");
+
+	munmap(ct, N * 32);
 }
