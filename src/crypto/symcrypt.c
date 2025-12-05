@@ -23,7 +23,7 @@
  *
  *******************************************************************************/
 
-#ifdef __AVX23__
+#ifdef __AVX2__
 #define USE_AVX2
 #endif /* __AVX2__ */
 
@@ -31,6 +31,8 @@
 #include <immintrin.h>
 #endif /* USE_AVX2 */
 #include <libfam/aes.h>
+#include <libfam/aighthash.h>
+#include <libfam/format.h>
 #include <libfam/string.h>
 #include <libfam/symcrypt.h>
 #include <libfam/utils.h>
@@ -58,13 +60,21 @@ STATIC void sym_crypt_init_avx2(SymCryptContext *ctx, const u8 mkey[32],
 	st->state = _mm256_xor_si256(iv256, key);
 
 	__m256i k = key;
-	const __m256i ONE4 = _mm256_set_epi64x(1, 0, 1, 0);
+	const __m256i ONE4 = _mm256_set_epi64x(0, 1, 0, 1);
 
 	for (int i = 0; i < 4; i++) {
 		st->rk_lo[i] = _mm256_castsi256_si128(k);
 		st->rk_hi[i] = _mm256_extracti128_si256(k, 1);
 		k = _mm256_add_epi64(k, ONE4);
 	}
+
+	u64 seed = ((u64 *)mkey)[0] ^ ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2] ^
+		   ((u64 *)mkey)[3];
+	u64 h = aighthash64((void *)&st->state, 32, seed);
+	((u64 *)&st->state)[0] ^= h;
+	((u64 *)&st->state)[1] ^= h;
+	((u64 *)&st->state)[2] ^= h;
+	((u64 *)&st->state)[3] ^= h;
 }
 
 STATIC void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx, u8 buf[32]) {
@@ -97,26 +107,30 @@ STATIC void sym_crypt_init_scalar(SymCryptContext *ctx, const u8 mkey[32],
 				  const u8 iv[16]) {
 	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
 
-	/* state = (IV ^ key_lo) || (IV ^ key_hi) */
 	for (int i = 0; i < 16; ++i) {
 		st->state[i] = iv[i] ^ mkey[i];
 		st->state[i + 16] = iv[i] ^ mkey[i + 16];
 	}
 
-	/* Generate round keys: K, K+1, K+2, K+3 (64-bit increment per half) */
-	u64 *k_lo = (u64 *)st->rk_lo[0];
-	u64 *k_hi = (u64 *)st->rk_hi[0];
-	*(u64 *)st->rk_lo[0] = *(u64 *)mkey;
-	*(u64 *)st->rk_hi[0] = *(u64 *)(mkey + 16);
+	fastmemcpy(st->rk_lo[0], mkey, 16);
+	fastmemcpy(st->rk_hi[0], mkey + 16, 16);
 
 	for (int i = 1; i < 4; ++i) {
 		fastmemcpy(st->rk_lo[i], st->rk_lo[i - 1], 16);
 		fastmemcpy(st->rk_hi[i], st->rk_hi[i - 1], 16);
-		k_lo[i * 2] += 1;
-		k_hi[i * 2] += 1;
-	}
-}
 
+		*(u64 *)st->rk_lo[i] += 1;
+		*(u64 *)st->rk_hi[i] += 1;
+	}
+
+	u64 seed = ((u64 *)mkey)[0] ^ ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2] ^
+		   ((u64 *)mkey)[3];
+	u64 h = aighthash64((void *)&st->state, 32, seed);
+	((u64 *)&st->state)[0] ^= h;
+	((u64 *)&st->state)[1] ^= h;
+	((u64 *)&st->state)[2] ^= h;
+	((u64 *)&st->state)[3] ^= h;
+}
 STATIC void sym_crypt_xcrypt_buffer_scalar(SymCryptContext *ctx, u8 buf[32]) {
 	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
 

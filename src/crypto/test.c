@@ -616,7 +616,7 @@ Test(symcrypt_longneighbors) {
 	Rng rng;
 	SymCryptContext ctx;
 	AesContext aes;
-	bool use_aes = true;
+	bool use_aes = false;
 	(void)ctx;
 	(void)aes;
 	u8 a[32] __attribute__((aligned(32))) = {0};
@@ -624,7 +624,7 @@ Test(symcrypt_longneighbors) {
 	u8 key[32] = {0};
 	u8 iv[16] = {0};
 	u32 iter = 100;
-	u32 trials = 100;
+	u32 trials = 10000;
 	u32 total_fail = 0;
 
 	(void)total_fail;
@@ -692,4 +692,19 @@ Test(symcrypt_longneighbors) {
 		println("total_failed(sym_crypt)={}/{},diff={}", total_fail,
 			iter * 256, max - min);
 			*/
+}
+
+Test(symcrypt_vector) {
+	SymCryptContext ctx;
+	u8 key[32] = {0};
+	u8 iv[16] = {0};
+	u8 buf[32] = {0};
+	sym_crypt_init(&ctx, key, iv);
+	sym_crypt_xcrypt_buffer(&ctx, buf);
+
+	u8 expected[32] = {0xc5, 0x4e, 0xdf, 0x87, 0xc6, 0x64, 0x9c, 0xf3,
+			   0xc7, 0x4e, 0xdf, 0x87, 0xc6, 0x64, 0x9c, 0xf3,
+			   0x36, 0x37, 0xa6, 0xc,  0xc6, 0x64, 0x9c, 0xf3,
+			   0xc7, 0x4e, 0xdf, 0x87, 0xc6, 0x64, 0x9c, 0xf3};
+	ASSERT(!memcmp(buf, expected, 32), "0 vector");
 }
