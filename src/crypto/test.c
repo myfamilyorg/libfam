@@ -334,7 +334,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					   // println("h1={x},h2={x}", h1, h2);
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -664,12 +664,14 @@ Test(symcrypt_longneighbors) {
 		}
 	}
 
+	/*
 	if (use_aes)
 		println("total_failed(aes)={}/{},diff={}", total_fail,
 			iter * 256, max - min);
 	else
 		println("total_failed(sym_crypt)={}/{},diff={}", total_fail,
 			iter * 256, max - min);
+			*/
 }
 
 Test(symcrypt_vector) {
@@ -684,18 +686,16 @@ Test(symcrypt_vector) {
 	sym_crypt_init(&ctx, key, iv);
 	sym_crypt_xcrypt_buffer(&ctx, buf);
 
-	u8 expected[32] = {0x9e, 0xfa, 0xe2, 0xfd, 0x41, 0x15, 0xa7, 0x41,
-			   0xbf, 0xdf, 0xea, 0x35, 0xa3, 0x3,  0x5,  0xdd,
-			   0xf,	 0x82, 0x38, 0xcb, 0x58, 0x57, 0xe8, 0x8f,
-			   0x53, 0x7f, 0xb8, 0x81, 0x9e, 0xeb, 0x8f, 0x9e};
+	u8 expected[32] = {95,	193, 27, 241, 157, 96,	21,  36,  186, 189, 176,
+			   64,	24,  2,	 45,  53,  15,	130, 56,  203, 88,  87,
+			   232, 143, 83, 127, 184, 129, 158, 235, 143, 158};
 	ASSERT(!memcmp(buf, expected, 32), "0 vector");
 
 	sym_crypt_xcrypt_buffer(&ctx, buf);
 
-	u8 expected2[32] = {0x92, 0xeb, 0x8f, 0xaf, 0x5f, 0xb7, 0x14, 0x9,
-			    0xae, 0x24, 0x2e, 0x2c, 0x79, 0x6e, 0x1b, 0x34,
-			    0x49, 0x78, 0xa,  0xe8, 0x99, 0xe6, 0x66, 0xd2,
-			    0x40, 0xf0, 0xb3, 0x48, 0x3c, 0x4a, 0x2f, 0xc};
+	u8 expected2[32] = {97,	 172, 24, 225, 98,  153, 2,   27, 221, 238, 190,
+			    194, 187, 80, 207, 147, 73,	 120, 10, 232, 153, 230,
+			    102, 210, 64, 240, 179, 72,	 60,  74, 47,  12};
 	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 }
 
@@ -853,3 +853,4 @@ Test(symcrypt_2round_integral_distinguisher) {
 	       "Too many zero XORs ({}). Cipher is structurally broken.",
 	       zero_bytes);
 }
+

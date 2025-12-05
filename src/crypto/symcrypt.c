@@ -47,8 +47,8 @@ typedef struct {
 	__m128i rk_hi[4];
 #else
 	u8 state[32];
-	u8 rk_lo[4][16];
-	u8 rk_hi[4][16];
+	u8 rk_lo[2][16];
+	u8 rk_hi[2][16];
 #endif /* !USE_AVX2 */
 } SymCryptContextImpl;
 
@@ -66,6 +66,13 @@ STATIC void sym_crypt_mix(SymCryptContextImpl *st, const u8 mkey[32]) {
 	lanes[2] ^= h;
 	h = aighthash64(&lanes[3], 8, seed2);
 	lanes[3] ^= h;
+
+	u64 *rk = (u64 *)st->rk_lo;
+	rk[0] = aighthash64(&lanes[0], 8, seed1);
+	rk[1] = aighthash64(&lanes[1], 8, seed1 ^ P1);
+	rk = (u64 *)st->rk_hi;
+	rk[0] = aighthash64(&lanes[2], 8, seed2 ^ P2);
+	rk[1] = aighthash64(&lanes[3], 8, seed2);
 }
 
 #ifdef USE_AVX2
