@@ -23,13 +23,14 @@
  *
  *******************************************************************************/
 
-#ifdef __AVX2__
+#ifdef __AVX23__
 #define USE_AVX2
 #endif /* __AVX2__ */
 
 #ifdef USE_AVX2
 #include <immintrin.h>
 #endif /* USE_AVX2 */
+#include <libfam/aes.h>
 #include <libfam/string.h>
 #include <libfam/symcrypt.h>
 #include <libfam/utils.h>
@@ -39,7 +40,11 @@ typedef struct {
 	__m256i state;
 	__m128i rk_lo[4];
 	__m128i rk_hi[4];
-#endif /* USE_AVX2 */
+#else
+	u8 state[32];
+	u8 rk_lo[4][16];
+	u8 rk_hi[4][16];
+#endif /* !USE_AVX2 */
 } SymCryptContextImpl;
 
 #ifdef USE_AVX2
@@ -87,14 +92,58 @@ STATIC void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx, u8 buf[32]) {
 	st->state = x;
 	_mm256_store_si256((__m256i *)(void *)buf, _mm256_xor_si256(p, x));
 }
-#endif /* USE_AVX2 */
+#else
+STATIC void sym_crypt_init_scalar(SymCryptContext *ctx, const u8 mkey[32],
+				  const u8 iv[16]) {
+	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
 
-STATIC __attribute__((unused)) void sym_crypt_init_scalar(SymCryptContext *ctx,
-							  const u8 mkey[32],
-							  const u8 iv[16]) {}
+	/* state = (IV ^ key_lo) || (IV ^ key_hi) */
+	for (int i = 0; i < 16; ++i) {
+		st->state[i] = iv[i] ^ mkey[i];
+		st->state[i + 16] = iv[i] ^ mkey[i + 16];
+	}
 
-STATIC __attribute__((unused)) void sym_crypt_xcrypt_buffer_scalar(
-    SymCryptContext *ctx, u8 buf[32]) {}
+	/* Generate round keys: K, K+1, K+2, K+3 (64-bit increment per half) */
+	u64 *k_lo = (u64 *)st->rk_lo[0];
+	u64 *k_hi = (u64 *)st->rk_hi[0];
+	*(u64 *)st->rk_lo[0] = *(u64 *)mkey;
+	*(u64 *)st->rk_hi[0] = *(u64 *)(mkey + 16);
+
+	for (int i = 1; i < 4; ++i) {
+		fastmemcpy(st->rk_lo[i], st->rk_lo[i - 1], 16);
+		fastmemcpy(st->rk_hi[i], st->rk_hi[i - 1], 16);
+		k_lo[i * 2] += 1;
+		k_hi[i * 2] += 1;
+	}
+}
+
+STATIC void sym_crypt_xcrypt_buffer_scalar(SymCryptContext *ctx, u8 buf[32]) {
+	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
+
+	/* Load state and plaintext */
+	u8 x_lo[16], x_hi[16];
+	for (int i = 0; i < 16; ++i) {
+		x_lo[i] = st->state[i] ^ buf[i];
+		x_hi[i] = st->state[i + 16] ^ buf[i + 16];
+	}
+
+	/* Two AES rounds per half — exactly like AVX2 path */
+	AesSingleRound(x_lo, st->rk_lo[0]);
+	AesSingleRound(x_hi, st->rk_hi[1]);
+	AesSingleRound(x_lo, st->rk_lo[2]);
+	AesSingleRound(x_hi, st->rk_hi[3]);
+
+	/* Update state */
+	fastmemcpy(st->state, x_lo, 16);
+	fastmemcpy(st->state + 16, x_hi, 16);
+
+	/* ciphertext = plaintext XOR new_state */
+	for (int i = 0; i < 16; ++i) {
+		buf[i] ^= x_lo[i];
+		buf[i + 16] ^= x_hi[i];
+	}
+}
+#endif /* !USE_AVX2 */
 
 PUBLIC void sym_crypt_init(SymCryptContext *ctx, const u8 key[32],
 			   const u8 iv[16]) {
@@ -102,7 +151,7 @@ PUBLIC void sym_crypt_init(SymCryptContext *ctx, const u8 key[32],
 	sym_crypt_init_avx2(ctx, key, iv);
 #else
 	sym_crypt_init_scalar(ctx, key, iv);
-#endif /* USE_AVX2 */
+#endif /* !USE_AVX2 */
 }
 
 PUBLIC void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[32]) {
@@ -111,5 +160,5 @@ PUBLIC void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[32]) {
 #else
 	sym_crypt_xcrypt_buffer_scalar(ctx, buf);
 
-#endif /* USE_AVX2 */
+#endif /* !USE_AVX2 */
 }
