@@ -43,8 +43,8 @@ typedef struct {
 } SymCryptContextImpl;
 
 #ifdef USE_AVX2
-STATIC void sym_crypt_init_avx2(SymCryptContext *ctx, const u8 mkey[32],
-				const u8 iv[16]) {
+STATIC inline void sym_crypt_init_avx2(SymCryptContext *ctx, const u8 mkey[32],
+				       const u8 iv[16]) {
 	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
 	__m256i key = _mm256_loadu_si256((const __m256i_u *)mkey);
 	__m256i iv256 =
@@ -62,7 +62,8 @@ STATIC void sym_crypt_init_avx2(SymCryptContext *ctx, const u8 mkey[32],
 	}
 }
 
-STATIC void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx, u8 buf[32]) {
+STATIC inline void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx,
+						u8 buf[32]) {
 	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
 
 	__m256i x = st->state;
@@ -89,15 +90,26 @@ STATIC void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx, u8 buf[32]) {
 }
 #endif /* USE_AVX2 */
 
+STATIC inline void sym_crypt_init_scalar(SymCryptContext *ctx,
+					 const u8 mkey[32], const u8 iv[16]) {}
+
+STATIC inline void sym_crypt_xcrypt_buffer_scalar(SymCryptContext *ctx,
+						  u8 buf[32]) {}
+
 PUBLIC void sym_crypt_init(SymCryptContext *ctx, const u8 key[32],
 			   const u8 iv[16]) {
 #ifdef USE_AVX2
 	sym_crypt_init_avx2(ctx, key, iv);
+#else
+	sym_crypt_init_scalar(ctx, key, iv);
 #endif /* USE_AVX2 */
 }
 
 PUBLIC void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[32]) {
 #ifdef USE_AVX2
 	sym_crypt_xcrypt_buffer_avx2(ctx, buf);
+#else
+	sym_crypt_xcrypt_buffer_scalar(ctx, buf);
+
 #endif /* USE_AVX2 */
 }
