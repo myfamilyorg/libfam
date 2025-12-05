@@ -691,6 +691,14 @@ Test(symcrypt_vector) {
 			   0xf,	 0x82, 0x38, 0xcb, 0x58, 0x57, 0xe8, 0x8f,
 			   0x53, 0x7f, 0xb8, 0x81, 0x9e, 0xeb, 0x8f, 0x9e};
 	ASSERT(!memcmp(buf, expected, 32), "0 vector");
+
+	sym_crypt_xcrypt_buffer(&ctx, buf);
+
+	u8 expected2[32] = {0x92, 0xeb, 0x8f, 0xaf, 0x5f, 0xb7, 0x14, 0x9,
+			    0xae, 0x24, 0x2e, 0x2c, 0x79, 0x6e, 0x1b, 0x34,
+			    0x49, 0x78, 0xa,  0xe8, 0x99, 0xe6, 0x66, 0xd2,
+			    0x40, 0xf0, 0xb3, 0x48, 0x3c, 0x4a, 0x2f, 0xc};
+	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 }
 
 Test(symcrypt_cross_half_diffusion) {
@@ -733,9 +741,9 @@ Test(symcrypt_cross_half_diffusion) {
 		total_diff += diff_bits;
 		runs++;
 
-		// Perfectly normal range for 2-round AES lanes
 		ASSERT(diff_bits >= 40 && diff_bits <= 90,
-		       "Cross-half diffusion out of range: {} bits (test={})",
+		       "Cross-half diffusion out of range: {} bits "
+		       "(test={})",
 		       diff_bits, test);
 	}
 
@@ -803,4 +811,47 @@ Test(symcrypt_key_recovery_integral) {
 	ASSERT(active_xor, "active_xor");
 
 	munmap(ct, N * 32);
+}
+
+Test(symcrypt_2round_integral_distinguisher) {
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
+
+	Rng rng;
+	rng_init(&rng, NULL);
+	rng_test_seed(&rng, (u8[32]){0x13}, (u8[32]){0x37});
+
+	SymCryptContext ctx;
+	u8 key[32];
+	u8 iv[16] = {0};
+
+	const u32 N = 1 << 19;
+	u64 xor_sum[32] = {0};
+
+	for (u32 exp = 0; exp < 16; exp++) {
+		rng_gen(&rng, key, 32);
+		sym_crypt_init(&ctx, key, iv);
+
+		for (u32 i = 0; i < N; i++) {
+			__attribute__((aligned(32))) u8 block[32] = {0};
+
+			block[0] = (u8)i;
+			block[1] = 0xAA;
+			block[2] = 0x55;
+			block[3] = 0xCC;
+
+			sym_crypt_xcrypt_buffer(&ctx, block);
+
+			for (int j = 0; j < 32; j++) xor_sum[j] ^= block[j];
+		}
+	}
+
+	u32 zero_bytes = 0;
+	for (int j = 0; j < 32; j++)
+		if (xor_sum[j] == 0) zero_bytes++;
+
+	ASSERT(zero_bytes <= 24,
+	       "2-round integral distinguisher triggered! "
+	       "Too many zero XORs ({}). Cipher is structurally broken.",
+	       zero_bytes);
 }

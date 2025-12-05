@@ -108,11 +108,12 @@ STATIC void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx, u8 buf[32]) {
 	hi = _mm_aesenc_si128(hi, kh1);
 	x = _mm256_set_m128i(hi, lo);
 
+	st->state = x;
+
 	lo = _mm_aesenc_si128(lo, kl2);
 	hi = _mm_aesenc_si128(hi, kh3);
 	x = _mm256_set_m128i(hi, lo);
 
-	st->state = x;
 	_mm256_store_si256((__m256i *)(void *)buf, _mm256_xor_si256(p, x));
 }
 #else
@@ -149,11 +150,10 @@ STATIC void sym_crypt_xcrypt_buffer_scalar(SymCryptContext *ctx, u8 buf[32]) {
 
 	AesSingleRound(x_lo, st->rk_lo[0]);
 	AesSingleRound(x_hi, st->rk_hi[1]);
-	AesSingleRound(x_lo, st->rk_lo[2]);
-	AesSingleRound(x_hi, st->rk_hi[3]);
-
 	fastmemcpy(st->state, x_lo, 16);
 	fastmemcpy(st->state + 16, x_hi, 16);
+	AesSingleRound(x_lo, st->rk_lo[2]);
+	AesSingleRound(x_hi, st->rk_hi[3]);
 
 	for (int i = 0; i < 16; ++i) {
 		buf[i] ^= x_lo[i];
@@ -176,6 +176,5 @@ PUBLIC void sym_crypt_xcrypt_buffer(SymCryptContext *ctx, u8 buf[32]) {
 	sym_crypt_xcrypt_buffer_avx2(ctx, buf);
 #else
 	sym_crypt_xcrypt_buffer_scalar(ctx, buf);
-
 #endif /* !USE_AVX2 */
 }
