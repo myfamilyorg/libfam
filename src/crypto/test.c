@@ -526,7 +526,7 @@ Test(storm_perf) {
 	u8* vg = getenv("VALGRIND");
 	if (vg && strlen(vg) == 1 && !memcmp(vg, "1", 1)) return;
 
-	storm_init(&ctx, (u8[32]){0}, (u8[16]){0});
+	storm_init(&ctx, (u8[32]){0});
 
 	timer = micros();
 	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
@@ -559,10 +559,10 @@ Test(storm_perf2) {
 
 	(void)sum;
 
-	storm_init(&ctx1, (u8[32]){0}, (u8[16]){0});
-	storm_init(&ctx2, (u8[32]){1}, (u8[16]){0});
-	storm_init(&ctx3, (u8[32]){2}, (u8[16]){0});
-	storm_init(&ctx4, (u8[32]){3}, (u8[16]){0});
+	storm_init(&ctx1, (u8[32]){0});
+	storm_init(&ctx2, (u8[32]){1});
+	storm_init(&ctx3, (u8[32]){2});
+	storm_init(&ctx4, (u8[32]){3});
 
 	timer = micros();
 	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
@@ -616,7 +616,7 @@ Test(storm_longneighbors) {
 		rng_gen(&rng, key, 32);
 		rng_gen(&rng, iv, 16);
 		if (!use_aes)
-			storm_init(&ctx, key, iv);
+			storm_init(&ctx, key);
 		else
 			aes_init(&aes, key, iv);
 		u64 zeros[256] = {0};
@@ -677,31 +677,29 @@ Test(storm_longneighbors) {
 Test(storm_vector) {
 	StormContext ctx;
 	u8 key[32] = {0};
-	u8 iv[16] = {0};
 	u8 buf[32] = {0};
 
 	u8* v = getenv("VALGRIND");
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
-	storm_init(&ctx, key, iv);
+	storm_init(&ctx, key);
 	storm_xcrypt_buffer(&ctx, buf);
 
-	u8 expected[32] = {38,	234, 160, 137, 193, 84,	 39,  150,
-			   156, 117, 172, 81,  144, 128, 62,  56,
-			   110, 179, 214, 121, 64,  71,	 151, 112,
-			   185, 6,   105, 133, 191, 240, 133, 82};
+	u8 expected[32] = {254, 31,  57,  153, 55,  154, 202, 14,
+			   120, 119, 113, 166, 233, 188, 177, 210,
+			   2,	212, 28,  154, 140, 200, 154, 73,
+			   206, 137, 219, 174, 65,  140, 34,  137};
 
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
-
 	ASSERT(!memcmp(buf, expected, 32), "0 vector");
 
 	storm_xcrypt_buffer(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) print("{},", buf[i]);
 
-	u8 expected2[32] = {50,	 115, 132, 242, 76,  8,	  73,  147,
-			    158, 30,  45,  72,	168, 212, 13,  5,
-			    202, 139, 195, 141, 116, 225, 146, 234,
-			    246, 6,   137, 220, 67,  155, 207, 166};
+	u8 expected2[32] = {26,	 74,  47,  39,	61,  221, 237, 29,
+			    108, 153, 216, 192, 149, 53,  233, 73,
+			    169, 59,  61,  38,	176, 41,  203, 23,
+			    2,	 57,  168, 44,	231, 172, 82,  67};
 	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 }
 
@@ -711,12 +709,11 @@ Test(storm_cross_half_diffusion) {
 		      0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00,
 		      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 		      0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
-	u8 iv[16] = {0};
 
 	u8* v = getenv("VALGRIND");
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
-	storm_init(&ctx, key, iv);
+	storm_init(&ctx, key);
 
 	u8 first_high[16];
 	int total_diff = 0;
@@ -765,10 +762,9 @@ Test(storm_key_recovery_integral) {
 
 	StormContext ctx;
 	u8 key[32];
-	u8 iv[16] = {0};
 	rng_gen(&rng, key, 32);
 
-	storm_init(&ctx, key, iv);
+	storm_init(&ctx, key);
 
 	const int N = 1 << 24;
 	u8* ct = map(N * 32);
@@ -827,14 +823,13 @@ Test(storm_2round_integral_distinguisher) {
 
 	StormContext ctx;
 	u8 key[32];
-	u8 iv[16] = {0};
 
 	const u32 N = 1 << 19;
 	u64 xor_sum[32] = {0};
 
 	for (u32 exp = 0; exp < 16; exp++) {
 		rng_gen(&rng, key, 32);
-		storm_init(&ctx, key, iv);
+		storm_init(&ctx, key);
 
 		for (u32 i = 0; i < N; i++) {
 			__attribute__((aligned(32))) u8 block[32] = {0};

@@ -34,7 +34,7 @@ typedef struct {
 	__attribute__((aligned(32))) u8 _data[STORM_CONTEXT_SIZE];
 } StormContext;
 
-void storm_init(StormContext *ctx, const u8 key[32], const u8 iv[16]);
+void storm_init(StormContext *ctx, const u8 key[32]);
 void storm_xcrypt_buffer(StormContext *ctx, u8 buf[32]);
 
 #endif /* _STORM_H */

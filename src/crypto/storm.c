@@ -38,6 +38,11 @@
 #define P1 0x9e3779b97f4a7c15ULL
 #define P2 0x517cc1b727220a95ULL
 #define Nb 4
+#define STORM_STATE_MIX                                                     \
+	(u8[]) {                                                            \
+		0x15, 0x7c, 0x4a, 0x7f, 0xb9, 0x79, 0x37, 0x9e, 0x95, 0x0a, \
+		    0x22, 0x27, 0xb7, 0xc1, 0x7c, 0x51                      \
+	}
 
 typedef struct {
 #ifdef USE_AVX2
@@ -146,7 +151,8 @@ STATIC void storm_add_round_key(u8 round, state_t *state, const u8 *key) {
 	}
 }
 
-STATIC void aesenc128(u8 state[16], const u8 *RoundKey) {
+STATIC __attribute__((unused)) void aesenc128(u8 state[16],
+					      const u8 *RoundKey) {
 	state_t *s = (void *)state;
 	storm_sub_bytes(s);
 	storm_shift_rows(s);
@@ -182,15 +188,12 @@ STATIC void storm_crypt_mix(StormContextImpl *st, const u8 mkey[32]) {
 }
 
 #ifdef USE_AVX2
-STATIC void storm_init_avx2(StormContext *ctx, const u8 mkey[32],
-			    const u8 iv[16]) {
+STATIC void storm_init_avx2(StormContext *ctx, const u8 mkey[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 	__m256i key = _mm256_loadu_si256((const __m256i_u *)mkey);
-	__m256i iv256 =
-	    _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i_u *)iv));
-
+	__m256i iv256 = _mm256_broadcastsi128_si256(
+	    _mm_loadu_si128((const __m128i_u *)STORM_STATE_MIX));
 	st->state = _mm256_xor_si256(iv256, key);
-
 	storm_crypt_mix(st, mkey);
 }
 
@@ -221,13 +224,12 @@ STATIC void storm_xcrypt_buffer_avx2(StormContext *ctx, u8 buf[32]) {
 	_mm256_store_si256((__m256i *)(void *)buf, _mm256_xor_si256(p, x));
 }
 #else
-STATIC void storm_init_scalar(StormContext *ctx, const u8 mkey[32],
-			      const u8 iv[16]) {
+STATIC void storm_init_scalar(StormContext *ctx, const u8 mkey[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 
 	for (int i = 0; i < 16; ++i) {
-		st->state[i] = iv[i] ^ mkey[i];
-		st->state[i + 16] = iv[i] ^ mkey[i + 16];
+		st->state[i] = (STORM_STATE_MIX)[i] ^ mkey[i];
+		st->state[i + 16] = (STORM_STATE_MIX)[i] ^ mkey[i + 16];
 	}
 
 	storm_crypt_mix(st, mkey);
@@ -255,11 +257,11 @@ STATIC void storm_xcrypt_buffer_scalar(StormContext *ctx, u8 buf[32]) {
 }
 #endif /* !USE_AVX2 */
 
-PUBLIC void storm_init(StormContext *ctx, const u8 key[32], const u8 iv[16]) {
+PUBLIC void storm_init(StormContext *ctx, const u8 key[32]) {
 #ifdef USE_AVX2
-	storm_init_avx2(ctx, key, iv);
+	storm_init_avx2(ctx, key);
 #else
-	storm_init_scalar(ctx, key, iv);
+	storm_init_scalar(ctx, key);
 #endif /* !USE_AVX2 */
 }
 
