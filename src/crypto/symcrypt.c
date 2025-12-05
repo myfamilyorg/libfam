@@ -37,6 +37,9 @@
 #include <libfam/symcrypt.h>
 #include <libfam/utils.h>
 
+#define P1 0x9e3779b97f4a7c15ULL
+#define P2 0x517cc1b727220a95ULL
+
 typedef struct {
 #ifdef USE_AVX2
 	__m256i state;
@@ -48,6 +51,19 @@ typedef struct {
 	u8 rk_hi[4][16];
 #endif /* !USE_AVX2 */
 } SymCryptContextImpl;
+
+STATIC void sym_crypt_mix(SymCryptContextImpl *st, const u8 mkey[32]) {
+	u64 h, seed = ((u64 *)mkey)[0] ^ ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2] ^
+		      ((u64 *)mkey)[3];
+	h = aighthash64(&((u64 *)&st->state)[0], 8, seed);
+	((u64 *)&st->state)[0] ^= h;
+	h = aighthash64(&((u64 *)&st->state)[1], 8, seed ^ P1);
+	((u64 *)&st->state)[1] ^= h;
+	h = aighthash64(&((u64 *)&st->state)[2], 8, seed ^ P2);
+	((u64 *)&st->state)[2] ^= h;
+	h = aighthash64(&((u64 *)&st->state)[3], 8, seed);
+	((u64 *)&st->state)[3] ^= h;
+}
 
 #ifdef USE_AVX2
 STATIC void sym_crypt_init_avx2(SymCryptContext *ctx, const u8 mkey[32],
@@ -68,13 +84,7 @@ STATIC void sym_crypt_init_avx2(SymCryptContext *ctx, const u8 mkey[32],
 		k = _mm256_add_epi64(k, ONE4);
 	}
 
-	u64 seed = ((u64 *)mkey)[0] ^ ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2] ^
-		   ((u64 *)mkey)[3];
-	u64 h = aighthash64((void *)&st->state, 32, seed);
-	((u64 *)&st->state)[0] ^= h;
-	((u64 *)&st->state)[1] ^= h;
-	((u64 *)&st->state)[2] ^= h;
-	((u64 *)&st->state)[3] ^= h;
+	sym_crypt_mix(st, mkey);
 }
 
 STATIC void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx, u8 buf[32]) {
@@ -123,35 +133,25 @@ STATIC void sym_crypt_init_scalar(SymCryptContext *ctx, const u8 mkey[32],
 		*(u64 *)st->rk_hi[i] += 1;
 	}
 
-	u64 seed = ((u64 *)mkey)[0] ^ ((u64 *)mkey)[1] ^ ((u64 *)mkey)[2] ^
-		   ((u64 *)mkey)[3];
-	u64 h = aighthash64((void *)&st->state, 32, seed);
-	((u64 *)&st->state)[0] ^= h;
-	((u64 *)&st->state)[1] ^= h;
-	((u64 *)&st->state)[2] ^= h;
-	((u64 *)&st->state)[3] ^= h;
+	sym_crypt_mix(st, mkey);
 }
 STATIC void sym_crypt_xcrypt_buffer_scalar(SymCryptContext *ctx, u8 buf[32]) {
 	SymCryptContextImpl *st = (SymCryptContextImpl *)ctx;
 
-	/* Load state and plaintext */
 	u8 x_lo[16], x_hi[16];
 	for (int i = 0; i < 16; ++i) {
 		x_lo[i] = st->state[i] ^ buf[i];
 		x_hi[i] = st->state[i + 16] ^ buf[i + 16];
 	}
 
-	/* Two AES rounds per half — exactly like AVX2 path */
 	AesSingleRound(x_lo, st->rk_lo[0]);
 	AesSingleRound(x_hi, st->rk_hi[1]);
 	AesSingleRound(x_lo, st->rk_lo[2]);
 	AesSingleRound(x_hi, st->rk_hi[3]);
 
-	/* Update state */
 	fastmemcpy(st->state, x_lo, 16);
 	fastmemcpy(st->state + 16, x_hi, 16);
 
-	/* ciphertext = plaintext XOR new_state */
 	for (int i = 0; i < 16; ++i) {
 		buf[i] ^= x_lo[i];
 		buf[i + 16] ^= x_hi[i];
