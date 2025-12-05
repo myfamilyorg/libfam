@@ -70,9 +70,13 @@ STATIC void sym_crypt_mix(SymCryptContextImpl *st, const u8 mkey[32]) {
 	u64 *rk = (u64 *)st->rk_lo;
 	rk[0] = aighthash64(&lanes[0], 8, seed1);
 	rk[1] = aighthash64(&lanes[1], 8, seed1 ^ P1);
+	rk[2] = aighthash64(&lanes[0], 8, seed1);
+	rk[3] = aighthash64(&lanes[1], 8, seed1 ^ P1);
 	rk = (u64 *)st->rk_hi;
 	rk[0] = aighthash64(&lanes[2], 8, seed2 ^ P2);
 	rk[1] = aighthash64(&lanes[3], 8, seed2);
+	rk[2] = aighthash64(&lanes[2], 8, seed2 ^ P2);
+	rk[3] = aighthash64(&lanes[3], 8, seed2);
 }
 
 #ifdef USE_AVX2
@@ -85,15 +89,6 @@ STATIC void sym_crypt_init_avx2(SymCryptContext *ctx, const u8 mkey[32],
 
 	st->state = _mm256_xor_si256(iv256, key);
 
-	__m256i k = key;
-	const __m256i ONE4 = _mm256_set_epi64x(0, 1, 0, 1);
-
-	for (int i = 0; i < 4; i++) {
-		st->rk_lo[i] = _mm256_castsi256_si128(k);
-		st->rk_hi[i] = _mm256_extracti128_si256(k, 1);
-		k = _mm256_add_epi64(k, ONE4);
-	}
-
 	sym_crypt_mix(st, mkey);
 }
 
@@ -103,8 +98,8 @@ STATIC void sym_crypt_xcrypt_buffer_avx2(SymCryptContext *ctx, u8 buf[32]) {
 	__m256i x = st->state;
 	__m128i kl0 = st->rk_lo[0];
 	__m128i kh1 = st->rk_hi[1];
-	__m128i kl2 = st->rk_lo[2];
-	__m128i kh3 = st->rk_hi[3];
+	__m128i kl2 = st->rk_lo[1];
+	__m128i kh3 = st->rk_hi[0];
 	__m256i p = _mm256_load_si256((const __m256i *)(void *)buf);
 
 	x = _mm256_xor_si256(x, p);
@@ -133,17 +128,6 @@ STATIC void sym_crypt_init_scalar(SymCryptContext *ctx, const u8 mkey[32],
 		st->state[i + 16] = iv[i] ^ mkey[i + 16];
 	}
 
-	fastmemcpy(st->rk_lo[0], mkey, 16);
-	fastmemcpy(st->rk_hi[0], mkey + 16, 16);
-
-	for (int i = 1; i < 4; ++i) {
-		fastmemcpy(st->rk_lo[i], st->rk_lo[i - 1], 16);
-		fastmemcpy(st->rk_hi[i], st->rk_hi[i - 1], 16);
-
-		*(u64 *)st->rk_lo[i] += 1;
-		*(u64 *)st->rk_hi[i] += 1;
-	}
-
 	sym_crypt_mix(st, mkey);
 }
 STATIC void sym_crypt_xcrypt_buffer_scalar(SymCryptContext *ctx, u8 buf[32]) {
@@ -159,8 +143,8 @@ STATIC void sym_crypt_xcrypt_buffer_scalar(SymCryptContext *ctx, u8 buf[32]) {
 	AesSingleRound(x_hi, st->rk_hi[1]);
 	fastmemcpy(st->state, x_lo, 16);
 	fastmemcpy(st->state + 16, x_hi, 16);
-	AesSingleRound(x_lo, st->rk_lo[2]);
-	AesSingleRound(x_hi, st->rk_hi[3]);
+	AesSingleRound(x_lo, st->rk_lo[1]);
+	AesSingleRound(x_hi, st->rk_hi[0]);
 
 	for (int i = 0; i < 16; ++i) {
 		buf[i] ^= x_lo[i];

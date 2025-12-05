@@ -334,7 +334,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					    // println("h1={x},h2={x}", h1, h2);
+					   // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -686,16 +686,22 @@ Test(symcrypt_vector) {
 	sym_crypt_init(&ctx, key, iv);
 	sym_crypt_xcrypt_buffer(&ctx, buf);
 
-	u8 expected[32] = {95,	193, 27, 241, 157, 96,	21,  36,  186, 189, 176,
-			   64,	24,  2,	 45,  53,  15,	130, 56,  203, 88,  87,
-			   232, 143, 83, 127, 184, 129, 158, 235, 143, 158};
+	u8 expected[32] = {38,	234, 160, 137, 193, 84,	 39,  150,
+			   156, 117, 172, 81,  144, 128, 62,  56,
+			   110, 179, 214, 121, 64,  71,	 151, 112,
+			   185, 6,   105, 133, 191, 240, 133, 82};
+
+	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
+
 	ASSERT(!memcmp(buf, expected, 32), "0 vector");
 
 	sym_crypt_xcrypt_buffer(&ctx, buf);
+	// for (u32 i = 0; i < 32; i++) print("{},", buf[i]);
 
-	u8 expected2[32] = {97,	 172, 24, 225, 98,  153, 2,   27, 221, 238, 190,
-			    194, 187, 80, 207, 147, 73,	 120, 10, 232, 153, 230,
-			    102, 210, 64, 240, 179, 72,	 60,  74, 47,  12};
+	u8 expected2[32] = {50,	 115, 132, 242, 76,  8,	  73,  147,
+			    158, 30,  45,  72,	168, 212, 13,  5,
+			    202, 139, 195, 141, 116, 225, 146, 234,
+			    246, 6,   137, 220, 67,  155, 207, 166};
 	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 }
 
