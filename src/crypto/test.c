@@ -30,8 +30,8 @@
 #include <libfam/env.h>
 #include <libfam/rng.h>
 #include <libfam/sha3.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
-#include <libfam/symcrypt.h>
 #include <libfam/test.h>
 
 u8 hex_to_nibble(u8 v1, u8 v2) {
@@ -516,21 +516,21 @@ Test(aighthash64_longneighbors) {
 
 #define SYMCRYPT_COUNT ((1000000 / 32))
 
-Test(sym_crypt_perf) {
+Test(storm_perf) {
 	i64 timer;
 	u8 text[32] = {0};
 	u64* v = (void*)text;
-	SymCryptContext ctx;
+	StormContext ctx;
 	u64 sum = 0;
 
 	u8* vg = getenv("VALGRIND");
 	if (vg && strlen(vg) == 1 && !memcmp(vg, "1", 1)) return;
 
-	sym_crypt_init(&ctx, (u8[32]){0}, (u8[16]){0});
+	storm_init(&ctx, (u8[32]){0}, (u8[16]){0});
 
 	timer = micros();
 	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
-		sym_crypt_xcrypt_buffer(&ctx, text);
+		storm_xcrypt_buffer(&ctx, text);
 		sum += *v;
 		// println("{X}", *v);
 	}
@@ -540,17 +540,17 @@ Test(sym_crypt_perf) {
 		(timer * 1000) / SYMCRYPT_COUNT);*/
 }
 
-Test(sym_crypt_perf2) {
+Test(storm_perf2) {
 	i64 timer;
 	__attribute__((aligned(32))) u8 buf1[64] = {0};
 	__attribute__((aligned(32))) u8 buf2[64] = {0};
 	__attribute__((aligned(32))) u8 buf3[64] = {0};
 	__attribute__((aligned(32))) u8 buf4[64] = {0};
 
-	SymCryptContext ctx1;
-	SymCryptContext ctx2;
-	SymCryptContext ctx3;
-	SymCryptContext ctx4;
+	StormContext ctx1;
+	StormContext ctx2;
+	StormContext ctx3;
+	StormContext ctx4;
 
 	u8* v = getenv("VALGRIND");
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
@@ -559,10 +559,10 @@ Test(sym_crypt_perf2) {
 
 	(void)sum;
 
-	sym_crypt_init(&ctx1, (u8[32]){0}, (u8[16]){0});
-	sym_crypt_init(&ctx2, (u8[32]){1}, (u8[16]){0});
-	sym_crypt_init(&ctx3, (u8[32]){2}, (u8[16]){0});
-	sym_crypt_init(&ctx4, (u8[32]){3}, (u8[16]){0});
+	storm_init(&ctx1, (u8[32]){0}, (u8[16]){0});
+	storm_init(&ctx2, (u8[32]){1}, (u8[16]){0});
+	storm_init(&ctx3, (u8[32]){2}, (u8[16]){0});
+	storm_init(&ctx4, (u8[32]){3}, (u8[16]){0});
 
 	timer = micros();
 	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
@@ -571,13 +571,13 @@ Test(sym_crypt_perf2) {
 		u8* block3 = buf3 + (i & 32);
 		u8* block4 = buf4 + (i & 32);
 
-		sym_crypt_xcrypt_buffer(&ctx1, block1);
+		storm_xcrypt_buffer(&ctx1, block1);
 		sum += ((u64*)block1)[0];
-		sym_crypt_xcrypt_buffer(&ctx2, block2);
+		storm_xcrypt_buffer(&ctx2, block2);
 		sum += ((u64*)block2)[0];
-		sym_crypt_xcrypt_buffer(&ctx3, block3);
+		storm_xcrypt_buffer(&ctx3, block3);
 		sum += ((u64*)block3)[0];
-		sym_crypt_xcrypt_buffer(&ctx4, block4);
+		storm_xcrypt_buffer(&ctx4, block4);
 		sum += ((u64*)block4)[0];
 	}
 	timer = micros() - timer;
@@ -588,9 +588,9 @@ Test(sym_crypt_perf2) {
 		*/
 }
 
-Test(symcrypt_longneighbors) {
+Test(storm_longneighbors) {
 	Rng rng;
-	SymCryptContext ctx;
+	StormContext ctx;
 	AesContext aes;
 	bool use_aes = false;
 	(void)ctx;
@@ -616,7 +616,7 @@ Test(symcrypt_longneighbors) {
 		rng_gen(&rng, key, 32);
 		rng_gen(&rng, iv, 16);
 		if (!use_aes)
-			sym_crypt_init(&ctx, key, iv);
+			storm_init(&ctx, key, iv);
 		else
 			aes_init(&aes, key, iv);
 		u64 zeros[256] = {0};
@@ -625,7 +625,7 @@ Test(symcrypt_longneighbors) {
 		for (u32 j = 0; j < trials; j++) {
 			fastmemcpy(b, a, 32);
 			if (!use_aes)
-				sym_crypt_xcrypt_buffer(&ctx, a);
+				storm_xcrypt_buffer(&ctx, a);
 			else
 				aes_ctr_xcrypt_buffer(&aes, a, 32);
 
@@ -639,7 +639,7 @@ Test(symcrypt_longneighbors) {
 			b[byte_pos] ^= (u8)(1 << bit_pos);
 
 			if (!use_aes)
-				sym_crypt_xcrypt_buffer(&ctx, b);
+				storm_xcrypt_buffer(&ctx, b);
 			else
 				aes_ctr_xcrypt_buffer(&aes, b, 32);
 
@@ -669,13 +669,13 @@ Test(symcrypt_longneighbors) {
 		println("total_failed(aes)={}/{},diff={}", total_fail,
 			iter * 256, max - min);
 	else
-		println("total_failed(sym_crypt)={}/{},diff={}", total_fail,
+		println("total_failed(storm)={}/{},diff={}", total_fail,
 			iter * 256, max - min);
 			*/
 }
 
-Test(symcrypt_vector) {
-	SymCryptContext ctx;
+Test(storm_vector) {
+	StormContext ctx;
 	u8 key[32] = {0};
 	u8 iv[16] = {0};
 	u8 buf[32] = {0};
@@ -683,8 +683,8 @@ Test(symcrypt_vector) {
 	u8* v = getenv("VALGRIND");
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
-	sym_crypt_init(&ctx, key, iv);
-	sym_crypt_xcrypt_buffer(&ctx, buf);
+	storm_init(&ctx, key, iv);
+	storm_xcrypt_buffer(&ctx, buf);
 
 	u8 expected[32] = {38,	234, 160, 137, 193, 84,	 39,  150,
 			   156, 117, 172, 81,  144, 128, 62,  56,
@@ -695,7 +695,7 @@ Test(symcrypt_vector) {
 
 	ASSERT(!memcmp(buf, expected, 32), "0 vector");
 
-	sym_crypt_xcrypt_buffer(&ctx, buf);
+	storm_xcrypt_buffer(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) print("{},", buf[i]);
 
 	u8 expected2[32] = {50,	 115, 132, 242, 76,  8,	  73,  147,
@@ -705,8 +705,8 @@ Test(symcrypt_vector) {
 	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 }
 
-Test(symcrypt_cross_half_diffusion) {
-	SymCryptContext ctx;
+Test(storm_cross_half_diffusion) {
+	StormContext ctx;
 	u8 key[32] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
 		      0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00,
 		      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -716,7 +716,7 @@ Test(symcrypt_cross_half_diffusion) {
 	u8* v = getenv("VALGRIND");
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
-	sym_crypt_init(&ctx, key, iv);
+	storm_init(&ctx, key, iv);
 
 	u8 first_high[16];
 	int total_diff = 0;
@@ -728,7 +728,7 @@ Test(symcrypt_cross_half_diffusion) {
 
 		u8 ct[32];
 		memcpy(ct, block, 32);
-		sym_crypt_xcrypt_buffer(&ctx, ct);
+		storm_xcrypt_buffer(&ctx, ct);
 
 		u8* high = ct + 16;
 
@@ -754,7 +754,7 @@ Test(symcrypt_cross_half_diffusion) {
 	double avg = (double)total_diff / runs;
 	ASSERT(avg >= 58 && avg <= 70, "Average diffusion too weak");
 }
-Test(symcrypt_key_recovery_integral) {
+Test(storm_key_recovery_integral) {
 	Rng rng;
 
 	u8* v = getenv("VALGRIND");
@@ -763,12 +763,12 @@ Test(symcrypt_key_recovery_integral) {
 	rng_init(&rng, NULL);
 	rng_test_seed(&rng, (u8[32]){0x37}, (u8[32]){0xEF});
 
-	SymCryptContext ctx;
+	StormContext ctx;
 	u8 key[32];
 	u8 iv[16] = {0};
 	rng_gen(&rng, key, 32);
 
-	sym_crypt_init(&ctx, key, iv);
+	storm_init(&ctx, key, iv);
 
 	const int N = 1 << 24;
 	u8* ct = map(N * 32);
@@ -798,7 +798,7 @@ Test(symcrypt_key_recovery_integral) {
 	for (u32 i = 0; i < N; i++) {
 		__attribute__((aligned(32))) u8 block[32];
 		memcpy(block, ct + i * 32, 32);
-		sym_crypt_xcrypt_buffer(&ctx, block);
+		storm_xcrypt_buffer(&ctx, block);
 		memcpy(ct + i * 32, block, 32);
 	}
 
@@ -817,7 +817,7 @@ Test(symcrypt_key_recovery_integral) {
 	munmap(ct, N * 32);
 }
 
-Test(symcrypt_2round_integral_distinguisher) {
+Test(storm_2round_integral_distinguisher) {
 	u8* v = getenv("VALGRIND");
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
@@ -825,7 +825,7 @@ Test(symcrypt_2round_integral_distinguisher) {
 	rng_init(&rng, NULL);
 	rng_test_seed(&rng, (u8[32]){0x13}, (u8[32]){0x37});
 
-	SymCryptContext ctx;
+	StormContext ctx;
 	u8 key[32];
 	u8 iv[16] = {0};
 
@@ -834,7 +834,7 @@ Test(symcrypt_2round_integral_distinguisher) {
 
 	for (u32 exp = 0; exp < 16; exp++) {
 		rng_gen(&rng, key, 32);
-		sym_crypt_init(&ctx, key, iv);
+		storm_init(&ctx, key, iv);
 
 		for (u32 i = 0; i < N; i++) {
 			__attribute__((aligned(32))) u8 block[32] = {0};
@@ -844,7 +844,7 @@ Test(symcrypt_2round_integral_distinguisher) {
 			block[2] = 0x55;
 			block[3] = 0xCC;
 
-			sym_crypt_xcrypt_buffer(&ctx, block);
+			storm_xcrypt_buffer(&ctx, block);
 
 			for (int j = 0; j < 32; j++) xor_sum[j] ^= block[j];
 		}
