@@ -26,6 +26,7 @@
 #include <libfam/bible.h>
 #include <libfam/linux.h>
 #include <libfam/sha3.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
@@ -111,14 +112,21 @@ CLEANUP:
 	RETURN;
 }
 
-PUBLIC void generate_sbox8_64(u64 sbox[256]) {
-	u64 s = GOLDEN_PRIME;
-	for (u32 i = 0; i < 256; i++) {
-		Sha3Context ctx;
-		sha3_init256(&ctx);
-		sha3_update(&ctx, &s, sizeof(u64));
-		memcpy(&s, sha3_finalize(&ctx), sizeof(u64));
-		sbox[i] = s;
+#include <libfam/format.h>
+
+PUBLIC void bible_sbox8_64(u64 sbox[256]) {
+	u8 buf[32] = {0};
+	StormContext ctx;
+	storm_init(&ctx, (u8[32]){0});
+
+	u8 *sbox_u8 = (void *)sbox;
+	for (u32 i = 0; i < 256 / 4; i++) {
+		// print("VALUE[{}]: ", i);
+
+		// for (u32 j = 0; j < 32; j++) print("{X}, ", buf[j]);
+		// println("");
+		storm_xcrypt_buffer(&ctx, buf);
+		fastmemcpy(sbox_u8 + i * 32, buf, 32);
 	}
 }
 
