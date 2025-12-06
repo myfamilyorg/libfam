@@ -23,21 +23,18 @@
  *
  *******************************************************************************/
 
-#include <libfam/errno.h>
-#include <libfam/linux.h>
+#include <libfam/format.h>
 #include <libfam/rng.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
 
 void rng_init(Rng *rng, const void *opt_entropy) {
-	u8 iv[32], key[32];
+	__attribute__((aligned(32))) u8 key[32];
 	random32(key);
 	if (opt_entropy) random_stir(key, opt_entropy);
-	random32(iv);
-	if (opt_entropy) random_stir(iv, opt_entropy);
-	aes_init(&rng->ctx, key, iv);
-	memset(iv, 0, sizeof(iv));
+	storm_init(&rng->ctx, key);
 	memset(key, 0, sizeof(key));
 }
 
@@ -46,14 +43,21 @@ void rng_reseed(Rng *rng, const void *opt_entropy) {
 }
 
 void rng_gen(Rng *rng, void *v, u64 size) {
-	aes_ctr_xcrypt_buffer(&rng->ctx, (u8 *)v, size);
+	__attribute__((aligned(32))) u8 buf[32] = {0};
+	u64 off = 0;
+	while (size >= 32) {
+		storm_xcrypt_buffer(&rng->ctx, (u8 *)(v + off));
+		size -= 32;
+		off += 32;
+	}
+
+	if (size) {
+		storm_xcrypt_buffer(&rng->ctx, buf);
+		fastmemcpy(((u8 *)v) + off, buf, size);
+	}
 }
 
 #if TEST == 1
-void rng_test_seed(Rng *rng, u8 key[32], u8 iv[16]) {
-	u8 v0[1] = {0};
-	aes_init(&rng->ctx, key, iv);
-	rng_gen(rng, &v0, 1);
-}
+void rng_test_seed(Rng *rng, u8 key[32]) { storm_init(&rng->ctx, key); }
 #endif /* TEST */
 

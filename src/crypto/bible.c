@@ -39,6 +39,7 @@
 #define PHI_PRIME 0x9e3779b97f4a7c15ULL
 #define LOOKUP_ROUNDS 32
 #define SHA3_ITER LOOKUP_ROUNDS
+#define STORM_ITER (LOOKUP_ROUNDS * 1024)
 
 #define EXTENDED_BIBLE_SIZE (256 * 1024 * 1024)
 #define BIBLE_EXTENDED_INDICES (EXTENDED_BIBLE_SIZE >> 5)
@@ -49,6 +50,38 @@ struct __attribute__((aligned(64))) Bible {
 	u64 padding[7];
 	u8 data[];
 };
+
+PUBLIC const Bible *bible_gen_storm(void) {
+	u8 buffer[32];
+	StormContext ctx;
+
+	Bible *ret =
+	    mmap(NULL, sizeof(Bible) + EXTENDED_BIBLE_SIZE,
+		 PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	if (ret == MAP_FAILED) return NULL;
+	ret->flags = 0;
+	fastmemcpy(ret->data, xxdir_file_0, xxdir_file_size_0);
+
+	storm_init(&ctx, (u8[32]){0});
+	u64 off = 0;
+	while (off < xxdir_file_size_0) {
+		fastmemcpy(buffer, xxdir_file_0 + off, 32);
+		storm_xcrypt_buffer(&ctx, buffer);
+		off += 32;
+	}
+
+	for (u64 offset = xxdir_file_size_0; offset < EXTENDED_BIBLE_SIZE;
+	     offset += 32) {
+		for (u32 i = 0; i < STORM_ITER; i++) {
+			StormContext ctx;
+			storm_init(&ctx, buffer);
+			storm_xcrypt_buffer(&ctx, buffer);
+		}
+		fastmemcpy(ret->data + offset, buffer, 32);
+	}
+
+	return ret;
+}
 
 PUBLIC const Bible *bible_gen(void) {
 	u8 seed[32];
@@ -112,8 +145,6 @@ CLEANUP:
 	RETURN;
 }
 
-#include <libfam/format.h>
-
 PUBLIC void bible_sbox8_64(u64 sbox[256]) {
 	u8 buf[32] = {0};
 	StormContext ctx;
@@ -121,17 +152,13 @@ PUBLIC void bible_sbox8_64(u64 sbox[256]) {
 
 	u8 *sbox_u8 = (void *)sbox;
 	for (u32 i = 0; i < 256 / 4; i++) {
-		// print("VALUE[{}]: ", i);
-
-		// for (u32 j = 0; j < 32; j++) print("{X}, ", buf[j]);
-		// println("");
 		storm_xcrypt_buffer(&ctx, buf);
 		fastmemcpy(sbox_u8 + i * 32, buf, 32);
 	}
 }
 
-PUBLIC void bible_pow_hash(const Bible *b, const u8 input[HASH_INPUT_LEN],
-			   u8 out[32], const u64 sbox[256]) {
+PUBLIC void bible_hash(const Bible *b, const u8 input[HASH_INPUT_LEN],
+		       u8 out[32], const u64 sbox[256]) {
 	u64 d[4];
 	u64 s[4] = {GOLDEN_PRIME, PHI_PRIME, WYHASH_P1, WYHASH_P2};
 
@@ -184,7 +211,7 @@ i32 mine_block(const Bible *bible, const u8 header[HASH_INPUT_LEN],
 	fastmemcpy(header_copy, header, HASH_INPUT_LEN);
 	do {
 		((u32 *)header_copy)[31] = *nonce;
-		bible_pow_hash(bible, header_copy, out, sbox);
+		bible_hash(bible, header_copy, out, sbox);
 	} while (memcmp(target, out, 32) < 0 && ++(*nonce) < max_iter);
 	return *nonce == max_iter ? -1 : 0;
 }

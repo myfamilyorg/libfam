@@ -23,8 +23,9 @@
  *
  *******************************************************************************/
 
+#include <libfam/aighthash.h>
 #include <libfam/atomic.h>
-#include <libfam/sha3.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 
 static inline u64 read_cycle_counter(void) {
@@ -46,22 +47,30 @@ static inline u64 read_cycle_counter(void) {
 static u64 global_entropy_counter = 1;
 
 void random32(u8 out[32]) {
-	Sha3Context ctx;
-	u64 x[4];
+	__attribute__((aligned(32))) u8 tmp[32] = {0};
+	u64 *x = (u64 *)tmp;
+
 	x[0] = read_cycle_counter();
 	x[1] = (u64)__builtin_return_address(0);
 	x[2] = (u64)__builtin_frame_address(0);
 	x[3] = __aadd64(&global_entropy_counter, 1);
-	sha3_init256(&ctx);
-	sha3_update(&ctx, x, sizeof(x));
-	fastmemcpy(out, sha3_finalize(&ctx), 32);
+
+	StormContext ctx;
+	storm_init(&ctx, tmp);
+	storm_xcrypt_buffer(&ctx, tmp);
+
+	fastmemcpy(out, tmp, 32);
+	memset(tmp, 0, 32);
 }
 
 void random_stir(u8 current[32], const u8 stir_in[32]) {
-	Sha3Context ctx;
-	sha3_init256(&ctx);
-	sha3_update(&ctx, current, 32);
-	sha3_update(&ctx, stir_in, 32);
-	fastmemcpy(current, sha3_finalize(&ctx), 32);
-}
+	__attribute__((aligned(32))) u8 block[32];
+	fastmemcpy(block, current, 32);
 
+	StormContext ctx;
+	storm_init(&ctx, block);
+	storm_xcrypt_buffer(&ctx, block);
+
+	fastmemcpy(current, block, 32);
+	memset(block, 0, 32);
+}

@@ -26,21 +26,11 @@
 #ifndef _RNG_H
 #define _RNG_H
 
-#include <libfam/aes.h>
+#include <libfam/storm.h>
 #include <libfam/types.h>
 
-/*
- * Type: Rng
- * Cryptographically secure pseudorandom number generator (CSPRNG).
- * members:
- *         AesContext ctx - internal AES-CTR state.
- * notes:
- *         Initialized with rng_init.
- *         Thread-safe as long as each thread has its own Rng instance.
- *         Uses AES-256 in CTR mode with 128-bit counter.
- */
 typedef struct {
-	AesContext ctx;
+	StormContext ctx;
 } Rng;
 
 /*
@@ -87,7 +77,7 @@ void rng_reseed(Rng *rng, const void *opt_entropy);
  * notes:
  *         rng must be initialized with rng_init.
  *         v must not be null and must have at least size bytes.
- *         Uses AES-CTR: each call advances the counter and encrypts.
+ *         Uses Storm: each call advances the counter and encrypts.
  *         Suitable for keys, nonces, salts, etc.
  *         Constant-time and side-channel resistant.
  */
@@ -99,8 +89,7 @@ void rng_gen(Rng *rng, void *v, u64 size);
  * [TEST ONLY] Seeds the RNG with a user-provided key and IV.
  * inputs:
  *         Rng *rng         - pointer to Rng structure.
- *         u8 key[32]       - 256-bit AES key.
- *         u8 iv[16]        - 128-bit initial counter (IV).
+ *         u8 key[32]       - 256-bit Storm key.
  * return value: None.
  * errors: None.
  * notes:
@@ -109,7 +98,7 @@ void rng_gen(Rng *rng, void *v, u64 size);
  *         Bypasses entropy source.
  *         Do not use in production.
  */
-void rng_test_seed(Rng *rng, u8 key[32], u8 iv[16]);
+void rng_test_seed(Rng *rng, u8 key[32]);
 #endif /* TEST */
 
 #endif /* _RNG_H */
