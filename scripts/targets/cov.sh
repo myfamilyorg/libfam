@@ -33,10 +33,10 @@ fi
 ${COMMAND} || exit $?;
 
 export TEST_PATTERN="*";
-LD_LIBRARY_PATH=${LIB_DIR} ${TEST_BIN} || { echo "tests failed!"; exit $?; }
+LD_LIBRARY_PATH=${LIB_DIR} ${TEST_BIN} || { echo "tests failed!"; exit 1; }
 
 if [ ! -e /tmp/test_complete ]; then
-        echo "tests failed!";
+	echo "tests failed (no file)!";
         exit 1;
 fi
 
