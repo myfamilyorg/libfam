@@ -28,7 +28,7 @@
 
 #include <libfam/types.h>
 
-#define STORM_CONTEXT_SIZE 96
+#define STORM_CONTEXT_SIZE 64
 
 typedef struct {
 	__attribute__((aligned(32))) u8 _data[STORM_CONTEXT_SIZE];

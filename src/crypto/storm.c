@@ -56,18 +56,28 @@ typedef struct {
 #ifdef USE_AVX2
 	__m256i state;
 	__m128i key;
+/*	u8 pad[16];*/
 #else
 	u8 state[32];
 	u8 key[16];
+	u8 pad[16];
 #endif /* !USE_AVX2 */
 } StormContextImpl;
 
 typedef u8 state_t[4][4];
 
-/*
 STATIC_ASSERT(sizeof(StormContext) == sizeof(StormContextImpl),
 	      storm_context_size);
-	      */
+
+/*
+#include <libfam/test_base.h>
+void __attribute__((constructor)) __inittest(void) {
+	write_num(2, sizeof(StormContext));
+	pwrite(2, "\n", 1, 0);
+	write_num(2, sizeof(StormContextImpl));
+	pwrite(2, "\n", 1, 0);
+}
+*/
 
 static const u8 sbox[256] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,
