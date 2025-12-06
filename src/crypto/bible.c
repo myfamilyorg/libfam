@@ -145,8 +145,10 @@ CLEANUP:
 	RETURN;
 }
 
+#include <libfam/format.h>
+
 PUBLIC void bible_sbox8_64(u64 sbox[256]) {
-	u8 buf[32] = {0};
+	__attribute__((aligned(32))) u8 buf[32] = {0};
 	StormContext ctx;
 	storm_init(&ctx, (u8[32]){0});
 
