@@ -857,7 +857,7 @@ Test(storm_2round_integral_distinguisher) {
 }
 
 Test(bible1) {
-	u64 sbox[256];
+	__attribute__((aligned(32))) u64 sbox[256];
 	bible_sbox8_64(sbox);
 	// for (u32 i = 0; i < 256; i++) println("sbox[{}]={X},", i, sbox[i]);
 }
