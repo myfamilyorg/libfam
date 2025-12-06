@@ -388,21 +388,21 @@ Test(storm_vector) {
 	storm_init(&ctx, key);
 	storm_xcrypt_buffer(&ctx, buf);
 
-	u8 expected[32] = {191, 181, 189, 245, 101, 185, 79, 114,
-			   160, 91,  102, 186, 230, 40,	 35, 141,
-			   191, 181, 189, 245, 101, 185, 79, 114,
-			   160, 91,  102, 186, 230, 40,	 35, 141};
+	u8 expected[32] = {139, 231, 18,  148, 147, 111, 68,  147, 28,	62,  83,
+			   6,	32,  160, 243, 30,  117, 133, 168, 133, 130, 56,
+			   183, 98,  92,  255, 62,  128, 176, 240, 123, 96};
 
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
-	// ASSERT(!memcmp(buf, expected, 32), "0 vector");
+	ASSERT(!memcmp(buf, expected, 32), "0 vector");
 
 	storm_xcrypt_buffer(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) print("{},", buf[i]);
 
-	u8 expected2[32] = {43, 147, 169, 156, 213, 41, 60,  166, 144, 71,  180,
-			    20, 41,  254, 163, 226, 43, 147, 169, 156, 213, 41,
-			    60, 166, 144, 71,  180, 20, 41,  254, 163, 226};
-	// ASSERT(!memcmp(buf, expected2, 32), "next vector");
+	u8 expected2[32] = {242, 175, 190, 246, 110, 89,  178, 98,
+			    181, 26,  85,  141, 43,  233, 200, 139,
+			    86,	 109, 235, 205, 148, 225, 9,   157,
+			    202, 151, 169, 38,	49,  111, 141, 187};
+	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 	(void)expected;
 	(void)expected2;
 }

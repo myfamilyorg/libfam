@@ -171,14 +171,18 @@ STATIC __attribute__((unused)) void aesenc128(u8 state[16],
 #ifdef USE_AVX2
 STATIC void storm_init_avx2(StormContext *ctx, const u8 key[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
+
 	__m256i key256 = _mm256_loadu_si256((const __m256i *)key);
 	__m256i domain = _mm256_loadu_si256((const __m256i *)STORM_DOMAIN_256);
 	st->state = _mm256_xor_si256(key256, domain);
-	st->key = _mm256_castsi256_si128(key256);
-	__m128i dom128 = _mm_loadu_si128((const __m128i *)STORM_KEY_MIX);
-	st->key = _mm_xor_si128(st->key, dom128);
-}
 
+	__m128i key_lo = _mm256_castsi256_si128(key256);
+	__m128i key_hi = _mm256_extracti128_si256(key256, 1);
+	__m128i round_key = _mm_xor_si128(key_lo, key_hi);
+
+	__m128i dom128 = _mm_loadu_si128((const __m128i *)STORM_KEY_MIX);
+	st->key = _mm_xor_si128(round_key, dom128);
+}
 STATIC void storm_xcrypt_buffer_avx2(StormContext *ctx, u8 buf[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 
@@ -208,12 +212,12 @@ STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
 	for (int i = 0; i < 16; i++) {
 		st->state[i] = key[i] ^ STORM_DOMAIN_256[i];
 		st->state[i + 16] = key[i + 16] ^ STORM_DOMAIN_256[i + 16];
-		st->key[i] = key[i] ^ STORM_DOMAIN_256[i];
 	}
 
-	fastmemcpy(st->key, key, 16);
-
-	for (u32 i = 0; i < 16; i++) {
+	for (int i = 0; i < 16; i++) {
+		st->key[i] = key[i] ^ key[i + 16];
+	}
+	for (int i = 0; i < 16; i++) {
 		st->key[i] ^= STORM_KEY_MIX[i];
 	}
 }
