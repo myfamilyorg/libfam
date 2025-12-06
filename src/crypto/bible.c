@@ -25,7 +25,6 @@
 
 #include <libfam/bible.h>
 #include <libfam/linux.h>
-#include <libfam/sha3.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
@@ -51,7 +50,7 @@ struct __attribute__((aligned(64))) Bible {
 	u8 data[];
 };
 
-PUBLIC const Bible *bible_gen_storm(void) {
+PUBLIC const Bible *bible_gen(void) {
 	u8 buffer[32];
 	StormContext ctx;
 
@@ -83,6 +82,7 @@ PUBLIC const Bible *bible_gen_storm(void) {
 	return ret;
 }
 
+/*
 PUBLIC const Bible *bible_gen(void) {
 	u8 seed[32];
 	Sha3Context ctx;
@@ -114,6 +114,7 @@ PUBLIC const Bible *bible_gen(void) {
 
 	return ret;
 }
+*/
 
 const Bible *bible_load(const u8 *path) {
 	const Bible *ret = NULL;
