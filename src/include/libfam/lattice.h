@@ -29,9 +29,9 @@
 #include <libfam/rng.h>
 #include <libfam/types.h>
 
-#define LATTICE_PK_SIZE 1281
-#define LATTICE_SK_SIZE 40
-#define LATTICE_SIG_SIZE 1281
+#define LATTICE_PK_SIZE 32
+#define LATTICE_SK_SIZE 32
+#define LATTICE_SIG_SIZE 3369
 
 typedef struct {
 	u8 data[LATTICE_PK_SIZE];
@@ -45,20 +45,19 @@ typedef struct {
 	u8 data[LATTICE_SIG_SIZE];
 } LatticeSig;
 
-typedef struct LatticeAggCtx LatticeAggCtx;
 typedef struct LatticeAggSig LatticeAggSig;
 
-i32 lattice_keygen(LatticeSK *sec_key, LatticePK *pub_key, Rng *rng);
-i32 lattice_sign(const LatticeSK *sec_key, const u8 msg[32], LatticeSig *sig);
-i32 lattice_verify(LatticePK *pub_key, const u8 msg[32], const LatticeSig *sig);
-i32 lattice_pubkey(const LatticeSK *sec_key, LatticePK *pk);
+void lattice_keygen(const u8 seed[32], LatticeSK *sk);
+void lattice_pubkey(const LatticeSK *sec_key, LatticePK *pk);
+i32 lattice_sign(const LatticeSK *sk, const u8 *message, u64 message_len,
+		 LatticeSig *sig);
+i32 lattice_verify(LatticePK *pub_key, const u8 *message, u64 message_len,
+		   const LatticeSig *sig);
 
-LatticeAggCtx *lattice_agg_create(void);
-void lattice_agg_destroy(LatticeAggCtx *ctx);
-i32 lattice_add_agg_add_partial(LatticeAggCtx *ctx, LatticeSig *partial,
-				const u8 msg[32]);
-LatticeAggSig *lattice_agg_finalize(LatticeAggCtx *ctx);
-void lattice_agg_finalize_destroy(LatticeAggSig *sig);
-i32 lattice_agg_verify(LatticeAggSig *sig);
+i32 lattice_aggregate(const LatticeSig partials[], u64 n, LatticeAggSig **out,
+		      u8 merkle_root[32]);
+i32 lattice_aggregate_verify(LatticeAggSig *sig, const u8 *expected_msg,
+			     u64 msg_len);
+void lattice_aggregate_destroy(LatticeAggSig *agg);
 
 #endif /* _LATTICE_H */

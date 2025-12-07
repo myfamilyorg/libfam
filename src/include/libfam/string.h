@@ -322,5 +322,6 @@ u8 u128_to_string(u8 buf[MAX_U128_STRING_LEN], u128 value, Int128DisplayType t);
  */
 #define fastmemcpy(dst, src, n) __builtin_memcpy((dst), (src), (n))
 #define fastmemmove(dst, src, n) __builtin_memmove((dst), (src), (n))
+#define fastmemset(dst, v, n) __builtin_memset((dst), (v), (n))
 
 #endif /* _LFAM_STRING_H */

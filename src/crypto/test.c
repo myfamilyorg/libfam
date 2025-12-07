@@ -53,7 +53,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					    // println("h1={x},h2={x}", h1, h2);
+					   // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -313,8 +313,7 @@ Test(storm_longneighbors) {
 	(void)ctx;
 	u8 a[32] __attribute__((aligned(32))) = {0};
 	u8 b[32] __attribute__((aligned(32))) = {0};
-	u8 key[32] = {0};
-	u8 iv[16] = {0};
+	u8 __attribute__((aligned(32))) key[32] = {0};
 	u32 iter = 1000;
 	u32 trials = 10000;
 	u32 total_fail = 0;
@@ -330,7 +329,6 @@ Test(storm_longneighbors) {
 
 	for (u32 i = 0; i < iter; i++) {
 		rng_gen(&rng, key, 32);
-		rng_gen(&rng, iv, 16);
 		storm_init(&ctx, key);
 		u64 zeros[256] = {0};
 		u64 ones[256] = {0};
