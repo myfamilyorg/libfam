@@ -53,7 +53,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					   // println("h1={x},h2={x}", h1, h2);
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -405,6 +405,23 @@ Test(storm_vector) {
 	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 	(void)expected;
 	(void)expected2;
+
+	storm_init(&ctx, (u8[32]){1});
+	memset(buf, 0, 32);
+	storm_xcrypt_buffer(&ctx, buf);
+	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
+	u8 expected3[32] = {109, 148, 97,  1,	144, 108, 65,  149,
+			    251, 12,  134, 225, 243, 203, 75,  166,
+			    116, 133, 168, 133, 130, 56,  183, 98,
+			    92,	 255, 62,  128, 176, 240, 123, 96};
+	ASSERT(!memcmp(buf, expected3, 32), "expected3");
+	storm_xcrypt_buffer(&ctx, buf);
+	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
+	u8 expected4[32] = {133, 219, 225, 147, 114, 181, 160, 4,
+			    237, 23,  158, 4,	82,  217, 227, 209,
+			    160, 57,  34,  150, 105, 43,  82,  115,
+			    162, 108, 212, 222, 145, 89,  115, 189};
+	ASSERT(!memcmp(buf, expected4, 32), "expected4");
 }
 
 Test(storm_cross_half_diffusion) {
