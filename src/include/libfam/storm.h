@@ -36,5 +36,6 @@ typedef struct {
 
 void storm_init(StormContext *ctx, const u8 key[32]);
 void storm_xcrypt_buffer(StormContext *ctx, u8 buf[32]);
+void storm_set_state(StormContext *ctx, u8 state[32]);
 
 #endif /* _STORM_H */
