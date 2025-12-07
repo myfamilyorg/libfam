@@ -37,7 +37,6 @@
 #define GOLDEN_PRIME 0x517cc1b727220a95ULL
 #define PHI_PRIME 0x9e3779b97f4a7c15ULL
 #define LOOKUP_ROUNDS 32
-#define SHA3_ITER LOOKUP_ROUNDS
 #define STORM_ITER (LOOKUP_ROUNDS * 1024)
 
 #define EXTENDED_BIBLE_SIZE (256 * 1024 * 1024)
@@ -82,40 +81,6 @@ PUBLIC const Bible *bible_gen(void) {
 	return ret;
 }
 
-/*
-PUBLIC const Bible *bible_gen(void) {
-	u8 seed[32];
-	Sha3Context ctx;
-	u64 counter = 0;
-
-	Bible *ret =
-	    mmap(NULL, sizeof(Bible) + EXTENDED_BIBLE_SIZE,
-		 PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	if (ret == MAP_FAILED) return NULL;
-
-	ret->flags = 0;
-	fastmemcpy(ret->data, xxdir_file_0, xxdir_file_size_0);
-	sha3_init256(&ctx);
-	sha3_update(&ctx, xxdir_file_0, xxdir_file_size_0);
-	fastmemcpy(seed, sha3_finalize(&ctx), sizeof(seed));
-
-	for (u64 offset = xxdir_file_size_0; offset < EXTENDED_BIBLE_SIZE;
-	     offset += 32) {
-		for (u32 i = 0; i < SHA3_ITER; i++) {
-			Sha3Context ctx;
-			sha3_init256(&ctx);
-			sha3_update(&ctx, &counter, sizeof(counter));
-			sha3_update(&ctx, seed, sizeof(seed));
-			fastmemcpy(ret->data + offset, sha3_finalize(&ctx), 32);
-			fastmemcpy(seed, ret->data + offset, sizeof(seed));
-			counter++;
-		}
-	}
-
-	return ret;
-}
-*/
-
 const Bible *bible_load(const u8 *path) {
 	const Bible *ret = NULL;
 	i32 fd = -1;
@@ -145,8 +110,6 @@ CLEANUP:
 	if (fd >= 0) close(fd);
 	RETURN;
 }
-
-#include <libfam/format.h>
 
 PUBLIC void bible_sbox8_64(u64 sbox[256]) {
 	__attribute__((aligned(32))) u8 buf[32] = {0};
