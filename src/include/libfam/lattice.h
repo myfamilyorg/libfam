@@ -31,14 +31,14 @@
 
 #define LATTICE_PK_SIZE 32
 #define LATTICE_SK_SIZE 32
-#define LATTICE_SIG_SIZE 3369
+#define LATTICE_SIG_SIZE 15424
 
 typedef struct {
-	u8 data[LATTICE_PK_SIZE];
+	__attribute__((aligned(32))) u8 data[LATTICE_PK_SIZE];
 } LatticePK;
 
 typedef struct {
-	u8 data[LATTICE_SK_SIZE];
+	__attribute__((aligned(32))) u8 data[LATTICE_SK_SIZE];
 } LatticeSK;
 
 typedef struct {
@@ -49,8 +49,7 @@ typedef struct LatticeAggSig LatticeAggSig;
 
 void lattice_skey(const u8 seed[32], LatticeSK *sk);
 void lattice_pubkey(const LatticeSK *sec_key, LatticePK *pk);
-i32 lattice_sign(const LatticeSK *sk, const u8 *message, u64 message_len,
-		 LatticeSig *sig);
+void lattice_sign(const LatticeSK *sk, const u8 message[128], LatticeSig *sig);
 i32 lattice_verify(LatticePK *pub_key, const u8 *message, u64 message_len,
 		   const LatticeSig *sig);
 
