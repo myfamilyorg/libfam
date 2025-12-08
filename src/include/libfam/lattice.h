@@ -29,7 +29,7 @@
 #include <libfam/rng.h>
 #include <libfam/types.h>
 
-#define LATTICE_PK_SIZE 32
+#define LATTICE_PK_SIZE (32 + 7168)
 #define LATTICE_SK_SIZE 32
 #define LATTICE_SIG_SIZE 15424
 
@@ -50,7 +50,7 @@ typedef struct LatticeAggSig LatticeAggSig;
 void lattice_skey(const u8 seed[32], LatticeSK *sk);
 void lattice_pubkey(const LatticeSK *sec_key, LatticePK *pk);
 void lattice_sign(const LatticeSK *sk, const u8 message[128], LatticeSig *sig);
-i32 lattice_verify(LatticePK *pub_key, const u8 *message, u64 message_len,
+i32 lattice_verify(const LatticePK *pub_key, const u8 message[128],
 		   const LatticeSig *sig);
 
 i32 lattice_aggregate(const LatticeSig partials[], u64 n, LatticeAggSig **out,
