@@ -28,7 +28,7 @@
 #include <libfam/string.h>
 #include <libfam/utils.h>
 
-PUBLIC void lattice_keygen(const u8 seed[32], LatticeSK *sk) {
+PUBLIC void lattice_skey(const u8 seed[32], LatticeSK *sk) {
 	fastmemcpy(sk, seed, 32);
 }
 

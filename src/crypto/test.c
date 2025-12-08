@@ -53,7 +53,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					   // println("h1={x},h2={x}", h1, h2);
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -84,13 +84,15 @@ Test(random_stir) {
 }
 
 #define SIZE (128 * 1024)
+__attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
+
 Test(aighthash_longneighbors) {
 	Rng rng;
 	int size = SIZE;
 	u8 a[SIZE] = {0};
 	u8 b[SIZE] = {0};
 
-	rng_test_seed(&rng, (u8[32]){0});
+	rng_test_seed(&rng, ZERO_SEED);
 
 	int total_fail = 0;
 	(void)total_fail;
@@ -162,7 +164,7 @@ Test(aighthash64_longneighbors) {
 	u8 a[SIZE] = {0};
 	u8 b[SIZE] = {0};
 
-	rng_test_seed(&rng, (u8[32]){0});
+	rng_test_seed(&rng, ZERO_SEED);
 	u8 key[16];
 	rng_gen(&rng, key, 16);
 
@@ -324,7 +326,7 @@ Test(storm_longneighbors) {
 	(void)total_fail;
 
 	rng_init(&rng, NULL);
-	rng_test_seed(&rng, (u8[32]){3});
+	rng_test_seed(&rng, ZERO_SEED);
 	f64 max = 0.0, min = 100.0;
 
 	for (u32 i = 0; i < iter; i++) {
@@ -477,7 +479,7 @@ Test(storm_key_recovery_integral) {
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	rng_init(&rng, NULL);
-	rng_test_seed(&rng, (u8[32]){0x37});
+	rng_test_seed(&rng, ZERO_SEED);
 
 	StormContext ctx;
 	u8 key[32];
@@ -538,7 +540,7 @@ Test(storm_2round_integral_distinguisher) {
 
 	Rng rng;
 	rng_init(&rng, NULL);
-	rng_test_seed(&rng, (u8[32]){0x13});
+	rng_test_seed(&rng, ZERO_SEED);
 
 	StormContext ctx;
 	u8 key[32];

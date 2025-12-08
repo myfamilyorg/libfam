@@ -47,7 +47,7 @@ typedef struct {
 
 typedef struct LatticeAggSig LatticeAggSig;
 
-void lattice_keygen(const u8 seed[32], LatticeSK *sk);
+void lattice_skey(const u8 seed[32], LatticeSK *sk);
 void lattice_pubkey(const LatticeSK *sec_key, LatticePK *pk);
 i32 lattice_sign(const LatticeSK *sk, const u8 *message, u64 message_len,
 		 LatticeSig *sig);
