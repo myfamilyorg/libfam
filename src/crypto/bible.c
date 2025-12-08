@@ -43,6 +43,8 @@
 #define BIBLE_EXTENDED_INDICES (EXTENDED_BIBLE_SIZE >> 5)
 #define BIBLE_EXTENDED_MASK (BIBLE_EXTENDED_INDICES - 1)
 
+static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
+
 struct __attribute__((aligned(64))) Bible {
 	u64 flags;
 	u64 padding[7];
@@ -114,7 +116,7 @@ CLEANUP:
 PUBLIC void bible_sbox8_64(u64 sbox[256]) {
 	__attribute__((aligned(32))) u8 buf[32] = {0};
 	StormContext ctx;
-	storm_init(&ctx, (u8[32]){0});
+	storm_init(&ctx, ZERO_SEED);
 
 	u8 *sbox_u8 = (void *)sbox;
 	for (u32 i = 0; i < 256 / 4; i++) {

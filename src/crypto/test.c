@@ -53,7 +53,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					    // println("h1={x},h2={x}", h1, h2);
+					   // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -73,7 +73,7 @@ Test(aighthash_original_fails_this) {
 }
 
 Test(random_stir) {
-	u8 v1[32], v2[32];
+	__attribute__((aligned(32))) u8 v1[32], v2[32];
 	const u8 st[32] = {1, 2, 3};
 
 	random32(v1);
@@ -84,7 +84,8 @@ Test(random_stir) {
 }
 
 #define SIZE (128 * 1024)
-__attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
+static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
+static __attribute__((aligned(32))) u8 ONE_SEED[32] = {1};
 
 Test(aighthash_longneighbors) {
 	Rng rng;
@@ -239,7 +240,7 @@ Test(aighthash64_longneighbors) {
 
 Test(storm_perf) {
 	i64 timer;
-	u8 text[32] = {0};
+	__attribute__((aligned(32))) u8 text[32] = {0};
 	u64* v = (void*)text;
 	StormContext ctx;
 	u64 sum = 0;
@@ -247,7 +248,7 @@ Test(storm_perf) {
 	u8* vg = getenv("VALGRIND");
 	if (vg && strlen(vg) == 1 && !memcmp(vg, "1", 1)) return;
 
-	storm_init(&ctx, (u8[32]){0});
+	storm_init(&ctx, ZERO_SEED);
 
 	timer = micros();
 	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
@@ -379,8 +380,8 @@ Test(storm_longneighbors) {
 
 Test(storm_vector) {
 	StormContext ctx;
-	u8 key[32] = {0};
-	u8 buf[32] = {0};
+	__attribute__((aligned(32))) u8 key[32] = {0};
+	__attribute__((aligned(32))) u8 buf[32] = {0};
 
 	u8* v = getenv("VALGRIND");
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
@@ -406,7 +407,7 @@ Test(storm_vector) {
 	(void)expected;
 	(void)expected2;
 
-	storm_init(&ctx, (u8[32]){1});
+	storm_init(&ctx, ONE_SEED);
 	memset(buf, 0, 32);
 	storm_xcrypt_buffer(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
@@ -426,10 +427,10 @@ Test(storm_vector) {
 
 Test(storm_cross_half_diffusion) {
 	StormContext ctx;
-	u8 key[32] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-		      0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00,
-		      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-		      0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
+	__attribute__((aligned(32))) u8 key[32] = {
+	    0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb,
+	    0xcc, 0xdd, 0xee, 0xff, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+	    0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
 
 	u8* v = getenv("VALGRIND");
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
@@ -444,7 +445,7 @@ Test(storm_cross_half_diffusion) {
 		u8 block[32] = {0};
 		block[0] = (u8)test;
 
-		u8 ct[32];
+		__attribute__((aligned(32))) u8 ct[32];
 		memcpy(ct, block, 32);
 		storm_xcrypt_buffer(&ctx, ct);
 
@@ -482,7 +483,7 @@ Test(storm_key_recovery_integral) {
 	rng_test_seed(&rng, ZERO_SEED);
 
 	StormContext ctx;
-	u8 key[32];
+	__attribute__((aligned(32))) u8 key[32];
 	rng_gen(&rng, key, 32);
 
 	storm_init(&ctx, key);
@@ -543,7 +544,7 @@ Test(storm_2round_integral_distinguisher) {
 	rng_test_seed(&rng, ZERO_SEED);
 
 	StormContext ctx;
-	u8 key[32];
+	__attribute__((aligned(32))) u8 key[32];
 
 	const u32 N = 1 << 19;
 	u64 xor_sum[32] = {0};
