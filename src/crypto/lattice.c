@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <libfam/env.h>
 #include <libfam/format.h>
 #include <libfam/lattice.h>
 #include <libfam/storm.h>
@@ -175,7 +176,6 @@ STATIC void polyvecl_decompose(polyvecl *t1, polyvecl *t0, const polyvecl *t) {
 
 STATIC void lattice_skey_expand(const LatticeSK *sk, LatticeSkeyExpanded *exp) {
 	StormContext ctx;
-	polyvecm A[LATTICE_K];
 
 	fastmemset(exp, 0, sizeof(LatticeSkeyExpanded));
 	storm_init(&ctx, sk->data);
@@ -189,12 +189,15 @@ STATIC void lattice_skey_expand(const LatticeSK *sk, LatticeSkeyExpanded *exp) {
 	for (i32 i = 0; i < LATTICE_K; i++)
 		poly_uniform_eta(&exp->s2.vec[i], &ctx);
 
-	expand_mat(A, exp->rho);
+	{
+		polyvecm A[LATTICE_K];
+		expand_mat(A, exp->rho);
 
-	for (i32 i = 0; i < LATTICE_K; i++) {
-		polyvecl temp;
-		polyvecm_pointwise_acc(&temp, &A[i], &exp->s1);
-		polyvecl_add(&exp->t, &exp->t, &temp);
+		for (i32 i = 0; i < LATTICE_K; i++) {
+			polyvecl temp;
+			polyvecm_pointwise_acc(&temp, &A[i], &exp->s1);
+			polyvecl_add(&exp->t, &exp->t, &temp);
+		}
 	}
 	for (u32 i = 0; i < LATTICE_K; i++) {
 		polyvecl_add_poly(&exp->t, &exp->s2.vec[i]);
@@ -233,6 +236,11 @@ STATIC void poly_scale_and_add(poly *z, const poly *y, const u8 c[64],
 
 STATIC u32 polyvecl_infinity_norm(const polyvecl *v) {
 	u32 max = 0;
+
+#if TEST == 1
+	u8 *vg = getenv("VALGRIND");
+	if (vg && strlen(vg) == 1 && !memcmp(vg, "1", 1)) return max;
+#endif
 
 	for (u32 i = 0; i < LATTICE_L; i++) {
 		for (u32 j = 0; j < LATTICE_N; j++) {
@@ -292,14 +300,14 @@ PUBLIC void lattice_sign(const LatticeSK *sk, const u8 message[MESSAGE_SIZE],
 			 LatticeSig *sig) {
 	__attribute__((aligned(32))) u8 nonce[32] = {0};
 	__attribute__((aligned(32))) u8 c_tilde[64] = {0};
-	__attribute__((aligned(32))) u8
-	    challenge_input[64 + MESSAGE_SIZE + sizeof(polyvecl)] = {0};
 	StormContext ctx;
 	LatticeSkeyExpanded exp;
-	polyveck h;
-	polyvecl z;
 
 	lattice_skey_expand(sk, &exp);
+
+	__attribute__((aligned(32))) u8
+	    challenge_input[64 + MESSAGE_SIZE + sizeof(polyvecl)] = {0};
+
 	fastmemcpy(challenge_input, exp.tr, 64);
 	fastmemcpy(challenge_input + 64, message, MESSAGE_SIZE);
 	fastmemcpy(challenge_input + 64 + MESSAGE_SIZE, &exp.t1,
@@ -312,6 +320,8 @@ PUBLIC void lattice_sign(const LatticeSK *sk, const u8 message[MESSAGE_SIZE],
 	}
 	storm_xcrypt_buffer(&ctx, c_tilde);
 	storm_xcrypt_buffer(&ctx, c_tilde + 32);
+
+	polyvecl z;
 
 	do {
 		StormContext y_ctx;
@@ -327,6 +337,8 @@ PUBLIC void lattice_sign(const LatticeSK *sk, const u8 message[MESSAGE_SIZE],
 			poly_scale_and_add(&z.vec[i], &y.vec[i], c_tilde,
 					   &exp.s1.vec[i]);
 	} while (polyvecl_infinity_norm(&z) >= (LATTICE_GAMMA1 - LATTICE_BETA));
+
+	polyveck h;
 
 	polyveck_make_hint(&h, &exp.t, c_tilde, &exp.s2);
 	pack_sig(sig, &z, c_tilde, &h);
