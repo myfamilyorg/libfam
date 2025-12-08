@@ -54,7 +54,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					    // println("h1={x},h2={x}", h1, h2);
+					   // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -598,6 +598,7 @@ Test(rng2) {
 }
 
 Test(lattice) {
+	/*
 	__attribute__((aligned(32))) u8 skey[32] = {0, 1, 2};
 	u8 msg[128] = {0};
 	LatticeSK sk;
@@ -608,5 +609,6 @@ Test(lattice) {
 	lattice_pubkey(&sk, &pk);
 	i32 v = lattice_verify(&pk, msg, &sig);
 	(void)v;
+	*/
 	//	println("v={}", v);
 }

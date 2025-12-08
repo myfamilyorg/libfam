@@ -160,19 +160,6 @@ STATIC void polyvecm_pointwise_acc(polyvecl *w, const polyvecm *u,
 	}
 }
 
-STATIC void polyvecl_pointwise_acc(polyvecl *w, const polyvecm mat[LATTICE_K],
-				   const polyvecl *v) {
-	fastmemset(w, 0, sizeof(*w));
-
-	for (int i = 0; i < LATTICE_L; i++) {
-		for (int j = 0; j < LATTICE_K; j++) {
-			poly temp;
-			poly_pointwise_mul(&temp, &mat[j].vec[i], &v->vec[i]);
-			poly_add(&w->vec[i], &w->vec[i], &temp);
-		}
-	}
-}
-
 STATIC void polyvecl_add_poly(polyvecl *w, const poly *p) {
 	for (u32 i = 0; i < LATTICE_L; i++) {
 		poly_add(&w->vec[i], &w->vec[i], p);
