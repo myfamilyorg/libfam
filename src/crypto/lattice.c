@@ -53,10 +53,6 @@ typedef struct {
 
 typedef struct {
 	poly vec[LATTICE_K];
-} polyveck_t0;
-
-typedef struct {
-	poly vec[LATTICE_K];
 } polyveck;
 
 typedef struct {
@@ -81,6 +77,13 @@ typedef struct {
 } LatticePKImpl;
 
 static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
+
+STATIC i32 mod_q(i64 x) {
+	i32 r = (i32)x;
+	if (r >= LATTICE_Q) r -= LATTICE_Q;
+	if (r < -LATTICE_Q / 2) r += LATTICE_Q;
+	return r;
+}
 
 STATIC void poly_uniform(poly *p, StormContext *ctx) {
 	__attribute__((aligned(32))) u8 buf[32] = {0};
@@ -126,7 +129,8 @@ STATIC void expand_mat(polyvecm mat[LATTICE_K], const u8 rho[32]) {
 
 STATIC void poly_add(poly *w, const poly *u, const poly *v) {
 	for (int i = 0; i < LATTICE_N; i++) {
-		w->coeffs[i] = u->coeffs[i] + v->coeffs[i];
+		i64 sum = (i64)u->coeffs[i] + v->coeffs[i];
+		w->coeffs[i] = mod_q(sum);
 	}
 }
 
@@ -138,8 +142,8 @@ STATIC void polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
 
 STATIC void poly_pointwise_mul(poly *w, const poly *u, const poly *v) {
 	for (int i = 0; i < LATTICE_N; i++) {
-		i64 t = (i64)u->coeffs[i] * v->coeffs[i];
-		w->coeffs[i] = (i32)t;
+		i64 prod = (i64)u->coeffs[i] * v->coeffs[i];
+		w->coeffs[i] = mod_q(prod);
 	}
 }
 
@@ -176,15 +180,18 @@ STATIC void polyvecl_add_poly(polyvecl *w, const poly *p) {
 }
 
 STATIC void polyvecl_decompose(polyvecl *t1, polyvecl *t0, const polyvecl *t) {
-	const u32 d = LATTICE_D;
-	const i32 alpha = (1 << d);
-
 	for (u32 i = 0; i < LATTICE_L; i++) {
 		for (u32 j = 0; j < LATTICE_N; j++) {
 			i32 a = t->vec[i].coeffs[j];
+			if (a < 0) a += LATTICE_Q;
 
-			i32 a1 = (a + (alpha >> 1)) >> d;
-			i32 a0 = a - (a1 << d);
+			i32 a0 = a & 0x1FFF;
+			i32 a1 = (a - a0) >> 13;
+
+			if (a0 > 4096) {
+				a0 -= 8192;
+				a1 += 1;
+			}
 
 			if (t1) t1->vec[i].coeffs[j] = a1;
 			if (t0) t0->vec[i].coeffs[j] = a0;
@@ -210,6 +217,16 @@ STATIC void lattice_skey_expand(const LatticeSK *sk, LatticeSkeyExpanded *exp) {
 	{
 		polyvecm A[LATTICE_K];
 		expand_mat(A, exp->rho);
+
+		/*
+		println(
+		    "=== MATRIX A DEBUG (first row, first 8 coeffs) (sign) "
+		    "===");*/
+		/*
+		for (int j = 0; j < 8; j++) {
+			println("A[0][{}] = {}", j, A[0].vec[0].coeffs[j]);
+		}
+		*/
 
 		for (i32 i = 0; i < LATTICE_K; i++) {
 			polyvecl temp;
@@ -269,8 +286,19 @@ STATIC void polyveck_make_hint(polyveck *h, const polyvecl *t0, const poly *c,
 			else if (c->coeffs[j] == -1)
 				val -= s2->vec[k].coeffs[j];
 
-			if (val >= LATTICE_Q / 2 || val <= -LATTICE_Q / 2)
+			/*
+			println("val={},upper={},lower={}", val, LATTICE_Q / 2,
+				-LATTICE_Q / 2);
+				*/
+
+			if (val >= LATTICE_Q / 2 || val <= -LATTICE_Q / 2) {
+				/*
+				println(
+				    "+===================================SETH=="
+				    "=======");
+				    */
 				h->vec[k].coeffs[j] = 1;
+			}
 		}
 	}
 }
@@ -309,7 +337,7 @@ PUBLIC void lattice_skey(const u8 seed[32], LatticeSK *sk) {
 }
 
 PUBLIC void lattice_pubkey(const LatticeSK *sec_key, LatticePK *pk) {
-	LatticePKImpl *impl = (void *)pk;
+	LatticePKImpl *impl = (void *)pk->data;
 	LatticeSkeyExpanded exp;
 	lattice_skey_expand(sec_key, &exp);
 
@@ -322,29 +350,61 @@ PUBLIC void lattice_sign(const LatticeSK *sk, const u8 message[MESSAGE_SIZE],
 			 LatticeSig *sig) {
 	__attribute__((aligned(32))) u8 nonce[32] = {0};
 	__attribute__((aligned(32))) u8 c_tilde[64] = {0};
-	StormContext ctx;
 	LatticeSkeyExpanded exp;
 
 	lattice_skey_expand(sk, &exp);
 
-	__attribute__((aligned(32))) u8 challenge_input[64 + MESSAGE_SIZE] = {
-	    0};
+	/*
+	println("=== EXPANDED KEY DEBUG ===");
+	println("rho[0..7]:  {} {} {} {} {} {} {} {}", exp.rho[0], exp.rho[1],
+		exp.rho[2], exp.rho[3], exp.rho[4], exp.rho[5], exp.rho[6],
+		exp.rho[7]);
+	println("tr[0..7]:   {} {} {} {} {} {} {} {}", exp.tr[0], exp.tr[1],
+		exp.tr[2], exp.tr[3], exp.tr[4], exp.tr[5], exp.tr[6],
+		exp.tr[7]);
+	println("t1[0][0..3]: {} {} {} {}", exp.t1.vec[0].coeffs[0],
+		exp.t1.vec[0].coeffs[1], exp.t1.vec[0].coeffs[2],
+		exp.t1.vec[0].coeffs[3]);
+	println("s1[0][0..3]: {} {} {} {}", exp.s1.vec[0].coeffs[0],
+		exp.s1.vec[0].coeffs[1], exp.s1.vec[0].coeffs[2],
+		exp.s1.vec[0].coeffs[3]);
+	println("s2[0][0..3]: {} {} {} {}", exp.s2.vec[0].coeffs[0],
+		exp.s2.vec[0].coeffs[1], exp.s2.vec[0].coeffs[2],
+		exp.s2.vec[0].coeffs[3]);
+	println("=== END EXPANDED KEY ===");
+	*/
 
-	fastmemcpy(challenge_input, exp.tr, 64);
-	fastmemcpy(challenge_input + 64, message, MESSAGE_SIZE);
+	{
+		__attribute__((aligned(
+		    32))) u8 input[32 + sizeof(polyvecl) + MESSAGE_SIZE];
+		fastmemcpy(input, exp.rho, 32);
+		fastmemcpy(input + 32, &exp.t1, sizeof(polyvecl));
+		fastmemcpy(input + 32 + sizeof(polyvecl), message,
+			   MESSAGE_SIZE);
 
-	storm_init(&ctx, ZERO_SEED);
-
-	for (u32 i = 0; i < sizeof(challenge_input); i += 32) {
-		storm_xcrypt_buffer(&ctx, challenge_input + i);
+		StormContext ctx;
+		storm_init(&ctx, ZERO_SEED);
+		for (u32 i = 0; i < sizeof(input); i += 32)
+			storm_xcrypt_buffer(&ctx, input + i);
+		storm_xcrypt_buffer(&ctx, c_tilde);
+		storm_xcrypt_buffer(&ctx, c_tilde + 32);
 	}
-	storm_xcrypt_buffer(&ctx, c_tilde);
-	storm_xcrypt_buffer(&ctx, c_tilde + 32);
+
+	poly c;
+	expand_challenge(&c, c_tilde);
+
+	/*
+	println("c_tilde[0..7]: {} {} {} {} {} {} {} {}", c_tilde[0],
+		c_tilde[1], c_tilde[2], c_tilde[3], c_tilde[4], c_tilde[5],
+		c_tilde[6], c_tilde[7]);
+
+	println("=== SIGN: sparse c (first 8 coeffs) ===");
+	for (int i = 0; i < 8; i++) {
+		println("c[{}] = {}", i, c.coeffs[i]);
+	}
+	*/
 
 	polyvecl z;
-	poly c;
-
-	expand_challenge(&c, c_tilde);
 
 	do {
 		StormContext y_ctx;
@@ -357,23 +417,66 @@ PUBLIC void lattice_sign(const LatticeSK *sk, const u8 message[MESSAGE_SIZE],
 		for (u32 i = 0; i < LATTICE_L; i++)
 			poly_uniform_gamma1(&y.vec[i], &y_ctx);
 
+		/*
+		println("=== DEBUG: y.vec[0] first 8 coeffs ===");
+		for (int j = 0; j < 8; j++)
+			println("y[0][{}] = {}", j, y.vec[0].coeffs[j]);
+
+		println("=== DEBUG: c·s1.vec[0] first 8 coeffs ===");
+		i32 cs1[8] = {0};
+		for (int j = 0; j < 8; j++) {
+			if (c.coeffs[j] == 1) cs1[j] = exp.s1.vec[0].coeffs[j];
+			if (c.coeffs[j] == -1)
+				cs1[j] = -exp.s1.vec[0].coeffs[j];
+			println("c·s1[{}] = {}  (c={} s1={})", j, cs1[j],
+				c.coeffs[j], exp.s1.vec[0].coeffs[j]);
+		}
+		*/
+
 		for (u32 i = 0; i < LATTICE_L; i++) {
 			for (u32 j = 0; j < LATTICE_N; j++) {
 				i64 val = y.vec[i].coeffs[j];
-
 				if (c.coeffs[j] == 1)
 					val += exp.s1.vec[i].coeffs[j];
-				else if (c.coeffs[j] == -1)
+				if (c.coeffs[j] == -1)
 					val -= exp.s1.vec[i].coeffs[j];
-
 				z.vec[i].coeffs[j] = (i32)val;
 			}
 		}
 	} while (polyvecl_infinity_norm(&z) >= (LATTICE_GAMMA1 - LATTICE_BETA));
 
+	/*
+	println("=== SIGN: First 8 coeffs of z.vec[0] ===");
+	for (int j = 0; j < 8; j++) {
+		println("z[0][{}] = {}", j, z.vec[0].coeffs[j]);
+	}
+	println("||z||_inf = {}", polyvecl_infinity_norm(&z));
+	*/
+
 	polyveck h;
 
+	/*
+	println("=== t0 (first vector, first 8 coeffs) ===");
+	for (int j = 0; j < 8; j++) {
+		println("t0.vec[0].coeffs[{}] = {}", j,
+			exp.t0.vec[0].coeffs[j]);
+	}
+
+	println("=== s2 (first vector, first 8 coeffs) ===");
+	for (int j = 0; j < 8; j++) {
+		println("s2.vec[0].coeffs[{}] = {}", j,
+			exp.s2.vec[0].coeffs[j]);
+	}*/
+
 	polyveck_make_hint(&h, &exp.t0, &c, &exp.s2);
+
+	/*
+	println("=== SIGN: First 8 hint bits (vector 0) ===");
+	for (int j = 0; j < 8; j++) {
+		println("h[0][{}] = {}", j, h.vec[0].coeffs[j]);
+	}
+	*/
+
 	pack_sig(sig, &z, c_tilde, &h);
 	fastmemset(&exp, 0, sizeof(LatticeSkeyExpanded));
 }
@@ -392,49 +495,89 @@ PUBLIC i32 lattice_verify(const LatticePK *pub_key,
 	if (polyvecl_infinity_norm(z) >= LATTICE_GAMMA1 - LATTICE_BETA)
 		return 0;
 
-	/* 2. Recompute expected c̃ = H(tr ‖ message) */
-	/*     tr = H(ρ ‖ t₁) — recompute it from pk contents */
+	/* 2. Recompute expected c̃ = H(ρ ‖ t₁ ‖ message) */
 	u8 expected_c_tilde[64] = {0};
 	{
-		__attribute__((aligned(32))) u8 tr_input[32 + sizeof(polyvecl)];
-		fastmemcpy(tr_input, pk->rho, 32);
-		fastmemcpy(tr_input + 32, &pk->t1, sizeof(polyvecl));
+		u8 input[32 + sizeof(polyvecl) + MESSAGE_SIZE];
+		fastmemcpy(input, pk->rho, 32);
+		fastmemcpy(input + 32, &pk->t1, sizeof(polyvecl));
+		fastmemcpy(input + 32 + sizeof(polyvecl), message,
+			   MESSAGE_SIZE);
 
 		StormContext ctx;
 		storm_init(&ctx, ZERO_SEED);
-		for (u32 i = 0; i < sizeof(tr_input); i += 32)
-			storm_xcrypt_buffer(&ctx, tr_input + i);
+		for (u32 i = 0; i < sizeof(input); i += 32)
+			storm_xcrypt_buffer(&ctx, input + i);
 		storm_xcrypt_buffer(&ctx, expected_c_tilde);
 		storm_xcrypt_buffer(&ctx, expected_c_tilde + 32);
 	}
 
 	if (memcmp(c_tilde, expected_c_tilde, 64) != 0) return 0;
 
-	/* 3. Compute A·z */
-	polyvecl Az;
+	polyveck Az;
 	{
 		polyvecm A[LATTICE_K];
 		expand_mat(A, pk->rho);
-		polyvecl_pointwise_acc(&Az, A, z);
+
+		/*
+		println("=== MATRIX A DEBUG (first row, first 8 coeffs) ===");
+		for (int j = 0; j < 8; j++) {
+			println("A[0][{}] = {}", j, A[0].vec[0].coeffs[j]);
+		}
+		*/
+
+		fastmemset(&Az, 0, sizeof(Az));
+		for (u32 i = 0; i < LATTICE_K; i++) {
+			for (u32 j = 0; j < LATTICE_L; j++) {
+				poly temp;
+				poly_pointwise_mul(&temp, &A[i].vec[j],
+						   &z->vec[j]);
+				poly_add(&Az.vec[i], &Az.vec[i], &temp);
+			}
+		}
 	}
 
-	/* 4. Compute w = A·z − c·t₁ */
 	poly c;
 	expand_challenge(&c, c_tilde);
 
-	polyvecl w;
-	for (u32 i = 0; i < LATTICE_L; i++) {
+	/*
+	println("=== VERIFY: sparse c (first 8 coeffs) ===");
+	for (int i = 0; i < 8; i++) {
+		println("c[{}] = {}", i, c.coeffs[i]);
+	}
+	*/
+
+	polyveck w;
+	for (u32 i = 0; i < LATTICE_K; i++) {
 		for (u32 j = 0; j < LATTICE_N; j++) {
 			i64 val = Az.vec[i].coeffs[j];
 			if (c.coeffs[j] == 1)
 				val -= pk->t1.vec[i].coeffs[j];
 			else if (c.coeffs[j] == -1)
 				val += pk->t1.vec[i].coeffs[j];
-			w.vec[i].coeffs[j] = (i32)val;
+			w.vec[i].coeffs[j] = mod_q((i32)val);
 		}
 	}
 
-	/* 5. Apply hints and check recovery of t₁ */
+	/*
+	println("=== FINAL CHECK (first 4 coeffs of first vector) ===");
+	for (int j = 0; j < 4; j++) {
+		i32 val = w.vec[0].coeffs[j];
+		i32 hinted = val;
+
+		if (h->vec[0].coeffs[j]) {
+			if (val >= 0)
+				hinted -= LATTICE_Q;
+			else
+				hinted += LATTICE_Q;
+		}
+
+		println("w[0][{}]={} → hinted={}  expected t1={}  match={}", j,
+			val, hinted, pk->t1.vec[0].coeffs[j],
+			(hinted == pk->t1.vec[0].coeffs[j]) ? "YES" : "NO");
+	}
+	*/
+
 	for (u32 k = 0; k < LATTICE_K; k++) {
 		for (u32 j = 0; j < LATTICE_N; j++) {
 			i32 val = w.vec[k].coeffs[j];
@@ -445,6 +588,49 @@ PUBLIC i32 lattice_verify(const LatticePK *pub_key,
 				else
 					val += LATTICE_Q;
 			}
+
+			/*
+			println("=== VERIFY: First 8 hint bits (vector 0) ===");
+			for (int j = 0; j < 8; j++) {
+				println("h[0][{}] = {}", j,
+					h->vec[0].coeffs[j]);
+			}
+
+			println("val={},pk={}", val, pk->t1.vec[k].coeffs[j]);
+
+			println("=== FINAL VERIFICATION PROOF ===");
+			*/
+
+			// Pick one coefficient — index 0 of vector 0
+			/*
+			u32 k = 0, j = 0;
+			i32 az = Az.vec[k].coeffs[j];
+			i32 ct1 = (c.coeffs[j] == 1) ? pk->t1.vec[k].coeffs[j]
+				  : (c.coeffs[j] == -1)
+				      ? -pk->t1.vec[k].coeffs[j]
+				      : 0;
+			i32 hint_adjust =
+			    h->vec[k].coeffs[j]
+				? (az >= 0 ? -LATTICE_Q : LATTICE_Q)
+				: 0;
+
+			i32 left = az;
+			i32 right = pk->t1.vec[k].coeffs[j] + ct1 + hint_adjust;
+
+			println("A·z[0][0]       = {}", left);
+			println("t1 + c·t1 + h*Q = {} + {} + {} = {}",
+				pk->t1.vec[k].coeffs[j], ct1, hint_adjust,
+				right);
+			println("MATCH? {}", left == right ? "YES" : "NO");
+
+			if (left == right) {
+				println(
+				    "VERIFICATION WOULD PASS IF THIS WAS THE "
+				    "ONLY COEFF");
+			} else {
+				println("VERIFICATION FAILS HERE");
+			}
+			*/
 
 			if (val != pk->t1.vec[k].coeffs[j]) return 0;
 		}

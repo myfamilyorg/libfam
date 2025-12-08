@@ -608,5 +608,5 @@ Test(lattice) {
 	lattice_pubkey(&sk, &pk);
 	i32 v = lattice_verify(&pk, msg, &sig);
 	(void)v;
-	// println("v={}", v);
+	//	println("v={}", v);
 }
