@@ -335,6 +335,9 @@ PUBLIC void asymmetric_pubkey(const AsymmetricSK *sec_key, AsymmetricPK *pk) {
 	fastmemcpy(&impl->rho, exp.rho, 32);
 	fastmemcpy(&impl->t1, &exp.t1, sizeof(exp.t1));
 
+	(void)debug_print_full_expanded_key;
+	(void)debug_verify_expanded_key_or_panic;
+	(void)print_hex;
 	// debug_print_full_expanded_key(&exp);
 	// debug_verify_expanded_key_or_panic(&exp);
 
