@@ -39,13 +39,13 @@
 #define P2 0x517cc1b727220a95ULL
 #define Nb 4
 #define STORM_KEY_MIX                                                       \
-	(u8[]) {                                                            \
+	(__attribute__((aligned(32))) u8[]) {                               \
 		0x15, 0x7c, 0x4a, 0x7f, 0xb9, 0x79, 0x37, 0x9e, 0x95, 0x0a, \
 		    0x22, 0x27, 0xb7, 0xc1, 0x7c, 0x51                      \
 	}
 
 #define STORM_DOMAIN_256                                                    \
-	(u8[]) {                                                            \
+	(__attribute__((aligned(32))) u8[]) {                               \
 		0x95, 0x0a, 0x22, 0x27, 0xb7, 0xc1, 0x7c, 0x51, 0x15, 0x7c, \
 		    0x4a, 0x7f, 0xb9, 0x79, 0x37, 0x9e, 0xcd, 0x8c, 0x55,   \
 		    0xed, 0xd7, 0xaf, 0x51, 0xff, 0x53, 0xec, 0x85, 0x1a,   \
@@ -171,7 +171,6 @@ STATIC __attribute__((unused)) void aesenc128(u8 state[16],
 #ifdef USE_AVX2
 STATIC void storm_init_avx2(StormContext *ctx, const u8 key[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
-
 	__m256i key256 = _mm256_load_si256((const __m256i *)key);
 	__m256i domain = _mm256_load_si256((const __m256i *)STORM_DOMAIN_256);
 	st->state = _mm256_xor_si256(key256, domain);

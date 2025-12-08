@@ -25,6 +25,7 @@
 
 #include <libfam/aighthash.h>
 #include <libfam/atomic.h>
+#include <libfam/format.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 

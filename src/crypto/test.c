@@ -73,8 +73,9 @@ Test(aighthash_original_fails_this) {
 }
 
 Test(random_stir) {
-	__attribute__((aligned(32))) u8 v1[32], v2[32];
-	const u8 st[32] = {1, 2, 3};
+	__attribute__((aligned(32))) u8 v1[32];
+	__attribute__((aligned(32))) u8 v2[32];
+	__attribute__((aligned(32))) const u8 st[32] = {1, 2, 3};
 
 	random32(v1);
 	memcpy(v2, v1, 32);
@@ -281,10 +282,10 @@ Test(storm_perf2) {
 
 	(void)sum;
 
-	storm_init(&ctx1, (u8[32]){0});
-	storm_init(&ctx2, (u8[32]){1});
-	storm_init(&ctx3, (u8[32]){2});
-	storm_init(&ctx4, (u8[32]){3});
+	storm_init(&ctx1, (__attribute__((aligned(32))) u8[32]){0});
+	storm_init(&ctx2, (__attribute__((aligned(32))) u8[32]){1});
+	storm_init(&ctx3, (__attribute__((aligned(32))) u8[32]){2});
+	storm_init(&ctx4, (__attribute__((aligned(32))) u8[32]){3});
 
 	timer = micros();
 	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
