@@ -150,19 +150,6 @@ STATIC void polyvecm_pointwise_acc(polyvecl *w, const polyvecm *u,
 	}
 }
 
-STATIC void poly_pointwise_acc(poly *w, const poly *u, const poly *v) {
-	for (u32 i = 0; i < LATTICE_N; ++i) {
-		i32 t = (i32)u->coeffs[i] * v->coeffs[i];
-		w->coeffs[i] = t;
-	}
-}
-
-STATIC void polyvecl_pointwise_acc(polyvecl *w, const polyvecm *u,
-				   const polyvecm *v) {
-	for (u32 i = 0; i < LATTICE_L; ++i)
-		poly_pointwise_acc(&w->vec[i], &u->vec[i], &v->vec[i]);
-}
-
 STATIC void polyvecl_add_poly(polyvecl *w, const poly *p) {
 	for (u32 i = 0; i < LATTICE_L; i++) {
 		poly_add(&w->vec[i], &w->vec[i], p);
@@ -188,6 +175,7 @@ STATIC void polyvecl_decompose(polyvecl *t1, polyvecl *t0, const polyvecl *t) {
 
 STATIC void lattice_skey_expand(const LatticeSK *sk, LatticeSkeyExpanded *exp) {
 	StormContext ctx;
+	polyvecm A[LATTICE_K];
 
 	fastmemset(exp, 0, sizeof(LatticeSkeyExpanded));
 	storm_init(&ctx, sk->data);
@@ -201,18 +189,15 @@ STATIC void lattice_skey_expand(const LatticeSK *sk, LatticeSkeyExpanded *exp) {
 	for (i32 i = 0; i < LATTICE_K; i++)
 		poly_uniform_eta(&exp->s2.vec[i], &ctx);
 
-	{
-		polyvecm A[LATTICE_K];
-		expand_mat(A, exp->rho);
+	expand_mat(A, exp->rho);
 
-		for (i32 i = 0; i < LATTICE_K; i++) {
-			polyvecl temp;
-			polyvecm_pointwise_acc(&temp, &A[i], &exp->s1);
-			polyvecl_add(&exp->t, &exp->t, &temp);
-		}
-		for (u32 i = 0; i < LATTICE_K; i++) {
-			polyvecl_add_poly(&exp->t, &exp->s2.vec[i]);
-		}
+	for (i32 i = 0; i < LATTICE_K; i++) {
+		polyvecl temp;
+		polyvecm_pointwise_acc(&temp, &A[i], &exp->s1);
+		polyvecl_add(&exp->t, &exp->t, &temp);
+	}
+	for (u32 i = 0; i < LATTICE_K; i++) {
+		polyvecl_add_poly(&exp->t, &exp->s2.vec[i]);
 	}
 	polyvecl_decompose(&exp->t1, &exp->t0, &exp->t);
 }
