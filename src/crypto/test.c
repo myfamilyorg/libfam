@@ -80,6 +80,9 @@ Test(random_stir) {
 	__attribute__((aligned(32))) u8 v2[32];
 	__attribute__((aligned(32))) const u8 st[32] = {1, 2, 3};
 
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
+
 	random32(v1);
 	memcpy(v2, v1, 32);
 	ASSERT(!memcmp(v1, v2, 32), "equal");
@@ -98,6 +101,9 @@ Test(aighthash_longneighbors) {
 	int size = SIZE;
 	u8 a[SIZE] = {0};
 	u8 b[SIZE] = {0};
+
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	rng_test_seed(&rng, ZERO_SEED);
 
@@ -170,6 +176,9 @@ Test(aighthash64_longneighbors) {
 	int size = SIZE;
 	u8 a[SIZE] = {0};
 	u8 b[SIZE] = {0};
+
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	rng_test_seed(&rng, ZERO_SEED);
 	u8 key[16];
@@ -395,9 +404,10 @@ Test(storm_vector) {
 	storm_init(&ctx, key);
 	storm_xcrypt_buffer(&ctx, buf);
 
-	u8 expected[32] = {139, 231, 18,  148, 147, 111, 68,  147, 28,	62,  83,
-			   6,	32,  160, 243, 30,  117, 133, 168, 133, 130, 56,
-			   183, 98,  92,  255, 62,  128, 176, 240, 123, 96};
+	u8 expected[32] = {228, 52,  131, 68,  63,  43,	 93,  36,
+			   76,	214, 118, 243, 240, 112, 96,  207,
+			   110, 173, 212, 112, 208, 64,	 29,  133,
+			   244, 149, 103, 91,  87,  194, 168, 239};
 
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
 	ASSERT(!memcmp(buf, expected, 32), "0 vector");
@@ -405,10 +415,10 @@ Test(storm_vector) {
 	storm_xcrypt_buffer(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) print("{},", buf[i]);
 
-	u8 expected2[32] = {242, 175, 190, 246, 110, 89,  178, 98,
-			    181, 26,  85,  141, 43,  233, 200, 139,
-			    86,	 109, 235, 205, 148, 225, 9,   157,
-			    202, 151, 169, 38,	49,  111, 141, 187};
+	u8 expected2[32] = {98,	 174, 220, 63,	31,  228, 32,  48,
+			    177, 80,  121, 124, 32,  148, 11,  239,
+			    13,	 173, 135, 175, 82,  223, 249, 38,
+			    238, 207, 55,  100, 220, 84,  17,  113};
 	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 	(void)expected;
 	(void)expected2;
@@ -417,17 +427,17 @@ Test(storm_vector) {
 	memset(buf, 0, 32);
 	storm_xcrypt_buffer(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
-	u8 expected3[32] = {109, 148, 97,  1,	144, 108, 65,  149,
-			    251, 12,  134, 225, 243, 203, 75,  166,
-			    116, 133, 168, 133, 130, 56,  183, 98,
-			    92,	 255, 62,  128, 176, 240, 123, 96};
+	u8 expected3[32] = {187, 27,  172, 53,	234, 254, 57,  149,
+			    61,	 69,  148, 130, 2,   37,  199, 104,
+			    110, 173, 212, 112, 208, 64,  29,  133,
+			    244, 149, 103, 91,	87,  194, 168, 239};
 	ASSERT(!memcmp(buf, expected3, 32), "expected3");
 	storm_xcrypt_buffer(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
-	u8 expected4[32] = {133, 219, 225, 147, 114, 181, 160, 4,
-			    237, 23,  158, 4,	82,  217, 227, 209,
-			    160, 57,  34,  150, 105, 43,  82,  115,
-			    162, 108, 212, 222, 145, 89,  115, 189};
+	u8 expected4[32] = {170, 37,  11,  5,  84,  107, 252, 156,
+			    40,	 176, 173, 78, 105, 184, 41,  86,
+			    126, 108, 207, 23, 69,  243, 148, 29,
+			    18,	 107, 169, 90, 178, 144, 36,  74};
 	ASSERT(!memcmp(buf, expected4, 32), "expected4");
 }
 
@@ -585,12 +595,20 @@ Test(storm_2round_integral_distinguisher) {
 
 Test(bible1) {
 	__attribute__((aligned(32))) u64 sbox[256];
+
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
+
 	bible_sbox8_64(sbox);
 	// for (u32 i = 0; i < 256; i++) println("sbox[{}]={X},", i, sbox[i]);
 }
 
 Test(rng2) {
 	Rng rng;
+
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
+
 	rng_init(&rng, NULL);
 	for (i32 i = 0; i < 10; i++) {
 		u64 v;
@@ -636,10 +654,18 @@ Test(asymmetric) {
 Test(trinity77) {
 	Trinity77SK sk;
 	Trinity77PK pk;
+	Trinity77Sig sig;
+
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
+
+	const u8 msg[128] = {1, 2, 3};
+
 	static const u8 test_seed[32] = {
 	    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
 	    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
 	    0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
 	trinity77_sk(test_seed, &sk);
 	trinity77_pk(&sk, &pk);
+	trinity77_sign(&sk, msg, &sig);
 }

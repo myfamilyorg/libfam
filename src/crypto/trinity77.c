@@ -33,6 +33,7 @@
 #define Q 8380417
 #define QINV 58728449
 #define D 13
+#define GAMMA1 (1 << 19)
 
 typedef struct {
 	i32 coeffs[N];
@@ -101,6 +102,8 @@ static const i32 zetas[N] = {
     -260646,  -3833893, -2939036, -2235985, -420899,  -2286327, 183443,
     -976891,  1612842,	-3545687, -554416,  3919660,  -48306,	-1362209,
     3937738,  1400424,	-846154,  1976782};
+
+static const u8 Y_DOMAIN[32] = {7, 7, 7, 7, 7, 7};
 
 STATIC i32 trinity77_power2round(i32 *a0, i32 a) {
 	i32 a1;
@@ -270,6 +273,26 @@ STATIC void trinity77_poly_uniform(poly *a, StormContext *ctx) {
 	secure_zero(buf, 32);
 }
 
+STATIC void trinity77_poly_uniform_gamma1(poly *r, StormContext *ctx) {
+	__attribute__((aligned(32))) u32 buf[8] = {0};
+	for (u32 i = 0; i < N; i += 8) {
+		storm_xcrypt_buffer(ctx, (void *)buf);
+		r->coeffs[i + 0] = (buf[0] & (GAMMA1 << 1)) - GAMMA1;
+		r->coeffs[i + 1] = (buf[1] & (GAMMA1 << 1)) - GAMMA1;
+		r->coeffs[i + 2] = (buf[2] & (GAMMA1 << 1)) - GAMMA1;
+		r->coeffs[i + 3] = (buf[3] & (GAMMA1 << 1)) - GAMMA1;
+		r->coeffs[i + 4] = (buf[4] & (GAMMA1 << 1)) - GAMMA1;
+		r->coeffs[i + 5] = (buf[5] & (GAMMA1 << 1)) - GAMMA1;
+		r->coeffs[i + 6] = (buf[6] & (GAMMA1 << 1)) - GAMMA1;
+		r->coeffs[i + 7] = (buf[7] & (GAMMA1 << 1)) - GAMMA1;
+	}
+}
+
+STATIC void trinity77_polyvec_uniform_gamma1(polyvec *v, StormContext *ctx) {
+	for (u32 i = 0; i < L; ++i)
+		trinity77_poly_uniform_gamma1(&v->vec[i], ctx);
+}
+
 STATIC void trinity77_poly_uniform_eta(poly *a, StormContext *ctx) {
 	__attribute__((aligned(32))) u8 buf[32] = {0};
 	u8 t0, t1;
@@ -316,11 +339,12 @@ STATIC void trinity77_sk_expand(const Trinity77SK *sk,
 	storm_xcrypt_buffer(&ctx, exp->tr);
 	storm_xcrypt_buffer(&ctx, exp->tr + 32);
 
+	trinity77_polyvec_uniform_eta(&exp->s1, &ctx);
+	trinity77_polyvec_uniform_eta(&exp->s2, &ctx);
+
 	fastmemcpy(rho, exp->rho, 32);
 	storm_init(&rctx, rho);
 	trinity77_polyvec_matrix_expand(mat, &rctx);
-	trinity77_polyvec_uniform_eta(&exp->s1, &ctx);
-	trinity77_polyvec_uniform_eta(&exp->s2, &ctx);
 
 	s1hat = exp->s1;
 	trinity77_polyvec_ntt(&s1hat);
@@ -343,12 +367,41 @@ PUBLIC void trinity77_sk(const u8 seed[32], Trinity77SK *sk) {
 PUBLIC void trinity77_pk(const Trinity77SK *sk, Trinity77PK *pk) {
 	Trinity77PKImpl *impl = (void *)pk->data;
 	Trinity77SKExpanded exp;
-
 	trinity77_sk_expand(sk, &exp);
-
 	fastmemcpy(&impl->rho, exp.rho, 32);
 	fastmemcpy(&impl->t1, &exp.t1, sizeof(exp.t1));
-
 	secure_zero(&exp, sizeof(exp));
 }
 
+PUBLIC void trinity77_sign(const Trinity77SK *sk, const u8 message[128],
+			   Trinity77Sig *sig) {
+	__attribute__((aligned(32))) u8 rho[32];
+	u64 nonce = 0;
+	polyvec mat[L];
+	Trinity77SKExpanded exp;
+	StormContext ctx, rctx;
+
+	trinity77_sk_expand(sk, &exp);
+	fastmemcpy(rho, exp.rho, 32);
+	storm_init(&rctx, rho);
+	trinity77_polyvec_matrix_expand(mat, &rctx);
+	trinity77_polyvec_ntt(&exp.s1);
+	trinity77_polyvec_ntt(&exp.s2);
+	trinity77_polyvec_ntt(&exp.t0);
+
+	while (true) {
+		polyvec y;
+		__attribute__((aligned(32))) u8 y_domain[32];
+		fastmemcpy(y_domain, Y_DOMAIN, 32);
+		storm_init(&ctx, sk->data);
+		*((u64 *)y_domain) += nonce;
+		storm_xcrypt_buffer(&ctx, y_domain);
+		trinity77_polyvec_uniform_gamma1(&y, &ctx);
+
+		nonce++;
+		break;
+	}
+
+	secure_zero(&ctx, sizeof(ctx));
+	secure_zero(&exp, sizeof(exp));
+}
