@@ -32,6 +32,7 @@
 #define L 7
 #define Q 8380417
 #define QINV 58728449
+#define D 13
 
 typedef struct {
 	i32 coeffs[N];
@@ -101,12 +102,132 @@ static const i32 zetas[N] = {
     -976891,  1612842,	-3545687, -554416,  3919660,  -48306,	-1362209,
     3937738,  1400424,	-846154,  1976782};
 
+STATIC i32 trinity77_power2round(i32 *a0, i32 a) {
+	i32 a1;
+
+	a1 = (a + (1 << (D - 1)) - 1) >> D;
+	*a0 = a - (a1 << D);
+	return a1;
+}
+
+STATIC void trinity77_poly_power2round(poly *a1, poly *a0, const poly *a) {
+	for (u32 i = 0; i < N; ++i)
+		a1->coeffs[i] =
+		    trinity77_power2round(&a0->coeffs[i], a->coeffs[i]);
+}
+
+STATIC void trinity77_polyvec_power2round(polyvec *v1, polyvec *v0,
+					  const polyvec *v) {
+	for (u32 i = 0; i < L; ++i)
+		trinity77_poly_power2round(&v1->vec[i], &v0->vec[i],
+					   &v->vec[i]);
+}
+
+STATIC i32 trinity77_caddq(i32 a) {
+	a += (a >> 31) & Q;
+	return a;
+}
+
 STATIC i32 trinity77_montgomery_reduce(i64 a) {
 	i32 t;
 
 	t = (i64)(i32)a * QINV;
 	t = (a - (i64)t * Q) >> 32;
 	return t;
+}
+
+STATIC void trinity77_invntt_tomont(i32 a[N]) {
+	u32 start, len, j, k;
+	i32 t, zeta;
+	const i32 f = 41978;
+
+	k = 256;
+	for (len = 1; len < N; len <<= 1) {
+		for (start = 0; start < N; start = j + len) {
+			zeta = -zetas[--k];
+			for (j = start; j < start + len; ++j) {
+				t = a[j];
+				a[j] = t + a[j + len];
+				a[j + len] = t - a[j + len];
+				a[j + len] = trinity77_montgomery_reduce(
+				    (i64)zeta * a[j + len]);
+			}
+		}
+	}
+
+	for (j = 0; j < N; ++j) {
+		a[j] = trinity77_montgomery_reduce((i64)f * a[j]);
+	}
+}
+
+STATIC void trinity77_poly_invntt_tomont(poly *a) {
+	trinity77_invntt_tomont(a->coeffs);
+}
+
+STATIC void trinity77_polyvec_invntt_tomont(polyvec *v) {
+	for (u32 i = 0; i < L; ++i) trinity77_poly_invntt_tomont(&v->vec[i]);
+}
+
+STATIC i32 reduce32(i32 a) {
+	i32 t;
+	t = (a + (1 << 22)) >> 23;
+	t = a - t * Q;
+	return t;
+}
+
+STATIC void trinity77_poly_add(poly *c, const poly *a, const poly *b) {
+	for (u32 i = 0; i < N; ++i) c->coeffs[i] = a->coeffs[i] + b->coeffs[i];
+}
+
+STATIC void trinity77_poly_caddq(poly *a) {
+	for (u32 i = 0; i < N; ++i)
+		a->coeffs[i] = trinity77_caddq(a->coeffs[i]);
+}
+
+STATIC void trinity77_polyvec_add(polyvec *w, const polyvec *u,
+				  const polyvec *v) {
+	for (u32 i = 0; i < L; ++i)
+		trinity77_poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
+}
+
+STATIC void trinity77_polyvec_caddq(polyvec *v) {
+	for (u32 i = 0; i < L; ++i) trinity77_poly_caddq(&v->vec[i]);
+}
+
+STATIC void trinity77_poly_reduce(poly *a) {
+	for (u32 i = 0; i < N; ++i) a->coeffs[i] = reduce32(a->coeffs[i]);
+}
+
+STATIC void trinity77_polyvec_reduce(polyvec *v) {
+	for (u32 i = 0; i < L; ++i) trinity77_poly_reduce(&v->vec[i]);
+}
+
+STATIC void trinity77_poly_pointwise_montgomery(poly *c, const poly *a,
+						const poly *b) {
+	for (u32 i = 0; i < N; ++i)
+		c->coeffs[i] = trinity77_montgomery_reduce((i64)a->coeffs[i] *
+							   b->coeffs[i]);
+}
+
+STATIC void trinity77_polyvec_pointwise_acc_montgomery(poly *w,
+						       const polyvec *u,
+						       const polyvec *v) {
+	unsigned int i;
+	poly t;
+
+	trinity77_poly_pointwise_montgomery(w, &u->vec[0], &v->vec[0]);
+	for (i = 1; i < L; ++i) {
+		trinity77_poly_pointwise_montgomery(&t, &u->vec[i], &v->vec[i]);
+		trinity77_poly_add(w, w, &t);
+	}
+}
+
+STATIC void trinity77_polyvec_matrix_pointwise_montgomery(polyvec *t,
+							  const polyvec mat[L],
+							  const polyvec *v) {
+	for (u32 i = 0; i < L; ++i)
+		trinity77_polyvec_pointwise_acc_montgomery(&t->vec[i], &mat[i],
+							   v);
 }
 
 STATIC void trinity77_ntt(i32 a[N]) {
@@ -203,6 +324,14 @@ STATIC void trinity77_sk_expand(const Trinity77SK *sk,
 
 	s1hat = exp->s1;
 	trinity77_polyvec_ntt(&s1hat);
+	trinity77_polyvec_matrix_pointwise_montgomery(&exp->t1, mat, &s1hat);
+	trinity77_polyvec_reduce(&exp->t1);
+	trinity77_polyvec_invntt_tomont(&exp->t1);
+
+	trinity77_polyvec_add(&exp->t1, &exp->t1, &exp->s2);
+
+	trinity77_polyvec_caddq(&exp->t1);
+	trinity77_polyvec_power2round(&exp->t1, &exp->t0, &exp->t1);
 
 	secure_zero(&ctx, sizeof(ctx));
 }
