@@ -34,6 +34,7 @@
 #define LATTICE_Q 8380417
 #define LATTICE_GAMMA1 (1 << 17)
 #define LATTICE_BETA 225
+#define LATTICE_GAMMA2 ((LATTICE_Q - 1) / 88)
 
 static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
 
@@ -259,6 +260,57 @@ STATIC u32 asymmetric_polyvec_infinity_norm(const polyvec *v) {
 	return max;
 }
 
+STATIC void asymmetric_polyvec_make_hint(polyvec *h, const polyvec *t0,
+					 const poly *c, const polyvec *s2) {
+	fastmemset(h, 0, sizeof(*h));
+
+	for (u32 k = 0; k < LATTICE_L; k++) {
+		for (u32 j = 0; j < LATTICE_N; j++) {
+			i32 val = t0->vec[k].coeffs[j];
+
+			if (c->coeffs[j] == 1)
+				val += s2->vec[k].coeffs[j];
+			else if (c->coeffs[j] == -1)
+				val -= s2->vec[k].coeffs[j];
+
+			if (val >= LATTICE_Q / 2 || val <= -LATTICE_Q / 2) {
+				h->vec[k].coeffs[j] = 1;
+			}
+		}
+	}
+}
+
+STATIC void asymmetric_pack_sig(AsymmetricSig *sig, const polyvec *z,
+				const u8 c_tilde[64], const polyvec *h) {
+	AsymmetricSigImpl *impl = (void *)sig;
+	fastmemcpy(&impl->z, z, sizeof(*z));
+	fastmemcpy(&impl->c_tilde, c_tilde, 64);
+	fastmemcpy(&impl->h, h, sizeof(*h));
+}
+
+STATIC void asymmetric_polyvec_use_hint(polyvec *result, const polyvec *r,
+					const polyvec *h) {
+	for (int i = 0; i < LATTICE_L; i++) {
+		for (int j = 0; j < LATTICE_N; j++) {
+			i32 r_val = r->vec[i].coeffs[j];
+			if (r_val < 0) r_val += LATTICE_Q;
+
+			i32 r0 = r_val & 0x1FFF;
+			i32 r1 = (r_val - r0) >> 13;
+
+			if (h->vec[i].coeffs[j]) {
+				if (r0 > 4096) {
+					r1 -= 1;
+				} else {
+					r1 += 1;
+				}
+			}
+
+			result->vec[i].coeffs[j] = r1;
+		}
+	}
+}
+
 PUBLIC void asymmetric_skey(const u8 seed[32], AsymmetricSK *sk) {
 	fastmemcpy(sk->data, seed, 32);
 }
@@ -462,7 +514,88 @@ PUBLIC void asymmetric_sign(const AsymmetricSK *sk, const u8 message[128],
 	} while (asymmetric_polyvec_infinity_norm(&z) >=
 		 (LATTICE_GAMMA1 - LATTICE_BETA));
 
+	polyvec h;
+	asymmetric_polyvec_make_hint(&h, &exp.t0, &c, &exp.s2);
+	asymmetric_pack_sig(sig, &z, c_tilde, &h);
+
 	secure_zero(nonce, sizeof(nonce));
 	secure_zero(c_tilde, sizeof(c_tilde));
 	secure_zero(&exp, sizeof(exp));
+}
+
+PUBLIC int asymmetric_verify(const AsymmetricPK *pk, const u8 message[128],
+			     const AsymmetricSig *sig) {
+	const AsymmetricPKImpl *pk_impl = (const void *)pk->data;
+	const AsymmetricSigImpl *sig_impl = (const void *)sig->data;
+
+	u8 c_tilde_recomputed[64] = {0};
+	poly c;
+	polyvec Az;
+	polyvec r;
+	polyvec w1;
+
+	if (asymmetric_polyvec_infinity_norm(&sig_impl->z) >=
+	    (LATTICE_GAMMA1 - LATTICE_BETA))
+		return -1;
+
+	{
+		polyvec A[LATTICE_L];
+		asymmetric_expand_mat(A, pk_impl->rho);
+		for (int i = 0; i < LATTICE_L; i++) {
+			asymmetric_poly_row_dot(&Az.vec[i], &A[i],
+						&sig_impl->z);
+		}
+		secure_zero(A, sizeof(A));
+	}
+
+	for (int i = 0; i < LATTICE_L; i++) {
+		fastmemcpy(r.vec[i].coeffs, Az.vec[i].coeffs, sizeof(poly));
+	}
+	asymmetric_expand_challenge(&c, sig_impl->c_tilde);
+	for (int j = 0; j < LATTICE_N; j++) {
+		if (c.coeffs[j] != 0) {
+			i32 s = c.coeffs[j];
+			for (int i = 0; i < LATTICE_L; i++) {
+				i64 val = (i64)r.vec[i].coeffs[j] -
+					  s * pk_impl->t1.vec[i].coeffs[j];
+				r.vec[i].coeffs[j] = asymmetric_mod_q(val);
+			}
+		}
+	}
+
+	asymmetric_polyvec_use_hint(&w1, &r, &sig_impl->h);
+
+	{
+		StormContext ctx;
+		u8 tmp[32];
+
+		storm_init(&ctx, ZERO_SEED);
+
+		fastmemcpy(tmp, pk_impl->rho, 32);
+		storm_xcrypt_buffer(&ctx, tmp);
+
+		for (u32 i = 0; i < sizeof(pk_impl->t1); i += 32) {
+			fastmemcpy(tmp, ((const u8 *)&pk_impl->t1) + i, 32);
+			storm_xcrypt_buffer(&ctx, tmp);
+		}
+
+		for (u32 i = 0; i < sizeof(w1); i += 32) {
+			fastmemcpy(tmp, ((const u8 *)&w1) + i, 32);
+			storm_xcrypt_buffer(&ctx, tmp);
+		}
+
+		for (u32 i = 0; i < 128; i += 32) {
+			u32 len = (i + 32 <= 128) ? 32 : 128 - i;
+			fastmemcpy(tmp, message + i, len);
+			fastmemset(tmp + len, 0, 32 - len);
+			storm_xcrypt_buffer(&ctx, tmp);
+		}
+
+		storm_xcrypt_buffer(&ctx, c_tilde_recomputed);
+		storm_xcrypt_buffer(&ctx, c_tilde_recomputed + 32);
+	}
+
+	if (memcmp(c_tilde_recomputed, sig_impl->c_tilde, 64) != 0) return -1;
+
+	return 0;  // Valid signature
 }
