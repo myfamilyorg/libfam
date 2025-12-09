@@ -29,10 +29,13 @@
 #include <libfam/string.h>
 #include <libfam/utils.h>
 
-#define LATTICE_K 8
 #define LATTICE_L 7
 #define LATTICE_N 256
 #define LATTICE_Q 8380417
+#define LATTICE_GAMMA1 (1 << 17)
+#define LATTICE_BETA 225
+
+static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
 
 typedef struct {
 	i32 coeffs[LATTICE_N];
@@ -40,31 +43,27 @@ typedef struct {
 
 typedef struct {
 	poly vec[LATTICE_L];
-} polyvecl;
-
-typedef struct {
-	poly vec[LATTICE_K];
-} polyveck;
+} polyvec;
 
 typedef struct {
 	__attribute__((aligned(32))) u8 rho[32];
 	__attribute__((aligned(32))) u8 tr[64];
-	polyvecl s1;
-	polyveck s2;
-	polyveck t;
-	polyveck t0;
-	polyveck t1;
+	polyvec s1;
+	polyvec s2;
+	polyvec t;
+	polyvec t0;
+	polyvec t1;
 } AsymmetricSkeyExpanded;
 
 typedef struct {
-	polyvecl z;
+	polyvec z;
 	u8 c_tilde[64];
-	polyveck h;
+	polyvec h;
 } AsymmetricSigImpl;
 
 typedef struct {
 	u8 rho[32];
-	polyveck t1;
+	polyvec t1;
 } AsymmetricPKImpl;
 
 STATIC i32 asymmetric_mod_q(i64 x) {
@@ -89,8 +88,8 @@ STATIC void asymmetric_poly_pointwise_mul(poly *w, const poly *u,
 	}
 }
 
-STATIC void asymmetric_poly_row_dot(poly *w, const polyvecl *row,
-				    const polyvecl *vec) {
+STATIC void asymmetric_poly_row_dot(poly *w, const polyvec *row,
+				    const polyvec *vec) {
 	poly temp;
 	fastmemset(w, 0, sizeof(*w));
 
@@ -133,18 +132,18 @@ STATIC void asymmetric_poly_uniform_eta(poly *p, StormContext *ctx) {
 		}
 	}
 }
-STATIC void asymmetric_expand_mat(polyvecl mat[LATTICE_K], const u8 rho[32]) {
+STATIC void asymmetric_expand_mat(polyvec mat[LATTICE_L], const u8 rho[32]) {
 	StormContext ctx;
 	storm_init(&ctx, rho);
 
-	for (u32 i = 0; i < LATTICE_K; i++)
+	for (u32 i = 0; i < LATTICE_L; i++)
 		for (u32 j = 0; j < LATTICE_L; j++)
 			asymmetric_poly_uniform(&mat[i].vec[j], &ctx);
 }
 
-STATIC void asymmetric_polyveck_decompose(polyveck *t1, polyveck *t0,
-					  const polyveck *t) {
-	for (u32 i = 0; i < LATTICE_K; i++) {
+STATIC void asymmetric_polyvec_decompose(polyvec *t1, polyvec *t0,
+					 const polyvec *t) {
+	for (u32 i = 0; i < LATTICE_L; i++) {
 		for (u32 j = 0; j < LATTICE_N; j++) {
 			i32 a = t->vec[i].coeffs[j];
 			if (a < 0) a += LATTICE_Q;
@@ -175,16 +174,16 @@ STATIC void asymmetric_skey_expand(const AsymmetricSK *sk,
 	for (i32 i = 0; i < LATTICE_L; i++) {
 		asymmetric_poly_uniform_eta(&exp->s1.vec[i], &ctx);
 	}
-	for (i32 i = 0; i < LATTICE_K; i++) {
+	for (i32 i = 0; i < LATTICE_L; i++) {
 		asymmetric_poly_uniform_eta(&exp->s2.vec[i], &ctx);
 	}
 
 	{
 		poly temp;
-		polyvecl A[LATTICE_K];
+		polyvec A[LATTICE_L];
 		asymmetric_expand_mat(A, exp->rho);
 
-		for (i32 i = 0; i < LATTICE_K; i++) {
+		for (i32 i = 0; i < LATTICE_L; i++) {
 			asymmetric_poly_row_dot(&temp, &A[i], &exp->s1);
 			asymmetric_poly_add(&exp->t.vec[i], &exp->t.vec[i],
 					    &temp);
@@ -193,14 +192,71 @@ STATIC void asymmetric_skey_expand(const AsymmetricSK *sk,
 		secure_zero(&temp, sizeof(temp));
 	}
 
-	for (u32 i = 0; i < LATTICE_K; i++) {
+	for (u32 i = 0; i < LATTICE_L; i++) {
 		asymmetric_poly_add(&exp->t.vec[i], &exp->t.vec[i],
 				    &exp->s2.vec[i]);
 	}
 
-	asymmetric_polyveck_decompose(&exp->t1, &exp->t0, &exp->t);
+	asymmetric_polyvec_decompose(&exp->t1, &exp->t0, &exp->t);
 
 	secure_zero(&ctx, sizeof(ctx));
+}
+
+STATIC void asymmetric_expand_challenge(poly *c, const u8 c_tilde[64]) {
+	fastmemset(c, 0, sizeof(poly));
+	u64 signs = 0;
+	for (int i = 0; i < 8; ++i) signs |= (u64)c_tilde[56 + i] << (8 * i);
+
+	u32 pos = 0;
+	for (int i = 0; i < 56; ++i) {
+		u8 bucket = c_tilde[i];
+		for (int j = 0; j < 8; ++j) {
+			if (bucket & 1) {
+				u32 idx = pos + j;
+				if (idx < 256)
+					c->coeffs[idx] = (signs & 1) ? -1 : 1;
+			}
+			bucket >>= 1;
+		}
+		signs >>= 8;
+		pos += 32;
+	}
+}
+
+STATIC void asymmetric_poly_uniform_gamma1(poly *p, StormContext *ctx) {
+	__attribute__((aligned(32))) u8 buf[32] = {0};
+	u32 pos = 0;
+
+	while (pos < LATTICE_N) {
+		storm_xcrypt_buffer(ctx, buf);
+		for (int i = 0; i < 32 && pos < LATTICE_N; i += 3) {
+			u32 t0 =
+			    buf[i] | (buf[i + 1] << 8) | (buf[i + 2] << 16);
+			u32 t = t0 & 0x3FFFF;
+
+			if (t < 2 * (LATTICE_GAMMA1 - 1) + 1) {
+				i32 val = (i32)(t);
+				if (val > LATTICE_GAMMA1 - 1)
+					val = val -
+					      (2 * (LATTICE_GAMMA1 - 1) + 1);
+				p->coeffs[pos++] = val;
+			}
+		}
+	}
+}
+
+STATIC u32 asymmetric_polyvec_infinity_norm(const polyvec *v) {
+	u32 max = 0;
+
+	for (u32 i = 0; i < LATTICE_L; i++) {
+		for (u32 j = 0; j < LATTICE_N; j++) {
+			i32 c = v->vec[i].coeffs[j];
+			u32 abs = (u32)(c < 0 ? -c : c);
+			if (abs > max) max = abs;
+		}
+	}
+
+	return max;
 }
 
 PUBLIC void asymmetric_skey(const u8 seed[32], AsymmetricSK *sk) {
@@ -247,10 +303,10 @@ STATIC void debug_print_full_expanded_key(const AsymmetricSkeyExpanded *exp) {
 				   : (v == 1) ? "t "
 				   : (v == 2) ? "t0"
 					      : "t1";
-		const polyveck *vec = (v == 0)	 ? &exp->s2
-				      : (v == 1) ? &exp->t
-				      : (v == 2) ? &exp->t0
-						 : &exp->t1;
+		const polyvec *vec = (v == 0)	? &exp->s2
+				     : (v == 1) ? &exp->t
+				     : (v == 2) ? &exp->t0
+						: &exp->t1;
 
 		println("{}[0] first 8: {} {} {} {} {} {} {} {}", name,
 			vec->vec[0].coeffs[0], vec->vec[0].coeffs[1],
@@ -258,7 +314,7 @@ STATIC void debug_print_full_expanded_key(const AsymmetricSkeyExpanded *exp) {
 			vec->vec[0].coeffs[4], vec->vec[0].coeffs[5],
 			vec->vec[0].coeffs[6], vec->vec[0].coeffs[7]);
 
-		i32 last_coeff = vec->vec[LATTICE_K - 1].coeffs[0];
+		i32 last_coeff = vec->vec[LATTICE_L - 1].coeffs[0];
 		println("{}[7] sample coeff[0] = {}  ← vec[7] is filled!", name,
 			last_coeff);
 	}
@@ -314,11 +370,11 @@ STATIC void debug_verify_expanded_key_or_panic(
 	// s1: length LATTICE_L = 7
 	CHECK_VEC("s1", &exp->s1, LATTICE_L, 6);
 
-	// s2, t, t0, t1: length LATTICE_K = 7 (or 8 if you go 8×8)
-	CHECK_VEC("s2", &exp->s2, LATTICE_K, LATTICE_K - 1);
-	CHECK_VEC("t ", &exp->t, LATTICE_K, LATTICE_K - 1);
-	CHECK_VEC("t0", &exp->t0, LATTICE_K, LATTICE_K - 1);
-	CHECK_VEC("t1", &exp->t1, LATTICE_K, LATTICE_K - 1);
+	// s2, t, t0, t1: length LATTICE_L = 7 (or 8 if you go 8×8)
+	CHECK_VEC("s2", &exp->s2, LATTICE_L, LATTICE_L - 1);
+	CHECK_VEC("t ", &exp->t, LATTICE_L, LATTICE_L - 1);
+	CHECK_VEC("t0", &exp->t0, LATTICE_L, LATTICE_L - 1);
+	CHECK_VEC("t1", &exp->t1, LATTICE_L, LATTICE_L - 1);
 
 	println("=== ALL VECTORS NON-ZERO AND FILLED ===");
 	println("Storm keygen: SUCCESS");
@@ -340,7 +396,70 @@ PUBLIC void asymmetric_pubkey(const AsymmetricSK *sec_key, AsymmetricPK *pk) {
 	(void)print_hex;
 	// debug_print_full_expanded_key(&exp);
 	// debug_verify_expanded_key_or_panic(&exp);
+	// println("sizeof={}", sizeof(polyvec));
 
 	secure_zero(&exp, sizeof(exp));
 }
 
+PUBLIC void asymmetric_sign(const AsymmetricSK *sk, const u8 message[128],
+			    AsymmetricSig *sig) {
+	__attribute__((aligned(32))) u8 nonce[32] = {0};
+	__attribute__((aligned(32))) u8 c_tilde[64] = {0};
+	AsymmetricSkeyExpanded exp;
+
+	asymmetric_skey_expand(sk, &exp);
+
+	{
+		__attribute__((aligned(32))) u8 tmp[32];
+		StormContext ctx;
+		storm_init(&ctx, ZERO_SEED);
+		storm_xcrypt_buffer(&ctx, exp.rho);
+		for (u32 i = 0; i < sizeof(exp.t1); i += 32)
+			storm_xcrypt_buffer(&ctx, ((u8 *)&exp.t1) + i);
+		for (u32 i = 0; i < 128; i += 32) {
+			fastmemcpy(tmp, message + i, 32);
+			storm_xcrypt_buffer(&ctx, tmp);
+		}
+		storm_xcrypt_buffer(&ctx, c_tilde);
+		storm_xcrypt_buffer(&ctx, c_tilde + 32);
+
+		secure_zero(&ctx, sizeof(ctx));
+		secure_zero(tmp, sizeof(tmp));
+	}
+
+	poly c;
+	asymmetric_expand_challenge(&c, c_tilde);
+	polyvec z;
+
+	do {
+		StormContext y_ctx;
+		polyvec y;
+
+		storm_init(&y_ctx, sk->data);
+		storm_xcrypt_buffer(&y_ctx, nonce);
+		(*(u64 *)nonce)++;
+
+		for (u32 i = 0; i < LATTICE_L; i++) {
+			fastmemcpy(z.vec[i].coeffs, y.vec[i].coeffs,
+				   sizeof(poly));
+		}
+
+		for (u32 j = 0; j < LATTICE_N; j++) {
+			if (c.coeffs[j] != 0) {
+				i32 s = c.coeffs[j];
+				for (u32 i = 0; i < LATTICE_L; i++) {
+					i64 val = (i64)z.vec[i].coeffs[j] +
+						  s * exp.s1.vec[i].coeffs[j];
+					z.vec[i].coeffs[j] =
+					    asymmetric_mod_q(val);
+				}
+			}
+		}
+
+	} while (asymmetric_polyvec_infinity_norm(&z) >=
+		 (LATTICE_GAMMA1 - LATTICE_BETA));
+
+	secure_zero(nonce, sizeof(nonce));
+	secure_zero(c_tilde, sizeof(c_tilde));
+	secure_zero(&exp, sizeof(exp));
+}
