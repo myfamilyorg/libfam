@@ -439,6 +439,9 @@ PUBLIC void asymmetric_sign(const AsymmetricSK *sk, const u8 message[128],
 		storm_xcrypt_buffer(&y_ctx, nonce);
 		(*(u64 *)nonce)++;
 
+		for (u32 i = 0; i < LATTICE_L; i++)
+			asymmetric_poly_uniform_gamma1(&y.vec[i], &y_ctx);
+
 		for (u32 i = 0; i < LATTICE_L; i++) {
 			fastmemcpy(z.vec[i].coeffs, y.vec[i].coeffs,
 				   sizeof(poly));
