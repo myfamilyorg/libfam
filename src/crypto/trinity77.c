@@ -34,6 +34,7 @@
 #define QINV 58728449
 #define D 13
 #define GAMMA1 (1 << 19)
+#define GAMMA2 ((Q - 1) / 32)
 
 typedef struct {
 	i32 coeffs[N];
@@ -104,6 +105,19 @@ static const i32 zetas[N] = {
     3937738,  1400424,	-846154,  1976782};
 
 static const u8 Y_DOMAIN[32] = {7, 7, 7, 7, 7, 7};
+
+i32 trinity77_decompose(i32 *a0, i32 a) {
+	i32 a1;
+
+	a1 = (a + 127) >> 7;
+	a1 = (a1 * 1025 + (1 << 21)) >> 22;
+	a1 &= 15;
+
+	*a0 = a - a1 * 2 * GAMMA2;
+	*a0 -= (((Q - 1) / 2 - *a0) >> 31) & Q;
+
+	return a1;
+}
 
 STATIC i32 trinity77_power2round(i32 *a0, i32 a) {
 	i32 a1;
@@ -261,7 +275,7 @@ STATIC void trinity77_poly_uniform(poly *a, StormContext *ctx) {
 	__attribute__((aligned(32))) u8 buf[32] = {0};
 	int x = 0;
 	while (x < N) {
-		storm_xcrypt_buffer(ctx, buf);
+		storm_next_block(ctx, buf);
 		for (u8 i = 0; i < 8; i++) {
 			u32 t = ((u32 *)buf)[i] & 0xFFFFFF;
 			if (t < Q) {
@@ -276,7 +290,7 @@ STATIC void trinity77_poly_uniform(poly *a, StormContext *ctx) {
 STATIC void trinity77_poly_uniform_gamma1(poly *r, StormContext *ctx) {
 	__attribute__((aligned(32))) u32 buf[8] = {0};
 	for (u32 i = 0; i < N; i += 8) {
-		storm_xcrypt_buffer(ctx, (void *)buf);
+		storm_next_block(ctx, (void *)buf);
 		r->coeffs[i + 0] = (buf[0] & (GAMMA1 << 1)) - GAMMA1;
 		r->coeffs[i + 1] = (buf[1] & (GAMMA1 << 1)) - GAMMA1;
 		r->coeffs[i + 2] = (buf[2] & (GAMMA1 << 1)) - GAMMA1;
@@ -298,7 +312,7 @@ STATIC void trinity77_poly_uniform_eta(poly *a, StormContext *ctx) {
 	u8 t0, t1;
 	int x = 0;
 	while (x < N) {
-		storm_xcrypt_buffer(ctx, buf);
+		storm_next_block(ctx, buf);
 		for (u8 i = 0; i < 32; i++) {
 			t0 = buf[i] & 0x0F;
 			t1 = buf[i] >> 4;
@@ -335,9 +349,9 @@ STATIC void trinity77_sk_expand(const Trinity77SK *sk,
 
 	fastmemset(exp, 0, sizeof(Trinity77SKExpanded));
 	storm_init(&ctx, sk->data);
-	storm_xcrypt_buffer(&ctx, exp->rho);
-	storm_xcrypt_buffer(&ctx, exp->tr);
-	storm_xcrypt_buffer(&ctx, exp->tr + 32);
+	storm_next_block(&ctx, exp->rho);
+	storm_next_block(&ctx, exp->tr);
+	storm_next_block(&ctx, exp->tr + 32);
 
 	trinity77_polyvec_uniform_eta(&exp->s1, &ctx);
 	trinity77_polyvec_uniform_eta(&exp->s2, &ctx);
@@ -360,6 +374,18 @@ STATIC void trinity77_sk_expand(const Trinity77SK *sk,
 	secure_zero(&ctx, sizeof(ctx));
 }
 
+STATIC void trinity77_poly_decompose(poly *a1, poly *a0, const poly *a) {
+	for (u32 i = 0; i < N; ++i)
+		a1->coeffs[i] =
+		    trinity77_decompose(&a0->coeffs[i], a->coeffs[i]);
+}
+
+STATIC void trinity77_polyvec_decompose(polyvec *v1, polyvec *v0,
+					const polyvec *v) {
+	for (u32 i = 0; i < L; ++i)
+		trinity77_poly_decompose(&v1->vec[i], &v0->vec[i], &v->vec[i]);
+}
+
 PUBLIC void trinity77_sk(const u8 seed[32], Trinity77SK *sk) {
 	fastmemcpy(sk->data, seed, 32);
 }
@@ -377,7 +403,7 @@ PUBLIC void trinity77_sign(const Trinity77SK *sk, const u8 message[128],
 			   Trinity77Sig *sig) {
 	__attribute__((aligned(32))) u8 rho[32];
 	u64 nonce = 0;
-	polyvec mat[L];
+	polyvec z, w0, w1, mat[L];
 	Trinity77SKExpanded exp;
 	StormContext ctx, rctx;
 
@@ -395,8 +421,13 @@ PUBLIC void trinity77_sign(const Trinity77SK *sk, const u8 message[128],
 		fastmemcpy(y_domain, Y_DOMAIN, 32);
 		storm_init(&ctx, sk->data);
 		*((u64 *)y_domain) += nonce;
-		storm_xcrypt_buffer(&ctx, y_domain);
+		storm_next_block(&ctx, y_domain);
 		trinity77_polyvec_uniform_gamma1(&y, &ctx);
+		z = y;
+		trinity77_polyvec_ntt(&z);
+		trinity77_polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
+		trinity77_polyvec_caddq(&w1);
+		trinity77_polyvec_decompose(&w1, &w0, &w1);
 
 		nonce++;
 		break;

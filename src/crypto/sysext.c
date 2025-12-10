@@ -58,7 +58,7 @@ void random32(u8 out[32]) {
 
 	StormContext ctx;
 	storm_init(&ctx, tmp);
-	storm_xcrypt_buffer(&ctx, tmp);
+	storm_next_block(&ctx, tmp);
 
 	fastmemcpy(out, tmp, 32);
 	memset(tmp, 0, 32);
@@ -70,7 +70,7 @@ void random_stir(u8 current[32], const u8 stir_in[32]) {
 
 	StormContext ctx;
 	storm_init(&ctx, block);
-	storm_xcrypt_buffer(&ctx, block);
+	storm_next_block(&ctx, block);
 
 	fastmemcpy(current, block, 32);
 	memset(block, 0, 32);

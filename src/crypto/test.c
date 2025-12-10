@@ -267,7 +267,7 @@ Test(storm_perf) {
 
 	timer = micros();
 	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
-		storm_xcrypt_buffer(&ctx, text);
+		storm_next_block(&ctx, text);
 		sum += *v;
 		// println("{X}", *v);
 	}
@@ -308,13 +308,13 @@ Test(storm_perf2) {
 		u8* block3 = buf3 + (i & 32);
 		u8* block4 = buf4 + (i & 32);
 
-		storm_xcrypt_buffer(&ctx1, block1);
+		storm_next_block(&ctx1, block1);
 		sum += ((u64*)block1)[0];
-		storm_xcrypt_buffer(&ctx2, block2);
+		storm_next_block(&ctx2, block2);
 		sum += ((u64*)block2)[0];
-		storm_xcrypt_buffer(&ctx3, block3);
+		storm_next_block(&ctx3, block3);
 		sum += ((u64*)block3)[0];
-		storm_xcrypt_buffer(&ctx4, block4);
+		storm_next_block(&ctx4, block4);
 		sum += ((u64*)block4)[0];
 	}
 	timer = micros() - timer;
@@ -353,7 +353,7 @@ Test(storm_longneighbors) {
 
 		for (u32 j = 0; j < trials; j++) {
 			fastmemcpy(b, a, 32);
-			storm_xcrypt_buffer(&ctx, a);
+			storm_next_block(&ctx, a);
 
 			u64 byte_pos = 0;
 			rng_gen(&rng, &byte_pos, sizeof(u64));
@@ -364,7 +364,7 @@ Test(storm_longneighbors) {
 
 			b[byte_pos] ^= (u8)(1 << bit_pos);
 
-			storm_xcrypt_buffer(&ctx, b);
+			storm_next_block(&ctx, b);
 
 			for (u32 k = 0; k < 32; k++) {
 				u8 diff = a[k] ^ b[k];
@@ -402,7 +402,7 @@ Test(storm_vector) {
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	storm_init(&ctx, key);
-	storm_xcrypt_buffer(&ctx, buf);
+	storm_next_block(&ctx, buf);
 
 	u8 expected[32] = {228, 52,  131, 68,  63,  43,	 93,  36,
 			   76,	214, 118, 243, 240, 112, 96,  207,
@@ -412,7 +412,7 @@ Test(storm_vector) {
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
 	ASSERT(!memcmp(buf, expected, 32), "0 vector");
 
-	storm_xcrypt_buffer(&ctx, buf);
+	storm_next_block(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) print("{},", buf[i]);
 
 	u8 expected2[32] = {98,	 174, 220, 63,	31,  228, 32,  48,
@@ -425,14 +425,14 @@ Test(storm_vector) {
 
 	storm_init(&ctx, ONE_SEED);
 	memset(buf, 0, 32);
-	storm_xcrypt_buffer(&ctx, buf);
+	storm_next_block(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
 	u8 expected3[32] = {187, 27,  172, 53,	234, 254, 57,  149,
 			    61,	 69,  148, 130, 2,   37,  199, 104,
 			    110, 173, 212, 112, 208, 64,  29,  133,
 			    244, 149, 103, 91,	87,  194, 168, 239};
 	ASSERT(!memcmp(buf, expected3, 32), "expected3");
-	storm_xcrypt_buffer(&ctx, buf);
+	storm_next_block(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
 	u8 expected4[32] = {170, 37,  11,  5,  84,  107, 252, 156,
 			    40,	 176, 173, 78, 105, 184, 41,  86,
@@ -463,7 +463,7 @@ Test(storm_cross_half_diffusion) {
 
 		__attribute__((aligned(32))) u8 ct[32];
 		memcpy(ct, block, 32);
-		storm_xcrypt_buffer(&ctx, ct);
+		storm_next_block(&ctx, ct);
 
 		u8* high = ct + 16;
 
@@ -532,7 +532,7 @@ Test(storm_key_recovery_integral) {
 	for (u32 i = 0; i < N; i++) {
 		__attribute__((aligned(32))) u8 block[32];
 		memcpy(block, ct + i * 32, 32);
-		storm_xcrypt_buffer(&ctx, block);
+		storm_next_block(&ctx, block);
 		memcpy(ct + i * 32, block, 32);
 	}
 
@@ -577,7 +577,7 @@ Test(storm_2round_integral_distinguisher) {
 			block[2] = 0x55;
 			block[3] = 0xCC;
 
-			storm_xcrypt_buffer(&ctx, block);
+			storm_next_block(&ctx, block);
 
 			for (int j = 0; j < 32; j++) xor_sum[j] ^= block[j];
 		}
@@ -668,4 +668,33 @@ Test(trinity77) {
 	trinity77_sk(test_seed, &sk);
 	trinity77_pk(&sk, &pk);
 	trinity77_sign(&sk, msg, &sig);
+}
+
+Test(storm_ctr) {
+	StormCtr send;
+	__attribute__((aligned(32))) u8 buf1[32] = "the cat in the hat";
+	__attribute__((aligned(32))) static const u8 key[32] = {
+	    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+	    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
+	    0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
+
+	u8* v = getenv("VALGRIND");
+	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
+
+	storm_ctr_init(&send, key);
+	print("input: ");
+	for (u32 i = 0; i < 32; i++) print("{},", buf1[i]);
+	println("");
+
+	storm_ctr_xcrypt(&send, buf1);
+	print("cipher: ");
+	for (u32 i = 0; i < 32; i++) print("{},", buf1[i]);
+	println("");
+
+	StormCtr recv;
+	storm_ctr_init(&recv, key);
+	storm_ctr_xcrypt(&recv, buf1);
+	print("output: ");
+	for (u32 i = 0; i < 32; i++) print("{},", buf1[i]);
+	println("");
 }

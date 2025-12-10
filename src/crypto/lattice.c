@@ -89,7 +89,7 @@ STATIC void poly_uniform(poly *p, StormContext *ctx) {
 	__attribute__((aligned(32))) u8 buf[32] = {0};
 	u32 x = 0;
 	while (true) {
-		storm_xcrypt_buffer(ctx, buf);
+		storm_next_block(ctx, buf);
 		for (u8 j = 0; j < 8; j++) {
 			u32 t = ((u32 *)buf)[j] & 0x7FFFFF;
 			t += (t >> 19);
@@ -106,7 +106,7 @@ STATIC void poly_uniform_eta(poly *p, StormContext *ctx) {
 	u32 x = 0;
 
 	while (true) {
-		storm_xcrypt_buffer(ctx, buf);
+		storm_next_block(ctx, buf);
 
 		for (u8 j = 0; j < 32; j++) {
 			u8 t = buf[j];
@@ -191,9 +191,9 @@ STATIC void lattice_skey_expand(const LatticeSK *sk, LatticeSkeyExpanded *exp) {
 
 	fastmemset(exp, 0, sizeof(LatticeSkeyExpanded));
 	storm_init(&ctx, sk->data);
-	storm_xcrypt_buffer(&ctx, exp->rho);
-	storm_xcrypt_buffer(&ctx, exp->tr);
-	storm_xcrypt_buffer(&ctx, exp->tr + 32);
+	storm_next_block(&ctx, exp->rho);
+	storm_next_block(&ctx, exp->tr);
+	storm_next_block(&ctx, exp->tr + 32);
 
 	for (i32 i = 0; i < LATTICE_K; i++)
 		poly_uniform_eta(&exp->s1.vec[i], &ctx);
@@ -232,7 +232,7 @@ STATIC void poly_uniform_gamma1(poly *p, StormContext *ctx) {
 	u32 x = 0;
 
 	while (true) {
-		storm_xcrypt_buffer(ctx, buf);
+		storm_next_block(ctx, buf);
 		for (u8 i = 0; i < 8; i++) {
 			u32 t = ((u32 *)buf)[i] & 0xFFFFF;
 			p->coeffs[x++] = (i32)(LATTICE_GAMMA1 - 1 - t);
@@ -372,9 +372,9 @@ PUBLIC void lattice_sign(const LatticeSK *sk, const u8 message[MESSAGE_SIZE],
 		StormContext ctx;
 		storm_init(&ctx, ZERO_SEED);
 		for (u32 i = 0; i < sizeof(input); i += 32)
-			storm_xcrypt_buffer(&ctx, input + i);
-		storm_xcrypt_buffer(&ctx, c_tilde);
-		storm_xcrypt_buffer(&ctx, c_tilde + 32);
+			storm_next_block(&ctx, input + i);
+		storm_next_block(&ctx, c_tilde);
+		storm_next_block(&ctx, c_tilde + 32);
 	}
 
 	poly c;
@@ -398,7 +398,7 @@ PUBLIC void lattice_sign(const LatticeSK *sk, const u8 message[MESSAGE_SIZE],
 		polyvecl y;
 
 		storm_init(&y_ctx, sk->data);
-		storm_xcrypt_buffer(&y_ctx, nonce);
+		storm_next_block(&y_ctx, nonce);
 		(*(u64 *)nonce)++;
 
 		for (u32 i = 0; i < LATTICE_L; i++)
@@ -494,9 +494,9 @@ PUBLIC i32 lattice_verify(const LatticePK *pub_key,
 		StormContext ctx;
 		storm_init(&ctx, ZERO_SEED);
 		for (u32 i = 0; i < sizeof(input); i += 32)
-			storm_xcrypt_buffer(&ctx, input + i);
-		storm_xcrypt_buffer(&ctx, expected_c_tilde);
-		storm_xcrypt_buffer(&ctx, expected_c_tilde + 32);
+			storm_next_block(&ctx, input + i);
+		storm_next_block(&ctx, expected_c_tilde);
+		storm_next_block(&ctx, expected_c_tilde + 32);
 	}
 
 	if (memcmp(c_tilde, expected_c_tilde, 64) != 0) return 0;

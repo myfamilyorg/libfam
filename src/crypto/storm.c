@@ -57,6 +57,11 @@ typedef struct {
 #endif /* !USE_AVX2 */
 } StormContextImpl;
 
+typedef struct {
+	StormContext ctx;
+	u64 counter;
+} StormCtrImpl;
+
 typedef u8 state_t[4][4];
 
 STATIC_ASSERT(sizeof(StormContext) == sizeof(StormContextImpl),
@@ -238,7 +243,7 @@ PUBLIC void storm_init(StormContext *ctx, const u8 key[32]) {
 #endif /* !USE_AVX2 */
 }
 
-PUBLIC void storm_xcrypt_buffer(StormContext *ctx, u8 buf[32]) {
+PUBLIC void storm_next_block(StormContext *ctx, u8 buf[32]) {
 #ifdef USE_AVX2
 	storm_xcrypt_buffer_avx2(ctx, buf);
 #else
@@ -253,4 +258,21 @@ PUBLIC void storm_set_state(StormContext *ctx, u8 state[32]) {
 #else
 	fastmemcpy(st->state, state, 32);
 #endif /* !USE_AVX2 */
+}
+
+void storm_ctr_init(StormCtr *s, const u8 key[32]) {
+	StormCtrImpl *impl = (void *)s;
+	impl->counter = 0;
+	storm_init(&impl->ctx, key);
+}
+
+STATIC void storm_ctr_xcrypt(StormCtr *s, u8 buf[32]) {
+	StormCtrImpl *impl = (void *)s;
+	__m256i p = _mm256_load_si256((const __m256i *)buf);
+
+	u64 Iv[4] = {impl->counter++, P1, P2, P2 ^ P1};
+	storm_next_block(&impl->ctx, (void *)Iv);
+	_mm256_store_si256(
+	    (__m256i *)buf,
+	    _mm256_xor_si256(p, _mm256_load_si256((const __m256i *)Iv)));
 }

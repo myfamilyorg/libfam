@@ -105,7 +105,7 @@ STATIC void asymmetric_poly_uniform(poly *p, StormContext *ctx) {
 	__attribute__((aligned(32))) u8 buf[32] = {0};
 	u32 x = 0;
 	while (true) {
-		storm_xcrypt_buffer(ctx, buf);
+		storm_next_block(ctx, buf);
 		for (u8 j = 0; j < 8; j++) {
 			u32 t = ((u32 *)buf)[j] & 0x7FFFFF;
 			t += (t >> 19);
@@ -122,7 +122,7 @@ STATIC void asymmetric_poly_uniform_eta(poly *p, StormContext *ctx) {
 	u32 x = 0;
 
 	while (true) {
-		storm_xcrypt_buffer(ctx, buf);
+		storm_next_block(ctx, buf);
 
 		for (u8 j = 0; j < 32; j++) {
 			u8 t = buf[j];
@@ -168,9 +168,9 @@ STATIC void asymmetric_skey_expand(const AsymmetricSK *sk,
 	StormContext ctx;
 	fastmemset(exp, 0, sizeof(AsymmetricSkeyExpanded));
 	storm_init(&ctx, sk->data);
-	storm_xcrypt_buffer(&ctx, exp->rho);
-	storm_xcrypt_buffer(&ctx, exp->tr);
-	storm_xcrypt_buffer(&ctx, exp->tr + 32);
+	storm_next_block(&ctx, exp->rho);
+	storm_next_block(&ctx, exp->tr);
+	storm_next_block(&ctx, exp->tr + 32);
 
 	for (i32 i = 0; i < LATTICE_L; i++) {
 		asymmetric_poly_uniform_eta(&exp->s1.vec[i], &ctx);
@@ -229,7 +229,7 @@ STATIC void asymmetric_poly_uniform_gamma1(poly *p, StormContext *ctx) {
 	u32 pos = 0;
 
 	while (pos < LATTICE_N) {
-		storm_xcrypt_buffer(ctx, buf);
+		storm_next_block(ctx, buf);
 		for (int i = 0; i < 32 && pos < LATTICE_N; i += 3) {
 			u32 t0 =
 			    buf[i] | (buf[i + 1] << 8) | (buf[i + 2] << 16);
@@ -465,15 +465,15 @@ PUBLIC void asymmetric_sign(const AsymmetricSK *sk, const u8 message[128],
 		__attribute__((aligned(32))) u8 tmp[32];
 		StormContext ctx;
 		storm_init(&ctx, ZERO_SEED);
-		storm_xcrypt_buffer(&ctx, exp.rho);
+		storm_next_block(&ctx, exp.rho);
 		for (u32 i = 0; i < sizeof(exp.t1); i += 32)
-			storm_xcrypt_buffer(&ctx, ((u8 *)&exp.t1) + i);
+			storm_next_block(&ctx, ((u8 *)&exp.t1) + i);
 		for (u32 i = 0; i < 128; i += 32) {
 			fastmemcpy(tmp, message + i, 32);
-			storm_xcrypt_buffer(&ctx, tmp);
+			storm_next_block(&ctx, tmp);
 		}
-		storm_xcrypt_buffer(&ctx, c_tilde);
-		storm_xcrypt_buffer(&ctx, c_tilde + 32);
+		storm_next_block(&ctx, c_tilde);
+		storm_next_block(&ctx, c_tilde + 32);
 
 		secure_zero(&ctx, sizeof(ctx));
 		secure_zero(tmp, sizeof(tmp));
@@ -488,7 +488,7 @@ PUBLIC void asymmetric_sign(const AsymmetricSK *sk, const u8 message[128],
 		polyvec y;
 
 		storm_init(&y_ctx, sk->data);
-		storm_xcrypt_buffer(&y_ctx, nonce);
+		storm_next_block(&y_ctx, nonce);
 		(*(u64 *)nonce)++;
 
 		for (u32 i = 0; i < LATTICE_L; i++)
@@ -572,27 +572,27 @@ PUBLIC int asymmetric_verify(const AsymmetricPK *pk, const u8 message[128],
 		storm_init(&ctx, ZERO_SEED);
 
 		fastmemcpy(tmp, pk_impl->rho, 32);
-		storm_xcrypt_buffer(&ctx, tmp);
+		storm_next_block(&ctx, tmp);
 
 		for (u32 i = 0; i < sizeof(pk_impl->t1); i += 32) {
 			fastmemcpy(tmp, ((const u8 *)&pk_impl->t1) + i, 32);
-			storm_xcrypt_buffer(&ctx, tmp);
+			storm_next_block(&ctx, tmp);
 		}
 
 		for (u32 i = 0; i < sizeof(w1); i += 32) {
 			fastmemcpy(tmp, ((const u8 *)&w1) + i, 32);
-			storm_xcrypt_buffer(&ctx, tmp);
+			storm_next_block(&ctx, tmp);
 		}
 
 		for (u32 i = 0; i < 128; i += 32) {
 			u32 len = (i + 32 <= 128) ? 32 : 128 - i;
 			fastmemcpy(tmp, message + i, len);
 			fastmemset(tmp + len, 0, 32 - len);
-			storm_xcrypt_buffer(&ctx, tmp);
+			storm_next_block(&ctx, tmp);
 		}
 
-		storm_xcrypt_buffer(&ctx, c_tilde_recomputed);
-		storm_xcrypt_buffer(&ctx, c_tilde_recomputed + 32);
+		storm_next_block(&ctx, c_tilde_recomputed);
+		storm_next_block(&ctx, c_tilde_recomputed + 32);
 	}
 
 	if (memcmp(c_tilde_recomputed, sig_impl->c_tilde, 64) != 0) return -1;

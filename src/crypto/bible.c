@@ -66,7 +66,7 @@ PUBLIC const Bible *bible_gen(void) {
 	u64 off = 0;
 	while (off < xxdir_file_size_0) {
 		fastmemcpy(buffer, xxdir_file_0 + off, 32);
-		storm_xcrypt_buffer(&ctx, buffer);
+		storm_next_block(&ctx, buffer);
 		off += 32;
 	}
 
@@ -75,7 +75,7 @@ PUBLIC const Bible *bible_gen(void) {
 		for (u32 i = 0; i < STORM_ITER; i++) {
 			StormContext ctx;
 			storm_init(&ctx, buffer);
-			storm_xcrypt_buffer(&ctx, buffer);
+			storm_next_block(&ctx, buffer);
 		}
 		fastmemcpy(ret->data + offset, buffer, 32);
 	}
@@ -120,7 +120,7 @@ PUBLIC void bible_sbox8_64(u64 sbox[256]) {
 
 	u8 *sbox_u8 = (void *)sbox;
 	for (u32 i = 0; i < 256 / 4; i++) {
-		storm_xcrypt_buffer(&ctx, buf);
+		storm_next_block(&ctx, buf);
 		fastmemcpy(sbox_u8 + i * 32, buf, 32);
 	}
 }

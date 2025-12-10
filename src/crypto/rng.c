@@ -46,13 +46,13 @@ void rng_gen(Rng *rng, void *v, u64 size) {
 	__attribute__((aligned(32))) u8 buf[32] = {0};
 	u64 off = 0;
 	while (size >= 32) {
-		storm_xcrypt_buffer(&rng->ctx, (u8 *)(v + off));
+		storm_next_block(&rng->ctx, (u8 *)(v + off));
 		size -= 32;
 		off += 32;
 	}
 
 	if (size) {
-		storm_xcrypt_buffer(&rng->ctx, buf);
+		storm_next_block(&rng->ctx, buf);
 		fastmemcpy(((u8 *)v) + off, buf, size);
 	}
 }
