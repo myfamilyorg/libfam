@@ -671,8 +671,12 @@ Test(trinity77) {
 }
 
 Test(storm_ctr) {
-	StormCtr send;
+	StormContext send;
+	u8 orig[32] = "the cat in the hat";
+	u8 orig2[32] = "storm test";
 	__attribute__((aligned(32))) u8 buf1[32] = "the cat in the hat";
+	__attribute__((aligned(32))) u8 buf2[32] = "storm test";
+
 	__attribute__((aligned(32))) static const u8 key[32] = {
 	    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
 	    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
@@ -681,20 +685,41 @@ Test(storm_ctr) {
 	u8* v = getenv("VALGRIND");
 	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
-	storm_ctr_init(&send, key);
+	storm_init(&send, key);
+	/*
 	print("input: ");
 	for (u32 i = 0; i < 32; i++) print("{},", buf1[i]);
 	println("");
+	*/
 
-	storm_ctr_xcrypt(&send, buf1);
+	storm_xcrypt_buffer(&send, buf1);
+	/*
 	print("cipher: ");
 	for (u32 i = 0; i < 32; i++) print("{},", buf1[i]);
 	println("");
+	*/
+	ASSERT(memcmp(orig, buf1, 32), "not equal");
 
-	StormCtr recv;
-	storm_ctr_init(&recv, key);
-	storm_ctr_xcrypt(&recv, buf1);
+	storm_xcrypt_buffer(&send, buf2);
+
+	/*
+	print("cipher2: ");
+	for (u32 i = 0; i < 32; i++) print("{},", buf2[i]);
+	println("");
+	*/
+
+	ASSERT(memcmp(orig2, buf2, 32), "not equal");
+
+	StormContext recv;
+	storm_init(&recv, key);
+	storm_xcrypt_buffer(&recv, buf1);
+	/*
 	print("output: ");
 	for (u32 i = 0; i < 32; i++) print("{},", buf1[i]);
 	println("");
+	*/
+	ASSERT(!memcmp(orig, buf1, 32), "equal");
+
+	storm_xcrypt_buffer(&recv, buf2);
+	ASSERT(!memcmp(orig2, buf2, 32), "equal");
 }

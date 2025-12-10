@@ -28,22 +28,14 @@
 
 #include <libfam/types.h>
 
-#define STORM_CONTEXT_SIZE 64
-#define STORM_CTR_SIZE (STORM_CONTEXT_SIZE + sizeof(u64))
+#define STORM_CONTEXT_SIZE 96
 
 typedef struct {
 	__attribute__((aligned(32))) u8 _data[STORM_CONTEXT_SIZE];
 } StormContext;
 
-typedef struct {
-	__attribute__((aligned(32))) u8 _data[STORM_CTR_SIZE];
-} StormCtr;
-
 void storm_init(StormContext *ctx, const u8 key[32]);
 void storm_next_block(StormContext *ctx, u8 buf[32]);
-void storm_set_state(StormContext *ctx, u8 state[32]);
-
-void storm_ctr_init(StormCtr *s, const u8 key[32]);
-void storm_ctr_xcrypt(StormCtr *s, u8 buf[32]);
+void storm_xcrypt_buffer(StormContext *s, u8 buf[32]);
 
 #endif /* _STORM_H */
