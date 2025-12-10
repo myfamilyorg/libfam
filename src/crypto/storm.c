@@ -24,7 +24,9 @@
  *******************************************************************************/
 
 #ifdef __AVX2__
+#ifndef NO_AVX2
 #define USE_AVX2
+#endif /* NO_AVX2 */
 #endif /* __AVX2__ */
 
 #ifdef USE_AVX2
@@ -254,15 +256,6 @@ PUBLIC void storm_next_block(StormContext *ctx, u8 buf[32]) {
 	storm_next_block_avx2(ctx, buf);
 #else
 	storm_next_block_scalar(ctx, buf);
-#endif /* !USE_AVX2 */
-}
-
-PUBLIC void storm_set_state(StormContext *ctx, u8 state[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
-#ifdef USE_AVX2
-	st->state = _mm256_load_si256((const __m256i *)state);
-#else
-	fastmemcpy(st->state, state, 32);
 #endif /* !USE_AVX2 */
 }
 

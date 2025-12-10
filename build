@@ -80,7 +80,7 @@ for t in $TARGETS; do
     case "$t" in
         all)     BUILD_MODE=all     ;;
         test)    BUILD_MODE=test    ;;
-        cov)     BUILD_MODE=cov     ;;
+        cov)     VALGRIND=0; BUILD_MODE=cov     ;;
         clean)   BUILD_MODE=clean   ;;
         install) BUILD_MODE=install ;;
     esac

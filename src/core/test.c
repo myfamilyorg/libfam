@@ -98,7 +98,6 @@ Test(atomic) {
 #define AITER 500
 
 Test(atomic_thread64) {
-	if (getenv("VALGRIND")) return;
 	i32 i;
 	i32 pids[ACOUNT] = {0};
 	u64 *count = smap(sizeof(u64));
@@ -131,7 +130,6 @@ Test(atomic_thread64) {
 }
 
 Test(atomic_thread32) {
-	if (getenv("VALGRIND")) return;
 	i32 i;
 	i32 pids[ACOUNT];
 	u32 *count = smap(sizeof(u32));
@@ -167,7 +165,6 @@ Test(atomic_thread32) {
 #define TA_ITER (1024 * 4)
 
 Test(bitmap1) {
-	if (getenv("VALGRIND")) return;
 	i32 i;
 	i32 pids[TA_COUNT];
 	u64 *count = smap(sizeof(u64));
@@ -332,9 +329,6 @@ Test(alloc2) {
 	i32 i, j, k;
 	Rng rng;
 
-	u8 *v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
-
 	rng_init(&rng, NULL);
 	Alloc *a = alloc_init(AllocMap, 32);
 	u8 **ptrs = map(sizeof(u8 *) * ALLOC_COUNT);
@@ -374,9 +368,6 @@ Test(alloc_cas_loop) {
 #define ALLOC_TCOUNT (4 * 1024)
 
 Test(alloc3) {
-	u8 *v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
-
 	i32 i;
 	i32 pids[ALLOC_THREADS];
 	Alloc *a = alloc_init(AllocSmap, 32);

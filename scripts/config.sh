@@ -62,7 +62,11 @@ case "$BUILD_MODE" in
         CFLAGS="$BASE_CFLAGS"
         LDFLAGS="$BASE_LDFLAGS"
         VISIBILITY=""
-        CDEFS="-DTEST=1 -DSTATIC="
+	if [ "${VALGRIND}" = "1" ]; then
+		CDEFS="-DTEST=1 -DSTATIC= -DNO_AVX2"
+	else
+        	CDEFS="-DTEST=1 -DSTATIC="
+	fi
         COVERAGE=""
         [ "$BUILD_MODE" = "cov" ] && COVERAGE="--coverage -DCOVERAGE" && LDFLAGS="$LDFLAGS"
         LTO=""

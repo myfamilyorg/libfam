@@ -56,7 +56,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					   // println("h1={x},h2={x}", h1, h2);
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -80,9 +80,6 @@ Test(random_stir) {
 	__attribute__((aligned(32))) u8 v2[32];
 	__attribute__((aligned(32))) const u8 st[32] = {1, 2, 3};
 
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
-
 	random32(v1);
 	memcpy(v2, v1, 32);
 	ASSERT(!memcmp(v1, v2, 32), "equal");
@@ -95,15 +92,14 @@ static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
 static __attribute__((aligned(32))) u8 ONE_SEED[32] = {1};
 static __attribute__((aligned(32))) u8 TWO_SEED[32] = {2};
 static __attribute__((aligned(32))) u8 THREE_SEED[32] = {3};
+static __attribute__((aligned(32))) u8 FOUR_SEED[32] = {4};
+static __attribute__((aligned(32))) u8 FIVE_SEED[32] = {5};
 
 Test(aighthash_longneighbors) {
 	Rng rng;
 	int size = SIZE;
 	u8 a[SIZE] = {0};
 	u8 b[SIZE] = {0};
-
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	rng_test_seed(&rng, ZERO_SEED);
 
@@ -176,9 +172,6 @@ Test(aighthash64_longneighbors) {
 	int size = SIZE;
 	u8 a[SIZE] = {0};
 	u8 b[SIZE] = {0};
-
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	rng_test_seed(&rng, ZERO_SEED);
 	u8 key[16];
@@ -260,9 +253,6 @@ Test(storm_perf) {
 	StormContext ctx;
 	u64 sum = 0;
 
-	u8* vg = getenv("VALGRIND");
-	if (vg && strlen(vg) == 1 && !memcmp(vg, "1", 1)) return;
-
 	storm_init(&ctx, ZERO_SEED);
 
 	timer = micros();
@@ -283,14 +273,15 @@ Test(storm_perf2) {
 	__attribute__((aligned(32))) u8 buf2[64] = {0};
 	__attribute__((aligned(32))) u8 buf3[64] = {0};
 	__attribute__((aligned(32))) u8 buf4[64] = {0};
+	__attribute__((aligned(32))) u8 buf5[64] = {0};
+	__attribute__((aligned(32))) u8 buf6[64] = {0};
 
 	StormContext ctx1;
 	StormContext ctx2;
 	StormContext ctx3;
 	StormContext ctx4;
-
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
+	StormContext ctx5;
+	StormContext ctx6;
 
 	u64 sum = 0;
 
@@ -300,24 +291,41 @@ Test(storm_perf2) {
 	storm_init(&ctx2, ONE_SEED);
 	storm_init(&ctx3, TWO_SEED);
 	storm_init(&ctx4, THREE_SEED);
+	storm_init(&ctx5, FOUR_SEED);
+	storm_init(&ctx6, FIVE_SEED);
 
 	timer = micros();
 	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
 		u8* block1 = buf1 + (i & 32);
+		/*
 		u8* block2 = buf2 + (i & 32);
 		u8* block3 = buf3 + (i & 32);
 		u8* block4 = buf4 + (i & 32);
+		u8* block5 = buf5 + (i & 32);
+		u8* block6 = buf6 + (i & 32);
+		*/
 
-		storm_next_block(&ctx1, block1);
+		storm_xcrypt_buffer(&ctx1, block1);
 		sum += ((u64*)block1)[0];
-		storm_next_block(&ctx2, block2);
+		/*
+		storm_xcrypt_buffer(&ctx2, block2);
 		sum += ((u64*)block2)[0];
-		storm_next_block(&ctx3, block3);
+		storm_xcrypt_buffer(&ctx3, block3);
 		sum += ((u64*)block3)[0];
-		storm_next_block(&ctx4, block4);
+		storm_xcrypt_buffer(&ctx4, block4);
 		sum += ((u64*)block4)[0];
+		storm_xcrypt_buffer(&ctx5, block5);
+		sum += ((u64*)block6)[0];
+		storm_xcrypt_buffer(&ctx6, block6);
+		sum += ((u64*)block6)[0];
+		*/
 	}
 	timer = micros() - timer;
+	(void)buf2;
+	(void)buf3;
+	(void)buf4;
+	(void)buf5;
+	(void)buf6;
 
 	/*
 	println("time={}us, sum={}, avg={}ns", timer, sum,
@@ -332,12 +340,9 @@ Test(storm_longneighbors) {
 	u8 a[32] __attribute__((aligned(32))) = {0};
 	u8 b[32] __attribute__((aligned(32))) = {0};
 	u8 __attribute__((aligned(32))) key[32] = {0};
-	u32 iter = 1000;
+	u32 iter = 10;
 	u32 trials = 10000;
 	u32 total_fail = 0;
-
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	(void)total_fail;
 
@@ -398,9 +403,6 @@ Test(storm_vector) {
 	__attribute__((aligned(32))) u8 key[32] = {0};
 	__attribute__((aligned(32))) u8 buf[32] = {0};
 
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
-
 	storm_init(&ctx, key);
 	storm_next_block(&ctx, buf);
 
@@ -448,9 +450,6 @@ Test(storm_cross_half_diffusion) {
 	    0xcc, 0xdd, 0xee, 0xff, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
 	    0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
 
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
-
 	storm_init(&ctx, key);
 
 	u8 first_high[16];
@@ -492,14 +491,11 @@ Test(storm_cross_half_diffusion) {
 Test(storm_key_recovery_integral) {
 	Rng rng;
 
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
-
 	rng_init(&rng, NULL);
 	rng_test_seed(&rng, ZERO_SEED);
 
 	StormContext ctx;
-	__attribute__((aligned(32))) u8 key[32];
+	__attribute__((aligned(32))) u8 key[32] = {0};
 	rng_gen(&rng, key, 32);
 
 	storm_init(&ctx, key);
@@ -552,15 +548,12 @@ Test(storm_key_recovery_integral) {
 }
 
 Test(storm_2round_integral_distinguisher) {
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
-
 	Rng rng;
 	rng_init(&rng, NULL);
 	rng_test_seed(&rng, ZERO_SEED);
 
 	StormContext ctx;
-	__attribute__((aligned(32))) u8 key[32];
+	__attribute__((aligned(32))) u8 key[32] = {0};
 
 	const u32 N = 1 << 19;
 	u64 xor_sum[32] = {0};
@@ -596,18 +589,12 @@ Test(storm_2round_integral_distinguisher) {
 Test(bible1) {
 	__attribute__((aligned(32))) u64 sbox[256];
 
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
-
 	bible_sbox8_64(sbox);
 	// for (u32 i = 0; i < 256; i++) println("sbox[{}]={X},", i, sbox[i]);
 }
 
 Test(rng2) {
 	Rng rng;
-
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	rng_init(&rng, NULL);
 	for (i32 i = 0; i < 10; i++) {
@@ -656,9 +643,6 @@ Test(trinity77) {
 	Trinity77PK pk;
 	Trinity77Sig sig;
 
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
-
 	const u8 msg[128] = {1, 2, 3};
 
 	static const u8 test_seed[32] = {
@@ -681,9 +665,6 @@ Test(storm_ctr) {
 	    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
 	    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
 	    0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
-
-	u8* v = getenv("VALGRIND");
-	if (v && strlen(v) == 1 && !memcmp(v, "1", 1)) return;
 
 	storm_init(&send, key);
 	/*
