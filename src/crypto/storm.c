@@ -194,7 +194,7 @@ STATIC void storm_next_block_avx2(StormContext *ctx, u8 buf[32]) {
 	lo = _mm_xor_si128(lo, hi);
 	st->state = _mm256_set_m128i(lo, hi);
 	x = _mm256_aesenc_epi128(x, key);
-	_mm256_store_si256((__m256i *)buf, _mm256_xor_si256(p, x));
+	_mm256_store_si256((__m256i *)buf, x);
 }
 #else
 STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
@@ -237,8 +237,8 @@ STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32]) {
 	aesenc128(orig_hi, st->key + 16);
 
 	for (int i = 0; i < 16; ++i) {
-		buf[i] ^= orig_lo[i];
-		buf[i + 16] ^= orig_hi[i];
+		buf[i] = orig_lo[i];
+		buf[i + 16] = orig_hi[i];
 	}
 }
 #endif /* !USE_AVX2 */

@@ -56,7 +56,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					    // println("h1={x},h2={x}", h1, h2);
+					   // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -417,10 +417,10 @@ Test(storm_vector) {
 	storm_next_block(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) print("{},", buf[i]);
 
-	u8 expected2[32] = {98,	 174, 220, 63,	31,  228, 32,  48,
-			    177, 80,  121, 124, 32,  148, 11,  239,
-			    13,	 173, 135, 175, 82,  223, 249, 38,
-			    238, 207, 55,  100, 220, 84,  17,  113};
+	u8 expected2[32] = {134, 154, 95, 123, 32,  207, 125, 20,
+			    253, 134, 15, 143, 208, 228, 107, 32,
+			    99,	 0,   83, 223, 130, 159, 228, 163,
+			    26,	 90,  80, 63,  139, 150, 185, 158};
 	ASSERT(!memcmp(buf, expected2, 32), "next vector");
 	(void)expected;
 	(void)expected2;
@@ -436,10 +436,10 @@ Test(storm_vector) {
 	ASSERT(!memcmp(buf, expected3, 32), "expected3");
 	storm_next_block(&ctx, buf);
 	// for (u32 i = 0; i < 32; i++) println("{},", buf[i]);
-	u8 expected4[32] = {170, 37,  11,  5,  84,  107, 252, 156,
-			    40,	 176, 173, 78, 105, 184, 41,  86,
-			    126, 108, 207, 23, 69,  243, 148, 29,
-			    18,	 107, 169, 90, 178, 144, 36,  74};
+	u8 expected4[32] = {17,	 62,  167, 48,	190, 149, 197, 9,
+			    21,	 245, 57,  204, 107, 157, 238, 62,
+			    16,	 193, 27,  103, 149, 179, 137, 152,
+			    230, 254, 206, 1,	229, 82,  140, 165};
 	ASSERT(!memcmp(buf, expected4, 32), "expected4");
 }
 
