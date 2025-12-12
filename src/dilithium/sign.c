@@ -3,7 +3,6 @@
 #include <dilithium/params.h>
 #include <dilithium/poly.h>
 #include <dilithium/polyvec.h>
-#include <dilithium/randombytes.h>
 #include <dilithium/sign.h>
 #include <dilithium/symmetric.h>
 #include <libfam/format.h>
@@ -21,7 +20,7 @@ void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 	fastmemcpy(seedbuf, seed, 32);
 
 	seedbuf[SEEDBYTES + 0] = K;
-	seedbuf[SEEDBYTES + 1] = L;
+	seedbuf[SEEDBYTES + 1] = K;
 	shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
 	rho = seedbuf;
 	rhoprime = rho + SEEDBYTES;
@@ -32,7 +31,7 @@ void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 
 	/* Sample short vectors s1 and s2 */
 	polyvecl_uniform_eta(&s1, rhoprime, 0);
-	polyveck_uniform_eta(&s2, rhoprime, L);
+	polyveck_uniform_eta(&s2, rhoprime, K);
 
 	/* Matrix-vector multiplication */
 	s1hat = s1;
@@ -66,7 +65,7 @@ void dilithium_keypair(u8 *pk, u8 *sk) {
 	random32(seedbuf);
 
 	seedbuf[SEEDBYTES + 0] = K;
-	seedbuf[SEEDBYTES + 1] = L;
+	seedbuf[SEEDBYTES + 1] = K;
 	shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
 	rho = seedbuf;
 	rhoprime = rho + SEEDBYTES;
@@ -77,7 +76,7 @@ void dilithium_keypair(u8 *pk, u8 *sk) {
 
 	/* Sample short vectors s1 and s2 */
 	polyvecl_uniform_eta(&s1, rhoprime, 0);
-	polyveck_uniform_eta(&s2, rhoprime, L);
+	polyveck_uniform_eta(&s2, rhoprime, K);
 
 	/* Matrix-vector multiplication */
 	s1hat = s1;
@@ -116,8 +115,8 @@ void dilithium_keypair(u8 *pk, u8 *sk) {
  *
  * Returns 0 (success)
  **************************************************/
-void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m,
-				    u64 mlen, const u8 *pre, u64 prelen,
+void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
+				    const u8 *pre, u64 prelen,
 				    const u8 rnd[RNDBYTES], const u8 *sk) {
 	u32 n;
 	u8 seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
@@ -269,8 +268,8 @@ int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
  *
  * Returns 0 (success) or -1 (context string too long)
  **************************************************/
-int dilithium_sign(u8 *sm, u64 *smlen, const u8 *m, u64 mlen,
-		   const u8 *ctx, u64 ctxlen, const u8 *sk) {
+int dilithium_sign(u8 *sm, u64 *smlen, const u8 *m, u64 mlen, const u8 *ctx,
+		   u64 ctxlen, const u8 *sk) {
 	int ret;
 	u64 i;
 
@@ -413,8 +412,8 @@ int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
  *
  * Returns 0 if signed message could be verified correctly and -1 otherwise
  **************************************************/
-int dilithium_verify(u8 *m, u64 *mlen, const u8 *sm, u64 smlen,
-		     const u8 *ctx, u64 ctxlen, const u8 *pk) {
+int dilithium_verify(u8 *m, u64 *mlen, const u8 *sm, u64 smlen, const u8 *ctx,
+		     u64 ctxlen, const u8 *pk) {
 	u64 i;
 
 	if (smlen < CRYPTO_BYTES) goto badsig;

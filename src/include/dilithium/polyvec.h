@@ -5,9 +5,9 @@
 #include <dilithium/poly.h>
 #include <libfam/types.h>
 
-/* Vectors of polynomials of length L */
+/* Vectors of polynomials of length K */
 typedef struct {
-	poly vec[L];
+	poly vec[K];
 } polyvecl;
 
 void polyvecl_uniform_eta(polyvecl *v, const u8 seed[CRHBYTES], u16 nonce);
@@ -50,8 +50,7 @@ int polyveck_chknorm(const polyveck *v, i32 B);
 
 void polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *v);
 void polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v);
-u32 polyveck_make_hint(polyveck *h, const polyveck *v0,
-				const polyveck *v1);
+u32 polyveck_make_hint(polyveck *h, const polyveck *v0, const polyveck *v1);
 void polyveck_use_hint(polyveck *w, const polyveck *v, const polyveck *h);
 
 void polyveck_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyveck *w1);

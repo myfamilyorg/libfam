@@ -16,7 +16,7 @@ void polyvec_matrix_expand(polyvecl mat[K], const u8 rho[SEEDBYTES]) {
 	u32 i, j;
 
 	for (i = 0; i < K; ++i)
-		for (j = 0; j < L; ++j)
+		for (j = 0; j < K; ++j)
 			poly_uniform(&mat[i].vec[j], rho, (i << 8) + j);
 }
 
@@ -29,32 +29,32 @@ void polyvec_matrix_pointwise_montgomery(polyveck *t, const polyvecl mat[K],
 }
 
 /**************************************************************/
-/************ Vectors of polynomials of length L **************/
+/************ Vectors of polynomials of length K **************/
 /**************************************************************/
 
 void polyvecl_uniform_eta(polyvecl *v, const u8 seed[CRHBYTES], u16 nonce) {
 	u32 i;
 
-	for (i = 0; i < L; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
+	for (i = 0; i < K; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
 }
 
 void polyvecl_uniform_gamma1(polyvecl *v, const u8 seed[CRHBYTES], u16 nonce) {
 	u32 i;
 
-	for (i = 0; i < L; ++i)
-		poly_uniform_gamma1(&v->vec[i], seed, L * nonce + i);
+	for (i = 0; i < K; ++i)
+		poly_uniform_gamma1(&v->vec[i], seed, K * nonce + i);
 }
 
 void polyvecl_reduce(polyvecl *v) {
 	u32 i;
 
-	for (i = 0; i < L; ++i) poly_reduce(&v->vec[i]);
+	for (i = 0; i < K; ++i) poly_reduce(&v->vec[i]);
 }
 
 /*************************************************
  * Name:        polyvecl_add
  *
- * Description: Add vectors of polynomials of length L.
+ * Description: Add vectors of polynomials of length K.
  *              No modular reduction is performed.
  *
  * Arguments:   - polyvecl *w: pointer to output vector
@@ -64,13 +64,13 @@ void polyvecl_reduce(polyvecl *v) {
 void polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
 	u32 i;
 
-	for (i = 0; i < L; ++i) poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
+	for (i = 0; i < K; ++i) poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
 }
 
 /*************************************************
  * Name:        polyvecl_ntt
  *
- * Description: Forward NTT of all polynomials in vector of length L. Output
+ * Description: Forward NTT of all polynomials in vector of length K. Output
  *              coefficients can be up to 16*Q larger than input coefficients.
  *
  * Arguments:   - polyvecl *v: pointer to input/output vector
@@ -78,27 +78,27 @@ void polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
 void polyvecl_ntt(polyvecl *v) {
 	u32 i;
 
-	for (i = 0; i < L; ++i) poly_ntt(&v->vec[i]);
+	for (i = 0; i < K; ++i) poly_ntt(&v->vec[i]);
 }
 
 void polyvecl_invntt_tomont(polyvecl *v) {
 	u32 i;
 
-	for (i = 0; i < L; ++i) poly_invntt_tomont(&v->vec[i]);
+	for (i = 0; i < K; ++i) poly_invntt_tomont(&v->vec[i]);
 }
 
 void polyvecl_pointwise_poly_montgomery(polyvecl *r, const poly *a,
 					const polyvecl *v) {
 	u32 i;
 
-	for (i = 0; i < L; ++i)
+	for (i = 0; i < K; ++i)
 		poly_pointwise_montgomery(&r->vec[i], a, &v->vec[i]);
 }
 
 /*************************************************
  * Name:        polyvecl_pointwise_acc_montgomery
  *
- * Description: Pointwise multiply vectors of polynomials of length L, multiply
+ * Description: Pointwise multiply vectors of polynomials of length K, multiply
  *              resulting vector by 2^{-32} and add (accumulate) polynomials
  *              in it. Input/output vectors are in NTT domain representation.
  *
@@ -112,7 +112,7 @@ void polyvecl_pointwise_acc_montgomery(poly *w, const polyvecl *u,
 	poly t;
 
 	poly_pointwise_montgomery(w, &u->vec[0], &v->vec[0]);
-	for (i = 1; i < L; ++i) {
+	for (i = 1; i < K; ++i) {
 		poly_pointwise_montgomery(&t, &u->vec[i], &v->vec[i]);
 		poly_add(w, w, &t);
 	}
@@ -121,7 +121,7 @@ void polyvecl_pointwise_acc_montgomery(poly *w, const polyvecl *u,
 /*************************************************
  * Name:        polyvecl_chknorm
  *
- * Description: Check infinity norm of polynomials in vector of length L.
+ * Description: Check infinity norm of polynomials in vector of length K.
  *              Assumes input polyvecl to be reduced by polyvecl_reduce().
  *
  * Arguments:   - const polyvecl *v: pointer to vector
@@ -133,7 +133,7 @@ void polyvecl_pointwise_acc_montgomery(poly *w, const polyvecl *u,
 int polyvecl_chknorm(const polyvecl *v, i32 bound) {
 	u32 i;
 
-	for (i = 0; i < L; ++i)
+	for (i = 0; i < K; ++i)
 		if (poly_chknorm(&v->vec[i], bound)) return 1;
 
 	return 0;
@@ -336,8 +336,7 @@ void polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v) {
  *
  * Returns number of 1 bits.
  **************************************************/
-u32 polyveck_make_hint(polyveck *h, const polyveck *v0,
-				const polyveck *v1) {
+u32 polyveck_make_hint(polyveck *h, const polyveck *v0, const polyveck *v1) {
 	u32 i, s = 0;
 
 	for (i = 0; i < K; ++i)

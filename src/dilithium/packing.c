@@ -57,8 +57,8 @@ void unpack_pk(u8 rho[SEEDBYTES], polyveck *t1,
  *              - const polyveck *s2: pointer to vector s2
  **************************************************/
 void pack_sk(u8 sk[CRYPTO_SECRETKEYBYTES], const u8 rho[SEEDBYTES],
-	     const u8 tr[TRBYTES], const u8 key[SEEDBYTES],
-	     const polyveck *t0, const polyvecl *s1, const polyveck *s2) {
+	     const u8 tr[TRBYTES], const u8 key[SEEDBYTES], const polyveck *t0,
+	     const polyvecl *s1, const polyveck *s2) {
 	u32 i;
 
 	for (i = 0; i < SEEDBYTES; ++i) sk[i] = rho[i];
@@ -70,9 +70,9 @@ void pack_sk(u8 sk[CRYPTO_SECRETKEYBYTES], const u8 rho[SEEDBYTES],
 	for (i = 0; i < TRBYTES; ++i) sk[i] = tr[i];
 	sk += TRBYTES;
 
-	for (i = 0; i < L; ++i)
+	for (i = 0; i < K; ++i)
 		polyeta_pack(sk + i * POLYETA_PACKEDBYTES, &s1->vec[i]);
-	sk += L * POLYETA_PACKEDBYTES;
+	sk += K * POLYETA_PACKEDBYTES;
 
 	for (i = 0; i < K; ++i)
 		polyeta_pack(sk + i * POLYETA_PACKEDBYTES, &s2->vec[i]);
@@ -95,8 +95,8 @@ void pack_sk(u8 sk[CRYPTO_SECRETKEYBYTES], const u8 rho[SEEDBYTES],
  *              - const polyveck *s2: pointer to output vector s2
  *              - u8 sk[]: byte array containing bit-packed sk
  **************************************************/
-void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES],
-	       u8 key[SEEDBYTES], polyveck *t0, polyvecl *s1, polyveck *s2,
+void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES], u8 key[SEEDBYTES],
+	       polyveck *t0, polyvecl *s1, polyveck *s2,
 	       const u8 sk[CRYPTO_SECRETKEYBYTES]) {
 	u32 i;
 
@@ -109,9 +109,9 @@ void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES],
 	for (i = 0; i < TRBYTES; ++i) tr[i] = sk[i];
 	sk += TRBYTES;
 
-	for (i = 0; i < L; ++i)
+	for (i = 0; i < K; ++i)
 		polyeta_unpack(&s1->vec[i], sk + i * POLYETA_PACKEDBYTES);
-	sk += L * POLYETA_PACKEDBYTES;
+	sk += K * POLYETA_PACKEDBYTES;
 
 	for (i = 0; i < K; ++i)
 		polyeta_unpack(&s2->vec[i], sk + i * POLYETA_PACKEDBYTES);
@@ -131,16 +131,16 @@ void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES],
  *              - const polyvecl *z: pointer to vector z
  *              - const polyveck *h: pointer to hint vector h
  **************************************************/
-void pack_sig(u8 sig[CRYPTO_BYTES], const u8 c[CTILDEBYTES],
-	      const polyvecl *z, const polyveck *h) {
+void pack_sig(u8 sig[CRYPTO_BYTES], const u8 c[CTILDEBYTES], const polyvecl *z,
+	      const polyveck *h) {
 	u32 i, j, k;
 
 	for (i = 0; i < CTILDEBYTES; ++i) sig[i] = c[i];
 	sig += CTILDEBYTES;
 
-	for (i = 0; i < L; ++i)
+	for (i = 0; i < K; ++i)
 		polyz_pack(sig + i * POLYZ_PACKEDBYTES, &z->vec[i]);
-	sig += L * POLYZ_PACKEDBYTES;
+	sig += K * POLYZ_PACKEDBYTES;
 
 	/* Encode h */
 	for (i = 0; i < OMEGA + K; ++i) sig[i] = 0;
@@ -174,9 +174,9 @@ int unpack_sig(u8 c[CTILDEBYTES], polyvecl *z, polyveck *h,
 	for (i = 0; i < CTILDEBYTES; ++i) c[i] = sig[i];
 	sig += CTILDEBYTES;
 
-	for (i = 0; i < L; ++i)
+	for (i = 0; i < K; ++i)
 		polyz_unpack(&z->vec[i], sig + i * POLYZ_PACKEDBYTES);
-	sig += L * POLYZ_PACKEDBYTES;
+	sig += K * POLYZ_PACKEDBYTES;
 
 	/* Decode h */
 	k = 0;
