@@ -10,10 +10,10 @@
  *
  * Arguments:   - u8 pk[]: output byte array
  *              - const u8 rho[]: byte array containing rho
- *              - const polyveck *t1: pointer to vector t1
+ *              - const polyvec *t1: pointer to vector t1
  **************************************************/
 void pack_pk(u8 pk[CRYPTO_PUBLICKEYBYTES], const u8 rho[SEEDBYTES],
-	     const polyveck *t1) {
+	     const polyvec *t1) {
 	u32 i;
 
 	for (i = 0; i < SEEDBYTES; ++i) pk[i] = rho[i];
@@ -29,10 +29,10 @@ void pack_pk(u8 pk[CRYPTO_PUBLICKEYBYTES], const u8 rho[SEEDBYTES],
  * Description: Unpack public key pk = (rho, t1).
  *
  * Arguments:   - const u8 rho[]: output byte array for rho
- *              - const polyveck *t1: pointer to output vector t1
+ *              - const polyvec *t1: pointer to output vector t1
  *              - u8 pk[]: byte array containing bit-packed pk
  **************************************************/
-void unpack_pk(u8 rho[SEEDBYTES], polyveck *t1,
+void unpack_pk(u8 rho[SEEDBYTES], polyvec *t1,
 	       const u8 pk[CRYPTO_PUBLICKEYBYTES]) {
 	u32 i;
 
@@ -52,13 +52,13 @@ void unpack_pk(u8 rho[SEEDBYTES], polyveck *t1,
  *              - const u8 rho[]: byte array containing rho
  *              - const u8 tr[]: byte array containing tr
  *              - const u8 key[]: byte array containing key
- *              - const polyveck *t0: pointer to vector t0
- *              - const polyvecl *s1: pointer to vector s1
- *              - const polyveck *s2: pointer to vector s2
+ *              - const polyvec *t0: pointer to vector t0
+ *              - const polyvec *s1: pointer to vector s1
+ *              - const polyvec *s2: pointer to vector s2
  **************************************************/
 void pack_sk(u8 sk[CRYPTO_SECRETKEYBYTES], const u8 rho[SEEDBYTES],
-	     const u8 tr[TRBYTES], const u8 key[SEEDBYTES], const polyveck *t0,
-	     const polyvecl *s1, const polyveck *s2) {
+	     const u8 tr[TRBYTES], const u8 key[SEEDBYTES], const polyvec *t0,
+	     const polyvec *s1, const polyvec *s2) {
 	u32 i;
 
 	for (i = 0; i < SEEDBYTES; ++i) sk[i] = rho[i];
@@ -90,13 +90,13 @@ void pack_sk(u8 sk[CRYPTO_SECRETKEYBYTES], const u8 rho[SEEDBYTES],
  * Arguments:   - const u8 rho[]: output byte array for rho
  *              - const u8 tr[]: output byte array for tr
  *              - const u8 key[]: output byte array for key
- *              - const polyveck *t0: pointer to output vector t0
- *              - const polyvecl *s1: pointer to output vector s1
- *              - const polyveck *s2: pointer to output vector s2
+ *              - const polyvec *t0: pointer to output vector t0
+ *              - const polyvec *s1: pointer to output vector s1
+ *              - const polyvec *s2: pointer to output vector s2
  *              - u8 sk[]: byte array containing bit-packed sk
  **************************************************/
 void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES], u8 key[SEEDBYTES],
-	       polyveck *t0, polyvecl *s1, polyveck *s2,
+	       polyvec *t0, polyvec *s1, polyvec *s2,
 	       const u8 sk[CRYPTO_SECRETKEYBYTES]) {
 	u32 i;
 
@@ -128,11 +128,11 @@ void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES], u8 key[SEEDBYTES],
  *
  * Arguments:   - u8 sig[]: output byte array
  *              - const u8 *c: pointer to challenge hash length SEEDBYTES
- *              - const polyvecl *z: pointer to vector z
- *              - const polyveck *h: pointer to hint vector h
+ *              - const polyvec *z: pointer to vector z
+ *              - const polyvec *h: pointer to hint vector h
  **************************************************/
-void pack_sig(u8 sig[CRYPTO_BYTES], const u8 c[CTILDEBYTES], const polyvecl *z,
-	      const polyveck *h) {
+void pack_sig(u8 sig[CRYPTO_BYTES], const u8 c[CTILDEBYTES], const polyvec *z,
+	      const polyvec *h) {
 	u32 i, j, k;
 
 	for (i = 0; i < CTILDEBYTES; ++i) sig[i] = c[i];
@@ -160,14 +160,14 @@ void pack_sig(u8 sig[CRYPTO_BYTES], const u8 c[CTILDEBYTES], const polyvecl *z,
  * Description: Unpack signature sig = (c, z, h).
  *
  * Arguments:   - u8 *c: pointer to output challenge hash
- *              - polyvecl *z: pointer to output vector z
- *              - polyveck *h: pointer to output hint vector h
+ *              - polyvec *z: pointer to output vector z
+ *              - polyvec *h: pointer to output hint vector h
  *              - const u8 sig[]: byte array containing
  *                bit-packed signature
  *
  * Returns 1 in case of malformed signature; otherwise 0.
  **************************************************/
-int unpack_sig(u8 c[CTILDEBYTES], polyvecl *z, polyveck *h,
+int unpack_sig(u8 c[CTILDEBYTES], polyvec *z, polyvec *h,
 	       const u8 sig[CRYPTO_BYTES]) {
 	u32 i, j, k;
 

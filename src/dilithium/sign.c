@@ -13,9 +13,9 @@ void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 	u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
 	u8 tr[TRBYTES];
 	const u8 *rho, *rhoprime, *key;
-	polyvecl mat[K];
-	polyvecl s1, s1hat;
-	polyveck s2, t1, t0;
+	polyvec mat[K];
+	polyvec s1, s1hat;
+	polyvec s2, t1, t0;
 
 	fastmemcpy(seedbuf, seed, 32);
 
@@ -57,9 +57,9 @@ void dilithium_keypair(u8 *pk, u8 *sk) {
 	u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
 	u8 tr[TRBYTES];
 	const u8 *rho, *rhoprime, *key;
-	polyvecl mat[K];
-	polyvecl s1, s1hat;
-	polyveck s2, t1, t0;
+	polyvec mat[K];
+	polyvec s1, s1hat;
+	polyvec s2, t1, t0;
 
 	/* Get randomness for rho, rhoprime and key */
 	random32(seedbuf);
@@ -122,8 +122,8 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	u8 seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
 	u8 *rho, *tr, *key, *mu, *rhoprime;
 	u16 nonce = 0;
-	polyvecl mat[K], s1, y, z;
-	polyveck t0, s2, w1, w0, h;
+	polyvec mat[K], s1, y, z;
+	polyvec t0, s2, w1, w0, h;
 	poly cp;
 	keccak_state state;
 
@@ -306,8 +306,8 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	u8 c[CTILDEBYTES];
 	u8 c2[CTILDEBYTES];
 	poly cp;
-	polyvecl mat[K], z;
-	polyveck t1, w1, h;
+	polyvec mat[K], z;
+	polyvec t1, w1, h;
 	keccak_state state;
 
 	if (siglen != CRYPTO_BYTES) {

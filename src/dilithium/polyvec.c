@@ -9,10 +9,10 @@
  *              random coefficients a_{i,j} by performing rejection
  *              sampling on the output stream of SHAKE128(rho|j|i)
  *
- * Arguments:   - polyvecl mat[K]: output matrix
+ * Arguments:   - polyvec mat[K]: output matrix
  *              - const u8 rho[]: byte array containing seed rho
  **************************************************/
-void polyvec_matrix_expand(polyvecl mat[K], const u8 rho[SEEDBYTES]) {
+void polyvec_matrix_expand(polyvec mat[K], const u8 rho[SEEDBYTES]) {
 	u32 i, j;
 
 	for (i = 0; i < K; ++i)
@@ -20,8 +20,8 @@ void polyvec_matrix_expand(polyvecl mat[K], const u8 rho[SEEDBYTES]) {
 			poly_uniform(&mat[i].vec[j], rho, (i << 8) + j);
 }
 
-void polyvec_matrix_pointwise_montgomery(polyveck *t, const polyvecl mat[K],
-					 const polyvecl *v) {
+void polyvec_matrix_pointwise_montgomery(polyvec *t, const polyvec mat[K],
+					 const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
@@ -32,36 +32,36 @@ void polyvec_matrix_pointwise_montgomery(polyveck *t, const polyvecl mat[K],
 /************ Vectors of polynomials of length K **************/
 /**************************************************************/
 
-void polyvecl_uniform_eta(polyvecl *v, const u8 seed[CRHBYTES], u16 nonce) {
+void polyvecl_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
 }
 
-void polyvecl_uniform_gamma1(polyvecl *v, const u8 seed[CRHBYTES], u16 nonce) {
+void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u16 nonce) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
 		poly_uniform_gamma1(&v->vec[i], seed, K * nonce + i);
 }
 
-void polyvecl_reduce(polyvecl *v) {
+void polyvecl_reduce(polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_reduce(&v->vec[i]);
 }
 
 /*************************************************
- * Name:        polyvecl_add
+ * Name:        polyvec_add
  *
  * Description: Add vectors of polynomials of length K.
  *              No modular reduction is performed.
  *
- * Arguments:   - polyvecl *w: pointer to output vector
- *              - const polyvecl *u: pointer to first summand
- *              - const polyvecl *v: pointer to second summand
+ * Arguments:   - polyvec *w: pointer to output vector
+ *              - const polyvec *u: pointer to first summand
+ *              - const polyvec *v: pointer to second summand
  **************************************************/
-void polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
+void polyvecl_add(polyvec *w, const polyvec *u, const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
@@ -73,22 +73,22 @@ void polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
  * Description: Forward NTT of all polynomials in vector of length K. Output
  *              coefficients can be up to 16*Q larger than input coefficients.
  *
- * Arguments:   - polyvecl *v: pointer to input/output vector
+ * Arguments:   - polyvec *v: pointer to input/output vector
  **************************************************/
-void polyvecl_ntt(polyvecl *v) {
+void polyvecl_ntt(polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_ntt(&v->vec[i]);
 }
 
-void polyvecl_invntt_tomont(polyvecl *v) {
+void polyvecl_invntt_tomont(polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_invntt_tomont(&v->vec[i]);
 }
 
-void polyvecl_pointwise_poly_montgomery(polyvecl *r, const poly *a,
-					const polyvecl *v) {
+void polyvecl_pointwise_poly_montgomery(polyvec *r, const poly *a,
+					const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
@@ -103,11 +103,11 @@ void polyvecl_pointwise_poly_montgomery(polyvecl *r, const poly *a,
  *              in it. Input/output vectors are in NTT domain representation.
  *
  * Arguments:   - poly *w: output polynomial
- *              - const polyvecl *u: pointer to first input vector
- *              - const polyvecl *v: pointer to second input vector
+ *              - const polyvec *u: pointer to first input vector
+ *              - const polyvec *v: pointer to second input vector
  **************************************************/
-void polyvecl_pointwise_acc_montgomery(poly *w, const polyvecl *u,
-				       const polyvecl *v) {
+void polyvecl_pointwise_acc_montgomery(poly *w, const polyvec *u,
+				       const polyvec *v) {
 	u32 i;
 	poly t;
 
@@ -122,15 +122,15 @@ void polyvecl_pointwise_acc_montgomery(poly *w, const polyvecl *u,
  * Name:        polyvecl_chknorm
  *
  * Description: Check infinity norm of polynomials in vector of length K.
- *              Assumes input polyvecl to be reduced by polyvecl_reduce().
+ *              Assumes input polyvec to be reduced by polyvecl_reduce().
  *
- * Arguments:   - const polyvecl *v: pointer to vector
+ * Arguments:   - const polyvec *v: pointer to vector
  *              - i32 B: norm bound
  *
  * Returns 0 if norm of all polynomials is strictly smaller than B <= (Q-1)/8
  * and 1 otherwise.
  **************************************************/
-int polyvecl_chknorm(const polyvecl *v, i32 bound) {
+int polyvecl_chknorm(const polyvec *v, i32 bound) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
@@ -143,7 +143,7 @@ int polyvecl_chknorm(const polyvecl *v, i32 bound) {
 /************ Vectors of polynomials of length K **************/
 /**************************************************************/
 
-void polyveck_uniform_eta(polyveck *v, const u8 seed[CRHBYTES], u16 nonce) {
+void polyveck_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
@@ -155,9 +155,9 @@ void polyveck_uniform_eta(polyveck *v, const u8 seed[CRHBYTES], u16 nonce) {
  * Description: Reduce coefficients of polynomials in vector of length K
  *              to representatives in [-6283008,6283008].
  *
- * Arguments:   - polyveck *v: pointer to input/output vector
+ * Arguments:   - polyvec *v: pointer to input/output vector
  **************************************************/
-void polyveck_reduce(polyveck *v) {
+void polyveck_reduce(polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_reduce(&v->vec[i]);
@@ -169,9 +169,9 @@ void polyveck_reduce(polyveck *v) {
  * Description: For all coefficients of polynomials in vector of length K
  *              add Q if coefficient is negative.
  *
- * Arguments:   - polyveck *v: pointer to input/output vector
+ * Arguments:   - polyvec *v: pointer to input/output vector
  **************************************************/
-void polyveck_caddq(polyveck *v) {
+void polyveck_caddq(polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_caddq(&v->vec[i]);
@@ -183,11 +183,11 @@ void polyveck_caddq(polyveck *v) {
  * Description: Add vectors of polynomials of length K.
  *              No modular reduction is performed.
  *
- * Arguments:   - polyveck *w: pointer to output vector
- *              - const polyveck *u: pointer to first summand
- *              - const polyveck *v: pointer to second summand
+ * Arguments:   - polyvec *w: pointer to output vector
+ *              - const polyvec *u: pointer to first summand
+ *              - const polyvec *v: pointer to second summand
  **************************************************/
-void polyveck_add(polyveck *w, const polyveck *u, const polyveck *v) {
+void polyveck_add(polyvec *w, const polyvec *u, const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
@@ -199,12 +199,12 @@ void polyveck_add(polyveck *w, const polyveck *u, const polyveck *v) {
  * Description: Subtract vectors of polynomials of length K.
  *              No modular reduction is performed.
  *
- * Arguments:   - polyveck *w: pointer to output vector
- *              - const polyveck *u: pointer to first input vector
- *              - const polyveck *v: pointer to second input vector to be
+ * Arguments:   - polyvec *w: pointer to output vector
+ *              - const polyvec *u: pointer to first input vector
+ *              - const polyvec *v: pointer to second input vector to be
  *                                   subtracted from first input vector
  **************************************************/
-void polyveck_sub(polyveck *w, const polyveck *u, const polyveck *v) {
+void polyveck_sub(polyvec *w, const polyvec *u, const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_sub(&w->vec[i], &u->vec[i], &v->vec[i]);
@@ -216,9 +216,9 @@ void polyveck_sub(polyveck *w, const polyveck *u, const polyveck *v) {
  * Description: Multiply vector of polynomials of Length K by 2^D without
  *modular reduction. Assumes input coefficients to be less than 2^{31-D}.
  *
- * Arguments:   - polyveck *v: pointer to input/output vector
+ * Arguments:   - polyvec *v: pointer to input/output vector
  **************************************************/
-void polyveck_shiftl(polyveck *v) {
+void polyveck_shiftl(polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_shiftl(&v->vec[i]);
@@ -230,9 +230,9 @@ void polyveck_shiftl(polyveck *v) {
  * Description: Forward NTT of all polynomials in vector of length K. Output
  *              coefficients can be up to 16*Q larger than input coefficients.
  *
- * Arguments:   - polyveck *v: pointer to input/output vector
+ * Arguments:   - polyvec *v: pointer to input/output vector
  **************************************************/
-void polyveck_ntt(polyveck *v) {
+void polyveck_ntt(polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_ntt(&v->vec[i]);
@@ -245,16 +245,16 @@ void polyveck_ntt(polyveck *v) {
  *              in vector of length K. Input coefficients need to be less
  *              than 2*Q.
  *
- * Arguments:   - polyveck *v: pointer to input/output vector
+ * Arguments:   - polyvec *v: pointer to input/output vector
  **************************************************/
-void polyveck_invntt_tomont(polyveck *v) {
+void polyveck_invntt_tomont(polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i) poly_invntt_tomont(&v->vec[i]);
 }
 
-void polyveck_pointwise_poly_montgomery(polyveck *r, const poly *a,
-					const polyveck *v) {
+void polyveck_pointwise_poly_montgomery(polyvec *r, const poly *a,
+					const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
@@ -265,15 +265,15 @@ void polyveck_pointwise_poly_montgomery(polyveck *r, const poly *a,
  * Name:        polyveck_chknorm
  *
  * Description: Check infinity norm of polynomials in vector of length K.
- *              Assumes input polyveck to be reduced by polyveck_reduce().
+ *              Assumes input polyvec to be reduced by polyveck_reduce().
  *
- * Arguments:   - const polyveck *v: pointer to vector
+ * Arguments:   - const polyvec *v: pointer to vector
  *              - i32 B: norm bound
  *
  * Returns 0 if norm of all polynomials are strictly smaller than B <= (Q-1)/8
  * and 1 otherwise.
  **************************************************/
-int polyveck_chknorm(const polyveck *v, i32 bound) {
+int polyveck_chknorm(const polyvec *v, i32 bound) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
@@ -290,13 +290,13 @@ int polyveck_chknorm(const polyveck *v, i32 bound) {
  *              with -2^{D-1} < a0 <= 2^{D-1}. Assumes coefficients to be
  *              standard representatives.
  *
- * Arguments:   - polyveck *v1: pointer to output vector of polynomials with
+ * Arguments:   - polyvec *v1: pointer to output vector of polynomials with
  *                              coefficients a1
- *              - polyveck *v0: pointer to output vector of polynomials with
+ *              - polyvec *v0: pointer to output vector of polynomials with
  *                              coefficients a0
- *              - const polyveck *v: pointer to input vector
+ *              - const polyvec *v: pointer to input vector
  **************************************************/
-void polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *v) {
+void polyveck_power2round(polyvec *v1, polyvec *v0, const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
@@ -312,13 +312,13 @@ void polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *v) {
  *              set a1 = 0 and -ALPHA/2 <= a0 = a mod Q - Q < 0.
  *              Assumes coefficients to be standard representatives.
  *
- * Arguments:   - polyveck *v1: pointer to output vector of polynomials with
+ * Arguments:   - polyvec *v1: pointer to output vector of polynomials with
  *                              coefficients a1
- *              - polyveck *v0: pointer to output vector of polynomials with
+ *              - polyvec *v0: pointer to output vector of polynomials with
  *                              coefficients a0
- *              - const polyveck *v: pointer to input vector
+ *              - const polyvec *v: pointer to input vector
  **************************************************/
-void polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v) {
+void polyveck_decompose(polyvec *v1, polyvec *v0, const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
@@ -330,13 +330,13 @@ void polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v) {
  *
  * Description: Compute hint vector.
  *
- * Arguments:   - polyveck *h: pointer to output vector
- *              - const polyveck *v0: pointer to low part of input vector
- *              - const polyveck *v1: pointer to high part of input vector
+ * Arguments:   - polyvec *h: pointer to output vector
+ *              - const polyvec *v0: pointer to low part of input vector
+ *              - const polyvec *v1: pointer to high part of input vector
  *
  * Returns number of 1 bits.
  **************************************************/
-u32 polyveck_make_hint(polyveck *h, const polyveck *v0, const polyveck *v1) {
+u32 polyveck_make_hint(polyvec *h, const polyvec *v0, const polyvec *v1) {
 	u32 i, s = 0;
 
 	for (i = 0; i < K; ++i)
@@ -350,19 +350,19 @@ u32 polyveck_make_hint(polyveck *h, const polyveck *v0, const polyveck *v1) {
  *
  * Description: Use hint vector to correct the high bits of input vector.
  *
- * Arguments:   - polyveck *w: pointer to output vector of polynomials with
+ * Arguments:   - polyvec *w: pointer to output vector of polynomials with
  *                             corrected high bits
- *              - const polyveck *u: pointer to input vector
- *              - const polyveck *h: pointer to input hint vector
+ *              - const polyvec *u: pointer to input vector
+ *              - const polyvec *h: pointer to input hint vector
  **************************************************/
-void polyveck_use_hint(polyveck *w, const polyveck *u, const polyveck *h) {
+void polyveck_use_hint(polyvec *w, const polyvec *u, const polyvec *h) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
 		poly_use_hint(&w->vec[i], &u->vec[i], &h->vec[i]);
 }
 
-void polyveck_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyveck *w1) {
+void polyveck_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyvec *w1) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
