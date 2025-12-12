@@ -50,7 +50,7 @@ int polyveck_chknorm(const polyveck *v, i32 B);
 
 void polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *v);
 void polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v);
-unsigned int polyveck_make_hint(polyveck *h, const polyveck *v0,
+u32 polyveck_make_hint(polyveck *h, const polyveck *v0,
 				const polyveck *v1);
 void polyveck_use_hint(polyveck *w, const polyveck *v, const polyveck *h);
 

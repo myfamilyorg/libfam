@@ -62,7 +62,7 @@ i32 decompose(i32 *a0, i32 a) {
  *
  * Returns 1 if overflow.
  **************************************************/
-unsigned int make_hint(i32 a0, i32 a1) {
+u32 make_hint(i32 a0, i32 a1) {
 	if (a0 > GAMMA2 || a0 < -GAMMA2 || (a0 == -GAMMA2 && a1 != 0)) return 1;
 
 	return 0;
@@ -74,11 +74,11 @@ unsigned int make_hint(i32 a0, i32 a1) {
  * Description: Correct high bits according to hint.
  *
  * Arguments:   - i32 a: input element
- *              - unsigned int hint: hint bit
+ *              - u32 hint: hint bit
  *
  * Returns corrected high bits.
  **************************************************/
-i32 use_hint(i32 a, unsigned int hint) {
+i32 use_hint(i32 a, u32 hint) {
 	i32 a0, a1;
 
 	a1 = decompose(&a0, a);

@@ -300,7 +300,7 @@ int dilithium_sign(u8 *sm, u64 *smlen, const u8 *m, u64 mlen,
 int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 				u64 mlen, const u8 *pre, u64 prelen,
 				const u8 *pk) {
-	unsigned int i;
+	u32 i;
 	u8 buf[K * POLYW1_PACKEDBYTES];
 	u8 rho[SEEDBYTES];
 	u8 mu[CRHBYTES];

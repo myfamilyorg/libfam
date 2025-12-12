@@ -14,7 +14,7 @@
  **************************************************/
 void pack_pk(u8 pk[CRYPTO_PUBLICKEYBYTES], const u8 rho[SEEDBYTES],
 	     const polyveck *t1) {
-	unsigned int i;
+	u32 i;
 
 	for (i = 0; i < SEEDBYTES; ++i) pk[i] = rho[i];
 	pk += SEEDBYTES;
@@ -34,7 +34,7 @@ void pack_pk(u8 pk[CRYPTO_PUBLICKEYBYTES], const u8 rho[SEEDBYTES],
  **************************************************/
 void unpack_pk(u8 rho[SEEDBYTES], polyveck *t1,
 	       const u8 pk[CRYPTO_PUBLICKEYBYTES]) {
-	unsigned int i;
+	u32 i;
 
 	for (i = 0; i < SEEDBYTES; ++i) rho[i] = pk[i];
 	pk += SEEDBYTES;
@@ -59,7 +59,7 @@ void unpack_pk(u8 rho[SEEDBYTES], polyveck *t1,
 void pack_sk(u8 sk[CRYPTO_SECRETKEYBYTES], const u8 rho[SEEDBYTES],
 	     const u8 tr[TRBYTES], const u8 key[SEEDBYTES],
 	     const polyveck *t0, const polyvecl *s1, const polyveck *s2) {
-	unsigned int i;
+	u32 i;
 
 	for (i = 0; i < SEEDBYTES; ++i) sk[i] = rho[i];
 	sk += SEEDBYTES;
@@ -98,7 +98,7 @@ void pack_sk(u8 sk[CRYPTO_SECRETKEYBYTES], const u8 rho[SEEDBYTES],
 void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES],
 	       u8 key[SEEDBYTES], polyveck *t0, polyvecl *s1, polyveck *s2,
 	       const u8 sk[CRYPTO_SECRETKEYBYTES]) {
-	unsigned int i;
+	u32 i;
 
 	for (i = 0; i < SEEDBYTES; ++i) rho[i] = sk[i];
 	sk += SEEDBYTES;
@@ -133,7 +133,7 @@ void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES],
  **************************************************/
 void pack_sig(u8 sig[CRYPTO_BYTES], const u8 c[CTILDEBYTES],
 	      const polyvecl *z, const polyveck *h) {
-	unsigned int i, j, k;
+	u32 i, j, k;
 
 	for (i = 0; i < CTILDEBYTES; ++i) sig[i] = c[i];
 	sig += CTILDEBYTES;
@@ -169,7 +169,7 @@ void pack_sig(u8 sig[CRYPTO_BYTES], const u8 c[CTILDEBYTES],
  **************************************************/
 int unpack_sig(u8 c[CTILDEBYTES], polyvecl *z, polyveck *h,
 	       const u8 sig[CRYPTO_BYTES]) {
-	unsigned int i, j, k;
+	u32 i, j, k;
 
 	for (i = 0; i < CTILDEBYTES; ++i) c[i] = sig[i];
 	sig += CTILDEBYTES;

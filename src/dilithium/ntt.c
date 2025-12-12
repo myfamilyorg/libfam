@@ -51,7 +51,7 @@ static const i32 zetas[N] = {
  * Arguments:   - u32 p[N]: input/output coefficient array
  **************************************************/
 void ntt(i32 a[N]) {
-	unsigned int len, start, j, k;
+	u32 len, start, j, k;
 	i32 zeta, t;
 
 	k = 0;
@@ -79,7 +79,7 @@ void ntt(i32 a[N]) {
  * Arguments:   - u32 p[N]: input/output coefficient array
  **************************************************/
 void invntt_tomont(i32 a[N]) {
-	unsigned int start, len, j, k;
+	u32 start, len, j, k;
 	i32 t, zeta;
 	const i32 f = 41978;  // mont^2/256
 

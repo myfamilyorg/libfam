@@ -2,7 +2,6 @@
 #define SYMMETRIC_H
 
 #include <dilithium/fips202.h>
-#include <dilithium/params.h>
 
 typedef keccak_state stream128_state;
 typedef keccak_state stream256_state;

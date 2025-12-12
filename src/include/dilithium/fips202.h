@@ -12,7 +12,7 @@
 
 typedef struct {
 	u64 s[25];
-	unsigned int pos;
+	u32 pos;
 } keccak_state;
 
 #define KeccakF_RoundConstants FIPS202_NAMESPACE(KeccakF_RoundConstants)

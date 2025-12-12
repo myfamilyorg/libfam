@@ -16,10 +16,10 @@
  *
  * Arguments:   - const u8 *x: pointer to input byte array
  *
- * Returns the loaded 64-bit unsigned integer
+ * Returns the loaded 64-bit u32eger
  **************************************************/
 static u64 load64(const u8 x[8]) {
-	unsigned int i;
+	u32 i;
 	u64 r = 0;
 
 	for (i = 0; i < 8; i++) r |= (u64)x[i] << 8 * i;
@@ -34,10 +34,10 @@ static u64 load64(const u8 x[8]) {
  *order
  *
  * Arguments:   - u8 *x: pointer to the output byte array (allocated)
- *              - u64 u: input 64-bit unsigned integer
+ *              - u64 u: input 64-bit u32eger
  **************************************************/
 static void store64(u8 x[8], u64 u) {
-	unsigned int i;
+	u32 i;
 
 	for (i = 0; i < 8; i++) x[i] = u >> 8 * i;
 }
@@ -335,7 +335,7 @@ static void KeccakF1600_StatePermute(u64 state[25]) {
  * Arguments:   - u64 *s: pointer to Keccak state
  **************************************************/
 static void keccak_init(u64 s[25]) {
-	unsigned int i;
+	u32 i;
 	for (i = 0; i < 25; i++) s[i] = 0;
 }
 
@@ -345,16 +345,16 @@ static void keccak_init(u64 s[25]) {
  * Description: Absorb step of Keccak; incremental.
  *
  * Arguments:   - u64 *s: pointer to Keccak state
- *              - unsigned int pos: position in current block to be absorbed
- *              - unsigned int r: rate in bytes (e.g., 168 for SHAKE128)
+ *              - u32 pos: position in current block to be absorbed
+ *              - u32 r: rate in bytes (e.g., 168 for SHAKE128)
  *              - const u8 *in: pointer to input to be absorbed into s
  *              - u64 inlen: length of input in bytes
  *
  * Returns new position pos in current block
  **************************************************/
-static unsigned int keccak_absorb(u64 s[25], unsigned int pos, unsigned int r,
+static u32 keccak_absorb(u64 s[25], u32 pos, u32 r,
 				  const u8 *in, u64 inlen) {
-	unsigned int i;
+	u32 i;
 
 	while (pos + inlen >= r) {
 		for (i = pos; i < r; i++) s[i / 8] ^= (u64)*in++ << 8 * (i % 8);
@@ -375,11 +375,11 @@ static unsigned int keccak_absorb(u64 s[25], unsigned int pos, unsigned int r,
  * Description: Finalize absorb step.
  *
  * Arguments:   - u64 *s: pointer to Keccak state
- *              - unsigned int pos: position in current block to be absorbed
- *              - unsigned int r: rate in bytes (e.g., 168 for SHAKE128)
+ *              - u32 pos: position in current block to be absorbed
+ *              - u32 r: rate in bytes (e.g., 168 for SHAKE128)
  *              - u8 p: domain separation byte
  **************************************************/
-static void keccak_finalize(u64 s[25], unsigned int pos, unsigned int r, u8 p) {
+static void keccak_finalize(u64 s[25], u32 pos, u32 r, u8 p) {
 	s[pos / 8] ^= (u64)p << 8 * (pos % 8);
 	s[r / 8 - 1] ^= 1ULL << 63;
 }
@@ -394,15 +394,15 @@ static void keccak_finalize(u64 s[25], unsigned int pos, unsigned int r, u8 p) {
  * Arguments:   - u8 *out: pointer to output
  *              - u64 outlen: number of bytes to be squeezed (written to out)
  *              - u64 *s: pointer to input/output Keccak state
- *              - unsigned int pos: number of bytes in current block already
+ *              - u32 pos: number of bytes in current block already
  *squeezed
- *              - unsigned int r: rate in bytes (e.g., 168 for SHAKE128)
+ *              - u32 r: rate in bytes (e.g., 168 for SHAKE128)
  *
  * Returns new position pos in current block
  **************************************************/
-static unsigned int keccak_squeeze(u8 *out, u64 outlen, u64 s[25],
-				   unsigned int pos, unsigned int r) {
-	unsigned int i;
+static u32 keccak_squeeze(u8 *out, u64 outlen, u64 s[25],
+				   u32 pos, u32 r) {
+	u32 i;
 
 	while (outlen) {
 		if (pos == r) {
@@ -425,15 +425,15 @@ static unsigned int keccak_squeeze(u8 *out, u64 outlen, u64 s[25],
  *              non-incremental, starts by zeroeing the state.
  *
  * Arguments:   - u64 *s: pointer to (uninitialized) output Keccak state
- *              - unsigned int r: rate in bytes (e.g., 168 for SHAKE128)
+ *              - u32 r: rate in bytes (e.g., 168 for SHAKE128)
  *              - const u8 *in: pointer to input to be absorbed into s
  *              - u64 inlen: length of input in bytes
  *              - u8 p: domain-separation byte for different Keccak-derived
  *functions
  **************************************************/
-static void keccak_absorb_once(u64 s[25], unsigned int r, const u8 *in,
+static void keccak_absorb_once(u64 s[25], u32 r, const u8 *in,
 			       u64 inlen, u8 p) {
-	unsigned int i;
+	u32 i;
 
 	for (i = 0; i < 25; i++) s[i] = 0;
 
@@ -462,11 +462,11 @@ static void keccak_absorb_once(u64 s[25], unsigned int r, const u8 *in,
  *              - u64 nblocks: number of blocks to be squeezed (written to
  *out)
  *              - u64 *s: pointer to input/output Keccak state
- *              - unsigned int r: rate in bytes (e.g., 168 for SHAKE128)
+ *              - u32 r: rate in bytes (e.g., 168 for SHAKE128)
  **************************************************/
 static void keccak_squeezeblocks(u8 *out, u64 nblocks, u64 s[25],
-				 unsigned int r) {
-	unsigned int i;
+				 u32 r) {
+	u32 i;
 
 	while (nblocks) {
 		KeccakF1600_StatePermute(s);
@@ -706,7 +706,7 @@ void shake256(u8 *out, u64 outlen, const u8 *in, u64 inlen) {
  *              - u64 inlen: length of input in bytes
  **************************************************/
 void sha3_256(u8 h[32], const u8 *in, u64 inlen) {
-	unsigned int i;
+	u32 i;
 	u64 s[25];
 
 	keccak_absorb_once(s, SHA3_256_RATE, in, inlen, 0x06);
@@ -724,7 +724,7 @@ void sha3_256(u8 h[32], const u8 *in, u64 inlen) {
  *              - u64 inlen: length of input in bytes
  **************************************************/
 void sha3_512(u8 h[64], const u8 *in, u64 inlen) {
-	unsigned int i;
+	u32 i;
 	u64 s[25];
 
 	keccak_absorb_once(s, SHA3_512_RATE, in, inlen, 0x06);
