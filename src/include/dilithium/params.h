@@ -1,7 +1,9 @@
+
 #ifndef PARAMS_H
 #define PARAMS_H
 
 #include <dilithium/config.h>
+#include <libfam/types.h>
 
 #define SEEDBYTES 32
 #define CRHBYTES 64

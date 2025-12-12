@@ -3,18 +3,15 @@
 
 #include <dilithium/fips202.h>
 #include <dilithium/params.h>
-#include <stdint.h>
 
 typedef keccak_state stream128_state;
 typedef keccak_state stream256_state;
 
 void dilithium_shake128_stream_init(keccak_state *state,
-				    const uint8_t seed[SEEDBYTES],
-				    uint16_t nonce);
+				    const u8 seed[SEEDBYTES], u16 nonce);
 
 void dilithium_shake256_stream_init(keccak_state *state,
-				    const uint8_t seed[CRHBYTES],
-				    uint16_t nonce);
+				    const u8 seed[CRHBYTES], u16 nonce);
 
 #define STREAM128_BLOCKBYTES SHAKE128_RATE
 #define STREAM256_BLOCKBYTES SHAKE256_RATE
