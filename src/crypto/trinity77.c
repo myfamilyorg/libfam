@@ -28,6 +28,18 @@
 #include <libfam/trinity77.h>
 #include <libfam/utils.h>
 
+/*
+ * #define K 7
+#define L 7
+#define ETA 2
+#define TAU 67
+#define BETA 134
+#define GAMMA1 (1 << 19)
+#define GAMMA2 ((Q-1)/32)
+#define OMEGA 85
+#define CTILDEBYTES 64
+*/
+
 #define N 256
 #define L 7
 #define Q 8380417

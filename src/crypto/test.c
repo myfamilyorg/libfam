@@ -56,7 +56,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					   // println("h1={x},h2={x}", h1, h2);
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -244,7 +244,7 @@ Test(aighthash64_longneighbors) {
 	// println("total_failed={}/{}", total_fail, iter);
 }
 
-#define SYMCRYPT_COUNT ((1000000 / 32))
+#define SYMCRYPT_COUNT ((10000000000 / 32))
 
 Test(storm_perf) {
 	i64 timer;
@@ -297,17 +297,14 @@ Test(storm_perf2) {
 	timer = micros();
 	for (u32 i = 0; i < SYMCRYPT_COUNT; i++) {
 		u8* block1 = buf1 + (i & 32);
-		/*
 		u8* block2 = buf2 + (i & 32);
 		u8* block3 = buf3 + (i & 32);
 		u8* block4 = buf4 + (i & 32);
 		u8* block5 = buf5 + (i & 32);
 		u8* block6 = buf6 + (i & 32);
-		*/
 
 		storm_xcrypt_buffer(&ctx1, block1);
 		sum += ((u64*)block1)[0];
-		/*
 		storm_xcrypt_buffer(&ctx2, block2);
 		sum += ((u64*)block2)[0];
 		storm_xcrypt_buffer(&ctx3, block3);
@@ -318,7 +315,6 @@ Test(storm_perf2) {
 		sum += ((u64*)block6)[0];
 		storm_xcrypt_buffer(&ctx6, block6);
 		sum += ((u64*)block6)[0];
-		*/
 	}
 	timer = micros() - timer;
 	(void)buf2;
@@ -327,10 +323,8 @@ Test(storm_perf2) {
 	(void)buf5;
 	(void)buf6;
 
-	/*
 	println("time={}us, sum={}, avg={}ns", timer, sum,
 		(timer * 1000) / SYMCRYPT_COUNT);
-		*/
 }
 
 Test(storm_longneighbors) {
