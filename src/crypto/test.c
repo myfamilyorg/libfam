@@ -23,12 +23,14 @@
  *
  *******************************************************************************/
 
+#define DILITHIUM_MODE 3
+
+#include <dilithium/sign.h>
 #include <libfam/aighthash.h>
 #include <libfam/asymmetric.h>
 #include <libfam/bible.h>
 #include <libfam/debug.h>
 #include <libfam/env.h>
-#include <libfam/lattice.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
@@ -244,7 +246,7 @@ Test(aighthash64_longneighbors) {
 	// println("total_failed={}/{}", total_fail, iter);
 }
 
-#define SYMCRYPT_COUNT ((10000000000 / 32))
+#define SYMCRYPT_COUNT ((10000000 / 32))
 
 Test(storm_perf) {
 	i64 timer;
@@ -323,8 +325,10 @@ Test(storm_perf2) {
 	(void)buf5;
 	(void)buf6;
 
+	/*
 	println("time={}us, sum={}, avg={}ns", timer, sum,
 		(timer * 1000) / SYMCRYPT_COUNT);
+		*/
 }
 
 Test(storm_longneighbors) {
@@ -494,11 +498,11 @@ Test(storm_key_recovery_integral) {
 
 	storm_init(&ctx, key);
 
-	const int N = 1 << 24;
-	u8* ct = map(N * 32);
+	int NUM = 1 << 24;
+	u8* ct = map(NUM * 32);
 	ASSERT(ct, "alloc");
 
-	for (u32 i = 0; i < N; i++) {
+	for (u32 i = 0; i < NUM; i++) {
 		memset(ct + i * 32, 0, 32);
 		u8 val = i;
 		u8 val2 = i >> 8;
@@ -519,7 +523,7 @@ Test(storm_key_recovery_integral) {
 		ct[i * 32 + 15] ^= val3;
 	}
 
-	for (u32 i = 0; i < N; i++) {
+	for (u32 i = 0; i < NUM; i++) {
 		__attribute__((aligned(32))) u8 block[32];
 		memcpy(block, ct + i * 32, 32);
 		storm_next_block(&ctx, block);
@@ -527,7 +531,7 @@ Test(storm_key_recovery_integral) {
 	}
 
 	u64 xor0 = 0, xor5 = 0, xor10 = 0, xor15 = 0;
-	for (u32 i = 0; i < N; i++) {
+	for (u32 i = 0; i < NUM; i++) {
 		xor0 ^= ct[i * 32 + 0];
 		xor5 ^= ct[i * 32 + 5];
 		xor10 ^= ct[i * 32 + 10];
@@ -538,7 +542,7 @@ Test(storm_key_recovery_integral) {
 
 	ASSERT(active_xor, "active_xor");
 
-	munmap(ct, N * 32);
+	munmap(ct, NUM * 32);
 }
 
 Test(storm_2round_integral_distinguisher) {
@@ -549,14 +553,14 @@ Test(storm_2round_integral_distinguisher) {
 	StormContext ctx;
 	__attribute__((aligned(32))) u8 key[32] = {0};
 
-	const u32 N = 1 << 19;
+	const u32 NUM = 1 << 19;
 	u64 xor_sum[32] = {0};
 
 	for (u32 exp = 0; exp < 16; exp++) {
 		rng_gen(&rng, key, 32);
 		storm_init(&ctx, key);
 
-		for (u32 i = 0; i < N; i++) {
+		for (u32 i = 0; i < NUM; i++) {
 			__attribute__((aligned(32))) u8 block[32] = {0};
 
 			block[0] = (u8)i;
@@ -596,22 +600,6 @@ Test(rng2) {
 		rng_gen(&rng, &v, sizeof(v));
 		// println("v={}", v);
 	}
-}
-
-Test(lattice) {
-	/*
-	__attribute__((aligned(32))) u8 skey[32] = {0, 1, 2};
-	u8 msg[128] = {0};
-	LatticeSK sk;
-	LatticePK pk;
-	LatticeSig sig;
-	lattice_skey(skey, &sk);
-	lattice_sign(&sk, msg, &sig);
-	lattice_pubkey(&sk, &pk);
-	i32 v = lattice_verify(&pk, msg, &sig);
-	(void)v;
-	*/
-	//	println("v={}", v);
 }
 
 Test(asymmetric) {
@@ -697,4 +685,30 @@ Test(storm_ctr) {
 
 	storm_xcrypt_buffer(&recv, buf2);
 	ASSERT(!memcmp(orig2, buf2, 32), "equal");
+}
+
+#define MLEN 59
+#define CTXLEN 14
+
+Test(dilithium) {
+	i32 ret;
+	u64 mlen, smlen;
+	u8 ctx[CTXLEN] = {0};
+	__attribute__((aligned(32))) u8 m[MLEN + CRYPTO_BYTES];
+	u8 m2[MLEN + CRYPTO_BYTES];
+	u8 sm[MLEN + CRYPTO_BYTES];
+	u8 pk[CRYPTO_PUBLICKEYBYTES];
+	u8 sk[CRYPTO_SECRETKEYBYTES];
+	Rng rng;
+
+	rng_init(&rng, NULL);
+	strcpy(ctx, "dilithium");
+	rng_gen(&rng, m, MLEN);
+	crypto_sign_keypair(pk, sk);
+	crypto_sign(sm, &smlen, m, MLEN, ctx, CTXLEN, sk);
+	ret = crypto_sign_open(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
+	ASSERT(!ret, "!ret");
+	sm[0]++;
+	ret = crypto_sign_open(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
+	ASSERT(ret, "ret");
 }
