@@ -695,6 +695,7 @@ Test(dilithium) {
 	u64 mlen, smlen;
 	u8 ctx[CTXLEN] = {0};
 	__attribute__((aligned(32))) u8 m[MLEN + CRYPTO_BYTES] = {0};
+	__attribute__((aligned(32))) u8 rnd[32] = {0};
 	u8 m2[MLEN + CRYPTO_BYTES];
 	u8 sm[MLEN + CRYPTO_BYTES];
 	u8 pk[CRYPTO_PUBLICKEYBYTES];
@@ -702,10 +703,11 @@ Test(dilithium) {
 	Rng rng;
 
 	rng_init(&rng, NULL);
+	rng_gen(&rng, rnd, 32);
 	rng_gen(&rng, m, MLEN);
 	strcpy(ctx, "dilithium");
 
-	dilithium_keypair(pk, sk);
+	dilithium_keyfrom(sk, pk, rnd);
 	dilithium_sign(sm, &smlen, m, MLEN, ctx, CTXLEN, sk);
 	ret = dilithium_verify(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
 	ASSERT(!ret, "!ret");

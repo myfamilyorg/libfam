@@ -7,22 +7,11 @@
 #include <dilithium/sign.h>
 #include <dilithium/symmetric.h>
 #include <libfam/format.h>
+#include <libfam/string.h>
 #include <libfam/sysext.h>
-#include <stdint.h>
+// #include <stdint.h>
 
-/*************************************************
- * Name:        crypto_sign_keypair
- *
- * Description: Generates public and private key.
- *
- * Arguments:   - uint8_t *pk: pointer to output public key (allocated
- *                             array of CRYPTO_PUBLICKEYBYTES bytes)
- *              - uint8_t *sk: pointer to output private key (allocated
- *                             array of CRYPTO_SECRETKEYBYTES bytes)
- *
- * Returns 0 (success)
- **************************************************/
-int dilithium_keypair(uint8_t *pk, uint8_t *sk) {
+void dilithium_keyfrom(uint8_t *sk, uint8_t *pk, u8 seed[32]) {
 	uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
 	uint8_t tr[TRBYTES];
 	const uint8_t *rho, *rhoprime, *key;
@@ -30,8 +19,7 @@ int dilithium_keypair(uint8_t *pk, uint8_t *sk) {
 	polyvecl s1, s1hat;
 	polyveck s2, t1, t0;
 
-	/* Get randomness for rho, rhoprime and key */
-	random32(seedbuf);  // TODO: use randomstir with additional entropy
+	fastmemcpy(seedbuf, seed, 32);
 
 	seedbuf[SEEDBYTES + 0] = K;
 	seedbuf[SEEDBYTES + 1] = L;
@@ -65,8 +53,51 @@ int dilithium_keypair(uint8_t *pk, uint8_t *sk) {
 	/* Compute H(rho, t1) and write secret key */
 	shake256(tr, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
 	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
+}
 
-	return 0;
+void dilithium_keypair(uint8_t *pk, uint8_t *sk) {
+	uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
+	uint8_t tr[TRBYTES];
+	const uint8_t *rho, *rhoprime, *key;
+	polyvecl mat[K];
+	polyvecl s1, s1hat;
+	polyveck s2, t1, t0;
+
+	/* Get randomness for rho, rhoprime and key */
+	random32(seedbuf);
+
+	seedbuf[SEEDBYTES + 0] = K;
+	seedbuf[SEEDBYTES + 1] = L;
+	shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
+	rho = seedbuf;
+	rhoprime = rho + SEEDBYTES;
+	key = rhoprime + CRHBYTES;
+
+	/* Expand matrix */
+	polyvec_matrix_expand(mat, rho);
+
+	/* Sample short vectors s1 and s2 */
+	polyvecl_uniform_eta(&s1, rhoprime, 0);
+	polyveck_uniform_eta(&s2, rhoprime, L);
+
+	/* Matrix-vector multiplication */
+	s1hat = s1;
+	polyvecl_ntt(&s1hat);
+	polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
+	polyveck_reduce(&t1);
+	polyveck_invntt_tomont(&t1);
+
+	/* Add error vector s2 */
+	polyveck_add(&t1, &t1, &s2);
+
+	/* Extract t1 and write public key */
+	polyveck_caddq(&t1);
+	polyveck_power2round(&t1, &t0, &t1);
+	pack_pk(pk, rho, &t1);
+
+	/* Compute H(rho, t1) and write secret key */
+	shake256(tr, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
+	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
 }
 
 /*************************************************
@@ -86,11 +117,11 @@ int dilithium_keypair(uint8_t *pk, uint8_t *sk) {
  *
  * Returns 0 (success)
  **************************************************/
-int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
-				   const uint8_t *m, size_t mlen,
-				   const uint8_t *pre, size_t prelen,
-				   const uint8_t rnd[RNDBYTES],
-				   const uint8_t *sk) {
+void crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
+				    const uint8_t *m, size_t mlen,
+				    const uint8_t *pre, size_t prelen,
+				    const uint8_t rnd[RNDBYTES],
+				    const uint8_t *sk) {
 	unsigned int n;
 	uint8_t seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
 	uint8_t *rho, *tr, *key, *mu, *rhoprime;
@@ -181,7 +212,6 @@ rej:
 	/* Write signature */
 	pack_sig(sig, sig, &z, &h);
 	*siglen = CRYPTO_BYTES;
-	return 0;
 }
 
 /*************************************************
