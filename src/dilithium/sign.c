@@ -22,7 +22,7 @@
  *
  * Returns 0 (success)
  **************************************************/
-int crypto_sign_keypair(uint8_t *pk, uint8_t *sk) {
+int dilithium_keypair(uint8_t *pk, uint8_t *sk) {
 	uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
 	uint8_t tr[TRBYTES];
 	const uint8_t *rho, *rhoprime, *key;
@@ -243,8 +243,8 @@ int crypto_sign_signature(uint8_t *sig, size_t *siglen, const uint8_t *m,
  *
  * Returns 0 (success) or -1 (context string too long)
  **************************************************/
-int crypto_sign(uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen,
-		const uint8_t *ctx, size_t ctxlen, const uint8_t *sk) {
+int dilithium_sign(uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen,
+		   const uint8_t *ctx, size_t ctxlen, const uint8_t *sk) {
 	int ret;
 	size_t i;
 
@@ -374,7 +374,7 @@ int crypto_sign_verify(const uint8_t *sig, size_t siglen, const uint8_t *m,
 }
 
 /*************************************************
- * Name:        crypto_sign_open
+ * Name:        crypto_verify
  *
  * Description: Verify signed message.
  *
@@ -389,7 +389,7 @@ int crypto_sign_verify(const uint8_t *sig, size_t siglen, const uint8_t *m,
  *
  * Returns 0 if signed message could be verified correctly and -1 otherwise
  **************************************************/
-int crypto_sign_open(uint8_t *m, size_t *mlen, const uint8_t *sm, size_t smlen,
+int dilithium_verify(uint8_t *m, size_t *mlen, const uint8_t *sm, size_t smlen,
 		     const uint8_t *ctx, size_t ctxlen, const uint8_t *pk) {
 	size_t i;
 

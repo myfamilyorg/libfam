@@ -58,7 +58,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					    // println("h1={x},h2={x}", h1, h2);
+					   // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -694,7 +694,7 @@ Test(dilithium) {
 	i32 ret;
 	u64 mlen, smlen;
 	u8 ctx[CTXLEN] = {0};
-	__attribute__((aligned(32))) u8 m[MLEN + CRYPTO_BYTES];
+	__attribute__((aligned(32))) u8 m[MLEN + CRYPTO_BYTES] = {0};
 	u8 m2[MLEN + CRYPTO_BYTES];
 	u8 sm[MLEN + CRYPTO_BYTES];
 	u8 pk[CRYPTO_PUBLICKEYBYTES];
@@ -702,13 +702,14 @@ Test(dilithium) {
 	Rng rng;
 
 	rng_init(&rng, NULL);
-	strcpy(ctx, "dilithium");
 	rng_gen(&rng, m, MLEN);
-	crypto_sign_keypair(pk, sk);
-	crypto_sign(sm, &smlen, m, MLEN, ctx, CTXLEN, sk);
-	ret = crypto_sign_open(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
+	strcpy(ctx, "dilithium");
+
+	dilithium_keypair(pk, sk);
+	dilithium_sign(sm, &smlen, m, MLEN, ctx, CTXLEN, sk);
+	ret = dilithium_verify(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
 	ASSERT(!ret, "!ret");
 	sm[0]++;
-	ret = crypto_sign_open(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
+	ret = dilithium_verify(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
 	ASSERT(ret, "ret");
 }
