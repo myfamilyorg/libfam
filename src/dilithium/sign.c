@@ -9,12 +9,11 @@
 #include <libfam/format.h>
 #include <libfam/string.h>
 #include <libfam/sysext.h>
-// #include <stdint.h>
 
-void dilithium_keyfrom(uint8_t *sk, uint8_t *pk, u8 seed[32]) {
-	uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
-	uint8_t tr[TRBYTES];
-	const uint8_t *rho, *rhoprime, *key;
+void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
+	u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
+	u8 tr[TRBYTES];
+	const u8 *rho, *rhoprime, *key;
 	polyvecl mat[K];
 	polyvecl s1, s1hat;
 	polyveck s2, t1, t0;
@@ -55,10 +54,10 @@ void dilithium_keyfrom(uint8_t *sk, uint8_t *pk, u8 seed[32]) {
 	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
 }
 
-void dilithium_keypair(uint8_t *pk, uint8_t *sk) {
-	uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
-	uint8_t tr[TRBYTES];
-	const uint8_t *rho, *rhoprime, *key;
+void dilithium_keypair(u8 *pk, u8 *sk) {
+	u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
+	u8 tr[TRBYTES];
+	const u8 *rho, *rhoprime, *key;
 	polyvecl mat[K];
 	polyvecl s1, s1hat;
 	polyveck s2, t1, t0;
@@ -105,27 +104,25 @@ void dilithium_keypair(uint8_t *pk, uint8_t *sk) {
  *
  * Description: Computes signature. Internal API.
  *
- * Arguments:   - uint8_t *sig:   pointer to output signature (of length
+ * Arguments:   - u8 *sig:   pointer to output signature (of length
  *CRYPTO_BYTES)
- *              - size_t *siglen: pointer to output length of signature
- *              - uint8_t *m:     pointer to message to be signed
- *              - size_t mlen:    length of message
- *              - uint8_t *pre:   pointer to prefix string
- *              - size_t prelen:  length of prefix string
- *              - uint8_t *rnd:   pointer to random seed
- *              - uint8_t *sk:    pointer to bit-packed secret key
+ *              - u64 *siglen: pointer to output length of signature
+ *              - u8 *m:     pointer to message to be signed
+ *              - u64 mlen:    length of message
+ *              - u8 *pre:   pointer to prefix string
+ *              - u64 prelen:  length of prefix string
+ *              - u8 *rnd:   pointer to random seed
+ *              - u8 *sk:    pointer to bit-packed secret key
  *
  * Returns 0 (success)
  **************************************************/
-void crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
-				    const uint8_t *m, size_t mlen,
-				    const uint8_t *pre, size_t prelen,
-				    const uint8_t rnd[RNDBYTES],
-				    const uint8_t *sk) {
-	unsigned int n;
-	uint8_t seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
-	uint8_t *rho, *tr, *key, *mu, *rhoprime;
-	uint16_t nonce = 0;
+void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m,
+				    u64 mlen, const u8 *pre, u64 prelen,
+				    const u8 rnd[RNDBYTES], const u8 *sk) {
+	u32 n;
+	u8 seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
+	u8 *rho, *tr, *key, *mu, *rhoprime;
+	u16 nonce = 0;
 	polyvecl mat[K], s1, y, z;
 	polyveck t0, s2, w1, w0, h;
 	poly cp;
@@ -219,23 +216,22 @@ rej:
  *
  * Description: Computes signature.
  *
- * Arguments:   - uint8_t *sig:   pointer to output signature (of length
+ * Arguments:   - u8 *sig:   pointer to output signature (of length
  *CRYPTO_BYTES)
- *              - size_t *siglen: pointer to output length of signature
- *              - uint8_t *m:     pointer to message to be signed
- *              - size_t mlen:    length of message
- *              - uint8_t *ctx:   pointer to contex string
- *              - size_t ctxlen:  length of contex string
- *              - uint8_t *sk:    pointer to bit-packed secret key
+ *              - u64 *siglen: pointer to output length of signature
+ *              - u8 *m:     pointer to message to be signed
+ *              - u64 mlen:    length of message
+ *              - u8 *ctx:   pointer to contex string
+ *              - u64 ctxlen:  length of contex string
+ *              - u8 *sk:    pointer to bit-packed secret key
  *
  * Returns 0 (success) or -1 (context string too long)
  **************************************************/
-int crypto_sign_signature(uint8_t *sig, size_t *siglen, const uint8_t *m,
-			  size_t mlen, const uint8_t *ctx, size_t ctxlen,
-			  const uint8_t *sk) {
-	size_t i;
-	uint8_t pre[257];
-	uint8_t rnd[RNDBYTES];
+int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
+			  const u8 *ctx, u64 ctxlen, const u8 *sk) {
+	u64 i;
+	u8 pre[257];
+	u8 rnd[RNDBYTES];
 
 	if (ctxlen > 255) return -1;
 
@@ -260,23 +256,23 @@ int crypto_sign_signature(uint8_t *sig, size_t *siglen, const uint8_t *m,
  *
  * Description: Compute signed message.
  *
- * Arguments:   - uint8_t *sm: pointer to output signed message (allocated
+ * Arguments:   - u8 *sm: pointer to output signed message (allocated
  *                             array with CRYPTO_BYTES + mlen bytes),
  *                             can be equal to m
- *              - size_t *smlen: pointer to output length of signed
+ *              - u64 *smlen: pointer to output length of signed
  *                               message
- *              - const uint8_t *m: pointer to message to be signed
- *              - size_t mlen: length of message
- *              - const uint8_t *ctx: pointer to context string
- *              - size_t ctxlen: length of context string
- *              - const uint8_t *sk: pointer to bit-packed secret key
+ *              - const u8 *m: pointer to message to be signed
+ *              - u64 mlen: length of message
+ *              - const u8 *ctx: pointer to context string
+ *              - u64 ctxlen: length of context string
+ *              - const u8 *sk: pointer to bit-packed secret key
  *
  * Returns 0 (success) or -1 (context string too long)
  **************************************************/
-int dilithium_sign(uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen,
-		   const uint8_t *ctx, size_t ctxlen, const uint8_t *sk) {
+int dilithium_sign(u8 *sm, u64 *smlen, const u8 *m, u64 mlen,
+		   const u8 *ctx, u64 ctxlen, const u8 *sk) {
 	int ret;
-	size_t i;
+	u64 i;
 
 	for (i = 0; i < mlen; ++i)
 		sm[CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
@@ -291,26 +287,25 @@ int dilithium_sign(uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen,
  *
  * Description: Verifies signature. Internal API.
  *
- * Arguments:   - uint8_t *m: pointer to input signature
- *              - size_t siglen: length of signature
- *              - const uint8_t *m: pointer to message
- *              - size_t mlen: length of message
- *              - const uint8_t *pre: pointer to prefix string
- *              - size_t prelen: length of prefix string
- *              - const uint8_t *pk: pointer to bit-packed public key
+ * Arguments:   - u8 *m: pointer to input signature
+ *              - u64 siglen: length of signature
+ *              - const u8 *m: pointer to message
+ *              - u64 mlen: length of message
+ *              - const u8 *pre: pointer to prefix string
+ *              - u64 prelen: length of prefix string
+ *              - const u8 *pk: pointer to bit-packed public key
  *
  * Returns 0 if signature could be verified correctly and -1 otherwise
  **************************************************/
-int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
-				const uint8_t *m, size_t mlen,
-				const uint8_t *pre, size_t prelen,
-				const uint8_t *pk) {
+int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
+				u64 mlen, const u8 *pre, u64 prelen,
+				const u8 *pk) {
 	unsigned int i;
-	uint8_t buf[K * POLYW1_PACKEDBYTES];
-	uint8_t rho[SEEDBYTES];
-	uint8_t mu[CRHBYTES];
-	uint8_t c[CTILDEBYTES];
-	uint8_t c2[CTILDEBYTES];
+	u8 buf[K * POLYW1_PACKEDBYTES];
+	u8 rho[SEEDBYTES];
+	u8 mu[CRHBYTES];
+	u8 c[CTILDEBYTES];
+	u8 c2[CTILDEBYTES];
 	poly cp;
 	polyvecl mat[K], z;
 	polyveck t1, w1, h;
@@ -377,21 +372,20 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
  *
  * Description: Verifies signature.
  *
- * Arguments:   - uint8_t *m: pointer to input signature
- *              - size_t siglen: length of signature
- *              - const uint8_t *m: pointer to message
- *              - size_t mlen: length of message
- *              - const uint8_t *ctx: pointer to context string
- *              - size_t ctxlen: length of context string
- *              - const uint8_t *pk: pointer to bit-packed public key
+ * Arguments:   - u8 *m: pointer to input signature
+ *              - u64 siglen: length of signature
+ *              - const u8 *m: pointer to message
+ *              - u64 mlen: length of message
+ *              - const u8 *ctx: pointer to context string
+ *              - u64 ctxlen: length of context string
+ *              - const u8 *pk: pointer to bit-packed public key
  *
  * Returns 0 if signature could be verified correctly and -1 otherwise
  **************************************************/
-int crypto_sign_verify(const uint8_t *sig, size_t siglen, const uint8_t *m,
-		       size_t mlen, const uint8_t *ctx, size_t ctxlen,
-		       const uint8_t *pk) {
-	size_t i;
-	uint8_t pre[257];
+int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
+		       const u8 *ctx, u64 ctxlen, const u8 *pk) {
+	u64 i;
+	u8 pre[257];
 
 	if (ctxlen > 255) return -1;
 
@@ -408,20 +402,20 @@ int crypto_sign_verify(const uint8_t *sig, size_t siglen, const uint8_t *m,
  *
  * Description: Verify signed message.
  *
- * Arguments:   - uint8_t *m: pointer to output message (allocated
+ * Arguments:   - u8 *m: pointer to output message (allocated
  *                            array with smlen bytes), can be equal to sm
- *              - size_t *mlen: pointer to output length of message
- *              - const uint8_t *sm: pointer to signed message
- *              - size_t smlen: length of signed message
- *              - const uint8_t *ctx: pointer to context tring
- *              - size_t ctxlen: length of context string
- *              - const uint8_t *pk: pointer to bit-packed public key
+ *              - u64 *mlen: pointer to output length of message
+ *              - const u8 *sm: pointer to signed message
+ *              - u64 smlen: length of signed message
+ *              - const u8 *ctx: pointer to context tring
+ *              - u64 ctxlen: length of context string
+ *              - const u8 *pk: pointer to bit-packed public key
  *
  * Returns 0 if signed message could be verified correctly and -1 otherwise
  **************************************************/
-int dilithium_verify(uint8_t *m, size_t *mlen, const uint8_t *sm, size_t smlen,
-		     const uint8_t *ctx, size_t ctxlen, const uint8_t *pk) {
-	size_t i;
+int dilithium_verify(u8 *m, u64 *mlen, const u8 *sm, u64 smlen,
+		     const u8 *ctx, u64 ctxlen, const u8 *pk) {
+	u64 i;
 
 	if (smlen < CRYPTO_BYTES) goto badsig;
 
