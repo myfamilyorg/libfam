@@ -657,7 +657,7 @@ Test(storm_ctr) {
 
 Test(dilithium) {
 	i32 ret;
-	u64 mlen, smlen;
+	u64 mlen;
 	__attribute__((aligned(32))) u8 m[MLEN + CRYPTO_BYTES] = {0};
 	__attribute__((aligned(32))) u8 rnd[32] = {0};
 	u8 m2[MLEN + CRYPTO_BYTES];
@@ -671,11 +671,11 @@ Test(dilithium) {
 	rng_gen(&rng, m, MLEN + CRYPTO_BYTES);
 
 	dilithium_keyfrom(sk, pk, rnd);
-	dilithium_sign(sm, &smlen, m, sk);
-	ret = dilithium_verify(m2, &mlen, sm, smlen, NULL, CTXLEN, pk);
+	dilithium_sign(sm, m, sk);
+	ret = dilithium_verify(m2, &mlen, sm, 2548, NULL, CTXLEN, pk);
 	ASSERT(!ret, "!ret");
 	sm[0]++;
-	ret = dilithium_verify(m2, &mlen, sm, smlen, NULL, CTXLEN, pk);
+	ret = dilithium_verify(m2, &mlen, sm, 2548, NULL, CTXLEN, pk);
 	ASSERT(ret, "ret");
 }
 
