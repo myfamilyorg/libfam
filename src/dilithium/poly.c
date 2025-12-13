@@ -274,11 +274,11 @@ static u32 rej_uniform(i32 *a, u32 len, const u8 *buf, u32 buflen) {
 #define POLY_UNIFORM_NBLOCKS \
 	((768 + STREAM128_BLOCKBYTES - 1) / STREAM128_BLOCKBYTES)
 void poly_uniform(poly *a, StormContext *ctx) {
-	static u64 next = U64_MAX / 2;
+	static u64 value = U64_MAX / 2;
 	u32 ctr = 0;
 	__attribute__((aligned(32))) u8 buf[32];
 	for (u32 i = 0; i < 32 / 8; i++)
-		((u64 *)buf)[i] = (i + next++) * 0x9E3779B97F4A7C15ULL;
+		((u64 *)buf)[i] = (i + value) * 0x9E3779B97F4A7C15ULL;
 
 	while (ctr < N) {
 		storm_next_block(ctx, buf);
@@ -345,11 +345,11 @@ static u32 rej_eta(i32 *a, u32 len, const u8 *buf, u32 buflen) {
 	((227 + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
 #endif
 void poly_uniform_eta(poly *a, StormContext *ctx) {
-	static u64 next = U64_MAX / 2;
+	static u64 value = U64_MAX / 2;
 	u32 ctr = 0;
 	__attribute__((aligned(32))) u8 buf[32];
 	for (u32 i = 0; i < 32 / 8; i++)
-		((u64 *)buf)[i] = (i + next++) * 0x9E3779B97F4A7C15ULL;
+		((u64 *)buf)[i] = (i + value) * 0x9E3779B97F4A7C15ULL;
 
 	while (ctr < N) {
 		storm_next_block(ctx, buf);
