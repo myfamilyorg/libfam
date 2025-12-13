@@ -242,16 +242,14 @@ int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
  *
  * Returns 0 (success) or -1 (context string too long)
  **************************************************/
-int dilithium_sign(u8 *sm, u64 *smlen, const u8 *m, u64 mlen, const u8 *ctx,
-		   u64 ctxlen, const u8 *sk) {
+int dilithium_sign(u8 *sm, u64 *smlen, const u8 m[128], const u8 *sk) {
 	int ret;
 	u64 i;
 
-	for (i = 0; i < mlen; ++i)
-		sm[CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
-	ret = crypto_sign_signature(sm, smlen, sm + CRYPTO_BYTES, mlen, ctx,
-				    ctxlen, sk);
-	*smlen += mlen;
+	for (i = 0; i < 128; ++i) sm[CRYPTO_BYTES + i] = m[i];
+	ret = crypto_sign_signature(sm, smlen, sm + CRYPTO_BYTES, 128, NULL, 0,
+				    sk);
+	*smlen += 128;
 	return ret;
 }
 
