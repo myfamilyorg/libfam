@@ -27,7 +27,7 @@ void poly_use_hint(poly *b, const poly *a, const poly *h);
 int poly_chknorm(const poly *a, i32 B);
 void poly_uniform(poly *a, StormContext *ctx);
 void poly_uniform_eta(poly *a, StormContext *ctx);
-void poly_uniform_gamma1(poly *a, const u8 seed[CRHBYTES], u16 nonce);
+void poly_uniform_gamma1(poly *a, StormContext *ctx, u16 nonce);
 void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]);
 
 void polyeta_pack(u8 *r, const poly *a);

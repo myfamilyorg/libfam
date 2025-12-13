@@ -17,7 +17,6 @@
 void polyvec_matrix_expand(polyvec mat[K], const u8 rho[SEEDBYTES]) {
 	u32 i, j;
 	StormContext ctx;
-
 	storm_init(&ctx, rho);
 
 	for (i = 0; i < K; ++i)
@@ -38,9 +37,11 @@ void polyvec_matrix_pointwise_montgomery(polyvec *t, const polyvec mat[K],
 
 void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u16 nonce) {
 	u32 i;
+	StormContext ctx;
+	storm_init(&ctx, seed);
 
 	for (i = 0; i < K; ++i)
-		poly_uniform_gamma1(&v->vec[i], seed, K * nonce + i);
+		poly_uniform_gamma1(&v->vec[i], &ctx, K * nonce + i);
 }
 
 void polyvecl_reduce(polyvec *v) {
