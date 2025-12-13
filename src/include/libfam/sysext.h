@@ -44,6 +44,7 @@ i32 fork(void);
 i32 unlink(const u8 *path);
 void random32(u8 buf[32]);
 void random_stir(u8 current[32], const u8 stir_in[32]);
+u64 read_cycle_counter(void);
 void *map(u64 length);
 void *fmap(i32 fd, i64 size, i64 offset);
 void *smap(u64 length);

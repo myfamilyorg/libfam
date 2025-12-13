@@ -30,7 +30,7 @@
 #include <libfam/storm.h>
 #include <libfam/string.h>
 
-static inline u64 read_cycle_counter(void) {
+PUBLIC u64 read_cycle_counter(void) {
 #if defined(__x86_64__)
 	u32 lo, hi;
 	__asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));

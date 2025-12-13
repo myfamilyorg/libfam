@@ -692,15 +692,15 @@ Test(dilithium_perf) {
 		rng_gen(&rng, rnd, 32);
 		rng_gen(&rng, &m, MLEN);
 
-		u64 start = micros();
+		u64 start = read_cycle_counter();
 		dilithium_keyfrom(&sk, &pk, rnd);
-		keygen_sum += micros() - start;
-		start = micros();
+		keygen_sum += read_cycle_counter() - start;
+		start = read_cycle_counter();
 		dilithium_sign(&sm, &m, &sk);
-		sign_sum += micros() - start;
-		start = micros();
+		sign_sum += read_cycle_counter() - start;
+		start = read_cycle_counter();
 		dilithium_verify(&sm, &pk);
-		verify_sum += micros() - start;
+		verify_sum += read_cycle_counter() - start;
 	}
 	println("keygen={},sign={},verify={}", keygen_sum / DILITHIUM_COUNT,
 		sign_sum / DILITHIUM_COUNT, verify_sum / DILITHIUM_COUNT);
