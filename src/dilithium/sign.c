@@ -1,10 +1,8 @@
-#include <dilithium/fips202.h>
 #include <dilithium/packing.h>
 #include <dilithium/params.h>
 #include <dilithium/poly.h>
 #include <dilithium/polyvec.h>
 #include <dilithium/sign.h>
-#include <dilithium/symmetric.h>
 #include <libfam/format.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
@@ -28,7 +26,12 @@ __attribute__((aligned(32))) static const u8 DILITHIUM_RHO_PRIME_DOMAIN[32] = {
 __attribute__((aligned(32))) static const u8 DILITHIUM_MU_DOMAIN[32] = {
     0x9e, 0x37, 0x79, 0xb9, 0x7f, 0x4a, 0x7c, 0x17, 0x85, 0xeb,
     0xca, 0x6b, 0xc2, 0xb2, 0xae, 0x37, 0x51, 0x7c, 0xc1, 0xb7,
-    0x27, 0x22, 0x0a, 0x97, 0x00, 0x00, 0x00, 0x03};
+    0x27, 0x22, 0x0a, 0x97, 0x00, 0x00, 0x00, 0x04};
+
+__attribute__((aligned(32))) static const u8 DILITHIUM_CTILDE_DOMAIN[32] = {
+    0x9e, 0x37, 0x79, 0xb9, 0x7f, 0x4a, 0x7c, 0x17, 0x85, 0xeb,
+    0xca, 0x6b, 0xc2, 0xb2, 0xae, 0x37, 0x51, 0x7c, 0xc1, 0xb7,
+    0x27, 0x22, 0x0a, 0x97, 0x00, 0x00, 0x00, 0x05};
 
 void dilithium_keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	u8 *pk = (void *)pk_in;
@@ -117,7 +120,6 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	polyvec mat[K], s1, y, z;
 	polyvec t0, s2, w1, w0, h;
 	poly cp;
-	keccak_state state;
 	StormContext ctx;
 
 	rho = seedbuf;
@@ -177,11 +179,16 @@ rej:
 	polyveck_decompose(&w1, &w0, &w1);
 	polyveck_pack_w1(sig, &w1);
 
-	shake256_init(&state);
-	shake256_absorb(&state, mu, CRHBYTES);
-	shake256_absorb(&state, sig, K * POLYW1_PACKEDBYTES);
-	shake256_finalize(&state);
-	shake256_squeeze(sig, CTILDEBYTES, &state);
+	storm_init(&ctx, DILITHIUM_CTILDE_DOMAIN);
+	__attribute__((
+	    aligned(32))) u8 ctilde_buffer[CRHBYTES + K * POLYW1_PACKEDBYTES];
+	fastmemcpy(ctilde_buffer, mu, CRHBYTES);
+	fastmemcpy(ctilde_buffer + CRHBYTES, sig, K * POLYW1_PACKEDBYTES);
+	for (u32 i = 0; i < CRHBYTES + K * POLYW1_PACKEDBYTES; i += 32)
+		storm_next_block(&ctx, ctilde_buffer + i);
+	fastmemset(sig, 0, 64);
+	storm_next_block(&ctx, sig);
+
 	poly_challenge(&cp, sig);
 	poly_ntt(&cp);
 
@@ -307,12 +314,11 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	__attribute__((aligned(32))) u8 rho[SEEDBYTES];
 	u8 mu[CRHBYTES] = {0};
 	u8 c[CTILDEBYTES];
-	u8 c2[CTILDEBYTES];
+	__attribute__((aligned(32))) u8 c2[CTILDEBYTES] = {0};
 	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES] = {0};
 	poly cp;
 	polyvec mat[K], z;
 	polyvec t1, w1, h;
-	keccak_state state;
 	StormContext ctx;
 
 	if (siglen != CRYPTO_BYTES) {
@@ -368,12 +374,15 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	polyveck_use_hint(&w1, &w1, &h);
 	polyveck_pack_w1(buf, &w1);
 
-	/* Call random oracle and verify challenge */
-	shake256_init(&state);
-	shake256_absorb(&state, mu, CRHBYTES);
-	shake256_absorb(&state, buf, K * POLYW1_PACKEDBYTES);
-	shake256_finalize(&state);
-	shake256_squeeze(c2, CTILDEBYTES, &state);
+	storm_init(&ctx, DILITHIUM_CTILDE_DOMAIN);
+	__attribute__((
+	    aligned(32))) u8 ctilde_buffer[CRHBYTES + K * POLYW1_PACKEDBYTES];
+	fastmemcpy(ctilde_buffer, mu, CRHBYTES);
+	fastmemcpy(ctilde_buffer + CRHBYTES, buf, K * POLYW1_PACKEDBYTES);
+	for (u32 i = 0; i < CRHBYTES + K * POLYW1_PACKEDBYTES; i += 32)
+		storm_next_block(&ctx, ctilde_buffer + i);
+	storm_next_block(&ctx, c2);
+
 	for (i = 0; i < CTILDEBYTES; ++i)
 		if (c[i] != c2[i]) {
 			return -1;
