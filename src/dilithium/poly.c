@@ -3,7 +3,6 @@
 #include <dilithium/poly.h>
 #include <dilithium/reduce.h>
 #include <dilithium/rounding.h>
-#include <dilithium/symmetric.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 
@@ -351,6 +350,8 @@ void poly_uniform_eta(poly *a, StormContext *ctx) {
 	}
 }
 
+#include <libfam/format.h>
+
 /*************************************************
  * Name:        poly_uniform_gamma1m1
  *
@@ -365,11 +366,16 @@ void poly_uniform_eta(poly *a, StormContext *ctx) {
 #define POLY_UNIFORM_GAMMA1_NBLOCKS \
 	((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
 void poly_uniform_gamma1(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
-	u8 buf[POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES];
-	stream256_state state;
+	u8 buf[704] = {0};
+	StormContext ctx;
 
-	stream256_init(&state, seed, nonce);
-	stream256_squeezeblocks(buf, POLY_UNIFORM_GAMMA1_NBLOCKS, &state);
+	storm_init(&ctx, seed);
+	fastmemcpy(buf, &nonce, sizeof(u16));
+
+	for (u32 j = 0; j < 2; j++)
+		for (u32 i = 0; i < 704; i += 32)
+			storm_next_block(&ctx, buf + i);
+
 	polyz_unpack(a, buf);
 }
 

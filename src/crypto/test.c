@@ -335,7 +335,7 @@ Test(storm_longneighbors) {
 	u8 a[32] __attribute__((aligned(32))) = {0};
 	u8 b[32] __attribute__((aligned(32))) = {0};
 	u8 __attribute__((aligned(32))) key[32] = {0};
-	u32 iter = 10;
+	u32 iter = 100;
 	u32 trials = 10000;
 	u32 total_fail = 0;
 
@@ -386,10 +386,10 @@ Test(storm_longneighbors) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
-
+	ASSERT(total_fail == 0, "total fail");
 	/*
-		println("total_failed(storm)={}/{},diff={}", total_fail,
-			iter * 256, max - min);
+		println("total_failed(storm)={}/{},diff={}", total_fail, iter *
+	   256, max - min);
 			*/
 }
 
@@ -654,7 +654,7 @@ Test(dilithium) {
 	SecretKey sk;
 	PublicKey pk;
 	Signature sig;
-	Message msg;
+	Message msg = {0};
 	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
 	Rng rng;
 

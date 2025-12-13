@@ -97,8 +97,8 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 				    const u8 *pre, u64 prelen,
 				    const u8 rnd[RNDBYTES], const u8 *sk) {
 	u32 n;
-	__attribute__((
-	    aligned(32))) u8 seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
+	__attribute__((aligned(
+	    32))) u8 seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES] = {0};
 	u8 *rho, *tr, *key, *mu, *rhoprime;
 	u16 nonce = 0;
 	polyvec mat[K], s1, y, z;
