@@ -33,7 +33,6 @@
 
 void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]);
 void dilithium_sign(u8 *sm, const u8 m[128], const u8 *sk);
-i32 dilithium_verify(u8 *m, u64 *mlen, const u8 *sm, u64 smlen, const u8 *ctx,
-		     u64 ctxlen, const u8 *pk);
+i32 dilithium_verify(u8 m[128], const u8 *sm, const u8 *pk);
 
 #endif /* _SIGN_H */

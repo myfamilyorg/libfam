@@ -386,26 +386,20 @@ int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
  *
  * Returns 0 if signed message could be verified correctly and -1 otherwise
  **************************************************/
-int dilithium_verify(u8 *m, u64 *mlen, const u8 *sm, u64 smlen, const u8 *ctx,
-		     u64 ctxlen, const u8 *pk) {
+int dilithium_verify(u8 m[128], const u8 *sm, const u8 *pk) {
 	u64 i;
-
-	if (smlen < CRYPTO_BYTES) goto badsig;
-
-	*mlen = smlen - CRYPTO_BYTES;
-	if (crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, *mlen, ctx,
-			       ctxlen, pk))
+	if (crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, 128, NULL,
+			       0, pk))
 		goto badsig;
 	else {
 		/* All good, copy msg, return 0 */
-		for (i = 0; i < *mlen; ++i) m[i] = sm[CRYPTO_BYTES + i];
+		for (i = 0; i < 128; ++i) m[i] = sm[CRYPTO_BYTES + i];
 		return 0;
 	}
 
 badsig:
 	/* Signature verification failed */
-	*mlen = 0;
-	for (i = 0; i < smlen; ++i) m[i] = 0;
+	secure_zero(m, 128);
 
 	return -1;
 }

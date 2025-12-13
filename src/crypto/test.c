@@ -23,8 +23,6 @@
  *
  *******************************************************************************/
 
-#define DILITHIUM_MODE 2
-
 #include <dilithium/sign.h>
 #include <libfam/aighthash.h>
 #include <libfam/asymmetric.h>
@@ -57,7 +55,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					   // println("h1={x},h2={x}", h1, h2);
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -657,7 +655,6 @@ Test(storm_ctr) {
 
 Test(dilithium) {
 	i32 ret;
-	u64 mlen;
 	__attribute__((aligned(32))) u8 m[MLEN + CRYPTO_BYTES] = {0};
 	__attribute__((aligned(32))) u8 rnd[32] = {0};
 	u8 m2[MLEN + CRYPTO_BYTES];
@@ -672,10 +669,10 @@ Test(dilithium) {
 
 	dilithium_keyfrom(sk, pk, rnd);
 	dilithium_sign(sm, m, sk);
-	ret = dilithium_verify(m2, &mlen, sm, 2548, NULL, CTXLEN, pk);
+	ret = dilithium_verify(m2, sm, pk);
 	ASSERT(!ret, "!ret");
 	sm[0]++;
-	ret = dilithium_verify(m2, &mlen, sm, 2548, NULL, CTXLEN, pk);
+	ret = dilithium_verify(m2, sm, pk);
 	ASSERT(ret, "ret");
 }
 
