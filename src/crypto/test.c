@@ -57,7 +57,7 @@ Test(aighthash) {
 Test(twobytefails) {
 	u32 h1 = aighthash32("a\0", 2, 0);  // input: 0x61 0x00
 	u32 h2 = aighthash32("ab", 2, 0);   // input: 0x61 0x62
-					   // println("h1={x},h2={x}", h1, h2);
+					    // println("h1={x},h2={x}", h1, h2);
 
 	ASSERT(h1 != h2, "twobyte");
 }
@@ -679,4 +679,24 @@ Test(dilithium) {
 	sm[0]++;
 	ret = dilithium_verify(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
 	ASSERT(ret, "ret");
+}
+
+Test(storm_ctr2) {
+	StormContext ctx1, ctx2;
+	__attribute__((aligned(32))) u8 block[32] = {
+	    99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+	    99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99};
+
+	storm_init(&ctx1, block);
+	storm_init(&ctx2, block);
+
+	storm_xcrypt_buffer(&ctx1, block);
+
+	memset(block, 1, 32);
+	storm_xcrypt_buffer(&ctx2, block);
+
+	memset(block, 2, 32);
+	storm_xcrypt_buffer(&ctx1, block);
+	memset(block, 2, 32);
+	storm_xcrypt_buffer(&ctx2, block);
 }

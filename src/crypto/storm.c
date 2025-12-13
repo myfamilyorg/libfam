@@ -23,6 +23,8 @@
  *
  *******************************************************************************/
 
+#include <libfam/format.h>
+
 #ifdef __AVX2__
 #ifndef NO_AVX2
 #define USE_AVX2

@@ -12,15 +12,18 @@
 
 __attribute__((aligned(32))) static const u8 DILITHIUM_KEYGEN_DOMAIN[32] = {
     5, 3, 5};
+__attribute__((aligned(32))) static const u8 DILITHIUM_TR_DOMAIN[32] = {5, 3,
+									6};
 
 void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 	u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
-	u8 tr[TRBYTES];
+	u8 tr[TRBYTES] = {0};
 	const u8 *rho, *rhoprime, *key;
 	polyvec mat[K];
 	polyvec s1, s1hat;
 	polyvec s2, t1, t0;
 	StormContext ctx;
+	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES] = {0};
 
 	fastmemcpy(seedbuf, seed, 32);
 
@@ -28,10 +31,10 @@ void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 	seedbuf[SEEDBYTES + 1] = K;
 
 	storm_init(&ctx, DILITHIUM_KEYGEN_DOMAIN);
-	storm_xcrypt_buffer(&ctx, seedbuf);
-	storm_xcrypt_buffer(&ctx, seedbuf + 32);
-	storm_xcrypt_buffer(&ctx, seedbuf + 64);
-	storm_xcrypt_buffer(&ctx, seedbuf + 96);
+	storm_next_block(&ctx, seedbuf);
+	storm_next_block(&ctx, seedbuf + 32);
+	storm_next_block(&ctx, seedbuf + 64);
+	storm_next_block(&ctx, seedbuf + 96);
 
 	rho = seedbuf;
 	rhoprime = rho + SEEDBYTES;
@@ -59,13 +62,12 @@ void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 	polyveck_power2round(&t1, &t0, &t1);
 	pack_pk(pk, rho, &t1);
 
-	/* Compute H(rho, t1) and write secret key */
-	shake256(tr, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
-	/*
-       for (u32 i = 0; i < 41; i++) storm_xcrypt_buffer(&ctx, pk + i * 32);
-       storm_xcrypt_buffer(&ctx, tr);
-       storm_xcrypt_buffer(&ctx, tr + 32);
-       */
+	storm_init(&ctx, DILITHIUM_TR_DOMAIN);
+	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
+
+	for (u32 i = 0; i < 41; i++) storm_next_block(&ctx, pk_copy + i * 32);
+	storm_next_block(&ctx, tr);
+	storm_next_block(&ctx, tr + 32);
 
 	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
 }
@@ -274,13 +276,15 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	u32 i;
 	u8 buf[K * POLYW1_PACKEDBYTES];
 	u8 rho[SEEDBYTES];
-	u8 mu[CRHBYTES];
+	u8 mu[CRHBYTES] = {0};
 	u8 c[CTILDEBYTES];
 	u8 c2[CTILDEBYTES];
+	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES] = {0};
 	poly cp;
 	polyvec mat[K], z;
 	polyvec t1, w1, h;
 	keccak_state state;
+	StormContext ctx;
 
 	if (siglen != CRYPTO_BYTES) {
 		return -1;
@@ -294,8 +298,12 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 		return -1;
 	}
 
-	/* Compute CRH(H(rho, t1), pre, msg) */
-	shake256(mu, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
+	storm_init(&ctx, DILITHIUM_TR_DOMAIN);
+	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
+	for (u32 i = 0; i < 41; i++) storm_next_block(&ctx, pk_copy + i * 32);
+	storm_next_block(&ctx, mu);
+	storm_next_block(&ctx, mu + 32);
+
 	shake256_init(&state);
 	shake256_absorb(&state, mu, TRBYTES);
 	shake256_absorb(&state, pre, prelen);

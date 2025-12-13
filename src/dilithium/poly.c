@@ -410,7 +410,7 @@ void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]) {
 
 	storm_init(&state, POLY_CHALLENGE_DOMAIN);
 	fastmemcpy(buf, seed, 32);
-	storm_xcrypt_buffer(&state, buf);
+	storm_next_block(&state, buf);
 
 	signs = 0;
 	for (i = 0; i < 8; ++i) signs |= (u64)buf[i] << 8 * i;
@@ -420,7 +420,7 @@ void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]) {
 	for (i = N - TAU; i < N; ++i) {
 		do {
 			if (pos >= STORM_RATE) {
-				storm_xcrypt_buffer(&state, buf);
+				storm_next_block(&state, buf);
 				pos = 0;
 			}
 
