@@ -350,8 +350,6 @@ void poly_uniform_eta(poly *a, StormContext *ctx) {
 	}
 }
 
-#include <libfam/format.h>
-
 /*************************************************
  * Name:        poly_uniform_gamma1m1
  *
@@ -366,7 +364,7 @@ void poly_uniform_eta(poly *a, StormContext *ctx) {
 #define POLY_UNIFORM_GAMMA1_NBLOCKS \
 	((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
 void poly_uniform_gamma1(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
-	u8 buf[704] = {0};
+	__attribute__((aligned(32))) u8 buf[704] = {0};
 	StormContext ctx;
 
 	storm_init(&ctx, seed);

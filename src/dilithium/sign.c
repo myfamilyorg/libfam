@@ -123,8 +123,8 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	shake256_squeeze(mu, CRHBYTES, &state);
 
 	storm_init(&ctx, DILITHIUM_RHO_PRIME_DOMAIN);
-	__attribute__((
-	    aligned(32))) u8 rho_prime_buf[SEEDBYTES + SEEDBYTES + CRHBYTES];
+	__attribute__((aligned(
+	    32))) u8 rho_prime_buf[SEEDBYTES + SEEDBYTES + CRHBYTES] = {0};
 
 	fastmemcpy(rho_prime_buf, key, SEEDBYTES);
 	fastmemcpy(rho_prime_buf + SEEDBYTES, rnd, RNDBYTES);
