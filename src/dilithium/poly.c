@@ -4,6 +4,12 @@
 #include <dilithium/reduce.h>
 #include <dilithium/rounding.h>
 #include <dilithium/symmetric.h>
+#include <libfam/storm.h>
+#include <libfam/string.h>
+
+#define STORM_RATE 32
+__attribute__((aligned(32))) static const u8 POLY_CHALLENGE_DOMAIN[32] = {2, 3,
+									  4};
 
 /*************************************************
  * Name:        poly_reduce
@@ -236,8 +242,7 @@ int poly_chknorm(const poly *a, i32 B) {
  * Returns number of sampled coefficients. Can be smaller than len if not enough
  * random bytes were given.
  **************************************************/
-static u32 rej_uniform(i32 *a, u32 len, const u8 *buf,
-				u32 buflen) {
+static u32 rej_uniform(i32 *a, u32 len, const u8 *buf, u32 buflen) {
 	u32 ctr, pos;
 	u32 t;
 
@@ -302,8 +307,7 @@ void poly_uniform(poly *a, const u8 seed[SEEDBYTES], u16 nonce) {
  * Returns number of sampled coefficients. Can be smaller than len if not enough
  * random bytes were given.
  **************************************************/
-static u32 rej_eta(i32 *a, u32 len, const u8 *buf,
-			    u32 buflen) {
+static u32 rej_eta(i32 *a, u32 len, const u8 *buf, u32 buflen) {
 	u32 ctr, pos;
 	u32 t0, t1;
 	ctr = pos = 0;
@@ -401,23 +405,22 @@ void poly_uniform_gamma1(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
 void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]) {
 	u32 i, b, pos;
 	u64 signs;
-	u8 buf[SHAKE256_RATE];
-	keccak_state state;
+	__attribute__((aligned(32))) u8 buf[STORM_RATE] = {0};
+	StormContext state;
 
-	shake256_init(&state);
-	shake256_absorb(&state, seed, CTILDEBYTES);
-	shake256_finalize(&state);
-	shake256_squeezeblocks(buf, 1, &state);
+	storm_init(&state, POLY_CHALLENGE_DOMAIN);
+	fastmemcpy(buf, seed, 32);
+	storm_xcrypt_buffer(&state, buf);
 
 	signs = 0;
 	for (i = 0; i < 8; ++i) signs |= (u64)buf[i] << 8 * i;
 	pos = 8;
 
-	for (i = 0; i < N; ++i) c->coeffs[i] = 0;
+	fastmemset(c->coeffs, 0, sizeof(c->coeffs));
 	for (i = N - TAU; i < N; ++i) {
 		do {
-			if (pos >= SHAKE256_RATE) {
-				shake256_squeezeblocks(buf, 1, &state);
+			if (pos >= STORM_RATE) {
+				storm_xcrypt_buffer(&state, buf);
 				pos = 0;
 			}
 
