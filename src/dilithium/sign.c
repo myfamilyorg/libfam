@@ -25,6 +25,11 @@ __attribute__((aligned(32))) static const u8 DILITHIUM_RHO_PRIME_DOMAIN[32] = {
     0xca, 0x6b, 0xc2, 0xb2, 0xae, 0x37, 0x51, 0x7c, 0xc1, 0xb7,
     0x27, 0x22, 0x0a, 0x97, 0x00, 0x00, 0x00, 0x03};
 
+__attribute__((aligned(32))) static const u8 DILITHIUM_MU_DOMAIN[32] = {
+    0x9e, 0x37, 0x79, 0xb9, 0x7f, 0x4a, 0x7c, 0x17, 0x85, 0xeb,
+    0xca, 0x6b, 0xc2, 0xb2, 0xae, 0x37, 0x51, 0x7c, 0xc1, 0xb7,
+    0x27, 0x22, 0x0a, 0x97, 0x00, 0x00, 0x00, 0x03};
+
 void dilithium_keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	u8 *pk = (void *)pk_in;
 	u8 *sk = (void *)sk_in;
@@ -122,13 +127,19 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	rhoprime = mu + CRHBYTES;
 	unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
 
-	/* Compute mu = CRH(tr, pre, msg) */
-	shake256_init(&state);
-	shake256_absorb(&state, tr, TRBYTES);
-	shake256_absorb(&state, pre, prelen);
-	shake256_absorb(&state, m, mlen);
-	shake256_finalize(&state);
-	shake256_squeeze(mu, CRHBYTES, &state);
+	storm_init(&ctx, DILITHIUM_MU_DOMAIN);
+	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + CRHBYTES] = {0};
+	fastmemcpy(mu_copy, tr, TRBYTES);
+	fastmemcpy(mu_copy + TRBYTES, m, mlen);
+	storm_next_block(&ctx, mu_copy);
+	storm_next_block(&ctx, mu_copy + 32);
+	storm_next_block(&ctx, mu_copy + 64);
+	storm_next_block(&ctx, mu_copy + 96);
+	storm_next_block(&ctx, mu_copy + 128);
+	storm_next_block(&ctx, mu_copy + 160);
+	fastmemset(mu, 0, CRHBYTES);
+	storm_next_block(&ctx, mu);
+	storm_next_block(&ctx, mu + 32);
 
 	storm_init(&ctx, DILITHIUM_RHO_PRIME_DOMAIN);
 	__attribute__((aligned(
@@ -322,12 +333,19 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	storm_next_block(&ctx, mu);
 	storm_next_block(&ctx, mu + 32);
 
-	shake256_init(&state);
-	shake256_absorb(&state, mu, TRBYTES);
-	shake256_absorb(&state, pre, prelen);
-	shake256_absorb(&state, m, mlen);
-	shake256_finalize(&state);
-	shake256_squeeze(mu, CRHBYTES, &state);
+	storm_init(&ctx, DILITHIUM_MU_DOMAIN);
+	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + CRHBYTES] = {0};
+	fastmemcpy(mu_copy, mu, TRBYTES);
+	fastmemcpy(mu_copy + TRBYTES, m, mlen);
+	storm_next_block(&ctx, mu_copy);
+	storm_next_block(&ctx, mu_copy + 32);
+	storm_next_block(&ctx, mu_copy + 64);
+	storm_next_block(&ctx, mu_copy + 96);
+	storm_next_block(&ctx, mu_copy + 128);
+	storm_next_block(&ctx, mu_copy + 160);
+	fastmemset(mu, 0, CRHBYTES);
+	storm_next_block(&ctx, mu);
+	storm_next_block(&ctx, mu + 32);
 
 	/* Matrix-vector multiplication; compute Az - c2^dt1 */
 	poly_challenge(&cp, c);
