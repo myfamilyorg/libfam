@@ -26,6 +26,7 @@
 #include <libfam/aighthash.h>
 #include <libfam/atomic.h>
 #include <libfam/format.h>
+#include <libfam/limits.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 
@@ -45,7 +46,7 @@ static inline u64 read_cycle_counter(void) {
 #endif
 }
 
-static u64 global_entropy_counter = 1;
+static u64 global_entropy_counter = U64_MAX / 2;
 
 void random32(u8 out[32]) {
 	__attribute__((aligned(32))) u8 tmp[32] = {0};
