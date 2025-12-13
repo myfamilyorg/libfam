@@ -6,8 +6,12 @@
 #include <dilithium/sign.h>
 #include <dilithium/symmetric.h>
 #include <libfam/format.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/sysext.h>
+
+__attribute__((aligned(32))) static const u8 DILITHIUM_KEYGEN_DOMAIN[32] = {
+    5, 3, 5};
 
 void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 	u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
@@ -16,12 +20,19 @@ void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 	polyvec mat[K];
 	polyvec s1, s1hat;
 	polyvec s2, t1, t0;
+	StormContext ctx;
 
 	fastmemcpy(seedbuf, seed, 32);
 
 	seedbuf[SEEDBYTES + 0] = K;
 	seedbuf[SEEDBYTES + 1] = K;
-	shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
+
+	storm_init(&ctx, DILITHIUM_KEYGEN_DOMAIN);
+	storm_xcrypt_buffer(&ctx, seedbuf);
+	storm_xcrypt_buffer(&ctx, seedbuf + 32);
+	storm_xcrypt_buffer(&ctx, seedbuf + 64);
+	storm_xcrypt_buffer(&ctx, seedbuf + 96);
+
 	rho = seedbuf;
 	rhoprime = rho + SEEDBYTES;
 	key = rhoprime + CRHBYTES;
@@ -50,51 +61,12 @@ void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 
 	/* Compute H(rho, t1) and write secret key */
 	shake256(tr, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
-	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
-}
+	/*
+       for (u32 i = 0; i < 41; i++) storm_xcrypt_buffer(&ctx, pk + i * 32);
+       storm_xcrypt_buffer(&ctx, tr);
+       storm_xcrypt_buffer(&ctx, tr + 32);
+       */
 
-void dilithium_keypair(u8 *pk, u8 *sk) {
-	u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
-	u8 tr[TRBYTES];
-	const u8 *rho, *rhoprime, *key;
-	polyvec mat[K];
-	polyvec s1, s1hat;
-	polyvec s2, t1, t0;
-
-	/* Get randomness for rho, rhoprime and key */
-	random32(seedbuf);
-
-	seedbuf[SEEDBYTES + 0] = K;
-	seedbuf[SEEDBYTES + 1] = K;
-	shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
-	rho = seedbuf;
-	rhoprime = rho + SEEDBYTES;
-	key = rhoprime + CRHBYTES;
-
-	/* Expand matrix */
-	polyvec_matrix_expand(mat, rho);
-
-	/* Sample short vectors s1 and s2 */
-	polyvecl_uniform_eta(&s1, rhoprime, 0);
-	polyveck_uniform_eta(&s2, rhoprime, K);
-
-	/* Matrix-vector multiplication */
-	s1hat = s1;
-	polyvecl_ntt(&s1hat);
-	polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
-	polyveck_reduce(&t1);
-	polyveck_invntt_tomont(&t1);
-
-	/* Add error vector s2 */
-	polyveck_add(&t1, &t1, &s2);
-
-	/* Extract t1 and write public key */
-	polyveck_caddq(&t1);
-	polyveck_power2round(&t1, &t0, &t1);
-	pack_pk(pk, rho, &t1);
-
-	/* Compute H(rho, t1) and write secret key */
-	shake256(tr, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
 	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
 }
 
