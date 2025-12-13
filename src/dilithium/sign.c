@@ -14,8 +14,12 @@ __attribute__((aligned(32))) static const u8 DILITHIUM_KEYGEN_DOMAIN[32] = {
     5, 3, 5};
 __attribute__((aligned(32))) static const u8 DILITHIUM_TR_DOMAIN[32] = {5, 3,
 									6};
+__attribute__((aligned(32))) static const u8 DILITHIUM_RHO_PRIME_DOMAIN[32] = {
+    5, 3, 7};
 
-void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
+void dilithium_keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
+	u8 *pk = (void *)pk_in;
+	u8 *sk = (void *)sk_in;
 	u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
 	u8 tr[TRBYTES] = {0};
 	const u8 *rho, *rhoprime, *key;
@@ -44,8 +48,8 @@ void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]) {
 	polyvec_matrix_expand(mat, rho);
 
 	/* Sample short vectors s1 and s2 */
-	polyvecl_uniform_eta(&s1, rhoprime, 0);
-	polyveck_uniform_eta(&s2, rhoprime, K);
+	polyvec_uniform_eta(&s1, rhoprime, 0);
+	polyvec_uniform_eta(&s2, rhoprime, K);
 
 	/* Matrix-vector multiplication */
 	s1hat = s1;
@@ -100,6 +104,7 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	polyvec t0, s2, w1, w0, h;
 	poly cp;
 	keccak_state state;
+	StormContext ctx;
 
 	rho = seedbuf;
 	tr = rho + SEEDBYTES;
@@ -116,13 +121,19 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	shake256_finalize(&state);
 	shake256_squeeze(mu, CRHBYTES, &state);
 
-	/* Compute rhoprime = CRH(key, rnd, mu) */
-	shake256_init(&state);
-	shake256_absorb(&state, key, SEEDBYTES);
-	shake256_absorb(&state, rnd, RNDBYTES);
-	shake256_absorb(&state, mu, CRHBYTES);
-	shake256_finalize(&state);
-	shake256_squeeze(rhoprime, CRHBYTES, &state);
+	storm_init(&ctx, DILITHIUM_RHO_PRIME_DOMAIN);
+	__attribute__((
+	    aligned(32))) u8 rho_prime_buf[SEEDBYTES + SEEDBYTES + CRHBYTES];
+
+	fastmemcpy(rho_prime_buf, key, SEEDBYTES);
+	fastmemcpy(rho_prime_buf + SEEDBYTES, rnd, RNDBYTES);
+	fastmemcpy(rho_prime_buf + SEEDBYTES + RNDBYTES, mu, CRHBYTES);
+	storm_next_block(&ctx, rho_prime_buf);
+	storm_next_block(&ctx, rho_prime_buf + 32);
+	storm_next_block(&ctx, rho_prime_buf + 64);
+	storm_next_block(&ctx, rho_prime_buf + 96);
+	storm_next_block(&ctx, rhoprime);
+	storm_next_block(&ctx, rhoprime + 32);
 
 	/* Expand matrix and transform vectors */
 	polyvec_matrix_expand(mat, rho);
@@ -216,7 +227,7 @@ int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 #ifdef DILITHIUM_RANDOMIZED_SIGNING
 	random32(rnd);
 #else
-	for (i = 0; i < RNDBYTES; i++) rnd[i] = 0;
+	fastmemset(rnd, 0, RNDBYTES);
 #endif
 
 	crypto_sign_signature_internal(sig, siglen, m, mlen, pre, 2 + ctxlen,
@@ -242,7 +253,11 @@ int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
  *
  * Returns 0 (success) or -1 (context string too long)
  **************************************************/
-void dilithium_sign(u8 *sm, const u8 m[128], const u8 *sk) {
+void dilithium_sign(Signature *sm_in, const Message *msg,
+		    const SecretKey *sk_in) {
+	u8 *sm = (void *)sm_in;
+	const u8 *sk = (void *)sk_in;
+	const u8 *m = (void *)msg;
 	u64 i, smlen;
 
 	for (i = 0; i < 128; ++i) sm[CRYPTO_BYTES + i] = m[i];
@@ -386,20 +401,10 @@ int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
  *
  * Returns 0 if signed message could be verified correctly and -1 otherwise
  **************************************************/
-int dilithium_verify(u8 m[128], const u8 *sm, const u8 *pk) {
-	u64 i;
-	if (crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, 128, NULL,
-			       0, pk))
-		goto badsig;
-	else {
-		/* All good, copy msg, return 0 */
-		for (i = 0; i < 128; ++i) m[i] = sm[CRYPTO_BYTES + i];
-		return 0;
-	}
-
-badsig:
-	/* Signature verification failed */
-	secure_zero(m, 128);
-
-	return -1;
+int dilithium_verify(const Signature *sm_in, const PublicKey *pk_in) {
+	const u8 *sm = (void *)sm_in;
+	const u8 *pk = (void *)pk_in;
+	i32 res = crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, 128,
+				     NULL, 0, pk);
+	return res == 0 ? 0 : -1;
 }

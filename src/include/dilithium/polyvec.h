@@ -10,8 +10,6 @@ typedef struct {
 	poly vec[K];
 } polyvec;
 
-void polyvecl_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce);
-
 void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u16 nonce);
 
 void polyvecl_reduce(polyvec *v);
@@ -27,7 +25,7 @@ void polyvecl_pointwise_acc_montgomery(poly *w, const polyvec *u,
 
 int polyvecl_chknorm(const polyvec *v, i32 B);
 
-void polyveck_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce);
+void polyvec_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce);
 
 void polyveck_reduce(polyvec *v);
 void polyveck_caddq(polyvec *v);

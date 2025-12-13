@@ -2,6 +2,7 @@
 #define POLY_H
 
 #include <dilithium/params.h>
+#include <libfam/storm.h>
 
 typedef struct {
 	i32 coeffs[N];
@@ -24,8 +25,8 @@ u32 poly_make_hint(poly *h, const poly *a0, const poly *a1);
 void poly_use_hint(poly *b, const poly *a, const poly *h);
 
 int poly_chknorm(const poly *a, i32 B);
-void poly_uniform(poly *a, const u8 seed[SEEDBYTES], u16 nonce);
-void poly_uniform_eta(poly *a, const u8 seed[CRHBYTES], u16 nonce);
+void poly_uniform(poly *a, StormContext *ctx);
+void poly_uniform_eta(poly *a, StormContext *ctx);
 void poly_uniform_gamma1(poly *a, const u8 seed[CRHBYTES], u16 nonce);
 void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]);
 

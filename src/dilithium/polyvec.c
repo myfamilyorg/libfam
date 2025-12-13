@@ -1,6 +1,8 @@
 #include <dilithium/params.h>
 #include <dilithium/poly.h>
 #include <dilithium/polyvec.h>
+#include <libfam/storm.h>
+#include <libfam/string.h>
 
 /*************************************************
  * Name:        expand_mat
@@ -14,10 +16,12 @@
  **************************************************/
 void polyvec_matrix_expand(polyvec mat[K], const u8 rho[SEEDBYTES]) {
 	u32 i, j;
+	StormContext ctx;
+
+	storm_init(&ctx, rho);
 
 	for (i = 0; i < K; ++i)
-		for (j = 0; j < K; ++j)
-			poly_uniform(&mat[i].vec[j], rho, (i << 8) + j);
+		for (j = 0; j < K; ++j) poly_uniform(&mat[i].vec[j], &ctx);
 }
 
 void polyvec_matrix_pointwise_montgomery(polyvec *t, const polyvec mat[K],
@@ -31,12 +35,6 @@ void polyvec_matrix_pointwise_montgomery(polyvec *t, const polyvec mat[K],
 /**************************************************************/
 /************ Vectors of polynomials of length K **************/
 /**************************************************************/
-
-void polyvecl_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce) {
-	u32 i;
-
-	for (i = 0; i < K; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
-}
 
 void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u16 nonce) {
 	u32 i;
@@ -143,10 +141,14 @@ int polyvecl_chknorm(const polyvec *v, i32 bound) {
 /************ Vectors of polynomials of length K **************/
 /**************************************************************/
 
-void polyveck_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce) {
+void polyvec_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce) {
+	__attribute__((aligned(32))) u8 nonce_buf[32] = {0};
 	u32 i;
-
-	for (i = 0; i < K; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
+	StormContext ctx;
+	storm_init(&ctx, seed);
+	fastmemcpy(nonce_buf, &nonce, sizeof(u16));
+	storm_next_block(&ctx, nonce_buf);
+	for (i = 0; i < K; ++i) poly_uniform_eta(&v->vec[i], &ctx);
 }
 
 /*************************************************

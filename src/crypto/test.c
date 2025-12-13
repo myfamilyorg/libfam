@@ -650,30 +650,60 @@ Test(storm_ctr) {
 	ASSERT(!memcmp(orig2, buf2, 32), "equal");
 }
 
-#define MLEN 128
-#define CTXLEN 0
-
 Test(dilithium) {
-	i32 ret;
-	__attribute__((aligned(32))) u8 m[MLEN + CRYPTO_BYTES] = {0};
-	__attribute__((aligned(32))) u8 rnd[32] = {0};
-	u8 m2[MLEN + CRYPTO_BYTES];
-	u8 sm[MLEN + CRYPTO_BYTES];
-	u8 pk[CRYPTO_PUBLICKEYBYTES];
-	u8 sk[CRYPTO_SECRETKEYBYTES];
+	SecretKey sk;
+	PublicKey pk;
+	Signature sig;
+	Message msg;
+	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
 	Rng rng;
 
 	rng_init(&rng, NULL);
-	rng_gen(&rng, rnd, 32);
-	rng_gen(&rng, m, MLEN + CRYPTO_BYTES);
 
-	dilithium_keyfrom(sk, pk, rnd);
-	dilithium_sign(sm, m, sk);
-	ret = dilithium_verify(m2, sm, pk);
-	ASSERT(!ret, "!ret");
-	sm[0]++;
-	ret = dilithium_verify(m2, sm, pk);
-	ASSERT(ret, "ret");
+	for (u32 i = 0; i < 12; i++) {
+		rng_gen(&rng, rnd, 32);
+		rng_gen(&rng, &msg, MLEN);
+
+		dilithium_keyfrom(&sk, &pk, rnd);
+		dilithium_sign(&sig, &msg, &sk);
+		ASSERT(!dilithium_verify(&sig, &pk), "verify");
+		((u8*)&sig)[0]++;
+		ASSERT(dilithium_verify(&sig, &pk), "!verify");
+	}
+}
+
+#define DILITHIUM_COUNT 1024
+
+Test(dilithium_perf) {
+	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
+	Message m;
+	SecretKey sk;
+	PublicKey pk;
+	Signature sm;
+
+	Rng rng;
+	u64 keygen_sum = 0;
+	u64 sign_sum = 0;
+	u64 verify_sum = 0;
+
+	rng_init(&rng, NULL);
+
+	for (u32 i = 0; i < DILITHIUM_COUNT; i++) {
+		rng_gen(&rng, rnd, 32);
+		rng_gen(&rng, &m, MLEN);
+
+		u64 start = micros();
+		dilithium_keyfrom(&sk, &pk, rnd);
+		keygen_sum += micros() - start;
+		start = micros();
+		dilithium_sign(&sm, &m, &sk);
+		sign_sum += micros() - start;
+		start = micros();
+		dilithium_verify(&sm, &pk);
+		verify_sum += micros() - start;
+	}
+	println("keygen={},sign={},verify={}", keygen_sum / DILITHIUM_COUNT,
+		sign_sum / DILITHIUM_COUNT, verify_sum / DILITHIUM_COUNT);
 }
 
 Test(storm_ctr2) {

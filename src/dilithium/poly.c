@@ -253,7 +253,8 @@ static u32 rej_uniform(i32 *a, u32 len, const u8 *buf, u32 buflen) {
 		t |= (u32)buf[pos++] << 16;
 		t &= 0x7FFFFF;
 
-		if (t < Q) a[ctr++] = t;
+		a[ctr] = t;
+		ctr += t < Q;
 	}
 
 	return ctr;
@@ -272,24 +273,13 @@ static u32 rej_uniform(i32 *a, u32 len, const u8 *buf, u32 buflen) {
  **************************************************/
 #define POLY_UNIFORM_NBLOCKS \
 	((768 + STREAM128_BLOCKBYTES - 1) / STREAM128_BLOCKBYTES)
-void poly_uniform(poly *a, const u8 seed[SEEDBYTES], u16 nonce) {
-	u32 i, ctr, off;
-	u32 buflen = POLY_UNIFORM_NBLOCKS * STREAM128_BLOCKBYTES;
-	u8 buf[POLY_UNIFORM_NBLOCKS * STREAM128_BLOCKBYTES + 2];
-	stream128_state state;
-
-	stream128_init(&state, seed, nonce);
-	stream128_squeezeblocks(buf, POLY_UNIFORM_NBLOCKS, &state);
-
-	ctr = rej_uniform(a->coeffs, N, buf, buflen);
+void poly_uniform(poly *a, StormContext *ctx) {
+	u32 ctr = 0;
+	__attribute__((aligned(32))) u8 buf[32] = {0};
 
 	while (ctr < N) {
-		off = buflen % 3;
-		for (i = 0; i < off; ++i) buf[i] = buf[buflen - off + i];
-
-		stream128_squeezeblocks(buf + off, 1, &state);
-		buflen = STREAM128_BLOCKBYTES + off;
-		ctr += rej_uniform(a->coeffs + ctr, N - ctr, buf, buflen);
+		storm_next_block(ctx, buf);
+		ctr += rej_uniform(a->coeffs + ctr, N - ctr, buf, 32);
 	}
 }
 
@@ -351,21 +341,13 @@ static u32 rej_eta(i32 *a, u32 len, const u8 *buf, u32 buflen) {
 #define POLY_UNIFORM_ETA_NBLOCKS \
 	((227 + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
 #endif
-void poly_uniform_eta(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
-	u32 ctr;
-	u32 buflen = POLY_UNIFORM_ETA_NBLOCKS * STREAM256_BLOCKBYTES;
-	u8 buf[POLY_UNIFORM_ETA_NBLOCKS * STREAM256_BLOCKBYTES];
-	stream256_state state;
-
-	stream256_init(&state, seed, nonce);
-	stream256_squeezeblocks(buf, POLY_UNIFORM_ETA_NBLOCKS, &state);
-
-	ctr = rej_eta(a->coeffs, N, buf, buflen);
+void poly_uniform_eta(poly *a, StormContext *ctx) {
+	u32 ctr = 0;
+	__attribute__((aligned(32))) u8 buf[32] = {0};
 
 	while (ctr < N) {
-		stream256_squeezeblocks(buf, 1, &state);
-		ctr += rej_eta(a->coeffs + ctr, N - ctr, buf,
-			       STREAM256_BLOCKBYTES);
+		storm_next_block(ctx, buf);
+		ctr += rej_eta(a->coeffs + ctr, N - ctr, buf, 32);
 	}
 }
 

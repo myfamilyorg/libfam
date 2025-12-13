@@ -26,13 +26,32 @@
 #ifndef _SIGN_H
 #define _SIGN_H
 
-#include <dilithium/params.h>
-#include <dilithium/poly.h>
-#include <dilithium/polyvec.h>
 #include <libfam/types.h>
 
-void dilithium_keyfrom(u8 *sk, u8 *pk, u8 seed[32]);
-void dilithium_sign(u8 *sm, const u8 m[128], const u8 *sk);
-i32 dilithium_verify(u8 m[128], const u8 *sm, const u8 *pk);
+#define MLEN 128
+#define SEEDLEN 32
+#define SECRET_KEY_SIZE 4096
+#define PUBLIC_KEY_SIZE 4096
+#define SIGNATURE_SIZE 4096
+
+typedef struct {
+	__attribute__((aligned(32))) u8 data[SECRET_KEY_SIZE];
+} SecretKey;
+
+typedef struct {
+	__attribute__((aligned(32))) u8 data[PUBLIC_KEY_SIZE];
+} PublicKey;
+
+typedef struct {
+	__attribute__((aligned(32))) u8 data[SIGNATURE_SIZE];
+} Signature;
+
+typedef struct {
+	__attribute__((aligned(32))) u8 data[MLEN];
+} Message;
+
+void dilithium_keyfrom(SecretKey *sk, PublicKey *pk, u8 seed[SEEDLEN]);
+void dilithium_sign(Signature *sig, const Message *msg, const SecretKey *sk);
+i32 dilithium_verify(const Signature *sig, const PublicKey *pk);
 
 #endif /* _SIGN_H */
