@@ -128,7 +128,7 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
 
 	storm_init(&ctx, DILITHIUM_MU_DOMAIN);
-	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + CRHBYTES] = {0};
+	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + 128] = {0};
 	fastmemcpy(mu_copy, tr, TRBYTES);
 	fastmemcpy(mu_copy + TRBYTES, m, mlen);
 	storm_next_block(&ctx, mu_copy);
@@ -334,7 +334,7 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	storm_next_block(&ctx, mu + 32);
 
 	storm_init(&ctx, DILITHIUM_MU_DOMAIN);
-	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + CRHBYTES] = {0};
+	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + 128] = {0};
 	fastmemcpy(mu_copy, mu, TRBYTES);
 	fastmemcpy(mu_copy + TRBYTES, m, mlen);
 	storm_next_block(&ctx, mu_copy);
