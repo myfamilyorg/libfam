@@ -20,7 +20,7 @@ __attribute__((aligned(32))) static const u8 DILITHIUM_RHO_PRIME_DOMAIN[32] = {
 void dilithium_keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	u8 *pk = (void *)pk_in;
 	u8 *sk = (void *)sk_in;
-	u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
+	__attribute__((aligned(32))) u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
 	u8 tr[TRBYTES] = {0};
 	const u8 *rho, *rhoprime, *key;
 	polyvec mat[K];
@@ -97,7 +97,8 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 				    const u8 *pre, u64 prelen,
 				    const u8 rnd[RNDBYTES], const u8 *sk) {
 	u32 n;
-	u8 seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
+	__attribute__((
+	    aligned(32))) u8 seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
 	u8 *rho, *tr, *key, *mu, *rhoprime;
 	u16 nonce = 0;
 	polyvec mat[K], s1, y, z;
@@ -284,7 +285,7 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 				const u8 *pk) {
 	u32 i;
 	u8 buf[K * POLYW1_PACKEDBYTES];
-	u8 rho[SEEDBYTES];
+	__attribute__((aligned(32))) u8 rho[SEEDBYTES];
 	u8 mu[CRHBYTES] = {0};
 	u8 c[CTILDEBYTES];
 	u8 c2[CTILDEBYTES];
