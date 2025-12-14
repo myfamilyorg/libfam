@@ -51,8 +51,6 @@ static const i32 zetas[N] = {
  * Arguments:   - u32 p[N]: input/output coefficient array
  **************************************************/
 
-#include <immintrin.h>
-#include <libfam/format.h>
 #include <libfam/utils.h>
 
 void ntt_avx(i32 a[N], const i32 zetas[N]);
