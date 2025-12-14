@@ -36,7 +36,7 @@
 
 static u64 global_entropy_counter = U64_MAX / 2;
 
-STATIC u64 read_cycle_counter(void) {
+u64 read_cycle_counter(void) {
 #if defined(__x86_64__)
 	u32 lo, hi;
 	mfence();

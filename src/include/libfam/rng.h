@@ -33,72 +33,14 @@ typedef struct {
 	StormContext ctx;
 } Rng;
 
-/*
- * Function: rng_init
- * Initializes a new RNG instance with a cryptographically secure seed.
- * inputs:
- *         Rng *rng - pointer to uninitialized Rng structure.
- * return value: i32 - 0 on success, -1 on error with errno set.
- *         void *opt_entropy - optional additional entropy source.
- * MUST either point to a 32 byte memory location that contains user
- * provided entropy or be NULL. If NULL, no additional entropy is used.
- * errors: none
- * notes:
- *         Seeds from entropy sources of random function.
- *         Must be called before rng_gen.
- *         Safe to call multiple times (reseeds).
- */
 void rng_init(Rng *rng, const void *opt_entropy);
-
-/*
- * Function: rng_reseed
- * Forces a reseed from the entropy source.
- * inputs:
- *         Rng *rng - pointer to initialized Rng.
- * return value: i32 - 0 on success, -1 on error with errno set.
- *         void *opt_entropy - optional entropy source must be 32 byte
- * memory location. If NULL, ignored.
- * errors: none
- * notes:
- *         Useful for long-running processes or after fork().
- *         Does not interrupt in-progress rng_gen calls.
- */
 void rng_reseed(Rng *rng, const void *opt_entropy);
-
-/*
- * Function: rng_gen
- * Generates cryptographically secure random bytes.
- * inputs:
- *         Rng *rng  - pointer to initialized Rng.
- *         void *v   - buffer to fill with random data.
- *         u64 size  - number of bytes to generate.
- * return value: None.
- * errors: None.
- * notes:
- *         rng must be initialized with rng_init.
- *         v must not be null and must have at least size bytes.
- *         Uses Storm: each call advances the counter and encrypts.
- *         Suitable for keys, nonces, salts, etc.
- *         Constant-time and side-channel resistant.
- */
 void rng_gen(Rng *rng, void *v, u64 size);
 
 #if TEST == 1
-/*
- * Function: rng_test_seed
- * [TEST ONLY] Seeds the RNG with a user-provided key and IV.
- * inputs:
- *         Rng *rng         - pointer to Rng structure.
- *         u8 key[32]       - 256-bit Storm key.
- * return value: None.
- * errors: None.
- * notes:
- *         Only available when TEST == 1.
- *         For deterministic testing and fuzzing.
- *         Bypasses entropy source.
- *         Do not use in production.
- */
 void rng_test_seed(Rng *rng, u8 key[32]);
 #endif /* TEST */
+
+u64 read_cycle_counter(void);
 
 #endif /* _RNG_H */
