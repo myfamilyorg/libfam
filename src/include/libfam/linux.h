@@ -91,11 +91,10 @@ struct io_uring_cqe {
 	u64 big_cqe[];
 };
 
-/* Exact copy of struct open_how from Linux 6.14 uapi/linux/openat2.h */
 struct open_how {
-	u64 flags;   /* O_* flags – same values as open(2) */
-	u64 mode;    /* File mode (only used with O_CREAT/O_TMPFILE) */
-	u64 resolve; /* RESOLVE_* flags – usually 0 */
+	u64 flags;
+	u64 mode;
+	u64 resolve;
 };
 
 struct io_uring_sqe {
@@ -296,9 +295,6 @@ enum {
 	IORING_REGISTER_USE_REGISTERED_RING = 1U << 31
 };
 
-/*
- * sqe->timeout_flags
- */
 #define IORING_TIMEOUT_ABS (1U << 0)
 #define IORING_TIMEOUT_UPDATE (1U << 1)
 #define IORING_TIMEOUT_BOOTTIME (1U << 2)

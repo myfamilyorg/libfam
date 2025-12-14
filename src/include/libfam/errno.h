@@ -18,12 +18,7 @@ i32 *__error(void);
 char *strerror(i32 err_code);
 void perror(const char *s);
 
-#define SUCCESS 0 /* Success */
-
-/* Standard POSIX / Linux error codes — complete, correct order, no duplicates
- */
-/* As defined in Linux 6.11+ (November 2025) */
-
+#define SUCCESS 0	/* Success */
 #define EPERM 1		/* Operation not permitted */
 #define ENOENT 2	/* No such file or directory */
 #define ESRCH 3		/* No such process */
@@ -156,12 +151,9 @@ void perror(const char *s);
 #define EKEYEXPIRED 127	   /* Key has expired */
 #define EKEYREVOKED 128	   /* Key has been revoked */
 #define EKEYREJECTED 129   /* Key was rejected by service */
-
-/* Aliases */
 #define EWOULDBLOCK EAGAIN /* Operation would block */
 #define EDEADLOCK EDEADLK  /* Resource deadlock avoided */
 
-/* Your custom error codes — safely above everything */
 #define EDUPLICATE 1001 /* Duplicate entry */
 #define ETODO 1002	/* Feature not implemented (temporary) */
 

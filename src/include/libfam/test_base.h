@@ -81,42 +81,42 @@ CLEANUP:
 	}                                                                  \
 	void __test_##name(void)
 
-#define ASSERT_EQ(x, y, msg)                                                   \
-	do {                                                                   \
-		if ((x) != (y)) {                                              \
-			i32 __attribute((unused)) _v;                          \
-			_v = pwrite(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED), \
-				    0);                                        \
-			_v = pwrite(STDERR_FD, __assertion_msg,                \
-				    strlen(__assertion_msg), 0);               \
-			_v = pwrite(STDERR_FD, RESET, strlen(RESET), 0);       \
-			_v = pwrite(STDERR_FD, ": [", 3, 0);                   \
-			_v = pwrite(STDERR_FD, tests[exe_test].name,           \
-				    strlen(tests[exe_test].name), 0);          \
-			_v = pwrite(STDERR_FD, "]. '", 4, 0);                  \
-			_v = pwrite(STDERR_FD, msg, strlen(msg), 0);           \
-			_v = pwrite(STDERR_FD, "'\n", 2, 0);                   \
-			_exit(-1);                                             \
-		}                                                              \
+#define ASSERT_EQ(x, y, msg)                                                 \
+	do {                                                                 \
+		if ((x) != (y)) {                                            \
+			i32 __attribute((unused)) _v;                        \
+			_v = pwrite(STDERR_FD, BRIGHT_RED,                   \
+				    faststrlen(BRIGHT_RED), 0);              \
+			_v = pwrite(STDERR_FD, __assertion_msg,              \
+				    faststrlen(__assertion_msg), 0);         \
+			_v = pwrite(STDERR_FD, RESET, faststrlen(RESET), 0); \
+			_v = pwrite(STDERR_FD, ": [", 3, 0);                 \
+			_v = pwrite(STDERR_FD, tests[exe_test].name,         \
+				    faststrlen(tests[exe_test].name), 0);    \
+			_v = pwrite(STDERR_FD, "]. '", 4, 0);                \
+			_v = pwrite(STDERR_FD, msg, faststrlen(msg), 0);     \
+			_v = pwrite(STDERR_FD, "'\n", 2, 0);                 \
+			_exit(-1);                                           \
+		}                                                            \
 	} while (0);
 
-#define ASSERT(x, msg)                                                         \
-	do {                                                                   \
-		if (!(x)) {                                                    \
-			i32 __attribute((unused)) _v;                          \
-			_v = pwrite(STDERR_FD, BRIGHT_RED, strlen(BRIGHT_RED), \
-				    0);                                        \
-			_v = pwrite(STDERR_FD, __assertion_msg,                \
-				    strlen(__assertion_msg), 0);               \
-			_v = pwrite(STDERR_FD, RESET, strlen(RESET), 0);       \
-			_v = pwrite(STDERR_FD, ": [", 3, 0);                   \
-			_v = pwrite(STDERR_FD, tests[exe_test].name,           \
-				    strlen(tests[exe_test].name), 0);          \
-			_v = pwrite(STDERR_FD, "]. '", 4, 0);                  \
-			_v = pwrite(STDERR_FD, msg, strlen(msg), 0);           \
-			_v = pwrite(STDERR_FD, "'\n", 2, 0);                   \
-			_exit(-1);                                             \
-		}                                                              \
+#define ASSERT(x, msg)                                                       \
+	do {                                                                 \
+		if (!(x)) {                                                  \
+			i32 __attribute((unused)) _v;                        \
+			_v = pwrite(STDERR_FD, BRIGHT_RED,                   \
+				    faststrlen(BRIGHT_RED), 0);              \
+			_v = pwrite(STDERR_FD, __assertion_msg,              \
+				    faststrlen(__assertion_msg), 0);         \
+			_v = pwrite(STDERR_FD, RESET, faststrlen(RESET), 0); \
+			_v = pwrite(STDERR_FD, ": [", 3, 0);                 \
+			_v = pwrite(STDERR_FD, tests[exe_test].name,         \
+				    faststrlen(tests[exe_test].name), 0);    \
+			_v = pwrite(STDERR_FD, "]. '", 4, 0);                \
+			_v = pwrite(STDERR_FD, msg, faststrlen(msg), 0);     \
+			_v = pwrite(STDERR_FD, "'\n", 2, 0);                 \
+			_exit(-1);                                           \
+		}                                                            \
 	} while (0);
 
 #endif /* _TEST_BASE_H */

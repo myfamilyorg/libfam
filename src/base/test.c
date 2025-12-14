@@ -980,9 +980,17 @@ Test(maps) {
 	munmap(x, 1);
 	i32 fd = file("resources/akjv5.txt");
 	ASSERT(fd > 0, "open");
-	write_num(2, fd);
 	x = fmap(fd, 4096, 0);
 	ASSERT(x, "fmap");
 	munmap(x, 4096);
 	close(fd);
+}
+
+Test(fast) {
+	u8 v1[] = "test1";
+	u8 v2[] = "test2";
+	u8 v3[] = "test1";
+
+	ASSERT(fastmemcmp(v1, v2, 5) != 0, "fastmemcmp ne");
+	ASSERT(fastmemcmp(v1, v3, 5) == 0, "fastmemcmp eq");
 }

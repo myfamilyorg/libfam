@@ -81,7 +81,7 @@ char *getenv(const char *name) {
 	RbTreeNodePair pair = {0};
 	EnvNode node;
 	node.key = name;
-	node.key_len = strlen(name);
+	node.key_len = faststrlen(name);
 	env_rbtree_search(__env_tree.root, (const RbTreeNode *)&node, &pair);
 	if (pair.self) ret = (u8 *)((EnvNode *)pair.self)->value;
 	return ret;

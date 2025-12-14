@@ -37,12 +37,12 @@ void perror(const char *s) {
 	const u8 *err_msg;
 	i32 __attribute__((unused)) _v;
 	if (s) {
-		u64 len = strlen(s);
+		u64 len = faststrlen(s);
 		if (pwrite(STDERR_FD, s, len, 0) < len) return;
 		if (pwrite(STDERR_FD, ": ", 2, 0) < 2) return;
 	}
 	err_msg = strerror(errno);
-	_v = pwrite(STDERR_FD, err_msg, strlen(err_msg), 0);
+	_v = pwrite(STDERR_FD, err_msg, faststrlen(err_msg), 0);
 	_v = pwrite(STDERR_FD, "\n", 1, 0);
 }
 

@@ -28,13 +28,13 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
-PUBLIC u64 strlen(const char *x) {
+u64 strlen(const char *x) {
 	const char *y = x;
 	while (*x) x++;
 	return x - y;
 }
 
-PUBLIC i32 strcmp(const char *x, const char *y) {
+i32 strcmp(const char *x, const char *y) {
 	while (*x == *y && *x) x++, y++;
 	return *x > *y ? 1 : *y > *x ? -1 : 0;
 }
@@ -45,7 +45,7 @@ char *strcpy(char *dest, const char *src) {
 	return dest;
 }
 
-PUBLIC char *strncpy(char *dest, const char *src, u64 n) {
+char *strncpy(char *dest, const char *src, u64 n) {
 	u64 i;
 	for (i = 0; i < n && src[i] != '\0'; i++) dest[i] = src[i];
 	for (; i < n; i++) dest[i] = '\0';
@@ -66,19 +66,19 @@ char *strchr(const char *s, i32 c) {
 	return !c ? (char *)s : NULL;
 }
 
-PUBLIC i32 strncmp(const char *x, const char *y, u64 n) {
+i32 strncmp(const char *x, const char *y, u64 n) {
 	while (n > 0 && *x == *y && *x) x++, y++, n--;
 	if (n == 0) return 0;
 	return (char)*x - (char)*y;
 }
 
-PUBLIC void *memset(void *dest, i32 c, u64 n) {
+void *memset(void *dest, i32 c, u64 n) {
 	u8 *tmp = dest;
 	while (n--) *tmp++ = (char)c;
 	return dest;
 }
 
-PUBLIC void *memcpy(void *dest, const void *src, u64 n) {
+void *memcpy(void *dest, const void *src, u64 n) {
 	u8 *d = (u8 *)dest;
 	const u8 *s = (void *)src;
 	while (n--) *d++ = *s++;
@@ -95,7 +95,7 @@ i32 memcmp(const void *s1, const void *s2, u64 n) {
 	return 0;
 }
 
-PUBLIC void *memmove(void *dest, const void *src, u64 n) {
+void *memmove(void *dest, const void *src, u64 n) {
 	u8 *d = (void *)((u8 *)dest + n);
 	u8 *s = (void *)((u8 *)src + n);
 	while (n--) d--, s--, *d = *s;
