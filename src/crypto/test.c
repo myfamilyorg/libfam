@@ -24,6 +24,7 @@
  *******************************************************************************/
 
 #include <libfam/aighthash.h>
+#include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
 
@@ -88,4 +89,21 @@ Test(storm) {
 
 	storm_xcrypt_buffer(&ctx2, buffer5);
 	ASSERT(!memcmp(buffer5, "x", 1), "eq5");
+}
+
+Test(rng) {
+	Rng rng1;
+	__attribute__((aligned(32))) u8 v[36] = {0};
+	__attribute__((aligned(32))) u8 entropy[] = {
+	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
+	    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+	__attribute__((aligned(32))) u8 k1[32] = {1};
+
+	rng_init(&rng1, entropy);
+
+	rng_gen(&rng1, v, 36);
+	ASSERT(memcmp(v, entropy, 32), "check entropy");
+
+	rng_reseed(&rng1, NULL);
+	rng_test_seed(&rng1, k1);
 }

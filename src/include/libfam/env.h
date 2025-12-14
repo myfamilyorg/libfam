@@ -31,4 +31,15 @@
 char *getenv(const char *name);
 i32 init_environ(u8 **envp);
 
+#define IS_VALGRIND()                           \
+	({                                      \
+		bool _ret__;                    \
+		u8 *_vg__ = getenv("VALGRIND"); \
+		if (_vg__ && _vg__[0] == '1')   \
+			_ret__ = true;          \
+		else                            \
+			_ret__ = false;         \
+		_ret__;                         \
+	})
+
 #endif /* _ENV_H */
