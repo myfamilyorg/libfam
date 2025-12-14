@@ -26,15 +26,6 @@
 #ifndef _LFAM_STRING_H
 #define _LFAM_STRING_H
 
-#ifndef NO_AVX2
-#ifdef __AVX2__
-#define USE_AVX2
-#endif /* __AVX2__ */
-#endif /* NO_AVX2 */
-
-#ifdef USE_AVX2
-#include <immintrin.h>
-#endif /* USE_AVX2 */
 #include <libfam/types.h>
 
 #define MAX_U128_STRING_LEN 255
@@ -84,14 +75,6 @@ __attribute__((unused, noinline)) static void secure_zero(void *ptr, u64 len) {
 	while (len--) *p++ = 0;
 }
 
-__attribute__((unused, noinline)) static void secure_zero32(u8 buf[32]) {
-#ifdef USE_AVX2
-	__m256i zero = _mm256_setzero_si256();
-	_mm256_store_si256((__m256i *)buf, zero);
-	__asm__ __volatile__("" ::: "memory");	// barrier
-#else
-	secure_zero(buf, 32);
-#endif /* !USE_AVX2 */
-}
+void secure_zero32(u8 buf[32]);
 
-#endif /* _LFAM_STRING_H */
+#endif /* _STRING_H */

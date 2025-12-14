@@ -28,6 +28,17 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
+#ifndef NO_AVX2
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_AVX2 */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+#include <libfam/types.h>
+
 u64 strlen(const char *x) {
 	const char *y = x;
 	while (*x) x++;
@@ -197,3 +208,14 @@ u8 f64_to_string(u8 buf[MAX_F64_STRING_LEN], f64 v, i32 max_decimals,
 	buf[pos] = '\0';
 	return pos;
 }
+
+void secure_zero32(u8 buf[32]) {
+#ifdef USE_AVX2
+	__m256i zero = _mm256_setzero_si256();
+	_mm256_store_si256((__m256i *)buf, zero);
+	__asm__ __volatile__("" ::: "memory");	// barrier
+#else
+	secure_zero(buf, 32);
+#endif /* !USE_AVX2 */
+}
+
