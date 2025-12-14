@@ -23,66 +23,19 @@
  *
  *******************************************************************************/
 
-#include <libfam/aighthash.h>
-#include <libfam/utils.h>
+#ifndef _STORM_H
+#define _STORM_H
 
-#define AIGHT64_INIT 0x9E3779B97F4A7C15ULL
-#define AIGHT32_INIT 0x9E3779B9U
-#define AIGHT_P1 0xc2b2ae35u
-#define AIGHT_P2 0x85ebca6bu
+#include <libfam/types.h>
 
-u32 aighthash32(const void* data, u64 len, u32 seed) {
-	const u8* p = (const u8*)data;
-	u32 h = seed ^ AIGHT32_INIT, tail = 0;
+#define STORM_CONTEXT_SIZE 96
 
-	while (len >= 8) {
-		u64 v = (u64)p[0] | ((u64)p[1] << 8) | ((u64)p[2] << 16) |
-			((u64)p[3] << 24) | ((u64)p[4] << 32) |
-			((u64)p[5] << 40) | ((u64)p[6] << 48) |
-			((u64)p[7] << 56);
+typedef struct {
+	__attribute__((aligned(32))) u8 _data[STORM_CONTEXT_SIZE];
+} StormContext;
 
-		h = (h ^ (u32)v) * AIGHT_P2;
-		h ^= h >> 16;
-		h = (h ^ (u32)(v >> 32)) * AIGHT_P1;
-		h ^= h >> 15;
+void storm_init(StormContext *ctx, const u8 key[32]);
+void storm_next_block(StormContext *ctx, u8 buf[32]);
+void storm_xcrypt_buffer(StormContext *s, u8 buf[32]);
 
-		p += 8;
-		len -= 8;
-	}
-	while (len--) tail = (tail << 8) | *p++;
-	h = (h + (u32)len) ^ tail;
-	h = (h ^ (h >> 16)) * AIGHT_P2;
-	return h ^ (h >> 15);
-}
-
-u64 aighthash64(const void* data, u64 len, u64 seed) {
-	const u8* p = (const u8*)data;
-	u64 h = seed ^ AIGHT64_INIT;
-
-	while (len >= 16) {
-		u64 v1 = *(u64*)p;
-		u64 v2 = *(u64*)(p + 8);
-
-		h ^= v1;
-		h *= AIGHT_P2;
-		h ^= h >> 33;
-		h ^= v2;
-		h *= AIGHT_P1;
-		h ^= h >> 29;
-
-		p += 16;
-		len -= 16;
-	}
-
-	u64 tail = 0;
-	while (len--) tail ^= (u64)*p++ << (8 * (len & 7));
-
-	h ^= tail;
-	h ^= len;
-	h *= AIGHT_P2;
-	h ^= h >> 29;
-	h *= AIGHT_P1;
-
-	return h;
-}
-
+#endif /* _STORM_H */
