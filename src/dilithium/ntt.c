@@ -50,18 +50,44 @@ static const i32 zetas[N] = {
  *
  * Arguments:   - u32 p[N]: input/output coefficient array
  **************************************************/
-void ntt(i32 a[N]) {
-	u32 len, start, j, k;
-	i32 zeta, t;
 
-	k = 0;
+#include <immintrin.h>
+#include <libfam/format.h>
+#include <libfam/utils.h>
+
+void ntt_avx(i32 a[N], const i32 zetas[N]);
+
+PUBLIC void ntt(i32 a[N]) {
+	// ntt_avx(a, zetas);
+	u32 len, start, j, k = 0;
+	i32 zeta;
+
 	for (len = 128; len > 0; len >>= 1) {
 		for (start = 0; start < N; start = j + len) {
 			zeta = zetas[++k];
 			for (j = start; j < start + len; ++j) {
-				t = montgomery_reduce((i64)zeta * a[j + len]);
-				a[j + len] = a[j] - t;
-				a[j] = a[j] + t;
+				i32 aj, ajlen, v;
+				i64 w, x, y, z;
+
+				// assignments
+				aj = a[j];
+				w = zeta;
+				x = a[j + len];
+
+				// operations
+				y = x * w;	     // 64 bit mul
+				i32 y_low = (i32)y;  // 32 bit cast
+
+				z = y_low * QINV;  // 32 bit mul
+				z = z * Q;	   // 64 bit mul
+				z = y - z;	   // 64 bit sub
+				v = z >> 32;	   // shift
+				ajlen = aj - v;	   // 32 bit sub
+				aj = aj + v;	   // 32 bit add
+
+				// update state
+				a[j + len] = ajlen;
+				a[j] = aj;
 			}
 		}
 	}

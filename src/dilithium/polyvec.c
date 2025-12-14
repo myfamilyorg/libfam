@@ -35,7 +35,7 @@ void polyvec_matrix_pointwise_montgomery(polyvec *t, const polyvec mat[K],
 /************ Vectors of polynomials of length K **************/
 /**************************************************************/
 
-void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u16 nonce) {
+void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u64 nonce) {
 	u32 i;
 	StormContext ctx;
 	storm_init(&ctx, seed);

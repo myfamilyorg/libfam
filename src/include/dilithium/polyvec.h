@@ -10,7 +10,7 @@ typedef struct {
 	poly vec[K];
 } polyvec;
 
-void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u16 nonce);
+void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u64 nonce);
 
 void polyvecl_reduce(polyvec *v);
 

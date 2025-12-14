@@ -370,12 +370,10 @@ void poly_uniform_eta(poly *a, StormContext *ctx) {
  **************************************************/
 #define POLY_UNIFORM_GAMMA1_NBLOCKS \
 	((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
-void poly_uniform_gamma1(poly *a, StormContext *ctx, u16 nonce) {
+void poly_uniform_gamma1(poly *a, StormContext *ctx, u64 nonce) {
 	__attribute__((aligned(32))) u8 buf[704];
-
-	for (u64 i = 0; i < 704 >> 3; i++)
+	for (u64 i = 0; i < 4; i++)
 		((u64 *)buf)[i] = (i + nonce) * 0x9E3779B97F4A7C15ULL;
-
 	for (u32 i = 0; i < 704; i += 32) storm_next_block(ctx, buf + i);
 
 	polyz_unpack(a, buf);
