@@ -58,10 +58,10 @@ STATIC void random32(u8 out[32]) {
 	StormContext ctx;
 	struct timespec ts;
 	u64 pid = getpid();
+	i32 res;
 
-	if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts) != 0) {
-		clock_gettime(CLOCK_MONOTONIC, &ts);
-	}
+	res = clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+	if (res != 0) clock_gettime(CLOCK_MONOTONIC, &ts);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wframe-address"
