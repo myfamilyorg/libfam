@@ -971,3 +971,18 @@ Test(pipefork) {
 	close(fds[0]);
 }
 
+Test(maps) {
+	void *x = map(1);
+	ASSERT(x, "map");
+	munmap(x, 1);
+	x = smap(1);
+	ASSERT(x, "smap");
+	munmap(x, 1);
+	i32 fd = file("resources/akjv5.txt");
+	ASSERT(fd > 0, "open");
+	write_num(2, fd);
+	x = fmap(fd, 4096, 0);
+	ASSERT(x, "fmap");
+	munmap(x, 4096);
+	close(fd);
+}

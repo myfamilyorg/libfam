@@ -28,4 +28,5 @@
 bool _debug_no_exit = false;
 bool _debug_no_write = false;
 bool _debug_fail_clone = false;
+bool _debug_fail_pipe2 = false;
 
