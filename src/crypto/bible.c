@@ -90,7 +90,7 @@ PUBLIC const Bible *bible_gen(void) {
 	     offset += 32) {
 		for (u32 i = 0; i < STORM_ITER; i++)
 			storm_next_block(&ctx, buffer);
-		println("offset={}", offset);
+		if (offset % (8 * 4096) == 0) println("offset={}", offset);
 
 		fastmemcpy(ret->data + offset, buffer, 32);
 	}
