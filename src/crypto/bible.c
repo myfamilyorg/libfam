@@ -70,7 +70,7 @@ struct __attribute__((aligned(64))) Bible {
 };
 
 PUBLIC const Bible *bible_gen(void) {
-	u8 buffer[32];
+	__attribute__((aligned(32))) u8 buffer[32];
 	StormContext ctx;
 
 	Bible *ret = map(sizeof(Bible) + EXTENDED_BIBLE_SIZE);
