@@ -36,22 +36,6 @@
 
 static u64 global_entropy_counter = U64_MAX / 2;
 
-u64 read_cycle_counter(void) {
-#if defined(__x86_64__)
-	u32 lo, hi;
-	mfence();
-	__asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
-	return ((u64)hi << 32) | lo;
-#elif defined(__aarch64__)
-	u64 cnt;
-	__asm__ __volatile__("isb" : : : "memory");
-	__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(cnt));
-	return cnt;
-#else
-#error "Unsupported architecture"
-#endif
-}
-
 STATIC void random32(u8 out[32]) {
 	__attribute__((aligned(32))) u8 tmp[32];
 	u64 *x = (u64 *)tmp;
@@ -69,7 +53,7 @@ STATIC void random32(u8 out[32]) {
 #pragma GCC diagnostic pop
 	x[1] = (u64)ts.tv_nsec;
 	x[2] = __aadd64(&global_entropy_counter, 1) ^ (u64)&ts;
-	x[3] = read_cycle_counter() ^ pid;
+	x[3] = cycle_counter() ^ pid;
 
 	storm_init(&ctx, tmp);
 	storm_next_block(&ctx, out);

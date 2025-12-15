@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <libfam/atomic.h>
 #include <libfam/debug.h>
 #include <libfam/iouring.h>
 #include <libfam/limits.h>
@@ -179,6 +180,22 @@ void yield(void) {
 	__asm__ __volatile__("pause" ::: "memory");
 #elif defined(__aarch64__)
 	__asm__ __volatile__("yield" ::: "memory");
+#endif
+}
+
+u64 cycle_counter(void) {
+#if defined(__x86_64__)
+	u32 lo, hi;
+	mfence();
+	__asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+	return ((u64)hi << 32) | lo;
+#elif defined(__aarch64__)
+	u64 cnt;
+	__asm__ __volatile__("isb" : : : "memory");
+	__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(cnt));
+	return cnt;
+#else
+#error "Unsupported architecture"
 #endif
 }
 

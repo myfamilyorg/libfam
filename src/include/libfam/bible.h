@@ -23,30 +23,24 @@
  *
  *******************************************************************************/
 
-#ifndef _SYSEXT_H
-#define _SYSEXT_H
+#ifndef _BIBLE_H
+#define _BIBLE_H
 
 #include <libfam/types.h>
 
-void yield(void);
-u64 cycle_counter(void);
-i64 pwrite(i32 fd, const void *buf, u64 len, u64 offset);
-i64 pread(i32 fd, void *buf, u64 len, u64 offset);
-i32 await(i32 pid);
-i32 open(const u8 *path, i32 flags, u32 mode);
-i32 fallocate(i32 fd, u64 new_size);
-i32 fsync(i32 fd);
-i64 fsize(i32 fd);
-i32 close(i32 fd);
-i64 micros(void);
-i32 nsleep(u64 nsec);
-i32 usleep(u64 usec);
-i32 fork(void);
-i32 unlink(const u8 *path);
-void *map(u64 length);
-void *fmap(i32 fd, i64 size, i64 offset);
-void *smap(u64 length);
-i32 file(const u8 *path);
-i32 exists(const u8 *path);
+#define HASH_INPUT_LEN 128
 
-#endif /* _SYSEXT_H */
+typedef struct Bible Bible;
+
+const Bible *bible_gen(void);
+const Bible *bible_load(const u8 *path);
+i32 bible_store(const Bible *b, const u8 *path);
+void bible_sbox8_64(u64 sbox[256]);
+void bible_hash(const Bible *b, const u8 input[HASH_INPUT_LEN], u8 out[32],
+		const u64 sbox[256]);
+i32 mine_block(const Bible *bible, const u8 header[HASH_INPUT_LEN],
+	       const u8 target[32], u8 out[32], u32 *nonce, u32 max_iter,
+	       u64 sbox[256]);
+void bible_destroy(const Bible *b);
+
+#endif /* _BIBLE_H */

@@ -24,6 +24,8 @@
  *******************************************************************************/
 
 #include <libfam/aighthash.h>
+#include <libfam/bible.h>
+#include <libfam/format.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
@@ -106,4 +108,30 @@ Test(rng) {
 
 	rng_reseed(&rng1, NULL);
 	rng_test_seed(&rng1, k1);
+}
+
+#define BIBLE_PATH "resources/test_bible.dat"
+
+Test(bible) {
+	const Bible *b;
+	u64 sbox[256];
+	__attribute__((aligned(32))) static const u8 input[128] = {
+	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
+	    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+	__attribute__((aligned(32))) u8 output[32];
+
+	if (!exists(BIBLE_PATH)) {
+		b = bible_gen();
+		bible_store(b, BIBLE_PATH);
+	} else
+		b = bible_load(BIBLE_PATH);
+
+	bible_sbox8_64(sbox);
+	bible_hash(b, input, output, sbox);
+
+	u8 expected[32] = {0xBF, 0x3E, 0x2,  0xD6, 0xE5, 0xF5, 0x92, 0xCE,
+			   0x9C, 0x1,  0xFF, 0x27, 0xA1, 0xB5, 0x5A, 0x52,
+			   0xD8, 0x4,  0x72, 0xDE, 0x29, 0xF1, 0x80, 0x8E,
+			   0xA0, 0xB6, 0x1C, 0x5D, 0x32, 0x95, 0xFE, 0x2E};
+	ASSERT(!memcmp(output, expected, 32), "hash");
 }
