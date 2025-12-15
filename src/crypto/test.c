@@ -26,6 +26,7 @@
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/format.h>
+#include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
@@ -134,4 +135,39 @@ Test(bible) {
 			   0xD8, 0x4,  0x72, 0xDE, 0x29, 0xF1, 0x80, 0x8E,
 			   0xA0, 0xB6, 0x1C, 0x5D, 0x32, 0x95, 0xFE, 0x2E};
 	ASSERT(!memcmp(output, expected, 32), "hash");
+	bible_destroy(b);
+	b = bible_load(BIBLE_PATH);
+	bible_destroy(b);
+}
+
+Test(bible_mine) {
+	const Bible *b;
+	u32 nonce = 0;
+	u64 sbox[256];
+	__attribute__((aligned(32))) u8 output[32] = {0};
+	u8 target[32];
+	__attribute((aligned(32))) u8 header[HASH_INPUT_LEN];
+
+	for (u32 i = 0; i < HASH_INPUT_LEN; i++) header[i] = i;
+
+	if (!exists(BIBLE_PATH)) {
+		b = bible_gen();
+		bible_store(b, BIBLE_PATH);
+	} else
+		b = bible_load(BIBLE_PATH);
+
+	memset(target, 0xFF, 32);
+	target[0] = 0;
+	target[1] = 0;
+	bible_sbox8_64(sbox);
+	mine_block(b, header, target, output, &nonce, U32_MAX, sbox);
+
+	ASSERT_EQ(nonce, 26647, "nonce");
+	ASSERT(!memcmp(output, (u8[]){0,   0,	130, 112, 151, 22,  74,	 167,
+				      170, 113, 109, 27,  234, 235, 45,	 189,
+				      100, 230, 166, 0,	  116, 241, 182, 57,
+				      182, 170, 158, 209, 46,  165, 155, 209},
+		       32),
+	       "hash");
+	bible_destroy(b);
 }
