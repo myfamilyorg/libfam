@@ -23,6 +23,16 @@
  *
  *******************************************************************************/
 
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __ARM_FEATURE_CRYPTO */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
 #include <libfam/dilithium.h>
 #include <libfam/ntt.h>
 #include <libfam/utils.h>
@@ -66,7 +76,31 @@ static const i32 zetas[N] = {
     -976891,  1612842,	-3545687, -554416,  3919660,  -48306,	-1362209,
     3937738,  1400424,	-846154,  1976782};
 
+#ifdef USE_AVX2
+typedef union {
+	i32 coeffs[624];
+	__m256i vec[78];
+} qdata_t;
+
+extern const qdata_t qdata;
+void ntt_avx(__m256i *a, const __m256i *qdata);
+void nttunpack_avx(__m256i *packed);
+#endif /* USE_AVX2 */
+
 void ntt(i32 a[N]) {
+#ifdef USE_AVX2
+	__m256i packed[32] __attribute__((aligned(32)));
+	for (int i = 0; i < 32; ++i) {
+		packed[i] = _mm256_load_si256((__m256i *)&a[i * 8]);
+	}
+
+	ntt_avx(packed, qdata.vec);
+	nttunpack_avx(packed);
+
+	for (int i = 0; i < 32; ++i) {
+		_mm256_store_si256((__m256i *)&a[i * 8], packed[i]);
+	}
+#else
 	u32 len, start, j, k = 0;
 	i32 zeta;
 
@@ -98,6 +132,7 @@ void ntt(i32 a[N]) {
 			}
 		}
 	}
+#endif /* !USE_AVX2 */
 }
 
 void invntt_tomont(i32 a[N]) {

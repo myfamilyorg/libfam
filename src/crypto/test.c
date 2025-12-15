@@ -256,7 +256,7 @@ Test(perfx) {
 void ntt(i32 a[256]);
 
 Test(ntt) {
-	i32 a[256];
+	__attribute__((aligned(32))) i32 a[256];
 	for (i32 i = -128; i < 128; i++) a[i + 128] = i;
 	ntt(a);
 

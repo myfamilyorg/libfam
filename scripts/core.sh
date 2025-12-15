@@ -1,17 +1,14 @@
 # scripts/core.sh
 # Loaded by every target – contains ALL real build logic
 
-# 1. Source configuration (flags, directories, etc.)
 . "$PROJECT_DIR/scripts/config.sh"
 
 # Generators
 . "$PROJECT_DIR/scripts/xxdir.sh"
 
-# 2. Generate version header
 TAG=$(git describe --tags --dirty 2>/dev/null || echo "unknown")
 printf '#define LIBFAM_VERSION "%s"\n' "$TAG" > "$PROJECT_DIR/src/include/libfam/version.h"
 
-# 3. Global constants
 SUB_DIRS="base crypto core"
 INCDIR="src/include"
 LIB_DIR="${OUTDIR}/lib"
@@ -37,14 +34,35 @@ else
    BLUE="";
 fi
 
+build_asm() {
+    local srcdir="$PROJECT_DIR/src/asm"
+    local objdir="$OBJDIR/asm"
+    mkdir -p "$objdir"
 
-# 4. Helper functions
+    if [ "${ARCH}" = "x86_64" ]; then
+
+        for src in "$srcdir"/*.S; do
+            [ -f "$src" ] || continue
+            basename="${src##*/}"
+
+            obj="$objdir/${basename%.S}.o"
+
+            if [ ! -f "$obj" ] || [ "$src" -nt "$obj" ]; then
+                COMMAND="$CC -I$PROJECT_DIR/$INCDIR -c $src -o $obj";
+                [ "$SILENT" != "1" ] && echo ${COMMAND};
+                ${COMMAND} || exit $?;
+            fi
+        done
+
+    fi
+}
+
 build_subdir() {
     local subdir="$1"
     local allow_test_c="$2"
 
     local srcdir="$PROJECT_DIR/src/$subdir"
-    local objdir="$OBJDIR/$subdir"   # now absolute!
+    local objdir="$OBJDIR/$subdir" 
 
     mkdir -p "$objdir"
 

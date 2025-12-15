@@ -8,8 +8,10 @@ mkdir -p ${BIN_DIR};
 for DIR in $SUB_DIRS; do
         build_subdir ${DIR} 1 || exit $?;
 done
+build_asm
 
 OBJECTS=$(collect_objects)
+
 
 if needs_rebuild "$TEST_LIB_NAME" $OBJECTS; then
         if [ "${OBJECTS}" != "" ]; then
