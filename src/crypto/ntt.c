@@ -34,7 +34,6 @@
 #endif /* USE_AVX2 */
 
 #include <libfam/dilithium.h>
-#include <libfam/ntt.h>
 #include <libfam/utils.h>
 
 static const i32 zetas[N] = {
