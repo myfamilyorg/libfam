@@ -216,8 +216,8 @@ Test(bible_mine) {
 	bible_destroy(b);
 }
 
-/*`
 Test(perfx) {
+	__attribute__((aligned(32))) u8 header[HASH_INPUT_LEN];
 	__attribute__((aligned(32))) u8 buf[32] = {
 	    0,	 0,   130, 112, 151, 22,  74,  167, 170, 113, 109,
 	    27,	 234, 235, 45,	189, 100, 230, 166, 0,	 116, 241,
@@ -236,9 +236,6 @@ Test(perfx) {
 	const Bible *b;
 	u64 sbox[256];
 	__attribute__((aligned(32))) u8 output[32] = {0};
-	u8 target[32];
-	__attribute((aligned(32))) u8 header[HASH_INPUT_LEN];
-
 	for (u32 i = 0; i < HASH_INPUT_LEN; i++) header[i] = i;
 
 	if (!exists(BIBLE_PATH)) {
@@ -247,11 +244,9 @@ Test(perfx) {
 	} else
 		b = bible_load(BIBLE_PATH);
 
-	memset(target, 0xFF, 32);
-	target[0] = 0;
-	target[1] = 0;
-
 	bible_sbox8_64(sbox);
+	c = cycle_counter();
 	bible_hash(b, header, output, sbox);
+	c = cycle_counter() - c;
+	println("c={},v={}", c, output[0]);
 }
-*/
