@@ -36,7 +36,19 @@
 #include <libfam/dilithium.h>
 #include <libfam/utils.h>
 
-static const i32 zetas[N] = {
+#ifdef USE_AVX2
+typedef union {
+	i32 coeffs[624];
+	__m256i vec[78];
+} qdata_t;
+
+extern const qdata_t qdata;
+void ntt_avx(__m256i *a, const __m256i *qdata);
+void invntt_avx(__m256i *a, const __m256i *qdata);
+void nttunpack_avx(__m256i *packed);
+#endif /* !USE_AVX2 */
+
+__attribute__((unused)) static const i32 zetas[N] = {
     0,	      25847,	-2608894, -518909,  237124,   -777960,	-876248,
     466468,   1826347,	2353451,  -359251,  -2091905, 3119733,	-2884855,
     3111497,  2680103,	2725464,  1024112,  -1079900, 3585928,	-549488,
@@ -74,17 +86,6 @@ static const i32 zetas[N] = {
     -260646,  -3833893, -2939036, -2235985, -420899,  -2286327, 183443,
     -976891,  1612842,	-3545687, -554416,  3919660,  -48306,	-1362209,
     3937738,  1400424,	-846154,  1976782};
-
-#ifdef USE_AVX2
-typedef union {
-	i32 coeffs[624];
-	__m256i vec[78];
-} qdata_t;
-
-extern const qdata_t qdata;
-void ntt_avx(__m256i *a, const __m256i *qdata);
-void nttunpack_avx(__m256i *packed);
-#endif /* USE_AVX2 */
 
 void ntt(i32 a[N]) {
 #ifdef USE_AVX2

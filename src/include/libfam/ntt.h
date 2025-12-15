@@ -23,22 +23,13 @@
  *
  *******************************************************************************/
 
-#ifndef _RNG_H
-#define _RNG_H
+#ifndef NTT_H
+#define NTT_H
 
-#include <libfam/storm.h>
+#include <libfam/dilithium.h>
 #include <libfam/types.h>
 
-typedef struct {
-	StormContext ctx;
-} Rng;
+void ntt(i32 a[N]);
+void invntt_tomont(i32 a[N]);
 
-void rng_init(Rng *rng, const void *opt_entropy);
-void rng_reseed(Rng *rng, const void *opt_entropy);
-void rng_gen(Rng *rng, void *v, u64 size);
-
-#if TEST == 1
-void rng_test_seed(Rng *rng, u8 key[32]);
-#endif /* TEST */
-
-#endif /* _RNG_H */
+#endif

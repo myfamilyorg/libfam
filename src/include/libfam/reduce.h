@@ -23,22 +23,18 @@
  *
  *******************************************************************************/
 
-#ifndef _RNG_H
-#define _RNG_H
+#ifndef _REDUCE_H
+#define _REDUCE_H
 
-#include <libfam/storm.h>
+#include <libfam/dilithium.h>
 #include <libfam/types.h>
 
-typedef struct {
-	StormContext ctx;
-} Rng;
+#define MONT -4186625  // 2^32 % Q
+#define QINV 58728449  // q^(-1) mod 2^32
 
-void rng_init(Rng *rng, const void *opt_entropy);
-void rng_reseed(Rng *rng, const void *opt_entropy);
-void rng_gen(Rng *rng, void *v, u64 size);
+i32 montgomery_reduce(i64 a);
+i32 reduce32(i32 a);
+i32 caddq(i32 a);
+i32 freeze(i32 a);
 
-#if TEST == 1
-void rng_test_seed(Rng *rng, u8 key[32]);
-#endif /* TEST */
-
-#endif /* _RNG_H */
+#endif /* _REDUCE_H */

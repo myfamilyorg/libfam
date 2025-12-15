@@ -23,22 +23,18 @@
  *
  *******************************************************************************/
 
-#ifndef _RNG_H
-#define _RNG_H
+#ifndef _ROUNDING_H
+#define _ROUNDING_H
 
-#include <libfam/storm.h>
+#include <libfam/dilithium.h>
 #include <libfam/types.h>
 
-typedef struct {
-	StormContext ctx;
-} Rng;
+i32 power2round(i32 *a0, i32 a);
 
-void rng_init(Rng *rng, const void *opt_entropy);
-void rng_reseed(Rng *rng, const void *opt_entropy);
-void rng_gen(Rng *rng, void *v, u64 size);
+i32 decompose(i32 *a0, i32 a);
 
-#if TEST == 1
-void rng_test_seed(Rng *rng, u8 key[32]);
-#endif /* TEST */
+u32 make_hint(i32 a0, i32 a1);
 
-#endif /* _RNG_H */
+i32 use_hint(i32 a, u32 hint);
+
+#endif /* _ROUNDING_H */

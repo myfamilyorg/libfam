@@ -28,6 +28,7 @@
 #include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
+#include <libfam/sign.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
 
@@ -310,7 +311,7 @@ Test(ntt) {
 void invntt_tomont(i32 a[256]);
 
 Test(invntt_tomont) {
-	i32 a[256];
+	__attribute__((aligned(32))) i32 a[256];
 	for (i32 i = -128; i < 128; i++) a[i + 128] = i;
 	invntt_tomont(a);
 
@@ -361,3 +362,65 @@ Test(invntt_tomont) {
 
 	ASSERT(!memcmp(a, expected, sizeof(a)), "result");
 }
+
+Test(dilithium) {
+	SecretKey sk;
+	PublicKey pk;
+	Signature sig;
+	Message msg = {0};
+	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
+	Rng rng;
+
+	rng_init(&rng, NULL);
+
+	for (u32 i = 0; i < 12; i++) {
+		rng_gen(&rng, rnd, 32);
+		rng_gen(&rng, &msg, MLEN);
+
+		dilithium_keyfrom(&sk, &pk, rnd);
+		dilithium_sign(&sig, &msg, &sk);
+		ASSERT(!dilithium_verify(&sig, &pk), "verify");
+		((u8 *)&sig)[0]++;
+		ASSERT(dilithium_verify(&sig, &pk), "!verify");
+	}
+}
+
+#define DILITHIUM_COUNT 1000
+
+Test(dilithium_perf) {
+	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
+	Message m = {0};
+	SecretKey sk;
+	PublicKey pk;
+	Signature sm;
+
+	Rng rng;
+	u64 keygen_sum = 0;
+	u64 sign_sum = 0;
+	u64 verify_sum = 0;
+
+	rng_init(&rng, NULL);
+
+	for (u32 i = 0; i < DILITHIUM_COUNT; i++) {
+		rng_gen(&rng, rnd, 32);
+		rng_gen(&rng, &m, MLEN);
+
+		u64 start = cycle_counter();
+		dilithium_keyfrom(&sk, &pk, rnd);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		dilithium_sign(&sm, &m, &sk);
+		sign_sum += cycle_counter() - start;
+		start = cycle_counter();
+		dilithium_verify(&sm, &pk);
+		verify_sum += cycle_counter() - start;
+	}
+	(void)keygen_sum;
+	(void)sign_sum;
+	(void)verify_sum;
+	/*
+	println("keygen={},sign={},verify={}", keygen_sum / DILITHIUM_COUNT,
+		sign_sum / DILITHIUM_COUNT, verify_sum / DILITHIUM_COUNT);
+		*/
+}
+

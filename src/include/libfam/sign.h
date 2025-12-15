@@ -23,22 +23,35 @@
  *
  *******************************************************************************/
 
-#ifndef _RNG_H
-#define _RNG_H
+#ifndef _SIGN_H
+#define _SIGN_H
 
-#include <libfam/storm.h>
 #include <libfam/types.h>
 
+#define MLEN 128
+#define SEEDLEN 32
+#define SECRET_KEY_SIZE 4096
+#define PUBLIC_KEY_SIZE 4096
+#define SIGNATURE_SIZE 4096
+
 typedef struct {
-	StormContext ctx;
-} Rng;
+	__attribute__((aligned(32))) u8 data[SECRET_KEY_SIZE];
+} SecretKey;
 
-void rng_init(Rng *rng, const void *opt_entropy);
-void rng_reseed(Rng *rng, const void *opt_entropy);
-void rng_gen(Rng *rng, void *v, u64 size);
+typedef struct {
+	__attribute__((aligned(32))) u8 data[PUBLIC_KEY_SIZE];
+} PublicKey;
 
-#if TEST == 1
-void rng_test_seed(Rng *rng, u8 key[32]);
-#endif /* TEST */
+typedef struct {
+	__attribute__((aligned(32))) u8 data[SIGNATURE_SIZE];
+} Signature;
 
-#endif /* _RNG_H */
+typedef struct {
+	__attribute__((aligned(32))) u8 data[MLEN];
+} Message;
+
+void dilithium_keyfrom(SecretKey *sk, PublicKey *pk, u8 seed[SEEDLEN]);
+void dilithium_sign(Signature *sig, const Message *msg, const SecretKey *sk);
+i32 dilithium_verify(const Signature *sig, const PublicKey *pk);
+
+#endif /* _SIGN_H */
