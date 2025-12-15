@@ -1,5 +1,5 @@
-#include "consts.h"
-.include "shuffle.inc"
+#include <libfam/asm_const.h>
+#include <libfam/shuffle.inc>
 
 .text
 nttunpack128_avx:

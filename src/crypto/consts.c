@@ -23,7 +23,6 @@
  *
  *******************************************************************************/
 
-#include <immintrin.h>
 #include <libfam/dilithium.h>
 #include <libfam/types.h>
 

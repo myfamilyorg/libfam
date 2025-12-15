@@ -1,5 +1,5 @@
-#include <consts.h>
-.include "shuffle.inc"
+#include <libfam/asm_const.h>
+#include <libfam/shuffle.inc>
 
 .macro butterfly l,h,zl0=1,zl1=1,zh0=2,zh1=2
 vpmuldq		%ymm\zl0,%ymm\h,%ymm13
