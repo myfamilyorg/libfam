@@ -155,7 +155,6 @@ Test(rng) {
 	rng_test_seed(&rng1, k1);
 }
 
-/*
 #define BIBLE_PATH "resources/test_bible.dat"
 
 Test(bible) {
@@ -216,4 +215,3 @@ Test(bible_mine) {
 	       "hash");
 	bible_destroy(b);
 }
-*/
