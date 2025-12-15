@@ -35,7 +35,6 @@
 
 #include <libfam/bible.h>
 #include <libfam/format.h>
-#include <libfam/linux.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
@@ -74,10 +73,8 @@ PUBLIC const Bible *bible_gen(void) {
 	u8 buffer[32];
 	StormContext ctx;
 
-	Bible *ret =
-	    mmap(NULL, sizeof(Bible) + EXTENDED_BIBLE_SIZE,
-		 PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	if (ret == MAP_FAILED) return NULL;
+	Bible *ret = map(sizeof(Bible) + EXTENDED_BIBLE_SIZE);
+	if (!ret) return NULL;
 	ret->flags = 0;
 	fastmemcpy(ret->data, xxdir_file_0, xxdir_file_size_0);
 
@@ -103,8 +100,7 @@ PUBLIC const Bible *bible_gen(void) {
 
 const Bible *bible_load(const u8 *path) {
 	const Bible *ret = NULL;
-	i32 fd = -1;
-	fd = open(path, O_RDWR, 0);
+	i32 fd = file(path);
 
 	if (fd >= 0) {
 		ret = fmap(fd, sizeof(Bible) + EXTENDED_BIBLE_SIZE, 0);
@@ -115,10 +111,10 @@ const Bible *bible_load(const u8 *path) {
 }
 
 PUBLIC i32 bible_store(const Bible *bible, const u8 *path) {
-	i32 fd = -1;
+	i32 fd;
 	u64 to_write = sizeof(Bible) + EXTENDED_BIBLE_SIZE;
 INIT:
-	fd = open(path, O_WRONLY | O_CREAT, 0600);
+	fd = file(path);
 	if (fd < 0) ERROR();
 	while (to_write) {
 		i64 v = pwrite(fd, bible, to_write, 0);

@@ -120,15 +120,19 @@ Test(bible) {
 	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
 	    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
 	__attribute__((aligned(32))) u8 output[32];
+	println("1");
 
 	if (!exists(BIBLE_PATH)) {
 		b = bible_gen();
 		bible_store(b, BIBLE_PATH);
 	} else
 		b = bible_load(BIBLE_PATH);
+	println("2");
 
 	bible_sbox8_64(sbox);
+	println("3");
 	bible_hash(b, input, output, sbox);
+	println("4");
 
 	u8 expected[32] = {0xBF, 0x3E, 0x2,  0xD6, 0xE5, 0xF5, 0x92, 0xCE,
 			   0x9C, 0x1,  0xFF, 0x27, 0xA1, 0xB5, 0x5A, 0x52,
