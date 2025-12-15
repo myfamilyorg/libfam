@@ -28,11 +28,11 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
-#ifndef NO_AVX2
+#ifndef NO_VECTOR
 #ifdef __AVX2__
 #define USE_AVX2
 #endif /* __AVX2__ */
-#endif /* NO_AVX2 */
+#endif /* NO_VECTOR */
 
 #ifdef USE_AVX2
 #include <immintrin.h>

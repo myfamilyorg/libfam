@@ -23,11 +23,11 @@
  *
  *******************************************************************************/
 
-#ifndef NO_AVX2
+#ifndef NO_VECTOR
 #ifdef __AVX2__
 #define USE_AVX2
 #endif /* __AVX2__ */
-#endif /* NO_AVX2 */
+#endif /* NO_VECTOR */
 
 #ifdef USE_AVX2
 #include <immintrin.h>
@@ -90,7 +90,6 @@ PUBLIC const Bible *bible_gen(void) {
 	     offset += 32) {
 		for (u32 i = 0; i < STORM_ITER; i++)
 			storm_next_block(&ctx, buffer);
-		if (offset % (8 * 4096) == 0) println("offset={}", offset);
 
 		fastmemcpy(ret->data + offset, buffer, 32);
 	}

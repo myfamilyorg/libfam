@@ -63,7 +63,7 @@ case "$BUILD_MODE" in
         LDFLAGS="$BASE_LDFLAGS"
         VISIBILITY=""
 	if [ "${VALGRIND}" = "1" ]; then
-		CDEFS="-DTEST=1 -DSTATIC= -DNO_AVX2"
+		CDEFS="-DTEST=1 -DSTATIC= -DNO_VECTOR"
 	else
         	CDEFS="-DTEST=1 -DSTATIC="
 	fi
