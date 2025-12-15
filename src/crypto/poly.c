@@ -1,4 +1,5 @@
 #include <libfam/dilithium.h>
+#include <libfam/env.h>
 #include <libfam/limits.h>
 #include <libfam/ntt.h>
 #include <libfam/poly.h>
@@ -372,6 +373,9 @@ void poly_uniform_eta(poly *a, StormContext *ctx) {
 	((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
 void poly_uniform_gamma1(poly *a, StormContext *ctx, u64 nonce) {
 	__attribute__((aligned(32))) u8 buf[704];
+
+	if (IS_VALGRIND()) fastmemset(buf, 0, 704);
+
 	for (u64 i = 0; i < 4; i++)
 		((u64 *)buf)[i] = (i + nonce) * 0x9E3779B97F4A7C15ULL;
 	for (u32 i = 0; i < 704; i += 32) storm_next_block(ctx, buf + i);

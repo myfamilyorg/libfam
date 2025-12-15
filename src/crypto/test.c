@@ -418,6 +418,7 @@ Test(dilithium_perf) {
 	(void)keygen_sum;
 	(void)sign_sum;
 	(void)verify_sum;
+
 	/*
 	println("keygen={},sign={},verify={}", keygen_sum / DILITHIUM_COUNT,
 		sign_sum / DILITHIUM_COUNT, verify_sum / DILITHIUM_COUNT);
