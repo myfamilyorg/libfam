@@ -26,9 +26,14 @@
 #ifndef NO_AVX2
 #ifdef __AVX2__
 #define USE_AVX2
-#endif /* __AVX2__ */
+#elif defined(__ARM_FEATURE_CRYPTO)
+#define USE_NEON
+#endif /* __ARM_FEATURE_CRYPTO */
 #endif /* NO_AVX2 */
 
+#ifdef USE_NEON
+#include <arm_neon.h>
+#endif /* USE_NEON */
 #ifdef USE_AVX2
 #include <immintrin.h>
 #endif /* USE_AVX2 */
@@ -55,6 +60,13 @@ typedef struct {
 	__m256i state;
 	__m256i key;
 	__m256i counter;
+#elif defined(USE_NEON)
+	uint8x16_t state_lo;
+	uint8x16_t state_hi;
+	uint8x16_t key_lo;
+	uint8x16_t key_hi;
+	uint8x16_t counter_lo;
+	uint8x16_t counter_hi;
 #else
 	u8 state[32];
 	u8 key[32];
@@ -207,6 +219,80 @@ void storm_xcrypt_buffer_avx2(StormContext *ctx, u8 buf[32]) {
 	    _mm256_xor_si256(_mm256_load_si256((__m256i *)buf), ctr));
 	st->counter = _mm256_add_epi64(st->counter, _mm256_set1_epi64x(1));
 }
+#elif defined(USE_NEON)
+STATIC void storm_init_neon(StormContext *ctx, const u8 key[32]) {
+	StormContextImpl *st = (StormContextImpl *)ctx;
+	uint8x16_t key_lo = vld1q_u8(key);
+	uint8x16_t key_hi = vld1q_u8(key + 16);
+	uint8x16_t domain_lo = vld1q_u8(STORM_KEY_MIX);
+	uint8x16_t domain_hi = vld1q_u8(STORM_KEY_MIX + 16);
+	st->state_lo = veorq_u8(key_lo, domain_lo);
+	st->state_hi = veorq_u8(key_hi, domain_hi);
+	uint8x16_t domain_key_lo = vld1q_u8(STORM_KEY_MIX + 32);
+	uint8x16_t domain_key_hi = vld1q_u8(STORM_KEY_MIX + 32 + 16);
+	st->key_lo = veorq_u8(key_lo, domain_key_lo);
+	st->key_hi = veorq_u8(key_hi, domain_key_hi);
+	st->counter_lo = vdupq_n_u8(0);
+	st->counter_hi = vdupq_n_u8(0);
+	(void)ZERO256;
+}
+
+STATIC uint8x16_t aesenc_intel_match(uint8x16_t data, uint8x16_t rkey) {
+	uint8x16_t zero = vdupq_n_u8(0);
+	data = vaeseq_u8(data, zero);
+	data = vaesmcq_u8(data);
+	return veorq_u8(data, rkey);
+}
+
+STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
+	StormContextImpl *st = (StormContextImpl *)ctx;
+	uint8x16_t p_lo = vld1q_u8(buf);
+	uint8x16_t p_hi = vld1q_u8(buf + 16);
+	uint8x16_t x_lo = veorq_u8(st->state_lo, p_lo);
+	uint8x16_t x_hi = veorq_u8(st->state_hi, p_hi);
+	uint8x16_t temp_lo = aesenc_intel_match(x_lo, st->key_lo);
+	uint8x16_t temp_hi = aesenc_intel_match(x_hi, st->key_hi);
+	uint8x16_t reduced = veorq_u8(temp_lo, temp_hi);
+	st->state_lo = temp_hi;
+	st->state_hi = reduced;
+	uint8x16_t out_lo = aesenc_intel_match(temp_lo, st->key_lo);
+	uint8x16_t out_hi = aesenc_intel_match(temp_hi, st->key_hi);
+	vst1q_u8(buf, out_lo);
+	vst1q_u8(buf + 16, out_hi);
+}
+
+STATIC void storm_xcrypt_buffer_neon(StormContext *ctx, u8 buf[32]) {
+	StormContextImpl *st = (StormContextImpl *)ctx;
+	uint8x16_t ctr_lo = st->counter_lo;
+	uint8x16_t ctr_hi = st->counter_hi;
+
+	u8 ctr_block[32] __attribute__((aligned(16)));
+	vst1q_u8(ctr_block, ctr_lo);
+	vst1q_u8(ctr_block + 16, ctr_hi);
+
+	storm_next_block_neon(ctx, ctr_block);
+
+	uint8x16_t keystream_lo = vld1q_u8(ctr_block);
+	uint8x16_t keystream_hi = vld1q_u8(ctr_block + 16);
+
+	uint8x16_t data_lo = vld1q_u8(buf);
+	uint8x16_t data_hi = vld1q_u8(buf + 16);
+
+	uint8x16_t out_lo = veorq_u8(data_lo, keystream_lo);
+	uint8x16_t out_hi = veorq_u8(data_hi, keystream_hi);
+
+	vst1q_u8(buf, out_lo);
+	vst1q_u8(buf + 16, out_hi);
+
+	uint64x2_t lo64 = vreinterpretq_u64_u8(ctr_lo);
+	uint64x2_t hi64 = vreinterpretq_u64_u8(ctr_hi);
+
+	uint64x2_t inc = vdupq_n_u64(1);
+
+	st->counter_lo = vreinterpretq_u8_u64(vaddq_u64(lo64, inc));
+	st->counter_hi = vreinterpretq_u8_u64(vaddq_u64(hi64, inc));
+}
+
 #else
 STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
@@ -275,6 +361,8 @@ void storm_xcrypt_buffer_scalar(StormContext *ctx, u8 buf[32]) {
 PUBLIC void storm_init(StormContext *ctx, const u8 key[32]) {
 #ifdef USE_AVX2
 	storm_init_avx2(ctx, key);
+#elif defined(USE_NEON)
+	storm_init_neon(ctx, key);
 #else
 	storm_init_scalar(ctx, key);
 #endif /* !USE_AVX2 */
@@ -283,6 +371,8 @@ PUBLIC void storm_init(StormContext *ctx, const u8 key[32]) {
 PUBLIC void storm_next_block(StormContext *ctx, u8 buf[32]) {
 #ifdef USE_AVX2
 	storm_next_block_avx2(ctx, buf);
+#elif defined(USE_NEON)
+	storm_next_block_neon(ctx, buf);
 #else
 	storm_next_block_scalar(ctx, buf);
 #endif /* !USE_AVX2 */
@@ -291,6 +381,8 @@ PUBLIC void storm_next_block(StormContext *ctx, u8 buf[32]) {
 PUBLIC void storm_xcrypt_buffer(StormContext *ctx, u8 buf[32]) {
 #ifdef USE_AVX2
 	storm_xcrypt_buffer_avx2(ctx, buf);
+#elif defined(USE_NEON)
+	storm_xcrypt_buffer_neon(ctx, buf);
 #else
 	storm_xcrypt_buffer_scalar(ctx, buf);
 #endif /* !USE_AVX2 */
