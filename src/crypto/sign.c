@@ -23,10 +23,10 @@
  *
  *******************************************************************************/
 
-#include <libfam/dilithium.h>
 #include <libfam/dilithium_const.h>
 #include <libfam/dilithium_impl.h>
 #include <libfam/format.h>
+#include <libfam/sign.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/sysext.h>
@@ -56,7 +56,7 @@ __attribute__((aligned(32))) static const u8 DILITHIUM_CTILDE_DOMAIN[32] = {
     0xca, 0x6b, 0xc2, 0xb2, 0xae, 0x37, 0x51, 0x7c, 0xc1, 0xb7,
     0x27, 0x22, 0x0a, 0x97, 0x00, 0x00, 0x00, 0x05};
 
-void dilithium_keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
+void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	u8 *pk = (void *)pk_in;
 	u8 *sk = (void *)sk_in;
 	__attribute__((aligned(32))) u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
@@ -303,8 +303,7 @@ int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
  *
  * Returns 0 (success) or -1 (context string too long)
  **************************************************/
-void dilithium_sign(Signature *sm_in, const Message *msg,
-		    const SecretKey *sk_in) {
+void sign(Signature *sm_in, const Message *msg, const SecretKey *sk_in) {
 	u8 *sm = (void *)sm_in;
 	const u8 *sk = (void *)sk_in;
 	const u8 *m = (void *)msg;
@@ -460,7 +459,7 @@ int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
  *
  * Returns 0 if signed message could be verified correctly and -1 otherwise
  **************************************************/
-int dilithium_verify(const Signature *sm_in, const PublicKey *pk_in) {
+i32 verify(const Signature *sm_in, const PublicKey *pk_in) {
 	const u8 *sm = (void *)sm_in;
 	const u8 *pk = (void *)pk_in;
 	i32 res = crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, 128,

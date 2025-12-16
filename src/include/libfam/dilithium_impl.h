@@ -30,9 +30,6 @@
 #include <libfam/storm.h>
 #include <libfam/types.h>
 
-#define MONT -4186625  // 2^32 % Q
-#define QINV 58728449  // q^(-1) mod 2^32
-
 typedef struct {
 	__attribute__((aligned(32))) i32 coeffs[N];
 } poly __attribute__((aligned(32)));

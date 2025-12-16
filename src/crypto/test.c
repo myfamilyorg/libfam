@@ -28,7 +28,7 @@
 #include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
-#include <libfam/dilithium.h>
+#include <libfam/sign.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
 
@@ -377,11 +377,11 @@ Test(dilithium) {
 		rng_gen(&rng, rnd, 32);
 		rng_gen(&rng, &msg, MLEN);
 
-		dilithium_keyfrom(&sk, &pk, rnd);
-		dilithium_sign(&sig, &msg, &sk);
-		ASSERT(!dilithium_verify(&sig, &pk), "verify");
+		keyfrom(&sk, &pk, rnd);
+		sign(&sig, &msg, &sk);
+		ASSERT(!verify(&sig, &pk), "verify");
 		((u8 *)&sig)[0]++;
-		ASSERT(dilithium_verify(&sig, &pk), "!verify");
+		ASSERT(verify(&sig, &pk), "!verify");
 		ASSERT(!memcmp(&msg, ((u8 *)&sig) + 2420, MLEN), "msg");
 	}
 }
@@ -407,13 +407,13 @@ Test(dilithium_perf) {
 		rng_gen(&rng, &m, MLEN);
 
 		u64 start = cycle_counter();
-		dilithium_keyfrom(&sk, &pk, rnd);
+		keyfrom(&sk, &pk, rnd);
 		keygen_sum += cycle_counter() - start;
 		start = cycle_counter();
-		dilithium_sign(&sm, &m, &sk);
+		sign(&sm, &m, &sk);
 		sign_sum += cycle_counter() - start;
 		start = cycle_counter();
-		dilithium_verify(&sm, &pk);
+		verify(&sm, &pk);
 		verify_sum += cycle_counter() - start;
 	}
 	(void)keygen_sum;

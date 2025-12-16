@@ -23,8 +23,8 @@
  *
  *******************************************************************************/
 
-#ifndef _DILITHIUM_H
-#define _DILITHIUM_H
+#ifndef _SIGN_H
+#define _SIGN_H
 
 #include <libfam/types.h>
 
@@ -50,8 +50,8 @@ typedef struct {
 	__attribute__((aligned(32))) u8 data[MLEN];
 } Message;
 
-void dilithium_keyfrom(SecretKey *sk, PublicKey *pk, u8 seed[SEEDLEN]);
-void dilithium_sign(Signature *sig, const Message *msg, const SecretKey *sk);
-i32 dilithium_verify(const Signature *sig, const PublicKey *pk);
+void keyfrom(SecretKey *sk, PublicKey *pk, u8 seed[SEEDLEN]);
+void sign(Signature *sig, const Message *msg, const SecretKey *sk);
+i32 verify(const Signature *sig, const PublicKey *pk);
 
-#endif /* _DILITHIUM_H */
+#endif /* _SIGN_H */

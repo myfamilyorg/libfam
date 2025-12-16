@@ -34,14 +34,7 @@
 #define _ZETAS_QINV 32
 #define _ZETAS 328
 
-#ifndef __ASSEMBLER__
+#define DIV 41978
+#define DIV_QINV -8395782
 
-#include "align.h"
-
-typedef ALIGNED_INT32(624) qdata_t;
-
-#define qdata DILITHIUM_NAMESPACE(qdata)
-extern const qdata_t qdata;
-
-#endif /* !__ASSEMBLER__ */
 #endif /* _ASM_CONSTS_H */
