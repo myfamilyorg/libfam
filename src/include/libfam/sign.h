@@ -28,7 +28,7 @@
 
 #include <libfam/types.h>
 
-#define MLEN 128
+#define MLEN 32
 #define SEEDLEN 32
 #define SECRET_KEY_SIZE 2560
 #define PUBLIC_KEY_SIZE 1312

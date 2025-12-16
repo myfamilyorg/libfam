@@ -153,15 +153,11 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
 
 	storm_init(&ctx, DILITHIUM_MU_DOMAIN);
-	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + 128] = {0};
+	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + MLEN] = {0};
 	fastmemcpy(mu_copy, tr, TRBYTES);
-	fastmemcpy(mu_copy + TRBYTES, m, mlen);
-	storm_next_block(&ctx, mu_copy);
-	storm_next_block(&ctx, mu_copy + 32);
-	storm_next_block(&ctx, mu_copy + 64);
-	storm_next_block(&ctx, mu_copy + 96);
-	storm_next_block(&ctx, mu_copy + 128);
-	storm_next_block(&ctx, mu_copy + 160);
+	fastmemcpy(mu_copy + TRBYTES, m, MLEN);
+	for (u32 i = 0; i < TRBYTES + MLEN; i += 32)
+		storm_next_block(&ctx, mu_copy + i);
 	fastmemset(mu, 0, CRHBYTES);
 	storm_next_block(&ctx, mu);
 	storm_next_block(&ctx, mu + 32);
@@ -309,8 +305,8 @@ void sign(Signature *sm_in, const Message *msg, const SecretKey *sk_in) {
 	const u8 *m = (void *)msg;
 	u64 i, smlen;
 
-	for (i = 0; i < 128; ++i) sm[CRYPTO_BYTES + i] = m[i];
-	crypto_sign_signature(sm, &smlen, sm + CRYPTO_BYTES, 128, NULL, 0, sk);
+	for (i = 0; i < MLEN; ++i) sm[CRYPTO_BYTES + i] = m[i];
+	crypto_sign_signature(sm, &smlen, sm + CRYPTO_BYTES, MLEN, NULL, 0, sk);
 }
 
 /*************************************************
@@ -362,15 +358,11 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	storm_next_block(&ctx, mu + 32);
 
 	storm_init(&ctx, DILITHIUM_MU_DOMAIN);
-	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + 128] = {0};
+	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + MLEN] = {0};
 	fastmemcpy(mu_copy, mu, TRBYTES);
 	fastmemcpy(mu_copy + TRBYTES, m, mlen);
-	storm_next_block(&ctx, mu_copy);
-	storm_next_block(&ctx, mu_copy + 32);
-	storm_next_block(&ctx, mu_copy + 64);
-	storm_next_block(&ctx, mu_copy + 96);
-	storm_next_block(&ctx, mu_copy + 128);
-	storm_next_block(&ctx, mu_copy + 160);
+	for (u32 i = 0; i < TRBYTES + MLEN; i += 32)
+		storm_next_block(&ctx, mu_copy + i);
 	fastmemset(mu, 0, CRHBYTES);
 	storm_next_block(&ctx, mu);
 	storm_next_block(&ctx, mu + 32);
@@ -462,7 +454,7 @@ int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
 i32 verify(const Signature *sm_in, const PublicKey *pk_in) {
 	const u8 *sm = (void *)sm_in;
 	const u8 *pk = (void *)pk_in;
-	i32 res = crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, 128,
+	i32 res = crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, MLEN,
 				     NULL, 0, pk);
 	return res == 0 ? 0 : -1;
 }
