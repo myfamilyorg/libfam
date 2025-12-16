@@ -26,7 +26,7 @@
 #ifndef _ROUNDING_H
 #define _ROUNDING_H
 
-#include <libfam/dilithium.h>
+#include <libfam/dilithium_const.h>
 #include <libfam/types.h>
 
 i32 power2round(i32 *a0, i32 a);

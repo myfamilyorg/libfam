@@ -23,13 +23,44 @@
  *
  *******************************************************************************/
 
-#ifndef NTT_H
-#define NTT_H
+#ifndef _DILITHIUM_IMPL_H
+#define _DILITHIUM_IMPL_H
 
-#include <libfam/dilithium.h>
-#include <libfam/types.h>
+#define SEEDBYTES 32
+#define CRHBYTES 64
+#define TRBYTES 64
+#define RNDBYTES 32
+#define N 256
+#define Q 8380417
+#define D 13
+#define ROOT_OF_UNITY 1753
 
-void ntt(i32 a[N]);
-void invntt_tomont(i32 a[N]);
+#define K 4
+#define ETA 2
+#define TAU 39
+#define BETA 78
+#define GAMMA1 (1 << 17)
+#define GAMMA2 ((Q - 1) / 88)
+#define OMEGA 80
+#define CTILDEBYTES 32
 
-#endif
+#define POLYT1_PACKEDBYTES 320
+#define POLYT0_PACKEDBYTES 416
+#define POLYVECH_PACKEDBYTES (OMEGA + K)
+
+#define POLYZ_PACKEDBYTES 576
+
+#define POLYW1_PACKEDBYTES 192
+
+#define POLYETA_PACKEDBYTES 96
+
+#define CRYPTO_PUBLICKEYBYTES (SEEDBYTES + K * POLYT1_PACKEDBYTES)
+#define CRYPTO_SECRETKEYBYTES                                \
+	(2 * SEEDBYTES + TRBYTES + K * POLYETA_PACKEDBYTES + \
+	 K * POLYETA_PACKEDBYTES + K * POLYT0_PACKEDBYTES)
+#define CRYPTO_BYTES \
+	(CTILDEBYTES + K * POLYZ_PACKEDBYTES + POLYVECH_PACKEDBYTES)
+
+#define QINV 58728449
+
+#endif /* _DILITHIUM_IMPL_H */

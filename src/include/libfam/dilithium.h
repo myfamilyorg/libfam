@@ -26,41 +26,32 @@
 #ifndef _DILITHIUM_H
 #define _DILITHIUM_H
 
-#define SEEDBYTES 32
-#define CRHBYTES 64
-#define TRBYTES 64
-#define RNDBYTES 32
-#define N 256
-#define Q 8380417
-#define D 13
-#define ROOT_OF_UNITY 1753
+#include <libfam/types.h>
 
-#define K 4
-#define ETA 2
-#define TAU 39
-#define BETA 78
-#define GAMMA1 (1 << 17)
-#define GAMMA2 ((Q - 1) / 88)
-#define OMEGA 80
-#define CTILDEBYTES 32
+#define MLEN 128
+#define SEEDLEN 32
+#define SECRET_KEY_SIZE 2560
+#define PUBLIC_KEY_SIZE 1312
+#define SIGNATURE_SIZE (2420 + MLEN)
 
-#define POLYT1_PACKEDBYTES 320
-#define POLYT0_PACKEDBYTES 416
-#define POLYVECH_PACKEDBYTES (OMEGA + K)
+typedef struct {
+	__attribute__((aligned(32))) u8 data[SECRET_KEY_SIZE];
+} SecretKey;
 
-#define POLYZ_PACKEDBYTES 576
+typedef struct {
+	__attribute__((aligned(32))) u8 data[PUBLIC_KEY_SIZE];
+} PublicKey;
 
-#define POLYW1_PACKEDBYTES 192
+typedef struct {
+	__attribute__((aligned(32))) u8 data[SIGNATURE_SIZE];
+} Signature;
 
-#define POLYETA_PACKEDBYTES 96
+typedef struct {
+	__attribute__((aligned(32))) u8 data[MLEN];
+} Message;
 
-#define CRYPTO_PUBLICKEYBYTES (SEEDBYTES + K * POLYT1_PACKEDBYTES)
-#define CRYPTO_SECRETKEYBYTES                                \
-	(2 * SEEDBYTES + TRBYTES + K * POLYETA_PACKEDBYTES + \
-	 K * POLYETA_PACKEDBYTES + K * POLYT0_PACKEDBYTES)
-#define CRYPTO_BYTES \
-	(CTILDEBYTES + K * POLYZ_PACKEDBYTES + POLYVECH_PACKEDBYTES)
-
-#define QINV 58728449
+void dilithium_keyfrom(SecretKey *sk, PublicKey *pk, u8 seed[SEEDLEN]);
+void dilithium_sign(Signature *sig, const Message *msg, const SecretKey *sk);
+i32 dilithium_verify(const Signature *sig, const PublicKey *pk);
 
 #endif /* _DILITHIUM_H */

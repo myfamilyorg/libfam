@@ -28,7 +28,7 @@
 #include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
-#include <libfam/sign.h>
+#include <libfam/dilithium.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
 
@@ -382,6 +382,7 @@ Test(dilithium) {
 		ASSERT(!dilithium_verify(&sig, &pk), "verify");
 		((u8 *)&sig)[0]++;
 		ASSERT(dilithium_verify(&sig, &pk), "!verify");
+		ASSERT(!memcmp(&msg, ((u8 *)&sig) + 2420, MLEN), "msg");
 	}
 }
 

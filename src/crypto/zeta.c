@@ -23,7 +23,7 @@
  *
  *******************************************************************************/
 
-#include <libfam/dilithium.h>
+#include <libfam/dilithium_const.h>
 #include <libfam/types.h>
 
 #ifndef NO_VECTOR

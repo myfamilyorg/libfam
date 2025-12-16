@@ -33,7 +33,7 @@
 #include <immintrin.h>
 #endif /* USE_AVX2 */
 
-#include <libfam/dilithium.h>
+#include <libfam/dilithium_const.h>
 #include <libfam/utils.h>
 
 #ifdef USE_AVX2

@@ -23,8 +23,8 @@
  *
  *******************************************************************************/
 
-#ifndef _LFAM_STRING_H
-#define _LFAM_STRING_H
+#ifndef _STRING_H
+#define _STRING_H
 
 #include <libfam/types.h>
 
