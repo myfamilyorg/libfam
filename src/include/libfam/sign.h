@@ -30,9 +30,9 @@
 
 #define MLEN 128
 #define SEEDLEN 32
-#define SECRET_KEY_SIZE 4096
-#define PUBLIC_KEY_SIZE 4096
-#define SIGNATURE_SIZE 4096
+#define SECRET_KEY_SIZE 2560
+#define PUBLIC_KEY_SIZE 1312
+#define SIGNATURE_SIZE (2420 + 128)
 
 typedef struct {
 	__attribute__((aligned(32))) u8 data[SECRET_KEY_SIZE];
