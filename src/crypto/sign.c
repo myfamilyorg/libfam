@@ -92,16 +92,16 @@ void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 
 	/* Matrix-vector multiplication */
 	s1hat = s1;
-	polyvecl_ntt(&s1hat);
+	polyvec_ntt(&s1hat);
 	polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
-	polyveck_reduce(&t1);
-	polyveck_invntt_tomont(&t1);
+	polyvec_reduce(&t1);
+	polyvec_invntt_tomont(&t1);
 
 	/* Add error vector s2 */
-	polyveck_add(&t1, &t1, &s2);
+	polyvec_add(&t1, &t1, &s2);
 
 	/* Extract t1 and write public key */
-	polyveck_caddq(&t1);
+	polyvec_caddq(&t1);
 	polyveck_power2round(&t1, &t0, &t1);
 	pack_pk(pk, rho, &t1);
 
@@ -178,9 +178,9 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 
 	/* Expand matrix and transform vectors */
 	polyvec_matrix_expand(mat, rho);
-	polyvecl_ntt(&s1);
-	polyveck_ntt(&s2);
-	polyveck_ntt(&t0);
+	polyvec_ntt(&s1);
+	polyvec_ntt(&s2);
+	polyvec_ntt(&t0);
 
 rej:
 	/* Sample intermediate vector y */
@@ -188,13 +188,13 @@ rej:
 
 	/* Matrix-vector multiplication */
 	z = y;
-	polyvecl_ntt(&z);
+	polyvec_ntt(&z);
 	polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
-	polyveck_reduce(&w1);
-	polyveck_invntt_tomont(&w1);
+	polyvec_reduce(&w1);
+	polyvec_invntt_tomont(&w1);
 
 	/* Decompose w and call the random oracle */
-	polyveck_caddq(&w1);
+	polyvec_caddq(&w1);
 	polyveck_decompose(&w1, &w0, &w1);
 	polyveck_pack_w1(sig, &w1);
 
@@ -209,30 +209,30 @@ rej:
 	storm_next_block(&ctx, sig);
 
 	poly_challenge(&cp, sig);
-	poly_ntt(&cp);
+	ntt(cp.coeffs);
 
 	/* Compute z, reject if it reveals secret */
 	polyvecl_pointwise_poly_montgomery(&z, &cp, &s1);
-	polyvecl_invntt_tomont(&z);
-	polyvecl_add(&z, &z, &y);
-	polyvecl_reduce(&z);
+	polyvec_invntt_tomont(&z);
+	polyvec_add(&z, &z, &y);
+	polyvec_reduce(&z);
 	if (polyvecl_chknorm(&z, GAMMA1 - BETA)) goto rej;
 
 	/* Check that subtracting cs2 does not change high bits of w and low
 	 * bits do not reveal secret information */
 	polyveck_pointwise_poly_montgomery(&h, &cp, &s2);
-	polyveck_invntt_tomont(&h);
-	polyveck_sub(&w0, &w0, &h);
-	polyveck_reduce(&w0);
+	polyvec_invntt_tomont(&h);
+	polyvec_sub(&w0, &w0, &h);
+	polyvec_reduce(&w0);
 	if (polyveck_chknorm(&w0, GAMMA2 - BETA)) goto rej;
 
 	/* Compute hints for w1 */
 	polyveck_pointwise_poly_montgomery(&h, &cp, &t0);
-	polyveck_invntt_tomont(&h);
-	polyveck_reduce(&h);
+	polyvec_invntt_tomont(&h);
+	polyvec_reduce(&h);
 	if (polyveck_chknorm(&h, GAMMA2)) goto rej;
 
-	polyveck_add(&w0, &w0, &h);
+	polyvec_add(&w0, &w0, &h);
 	n = polyveck_make_hint(&h, &w0, &w1);
 	if (n > OMEGA) goto rej;
 
@@ -371,20 +371,20 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	poly_challenge(&cp, c);
 	polyvec_matrix_expand(mat, rho);
 
-	polyvecl_ntt(&z);
+	polyvec_ntt(&z);
 	polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
 
-	poly_ntt(&cp);
-	polyveck_shiftl(&t1);
-	polyveck_ntt(&t1);
+	ntt(cp.coeffs);
+	polyvec_shiftl(&t1);
+	polyvec_ntt(&t1);
 	polyveck_pointwise_poly_montgomery(&t1, &cp, &t1);
 
-	polyveck_sub(&w1, &w1, &t1);
-	polyveck_reduce(&w1);
-	polyveck_invntt_tomont(&w1);
+	polyvec_sub(&w1, &w1, &t1);
+	polyvec_reduce(&w1);
+	polyvec_invntt_tomont(&w1);
 
 	/* Reconstruct w1 */
-	polyveck_caddq(&w1);
+	polyvec_caddq(&w1);
 	polyveck_use_hint(&w1, &w1, &h);
 	polyveck_pack_w1(buf, &w1);
 

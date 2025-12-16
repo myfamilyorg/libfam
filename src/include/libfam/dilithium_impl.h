@@ -73,30 +73,25 @@ void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]);
 
 void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u64 nonce);
 
-void polyvecl_reduce(polyvec *v);
+void polyvec_reduce(polyvec *v);
 
-void polyvecl_add(polyvec *w, const polyvec *u, const polyvec *v);
-
-void polyvecl_ntt(polyvec *v);
-void polyvecl_invntt_tomont(polyvec *v);
 void polyvecl_pointwise_poly_montgomery(polyvec *r, const poly *a,
 					const polyvec *v);
-void polyvecl_pointwise_acc_montgomery(poly *w, const polyvec *u,
-				       const polyvec *v);
+void polyvec_pointwise_acc_montgomery(poly *w, const polyvec *u,
+				      const polyvec *v);
 
 int polyvecl_chknorm(const polyvec *v, i32 B);
 
 void polyvec_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce);
 
-void polyveck_reduce(polyvec *v);
-void polyveck_caddq(polyvec *v);
+void polyvec_caddq(polyvec *v);
 
-void polyveck_add(polyvec *w, const polyvec *u, const polyvec *v);
-void polyveck_sub(polyvec *w, const polyvec *u, const polyvec *v);
-void polyveck_shiftl(polyvec *v);
+void polyvec_add(polyvec *w, const polyvec *u, const polyvec *v);
+void polyvec_sub(polyvec *w, const polyvec *u, const polyvec *v);
+void polyvec_shiftl(polyvec *v);
 
-void polyveck_ntt(polyvec *v);
-void polyveck_invntt_tomont(polyvec *v);
+void polyvec_ntt(polyvec *v);
+void polyvec_invntt_tomont(polyvec *v);
 void polyveck_pointwise_poly_montgomery(polyvec *r, const poly *a,
 					const polyvec *v);
 
