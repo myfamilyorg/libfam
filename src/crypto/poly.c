@@ -8,6 +8,16 @@
 #include <libfam/storm.h>
 #include <libfam/string.h>
 
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __ARM_FEATURE_CRYPTO */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
 #define STORM_RATE 32
 __attribute__((aligned(32))) static const u8 POLY_CHALLENGE_DOMAIN[32] = {2, 3,
 									  4};
@@ -114,11 +124,29 @@ void poly_invntt_tomont(poly *a) { invntt_tomont(a->coeffs); }
  *              - const poly *a: pointer to first input polynomial
  *              - const poly *b: pointer to second input polynomial
  **************************************************/
+
+#ifdef USE_AVX2
+typedef union {
+	i32 coeffs[624];
+	__m256i vec[78];
+} qdata_t;
+
+extern const qdata_t qdata;
+
+void pointwise_avx(__m256i *c, const __m256i *a, const __m256i *b,
+		   const __m256i *qdata);
+
+#endif /* USE_AVX2 */
+
 void poly_pointwise_montgomery(poly *c, const poly *a, const poly *b) {
+#ifdef USE_AVX2
+	pointwise_avx((void *)c, (void *)a, (void *)b, qdata.vec);
+#else
 	u32 i;
 	for (i = 0; i < N; ++i)
 		c->coeffs[i] =
 		    montgomery_reduce((i64)a->coeffs[i] * b->coeffs[i]);
+#endif /* USE_AVX2 */
 }
 
 /*************************************************
