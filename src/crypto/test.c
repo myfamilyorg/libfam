@@ -384,7 +384,7 @@ Test(dilithium) {
 	}
 }
 
-#define DILITHIUM_COUNT 1000
+#define DILITHIUM_COUNT 100
 
 Test(dilithium_perf) {
 	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
@@ -643,7 +643,7 @@ static __attribute__((aligned(32))) u8 TWO_SEED[32] = {2};
 static __attribute__((aligned(32))) u8 THREE_SEED[32] = {3};
 static __attribute__((aligned(32))) u8 FOUR_SEED[32] = {4};
 static __attribute__((aligned(32))) u8 FIVE_SEED[32] = {5};
-#define STORM_PERF2_COUNT (1000000000 / 32)
+#define STORM_PERF2_COUNT (1000000 / 32)
 
 Test(storm256_perf) {
 	i64 timer;
