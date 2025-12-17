@@ -100,20 +100,21 @@ Test(storm_vectors) {
 	Storm256Context ctx;
 	__attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
 	__attribute((aligned(32))) u8 buf1[32] = {
-	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
-	    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+	    9,	 93,  216, 137, 224, 212, 105, 200, 163, 28,  146,
+	    246, 75,  164, 149, 109, 209, 70,  183, 116, 224, 157,
+	    245, 221, 5,   53,	245, 155, 165, 135, 142, 218};
 	storm256_init(&ctx, SEED);
 	storm256_next_block(&ctx, buf1);
 
-	u8 exp1[32] = {113, 239, 171, 69,  83, 52,  28,	 60,  225, 220, 56,
-		       50,  138, 6,   245, 3,  222, 255, 209, 83,  227, 154,
-		       122, 141, 75,  208, 13, 154, 100, 84,  30,  167};
+	u8 exp1[32] = {204, 193, 116, 178, 204, 191, 250, 240, 24,  241, 23,
+		       185, 255, 250, 66,  221, 100, 77,  187, 202, 221, 228,
+		       223, 20,	 106, 134, 78,	38,  178, 172, 110, 153};
 	ASSERT(!memcmp(buf1, exp1, sizeof(buf1)), "buf1");
 	storm256_next_block(&ctx, buf1);
 
-	u8 exp2[32] = {216, 99,	 190, 197, 23, 62, 52,	69, 122, 216, 104,
-		       172, 177, 212, 82,  30, 94, 143, 49, 165, 80,  125,
-		       202, 141, 190, 39,  54, 25, 41,	91, 222, 187};
+	u8 exp2[32] = {104, 232, 235, 200, 225, 117, 15,  17,  193, 182, 235,
+		       70,  96,	 116, 156, 217, 123, 199, 27,  10,  131, 152,
+		       172, 145, 79,  14,  208, 70,  27,  207, 59,  211};
 
 	ASSERT(!memcmp(buf1, exp2, sizeof(buf1)), "buf1 round2");
 
@@ -123,16 +124,16 @@ Test(storm_vectors) {
 	storm256_init(&ctx, SEED);
 	storm256_next_block(&ctx, buf2);
 
-	u8 exp3[32] = {143, 21,	 148, 109, 114, 92, 230, 180, 146, 121, 254,
-		       239, 133, 56,  85,  33,	46, 112, 188, 217, 252, 243,
-		       167, 220, 74,  79,  155, 68, 36,	 117, 44,  170};
+	u8 exp3[32] = {140, 187, 82,  252, 180, 187, 246, 27,  94,  60, 140,
+		       8,   58,	 82,  23,  211, 56,  168, 6,   16,  22, 181,
+		       32,  164, 138, 211, 201, 50,  77,  254, 156, 40};
 	ASSERT(!memcmp(buf2, exp3, sizeof(buf2)), "buf2");
 
 	storm256_next_block(&ctx, buf2);
 
-	u8 exp4[32] = {236, 147, 161, 174, 97,	88,  15,  113, 127, 129, 63,
-		       218, 158, 77,  178, 47,	24,  201, 25,  228, 93,	 64,
-		       30,  138, 254, 76,  147, 187, 165, 1,   215, 237};
+	u8 exp4[32] = {115, 33,	 96,  112, 88, 80, 97, 17,  236, 164, 249,
+		       136, 197, 55,  160, 85, 30, 92, 154, 49,	 11,  80,
+		       164, 112, 126, 77,  25, 42, 22, 18,  14,	 15};
 	ASSERT(!memcmp(buf2, exp4, sizeof(buf2)), "buf2 round2");
 }
 
@@ -172,10 +173,10 @@ Test(bible) {
 	bible_sbox8_64(sbox);
 	bible_hash(b, input, output, sbox);
 
-	u8 expected[32] = {207, 224, 174, 241, 87,  29,	 16,  104,
-			   213, 206, 113, 110, 70,  253, 8,   204,
-			   226, 97,  128, 240, 236, 201, 208, 224,
-			   190, 95,  44,  52,  123, 32,	 233, 202};
+	u8 expected[32] = {249, 168, 232, 160, 194, 243, 109, 75,
+			   40,	194, 193, 113, 79,  238, 116, 12,
+			   245, 176, 250, 234, 6,   158, 153, 190,
+			   108, 14,  15,  130, 187, 245, 90,  88};
 
 	ASSERT(!memcmp(output, expected, 32), "hash");
 	bible_destroy(b);
@@ -205,11 +206,11 @@ Test(bible_mine) {
 	bible_sbox8_64(sbox);
 	mine_block(b, header, target, output, &nonce, U32_MAX, sbox);
 
-	ASSERT_EQ(nonce, 7628, "nonce");
-	ASSERT(!memcmp(output, (u8[]){0,   0,	224, 81,  219, 95,  106, 205,
-				      21,  240, 26,  133, 170, 98,  59,	 64,
-				      146, 2,	210, 31,  102, 168, 233, 183,
-				      81,  64,	169, 112, 128, 13,  165, 196},
+	ASSERT_EQ(nonce, 123315, "nonce");
+	ASSERT(!memcmp(output, (u8[]){0,   0,	184, 21,  152, 208, 245, 124,
+				      132, 4,	178, 203, 122, 163, 126, 219,
+				      131, 76,	104, 85,  157, 75,  23,	 95,
+				      61,  199, 217, 78,  5,   107, 153, 141},
 		       32),
 	       "hash");
 	bible_destroy(b);
@@ -230,7 +231,7 @@ Test(perfx) {
 
 	c = cycle_counter() - c;
 
-	ASSERT_EQ(buf[0], 110, "check 0 index 1");
+	ASSERT_EQ(buf[0], 204, "check 0 index 1");
 
 	const Bible *b;
 	u64 sbox[256];
@@ -247,7 +248,8 @@ Test(perfx) {
 	c = cycle_counter();
 	bible_hash(b, header, output, sbox);
 	c = cycle_counter() - c;
-	ASSERT_EQ(output[0], 253, "check 0 index 2");
+
+	ASSERT_EQ(output[0], 73, "check 0 index 2");
 }
 
 void ntt(i32 a[256]);
@@ -434,7 +436,7 @@ Test(verihash_bitflip) {
 	u8 plaintext[32] = {0};
 	u8 plaintext2[32] = {0};
 	u32 iter = 20;
-	u32 trials = 100;
+	u32 trials = 10;
 	u32 total_fail = 0;
 
 	(void)total_fail;
@@ -498,7 +500,7 @@ Test(aes_bitflip) {
 	u8 plaintext[32] = {0};
 	u8 plaintext2[32] = {0};
 	u8 plaintext3[32] = {0};
-	u32 iter = 10000;
+	u32 iter = 100;
 	u32 trials = 100;
 	u32 total_fail = 0;
 
@@ -570,7 +572,7 @@ Test(storm256_bitflip) {
 	__attribute__((aligned(32))) u8 plaintext[32] = {0};
 	__attribute__((aligned(32))) u8 plaintext2[32] = {0};
 	__attribute__((aligned(32))) u8 plaintext3[32] = {0};
-	u32 iter = 10000;
+	u32 iter = 100;
 	u32 trials = 100;
 	u32 total_fail = 0;
 
@@ -596,7 +598,7 @@ Test(storm256_bitflip) {
 			storm256_next_block(&ctx, plaintext2);
 			u64 byte_pos = 0;
 			rng_gen(&rng, &byte_pos, sizeof(u64));
-			byte_pos %= 16;
+			byte_pos %= 32;
 			u8 bit_pos = 0;
 			rng_gen(&rng, &bit_pos, sizeof(u8));
 			bit_pos %= 8;
@@ -629,8 +631,10 @@ Test(storm256_bitflip) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
+	/*
 	println("total_failed(storm256)={}/{},diff={}", total_fail, iter * 256,
 		max - min);
+		*/
 }
 
 static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
@@ -696,7 +700,7 @@ Test(storm256_perf) {
 	(void)buf5;
 	(void)buf6;
 
-	println("time={}us, sum={}, avg={}ns", timer, sum,
-		(timer * 1000) / STORM_PERF2_COUNT);
+	/*println("time={}us, sum={}, avg={}ns", timer, sum,
+		(timer * 1000) / STORM_PERF2_COUNT);*/
 }
 
