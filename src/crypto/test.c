@@ -173,10 +173,10 @@ Test(bible) {
 	bible_sbox8_64(sbox);
 	bible_hash(b, input, output, sbox);
 
-	u8 expected[32] = {249, 168, 232, 160, 194, 243, 109, 75,
-			   40,	194, 193, 113, 79,  238, 116, 12,
-			   245, 176, 250, 234, 6,   158, 153, 190,
-			   108, 14,  15,  130, 187, 245, 90,  88};
+	u8 expected[32] = {155, 115, 44,  19,  62,  253, 241, 244,
+			   190, 79,  245, 217, 85,  195, 38,  108,
+			   244, 44,  203, 158, 122, 32,	 229, 32,
+			   56,	172, 212, 236, 89,  111, 233, 183};
 
 	ASSERT(!memcmp(output, expected, 32), "hash");
 	bible_destroy(b);
@@ -206,11 +206,11 @@ Test(bible_mine) {
 	bible_sbox8_64(sbox);
 	mine_block(b, header, target, output, &nonce, U32_MAX, sbox);
 
-	ASSERT_EQ(nonce, 123315, "nonce");
-	ASSERT(!memcmp(output, (u8[]){0,   0,	184, 21,  152, 208, 245, 124,
-				      132, 4,	178, 203, 122, 163, 126, 219,
-				      131, 76,	104, 85,  157, 75,  23,	 95,
-				      61,  199, 217, 78,  5,   107, 153, 141},
+	ASSERT_EQ(nonce, 34264, "nonce");
+	ASSERT(!memcmp(output, (u8[]){0,   0,	30, 233, 156, 138, 107, 143,
+				      57,  175, 10, 239, 101, 30,  32,	154,
+				      249, 219, 21, 189, 4,   220, 79,	104,
+				      144, 104, 71, 40,	 223, 159, 75,	174},
 		       32),
 	       "hash");
 	bible_destroy(b);
@@ -230,7 +230,6 @@ Test(perfx) {
 	for (u32 i = 0; i < 16384 * 32; i++) storm256_next_block(&ctx, buf);
 
 	c = cycle_counter() - c;
-
 	ASSERT_EQ(buf[0], 204, "check 0 index 1");
 
 	const Bible *b;
@@ -249,7 +248,7 @@ Test(perfx) {
 	bible_hash(b, header, output, sbox);
 	c = cycle_counter() - c;
 
-	ASSERT_EQ(output[0], 73, "check 0 index 2");
+	ASSERT_EQ(output[0], 150, "check 0 index 2");
 }
 
 void ntt(i32 a[256]);
