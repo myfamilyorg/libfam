@@ -564,7 +564,7 @@ Test(aes_bitflip) {
 		*/
 }
 
-Test(storm_bitflip) {
+Test(storm256_bitflip) {
 	Storm256Context ctx;
 	Rng rng;
 	__attribute__((aligned(32))) u8 plaintext[32] = {0};
@@ -629,10 +629,8 @@ Test(storm_bitflip) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
-	/*
-	println("total_failed(storm)={}/{},diff={}", total_fail, iter * 256,
+	println("total_failed(storm256)={}/{},diff={}", total_fail, iter * 256,
 		max - min);
-		*/
 }
 
 static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
@@ -641,9 +639,9 @@ static __attribute__((aligned(32))) u8 TWO_SEED[32] = {2};
 static __attribute__((aligned(32))) u8 THREE_SEED[32] = {3};
 static __attribute__((aligned(32))) u8 FOUR_SEED[32] = {4};
 static __attribute__((aligned(32))) u8 FIVE_SEED[32] = {5};
-#define STORM_PERF2_COUNT (1000000 / 32)
+#define STORM_PERF2_COUNT (1000000000 / 32)
 
-Test(storm_perf2) {
+Test(storm256_perf) {
 	i64 timer;
 	__attribute__((aligned(32))) u8 buf1[64] = {0};
 	__attribute__((aligned(32))) u8 buf2[64] = {0};
@@ -698,9 +696,7 @@ Test(storm_perf2) {
 	(void)buf5;
 	(void)buf6;
 
-	/*
 	println("time={}us, sum={}, avg={}ns", timer, sum,
 		(timer * 1000) / STORM_PERF2_COUNT);
-		*/
 }
 

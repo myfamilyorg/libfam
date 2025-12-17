@@ -38,14 +38,4 @@ void storm256_init(Storm256Context *ctx, const u8 key[32]);
 void storm256_next_block(Storm256Context *ctx, u8 buf[32]);
 void storm256_xcrypt_buffer(Storm256Context *s, u8 buf[32]);
 
-#define STORM128_CONTEXT_SIZE 96
-
-typedef struct {
-	__attribute__((aligned(32))) u8 _data[STORM128_CONTEXT_SIZE];
-} Storm128Context;
-
-void storm128_init(Storm128Context *ctx, const u8 key[16]);
-void storm128_next_block(Storm128Context *ctx, u8 buf[16]);
-void storm128_xcrypt_buffer(Storm128Context *s, u8 buf[16]);
-
 #endif /* _STORM_H */

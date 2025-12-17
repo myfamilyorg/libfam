@@ -222,11 +222,18 @@ STATIC void storm256_next_block_avx2(Storm256Context *ctx, u8 buf[32]) {
 	__m128i lo = _mm256_castsi256_si128(x);
 	__m128i hi = _mm256_extracti128_si256(x, 1);
 	lo = _mm_xor_si128(lo, hi);
+	__m256i y = _mm256_set_m128i(lo, hi);
+	x = _mm256_aesenc_epi128(x, key);
+	x = _mm256_xor_si256(y, x);
+	x = _mm256_aesenc_epi128(x, key);
+	lo = _mm256_castsi256_si128(x);
+	hi = _mm256_extracti128_si256(x, 1);
+	lo = _mm_xor_si128(lo, hi);
 	st->state = _mm256_set_m128i(lo, hi);
 	x = _mm256_aesenc_epi128(x, key);
 	_mm256_store_si256((__m256i *)buf, x);
 }
-void storm256_xcrypt_buffer_avx2(Storm256Context *ctx, u8 buf[32]) {
+STATIC void storm256_xcrypt_buffer_avx2(Storm256Context *ctx, u8 buf[32]) {
 	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 	__m256i ctr = st->counter;
 	storm256_next_block(ctx, (u8 *)&ctr);
@@ -234,35 +241,6 @@ void storm256_xcrypt_buffer_avx2(Storm256Context *ctx, u8 buf[32]) {
 	    (__m256i *)buf,
 	    _mm256_xor_si256(_mm256_load_si256((__m256i *)buf), ctr));
 	st->counter = _mm256_add_epi64(st->counter, _mm256_set1_epi64x(1));
-}
-STATIC void storm128_init_avx2(Storm128Context *ctx, const u8 key[16]) {
-	Storm128ContextImpl *st = (Storm128ContextImpl *)ctx;
-	__m128i key128 = _mm_load_si128((const __m128i *)key);
-	__m128i domain = _mm_load_si128((const __m128i *)STORM_KEY_MIX);
-	st->state = _mm_xor_si128(key128, domain);
-	__m128i domain_key =
-	    _mm_load_si128((const __m128i *)(STORM_KEY_MIX + 32));
-	st->key = _mm_xor_si128(key128, domain_key);
-	st->counter = _mm_load_si128((const __m128i *)ZERO256);
-}
-STATIC void storm128_next_block_avx2(Storm128Context *ctx, u8 buf[16]) {
-	Storm128ContextImpl *st = (Storm128ContextImpl *)ctx;
-
-	__m128i p = _mm_load_si128((const __m128i *)buf);
-	__m128i x = _mm_xor_si128(st->state, p);
-	__m128i key = st->key;
-	// x = _mm_aesenc_epi128(x, key);
-	/*
-	__m128i lo = _mm256_castsi256_si128(x);
-	__m128i hi = _mm256_extracti128_si256(x, 1);
-	lo = _mm_xor_si128(lo, hi);
-	st->state = _mm256_set_m128i(lo, hi);
-	x = _mm256_aesenc_epi128(x, key);
-	_mm256_store_si256((__m256i *)buf, x);
-	*/
-	(void)st;
-	(void)x;
-	(void)key;
 }
 #elif defined(USE_NEON)
 STATIC void storm256_init_neon(Storm256Context *ctx, const u8 key[32]) {
@@ -383,7 +361,7 @@ STATIC void storm256_next_block_scalar(Storm256Context *ctx, u8 buf[32]) {
 		buf[i + 16] = orig_hi[i];
 	}
 }
-void storm256_xcrypt_buffer_scalar(Storm256Context *ctx, u8 buf[32]) {
+STATIC void storm256_xcrypt_buffer_scalar(Storm256Context *ctx, u8 buf[32]) {
 	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 	u8 block[32];
 	fastmemcpy(block, st->counter, 32);
@@ -416,7 +394,6 @@ PUBLIC void storm256_init(Storm256Context *ctx, const u8 key[32]) {
 PUBLIC void storm256_next_block(Storm256Context *ctx, u8 buf[32]) {
 #ifdef USE_AVX2
 	storm256_next_block_avx2(ctx, buf);
-	storm256_next_block_avx2(ctx, buf);
 #elif defined(USE_NEON)
 	storm256_next_block_neon(ctx, buf);
 	storm256_next_block_neon(ctx, buf);
@@ -435,28 +412,4 @@ PUBLIC void storm256_xcrypt_buffer(Storm256Context *ctx, u8 buf[32]) {
 	storm256_xcrypt_buffer_scalar(ctx, buf);
 #endif /* !USE_AVX2 */
 }
-
-void storm128_init(Storm128Context *ctx, const u8 key[16]) {
-#ifdef USE_AVX2
-	storm128_init_avx2(ctx, key);
-#elif defined(USE_NEON)
-	storm128_init_neon(ctx, key);
-#else
-	storm128_init_scalar(ctx, key);
-#endif /* !USE_AVX2 */
-}
-void storm128_next_block(Storm128Context *ctx, u8 buf[16]) {
-#ifdef USE_AVX2
-	storm128_next_block_avx2(ctx, buf);
-	storm128_next_block_avx2(ctx, buf);
-#elif defined(USE_NEON)
-	storm128_next_block_neon(ctx, buf);
-	storm128_next_block_neon(ctx, buf);
-#else
-	storm128_next_block_scalar(ctx, buf);
-	storm128_next_block_scalar(ctx, buf);
-#endif /* !USE_AVX2 */
-}
-
-void storm128_xcrypt_buffer(Storm128Context *s, u8 buf[16]);
 
