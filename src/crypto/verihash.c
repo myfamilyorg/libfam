@@ -96,11 +96,11 @@ STATIC void verihash_round(u64 field[FIELD_SIZE], u64 round) {
 }
 
 void verihash_init(void) {
-	StormContext ctx;
-	storm_init(&ctx, VERIHASH_DOMAIN);
+	Storm256Context ctx;
+	storm256_init(&ctx, VERIHASH_DOMAIN);
 	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++) {
 		for (u64 j = 0; j < FIELD_SIZE / 4; j++)
-			storm_next_block(&ctx,
+			storm256_next_block(&ctx,
 					 (((u8 *)const_data[i]) + j * 32));
 	}
 }

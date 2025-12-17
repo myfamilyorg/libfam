@@ -65,7 +65,7 @@ void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	polyvec mat[K];
 	polyvec s1, s1hat;
 	polyvec s2, t1, t0;
-	StormContext ctx;
+	Storm256Context ctx;
 	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES] = {0};
 
 	fastmemcpy(seedbuf, seed, 32);
@@ -73,11 +73,11 @@ void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	seedbuf[SEEDBYTES + 0] = K;
 	seedbuf[SEEDBYTES + 1] = K;
 
-	storm_init(&ctx, DILITHIUM_KEYGEN_DOMAIN);
-	storm_next_block(&ctx, seedbuf);
-	storm_next_block(&ctx, seedbuf + 32);
-	storm_next_block(&ctx, seedbuf + 64);
-	storm_next_block(&ctx, seedbuf + 96);
+	storm256_init(&ctx, DILITHIUM_KEYGEN_DOMAIN);
+	storm256_next_block(&ctx, seedbuf);
+	storm256_next_block(&ctx, seedbuf + 32);
+	storm256_next_block(&ctx, seedbuf + 64);
+	storm256_next_block(&ctx, seedbuf + 96);
 
 	rho = seedbuf;
 	rhoprime = rho + SEEDBYTES;
@@ -105,12 +105,12 @@ void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	polyveck_power2round(&t1, &t0, &t1);
 	pack_pk(pk, rho, &t1);
 
-	storm_init(&ctx, DILITHIUM_TR_DOMAIN);
+	storm256_init(&ctx, DILITHIUM_TR_DOMAIN);
 	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
 
-	for (u32 i = 0; i < 41; i++) storm_next_block(&ctx, pk_copy + i * 32);
-	storm_next_block(&ctx, tr);
-	storm_next_block(&ctx, tr + 32);
+	for (u32 i = 0; i < 41; i++) storm256_next_block(&ctx, pk_copy + i * 32);
+	storm256_next_block(&ctx, tr);
+	storm256_next_block(&ctx, tr + 32);
 
 	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
 }
@@ -143,7 +143,7 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	polyvec mat[K], s1, y, z;
 	polyvec t0, s2, w1, w0, h;
 	poly cp;
-	StormContext ctx;
+	Storm256Context ctx;
 
 	rho = seedbuf;
 	tr = rho + SEEDBYTES;
@@ -152,29 +152,29 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	rhoprime = mu + CRHBYTES;
 	unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
 
-	storm_init(&ctx, DILITHIUM_MU_DOMAIN);
+	storm256_init(&ctx, DILITHIUM_MU_DOMAIN);
 	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + MLEN] = {0};
 	fastmemcpy(mu_copy, tr, TRBYTES);
 	fastmemcpy(mu_copy + TRBYTES, m, MLEN);
 	for (u32 i = 0; i < TRBYTES + MLEN; i += 32)
-		storm_next_block(&ctx, mu_copy + i);
+		storm256_next_block(&ctx, mu_copy + i);
 	fastmemset(mu, 0, CRHBYTES);
-	storm_next_block(&ctx, mu);
-	storm_next_block(&ctx, mu + 32);
+	storm256_next_block(&ctx, mu);
+	storm256_next_block(&ctx, mu + 32);
 
-	storm_init(&ctx, DILITHIUM_RHO_PRIME_DOMAIN);
+	storm256_init(&ctx, DILITHIUM_RHO_PRIME_DOMAIN);
 	__attribute__((aligned(
 	    32))) u8 rho_prime_buf[SEEDBYTES + SEEDBYTES + CRHBYTES] = {0};
 
 	fastmemcpy(rho_prime_buf, key, SEEDBYTES);
 	fastmemcpy(rho_prime_buf + SEEDBYTES, rnd, RNDBYTES);
 	fastmemcpy(rho_prime_buf + SEEDBYTES + RNDBYTES, mu, CRHBYTES);
-	storm_next_block(&ctx, rho_prime_buf);
-	storm_next_block(&ctx, rho_prime_buf + 32);
-	storm_next_block(&ctx, rho_prime_buf + 64);
-	storm_next_block(&ctx, rho_prime_buf + 96);
-	storm_next_block(&ctx, rhoprime);
-	storm_next_block(&ctx, rhoprime + 32);
+	storm256_next_block(&ctx, rho_prime_buf);
+	storm256_next_block(&ctx, rho_prime_buf + 32);
+	storm256_next_block(&ctx, rho_prime_buf + 64);
+	storm256_next_block(&ctx, rho_prime_buf + 96);
+	storm256_next_block(&ctx, rhoprime);
+	storm256_next_block(&ctx, rhoprime + 32);
 
 	/* Expand matrix and transform vectors */
 	polyvec_matrix_expand(mat, rho);
@@ -198,15 +198,15 @@ rej:
 	polyveck_decompose(&w1, &w0, &w1);
 	polyveck_pack_w1(sig, &w1);
 
-	storm_init(&ctx, DILITHIUM_CTILDE_DOMAIN);
+	storm256_init(&ctx, DILITHIUM_CTILDE_DOMAIN);
 	__attribute__((
 	    aligned(32))) u8 ctilde_buffer[CRHBYTES + K * POLYW1_PACKEDBYTES];
 	fastmemcpy(ctilde_buffer, mu, CRHBYTES);
 	fastmemcpy(ctilde_buffer + CRHBYTES, sig, K * POLYW1_PACKEDBYTES);
 	for (u32 i = 0; i < CRHBYTES + K * POLYW1_PACKEDBYTES; i += 32)
-		storm_next_block(&ctx, ctilde_buffer + i);
+		storm256_next_block(&ctx, ctilde_buffer + i);
 	fastmemset(sig, 0, 64);
-	storm_next_block(&ctx, sig);
+	storm256_next_block(&ctx, sig);
 
 	poly_challenge(&cp, sig);
 	ntt(cp.coeffs);
@@ -337,7 +337,7 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	poly cp;
 	polyvec mat[K], z;
 	polyvec t1, w1, h;
-	StormContext ctx;
+	Storm256Context ctx;
 
 	if (siglen != CRYPTO_BYTES) {
 		return -1;
@@ -351,21 +351,21 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 		return -1;
 	}
 
-	storm_init(&ctx, DILITHIUM_TR_DOMAIN);
+	storm256_init(&ctx, DILITHIUM_TR_DOMAIN);
 	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
-	for (u32 i = 0; i < 41; i++) storm_next_block(&ctx, pk_copy + i * 32);
-	storm_next_block(&ctx, mu);
-	storm_next_block(&ctx, mu + 32);
+	for (u32 i = 0; i < 41; i++) storm256_next_block(&ctx, pk_copy + i * 32);
+	storm256_next_block(&ctx, mu);
+	storm256_next_block(&ctx, mu + 32);
 
-	storm_init(&ctx, DILITHIUM_MU_DOMAIN);
+	storm256_init(&ctx, DILITHIUM_MU_DOMAIN);
 	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + MLEN] = {0};
 	fastmemcpy(mu_copy, mu, TRBYTES);
 	fastmemcpy(mu_copy + TRBYTES, m, mlen);
 	for (u32 i = 0; i < TRBYTES + MLEN; i += 32)
-		storm_next_block(&ctx, mu_copy + i);
+		storm256_next_block(&ctx, mu_copy + i);
 	fastmemset(mu, 0, CRHBYTES);
-	storm_next_block(&ctx, mu);
-	storm_next_block(&ctx, mu + 32);
+	storm256_next_block(&ctx, mu);
+	storm256_next_block(&ctx, mu + 32);
 
 	/* Matrix-vector multiplication; compute Az - c2^dt1 */
 	poly_challenge(&cp, c);
@@ -388,14 +388,14 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	polyveck_use_hint(&w1, &w1, &h);
 	polyveck_pack_w1(buf, &w1);
 
-	storm_init(&ctx, DILITHIUM_CTILDE_DOMAIN);
+	storm256_init(&ctx, DILITHIUM_CTILDE_DOMAIN);
 	__attribute__((
 	    aligned(32))) u8 ctilde_buffer[CRHBYTES + K * POLYW1_PACKEDBYTES];
 	fastmemcpy(ctilde_buffer, mu, CRHBYTES);
 	fastmemcpy(ctilde_buffer + CRHBYTES, buf, K * POLYW1_PACKEDBYTES);
 	for (u32 i = 0; i < CRHBYTES + K * POLYW1_PACKEDBYTES; i += 32)
-		storm_next_block(&ctx, ctilde_buffer + i);
-	storm_next_block(&ctx, c2);
+		storm256_next_block(&ctx, ctilde_buffer + i);
+	storm256_next_block(&ctx, c2);
 
 	for (i = 0; i < CTILDEBYTES; ++i)
 		if (c[i] != c2[i]) {

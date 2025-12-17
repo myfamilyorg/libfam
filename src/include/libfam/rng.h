@@ -30,7 +30,7 @@
 #include <libfam/types.h>
 
 typedef struct {
-	StormContext ctx;
+	Storm256Context ctx;
 } Rng;
 
 void rng_init(Rng *rng, const void *opt_entropy);

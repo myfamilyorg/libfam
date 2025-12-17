@@ -39,7 +39,7 @@ static u64 global_entropy_counter = U64_MAX / 2;
 STATIC void random32(u8 out[32]) {
 	__attribute__((aligned(32))) u8 tmp[32];
 	u64 *x = (u64 *)tmp;
-	StormContext ctx;
+	Storm256Context ctx;
 	struct timespec ts;
 	u64 pid = getpid();
 	i32 res;
@@ -55,19 +55,19 @@ STATIC void random32(u8 out[32]) {
 	x[2] = __aadd64(&global_entropy_counter, 1) ^ (u64)&ts;
 	x[3] = cycle_counter() ^ pid;
 
-	storm_init(&ctx, tmp);
-	storm_next_block(&ctx, out);
+	storm256_init(&ctx, tmp);
+	storm256_next_block(&ctx, out);
 
 	secure_zero32(tmp);
 	secure_zero(&ctx, sizeof(ctx));
 }
 
 STATIC void random_stir(u8 current[32], const u8 stir_in[32]) {
-	StormContext ctx;
+	Storm256Context ctx;
 
-	storm_init(&ctx, current);
+	storm256_init(&ctx, current);
 	fastmemcpy(current, stir_in, 32);
-	storm_next_block(&ctx, current);
+	storm256_next_block(&ctx, current);
 
 	secure_zero(&ctx, sizeof(ctx));
 }
@@ -81,7 +81,7 @@ void rng_init(Rng *rng, const void *opt_entropy) {
 
 	random32(key);
 	if (opt_entropy) random_stir(key, opt_entropy);
-	storm_init(&rng->ctx, key);
+	storm256_init(&rng->ctx, key);
 	secure_zero32(key);
 }
 
@@ -93,7 +93,7 @@ void rng_gen(Rng *rng, void *v, u64 size) {
 	u8 *out = v;
 	u64 off = 0;
 	while (off + 32 < size) {
-		storm_next_block(&rng->ctx, out + off);
+		storm256_next_block(&rng->ctx, out + off);
 		off += 32;
 	}
 
@@ -103,13 +103,13 @@ void rng_gen(Rng *rng, void *v, u64 size) {
 		if (IS_VALGRIND()) fastmemset(buf, 0, 32);
 #endif /* TEST */
 
-		storm_next_block(&rng->ctx, buf);
+		storm256_next_block(&rng->ctx, buf);
 		fastmemcpy(out + off, buf, size - off);
 		secure_zero32(buf);
 	}
 }
 
 #if TEST == 1
-void rng_test_seed(Rng *rng, u8 key[32]) { storm_init(&rng->ctx, key); }
+void rng_test_seed(Rng *rng, u8 key[32]) { storm256_init(&rng->ctx, key); }
 #endif /* TEST */
 

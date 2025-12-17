@@ -66,9 +66,9 @@ u32 poly_make_hint(poly *h, const poly *a0, const poly *a1);
 void poly_use_hint(poly *b, const poly *a, const poly *h);
 
 int poly_chknorm(const poly *a, i32 B);
-void poly_uniform(poly *a, StormContext *ctx);
-void poly_uniform_eta(poly *a, StormContext *ctx);
-void poly_uniform_gamma1(poly *a, StormContext *ctx, u64 nonce);
+void poly_uniform(poly *a, Storm256Context *ctx);
+void poly_uniform_eta(poly *a, Storm256Context *ctx);
+void poly_uniform_gamma1(poly *a, Storm256Context *ctx, u64 nonce);
 void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]);
 
 void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u64 nonce);

@@ -72,16 +72,16 @@ typedef struct {
 	u8 key[32];
 	u8 counter[32];
 #endif /* !USE_AVX2 */
-} StormContextImpl;
+} Storm256ContextImpl;
 
 typedef struct {
-	StormContext ctx;
+	Storm256Context ctx;
 	u64 counter;
 } StormCtrImpl;
 
 typedef u8 state_t[4][4];
 
-STATIC_ASSERT(sizeof(StormContext) == sizeof(StormContextImpl),
+STATIC_ASSERT(sizeof(Storm256Context) == sizeof(Storm256ContextImpl),
 	      storm_context_size);
 
 #if !defined(USE_AVX2) && !defined(USE_NEON)
@@ -187,8 +187,8 @@ STATIC __attribute__((unused)) void aesenc128(u8 state[16],
 #endif /* USE_AVX2 */
 
 #ifdef USE_AVX2
-STATIC void storm_init_avx2(StormContext *ctx, const u8 key[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
+STATIC void storm256_init_avx2(Storm256Context *ctx, const u8 key[32]) {
+	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 	__m256i key256 = _mm256_load_si256((const __m256i *)key);
 	__m256i domain = _mm256_load_si256((const __m256i *)STORM_KEY_MIX);
 	st->state = _mm256_xor_si256(key256, domain);
@@ -197,8 +197,8 @@ STATIC void storm_init_avx2(StormContext *ctx, const u8 key[32]) {
 	st->key = _mm256_xor_si256(key256, domain_key);
 	st->counter = _mm256_load_si256((const __m256i *)ZERO256);
 }
-STATIC void storm_next_block_avx2(StormContext *ctx, u8 buf[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
+STATIC void storm256_next_block_avx2(Storm256Context *ctx, u8 buf[32]) {
+	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 	__m256i p = _mm256_load_si256((const __m256i *)buf);
 	__m256i x = _mm256_xor_si256(st->state, p);
 	__m256i key = st->key;
@@ -210,18 +210,18 @@ STATIC void storm_next_block_avx2(StormContext *ctx, u8 buf[32]) {
 	x = _mm256_aesenc_epi128(x, key);
 	_mm256_store_si256((__m256i *)buf, x);
 }
-void storm_xcrypt_buffer_avx2(StormContext *ctx, u8 buf[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
+void storm256_xcrypt_buffer_avx2(Storm256Context *ctx, u8 buf[32]) {
+	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 	__m256i ctr = st->counter;
-	storm_next_block(ctx, (u8 *)&ctr);
+	storm256_next_block(ctx, (u8 *)&ctr);
 	_mm256_store_si256(
 	    (__m256i *)buf,
 	    _mm256_xor_si256(_mm256_load_si256((__m256i *)buf), ctr));
 	st->counter = _mm256_add_epi64(st->counter, _mm256_set1_epi64x(1));
 }
 #elif defined(USE_NEON)
-STATIC void storm_init_neon(StormContext *ctx, const u8 key[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
+STATIC void storm256_init_neon(Storm256Context *ctx, const u8 key[32]) {
+	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 	uint8x16_t key_lo = vld1q_u8(key);
 	uint8x16_t key_hi = vld1q_u8(key + 16);
 	uint8x16_t domain_lo = vld1q_u8(STORM_KEY_MIX);
@@ -244,8 +244,8 @@ STATIC uint8x16_t aesenc_intel_match(uint8x16_t data, uint8x16_t rkey) {
 	return veorq_u8(data, rkey);
 }
 
-STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
+STATIC void storm256_next_block_neon(Storm256Context *ctx, u8 buf[32]) {
+	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 	uint8x16_t p_lo = vld1q_u8(buf);
 	uint8x16_t p_hi = vld1q_u8(buf + 16);
 	uint8x16_t x_lo = veorq_u8(st->state_lo, p_lo);
@@ -261,8 +261,8 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 	vst1q_u8(buf + 16, out_hi);
 }
 
-STATIC void storm_xcrypt_buffer_neon(StormContext *ctx, u8 buf[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
+STATIC void storm256_xcrypt_buffer_neon(Storm256Context *ctx, u8 buf[32]) {
+	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 	uint8x16_t ctr_lo = st->counter_lo;
 	uint8x16_t ctr_hi = st->counter_hi;
 
@@ -270,7 +270,7 @@ STATIC void storm_xcrypt_buffer_neon(StormContext *ctx, u8 buf[32]) {
 	vst1q_u8(ctr_block, ctr_lo);
 	vst1q_u8(ctr_block + 16, ctr_hi);
 
-	storm_next_block_neon(ctx, ctr_block);
+	storm256_next_block_neon(ctx, ctr_block);
 
 	uint8x16_t keystream_lo = vld1q_u8(ctr_block);
 	uint8x16_t keystream_hi = vld1q_u8(ctr_block + 16);
@@ -294,8 +294,8 @@ STATIC void storm_xcrypt_buffer_neon(StormContext *ctx, u8 buf[32]) {
 }
 
 #else
-STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
+STATIC void storm256_init_scalar(Storm256Context *ctx, const u8 key[32]) {
+	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 
 	for (int i = 0; i < 32; ++i) {
 		st->state[i] = key[i] ^ STORM_KEY_MIX[i];
@@ -304,8 +304,8 @@ STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
 	fastmemcpy(st->counter, ZERO256, 32);
 }
 
-STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
+STATIC void storm256_next_block_scalar(Storm256Context *ctx, u8 buf[32]) {
+	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 
 	u8 lo[16], hi[16];
 
@@ -338,12 +338,12 @@ STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32]) {
 		buf[i + 16] = orig_hi[i];
 	}
 }
-void storm_xcrypt_buffer_scalar(StormContext *ctx, u8 buf[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
+void storm256_xcrypt_buffer_scalar(Storm256Context *ctx, u8 buf[32]) {
+	Storm256ContextImpl *st = (Storm256ContextImpl *)ctx;
 	u8 block[32];
 	fastmemcpy(block, st->counter, 32);
 
-	storm_next_block(ctx, block);
+	storm256_next_block(ctx, block);
 
 	for (int i = 0; i < 32; i++) {
 		buf[i] ^= block[i];
@@ -358,36 +358,36 @@ void storm_xcrypt_buffer_scalar(StormContext *ctx, u8 buf[32]) {
 
 #endif /* !USE_AVX2 */
 
-PUBLIC void storm_init(StormContext *ctx, const u8 key[32]) {
+PUBLIC void storm256_init(Storm256Context *ctx, const u8 key[32]) {
 #ifdef USE_AVX2
-	storm_init_avx2(ctx, key);
+	storm256_init_avx2(ctx, key);
 #elif defined(USE_NEON)
-	storm_init_neon(ctx, key);
+	storm256_init_neon(ctx, key);
 #else
-	storm_init_scalar(ctx, key);
+	storm256_init_scalar(ctx, key);
 #endif /* !USE_AVX2 */
 }
 
-PUBLIC void storm_next_block(StormContext *ctx, u8 buf[32]) {
+PUBLIC void storm256_next_block(Storm256Context *ctx, u8 buf[32]) {
 #ifdef USE_AVX2
-	storm_next_block_avx2(ctx, buf);
-	storm_next_block_avx2(ctx, buf);
+	storm256_next_block_avx2(ctx, buf);
+	storm256_next_block_avx2(ctx, buf);
 #elif defined(USE_NEON)
-	storm_next_block_neon(ctx, buf);
-	storm_next_block_neon(ctx, buf);
+	storm256_next_block_neon(ctx, buf);
+	storm256_next_block_neon(ctx, buf);
 #else
-	storm_next_block_scalar(ctx, buf);
-	storm_next_block_scalar(ctx, buf);
+	storm256_next_block_scalar(ctx, buf);
+	storm256_next_block_scalar(ctx, buf);
 #endif /* !USE_AVX2 */
 }
 
-PUBLIC void storm_xcrypt_buffer(StormContext *ctx, u8 buf[32]) {
+PUBLIC void storm256_xcrypt_buffer(Storm256Context *ctx, u8 buf[32]) {
 #ifdef USE_AVX2
-	storm_xcrypt_buffer_avx2(ctx, buf);
+	storm256_xcrypt_buffer_avx2(ctx, buf);
 #elif defined(USE_NEON)
-	storm_xcrypt_buffer_neon(ctx, buf);
+	storm256_xcrypt_buffer_neon(ctx, buf);
 #else
-	storm_xcrypt_buffer_scalar(ctx, buf);
+	storm256_xcrypt_buffer_scalar(ctx, buf);
 #endif /* !USE_AVX2 */
 }
 

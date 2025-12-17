@@ -140,3 +140,26 @@ u128 __umodti3(u128 a, u128 b) {
 	return r;
 }
 
+PUBLIC u128 __udivti3(u128 a, u128 b) {
+	i32 shift;
+	u128 quot, rem;
+	if (!b) trap();
+	if (a < b) return 0;
+	quot = 0;
+	rem = a;
+	shift = (i32)clz_u128(b) - (i32)clz_u128(rem);
+	if (shift < 0) shift = 0;
+
+	b <<= shift;
+
+	while (shift >= 0) {
+		if (rem >= b) {
+			rem -= b;
+			quot |= ((u128)1 << shift);
+		}
+		b >>= 1;
+		shift--;
+	}
+	return quot;
+}
+

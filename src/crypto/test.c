@@ -52,7 +52,7 @@ Test(aighthash) {
 }
 
 Test(storm) {
-	StormContext ctx;
+	Storm256Context ctx;
 	__attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
 	__attribute__((aligned(32))) u8 buffer1[32] = {0};
 	__attribute__((aligned(32))) u8 buffer2[32] = {0};
@@ -60,17 +60,17 @@ Test(storm) {
 	__attribute__((aligned(32))) u8 buffer4[32] = {0};
 	__attribute__((aligned(32))) u8 buffer5[32] = {0};
 
-	storm_init(&ctx, SEED);
+	storm256_init(&ctx, SEED);
 	faststrcpy(buffer1, "test1");
-	storm_xcrypt_buffer(&ctx, buffer1);
+	storm256_xcrypt_buffer(&ctx, buffer1);
 	faststrcpy(buffer2, "test2");
-	storm_xcrypt_buffer(&ctx, buffer2);
+	storm256_xcrypt_buffer(&ctx, buffer2);
 	faststrcpy(buffer3, "blahblah");
-	storm_xcrypt_buffer(&ctx, buffer3);
+	storm256_xcrypt_buffer(&ctx, buffer3);
 	faststrcpy(buffer4, "ok");
-	storm_xcrypt_buffer(&ctx, buffer4);
+	storm256_xcrypt_buffer(&ctx, buffer4);
 	faststrcpy(buffer5, "x");
-	storm_xcrypt_buffer(&ctx, buffer5);
+	storm256_xcrypt_buffer(&ctx, buffer5);
 
 	ASSERT(memcmp(buffer1, "test1", 5), "ne1");
 	ASSERT(memcmp(buffer2, "test2", 5), "ne2");
@@ -78,38 +78,38 @@ Test(storm) {
 	ASSERT(memcmp(buffer4, "ok", 2), "ne4");
 	ASSERT(memcmp(buffer5, "x", 1), "ne5");
 
-	StormContext ctx2;
-	storm_init(&ctx2, SEED);
+	Storm256Context ctx2;
+	storm256_init(&ctx2, SEED);
 
-	storm_xcrypt_buffer(&ctx2, buffer1);
+	storm256_xcrypt_buffer(&ctx2, buffer1);
 	ASSERT(!memcmp(buffer1, "test1", 5), "eq1");
-	storm_xcrypt_buffer(&ctx2, buffer2);
+	storm256_xcrypt_buffer(&ctx2, buffer2);
 	ASSERT(!memcmp(buffer2, "test2", 5), "eq2");
 
-	storm_xcrypt_buffer(&ctx2, buffer3);
+	storm256_xcrypt_buffer(&ctx2, buffer3);
 	ASSERT(!memcmp(buffer3, "blahblah", 8), "eq3");
 
-	storm_xcrypt_buffer(&ctx2, buffer4);
+	storm256_xcrypt_buffer(&ctx2, buffer4);
 	ASSERT(!memcmp(buffer4, "ok", 2), "eq4");
 
-	storm_xcrypt_buffer(&ctx2, buffer5);
+	storm256_xcrypt_buffer(&ctx2, buffer5);
 	ASSERT(!memcmp(buffer5, "x", 1), "eq5");
 }
 
 Test(storm_vectors) {
-	StormContext ctx;
+	Storm256Context ctx;
 	__attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
 	__attribute((aligned(32))) u8 buf1[32] = {
 	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
 	    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
-	storm_init(&ctx, SEED);
-	storm_next_block(&ctx, buf1);
+	storm256_init(&ctx, SEED);
+	storm256_next_block(&ctx, buf1);
 
 	u8 exp1[32] = {113, 239, 171, 69,  83, 52,  28,	 60,  225, 220, 56,
 		       50,  138, 6,   245, 3,  222, 255, 209, 83,  227, 154,
 		       122, 141, 75,  208, 13, 154, 100, 84,  30,  167};
 	ASSERT(!memcmp(buf1, exp1, sizeof(buf1)), "buf1");
-	storm_next_block(&ctx, buf1);
+	storm256_next_block(&ctx, buf1);
 
 	u8 exp2[32] = {216, 99,	 190, 197, 23, 62, 52,	69, 122, 216, 104,
 		       172, 177, 212, 82,  30, 94, 143, 49, 165, 80,  125,
@@ -120,15 +120,15 @@ Test(storm_vectors) {
 	__attribute((aligned(32))) u8 buf2[32] = {
 	    32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17,
 	    16, 15, 14, 13, 12, 11, 10, 9,  8,	7,  6,	5,  4,	3,  2,	1};
-	storm_init(&ctx, SEED);
-	storm_next_block(&ctx, buf2);
+	storm256_init(&ctx, SEED);
+	storm256_next_block(&ctx, buf2);
 
 	u8 exp3[32] = {143, 21,	 148, 109, 114, 92, 230, 180, 146, 121, 254,
 		       239, 133, 56,  85,  33,	46, 112, 188, 217, 252, 243,
 		       167, 220, 74,  79,  155, 68, 36,	 117, 44,  170};
 	ASSERT(!memcmp(buf2, exp3, sizeof(buf2)), "buf2");
 
-	storm_next_block(&ctx, buf2);
+	storm256_next_block(&ctx, buf2);
 
 	u8 exp4[32] = {236, 147, 161, 174, 97,	88,  15,  113, 127, 129, 63,
 		       218, 158, 77,  178, 47,	24,  201, 25,  228, 93,	 64,
@@ -221,12 +221,12 @@ Test(perfx) {
 	    0,	 0,   130, 112, 151, 22,  74,  167, 170, 113, 109,
 	    27,	 234, 235, 45,	189, 100, 230, 166, 0,	 116, 241,
 	    182, 57,  182, 170, 158, 209, 46,  165, 155, 209};
-	StormContext ctx;
+	Storm256Context ctx;
 
-	storm_init(&ctx, buf);
+	storm256_init(&ctx, buf);
 
 	u64 c = cycle_counter();
-	for (u32 i = 0; i < 16384 * 32; i++) storm_next_block(&ctx, buf);
+	for (u32 i = 0; i < 16384 * 32; i++) storm256_next_block(&ctx, buf);
 
 	c = cycle_counter() - c;
 
@@ -565,7 +565,7 @@ Test(aes_bitflip) {
 }
 
 Test(storm_bitflip) {
-	StormContext ctx;
+	Storm256Context ctx;
 	Rng rng;
 	u8 plaintext[32] = {0};
 	u8 plaintext2[32] = {0};
@@ -582,7 +582,7 @@ Test(storm_bitflip) {
 	u8 key[32] = {0}, iv[16] = {0};
 	rng_gen(&rng, key, 32);
 	rng_gen(&rng, iv, 16);
-	storm_init(&ctx, key);
+	storm256_init(&ctx, key);
 
 	for (u32 i = 0; i < iter; i++) {
 		rng_gen(&rng, plaintext, 32);
@@ -590,11 +590,11 @@ Test(storm_bitflip) {
 		u64 ones[256] = {0};
 
 		for (u32 j = 0; j < trials; j++) {
-			StormContext ctx2;
+			Storm256Context ctx2;
 			fastmemcpy(&ctx2, &ctx, sizeof(ctx2));
 			fastmemcpy(plaintext2, plaintext, 32);
 			fastmemcpy(plaintext3, plaintext, 32);
-			storm_next_block(&ctx, plaintext2);
+			storm256_next_block(&ctx, plaintext2);
 			u64 byte_pos = 0;
 			rng_gen(&rng, &byte_pos, sizeof(u64));
 			byte_pos %= 16;
@@ -604,7 +604,7 @@ Test(storm_bitflip) {
 
 			plaintext3[byte_pos] ^= (u8)(1 << bit_pos);
 			ASSERT(memcmp(plaintext2, plaintext3, 32), "pt");
-			storm_next_block(&ctx2, plaintext3);
+			storm256_next_block(&ctx2, plaintext3);
 			u8 *a = plaintext2;
 			u8 *b = plaintext3;
 
@@ -653,23 +653,23 @@ Test(storm_perf2) {
 	__attribute__((aligned(32))) u8 buf5[64] = {0};
 	__attribute__((aligned(32))) u8 buf6[64] = {0};
 
-	StormContext ctx1;
-	StormContext ctx2;
-	StormContext ctx3;
-	StormContext ctx4;
-	StormContext ctx5;
-	StormContext ctx6;
+	Storm256Context ctx1;
+	Storm256Context ctx2;
+	Storm256Context ctx3;
+	Storm256Context ctx4;
+	Storm256Context ctx5;
+	Storm256Context ctx6;
 
 	u64 sum = 0;
 
 	(void)sum;
 
-	storm_init(&ctx1, ZERO_SEED);
-	storm_init(&ctx2, ONE_SEED);
-	storm_init(&ctx3, TWO_SEED);
-	storm_init(&ctx4, THREE_SEED);
-	storm_init(&ctx5, FOUR_SEED);
-	storm_init(&ctx6, FIVE_SEED);
+	storm256_init(&ctx1, ZERO_SEED);
+	storm256_init(&ctx2, ONE_SEED);
+	storm256_init(&ctx3, TWO_SEED);
+	storm256_init(&ctx4, THREE_SEED);
+	storm256_init(&ctx5, FOUR_SEED);
+	storm256_init(&ctx6, FIVE_SEED);
 
 	timer = micros();
 	for (u32 i = 0; i < STORM_PERF2_COUNT; i++) {
@@ -679,17 +679,17 @@ Test(storm_perf2) {
 		u8 *block4 = buf4 + (i & 32);
 		u8 *block5 = buf5 + (i & 32);
 		u8 *block6 = buf6 + (i & 32);
-		storm_xcrypt_buffer(&ctx1, block1);
+		storm256_xcrypt_buffer(&ctx1, block1);
 		sum += ((u64 *)block1)[0];
-		storm_xcrypt_buffer(&ctx2, block2);
+		storm256_xcrypt_buffer(&ctx2, block2);
 		sum += ((u64 *)block2)[0];
-		storm_xcrypt_buffer(&ctx3, block3);
+		storm256_xcrypt_buffer(&ctx3, block3);
 		sum += ((u64 *)block3)[0];
-		storm_xcrypt_buffer(&ctx4, block4);
+		storm256_xcrypt_buffer(&ctx4, block4);
 		sum += ((u64 *)block4)[0];
-		storm_xcrypt_buffer(&ctx5, block5);
+		storm256_xcrypt_buffer(&ctx5, block5);
 		sum += ((u64 *)block6)[0];
-		storm_xcrypt_buffer(&ctx6, block6);
+		storm256_xcrypt_buffer(&ctx6, block6);
 		sum += ((u64 *)block6)[0];
 	}
 	timer = micros() - timer;

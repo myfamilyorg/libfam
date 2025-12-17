@@ -71,25 +71,25 @@ struct __attribute__((aligned(64))) Bible {
 
 PUBLIC const Bible *bible_gen(void) {
 	__attribute__((aligned(32))) u8 buffer[32];
-	StormContext ctx;
+	Storm256Context ctx;
 
 	Bible *ret = map(sizeof(Bible) + EXTENDED_BIBLE_SIZE);
 	if (!ret) return NULL;
 	ret->flags = 0;
 	fastmemcpy(ret->data, xxdir_file_0, xxdir_file_size_0);
 
-	storm_init(&ctx, BIBLE_GEN_DOMAIN);
+	storm256_init(&ctx, BIBLE_GEN_DOMAIN);
 	u64 off = 0;
 	while (off < xxdir_file_size_0) {
 		fastmemcpy(buffer, xxdir_file_0 + off, 32);
-		storm_next_block(&ctx, buffer);
+		storm256_next_block(&ctx, buffer);
 		off += 32;
 	}
 
 	for (u64 offset = xxdir_file_size_0; offset < EXTENDED_BIBLE_SIZE;
 	     offset += 32) {
 		for (u32 i = 0; i < STORM_ITER; i++)
-			storm_next_block(&ctx, buffer);
+			storm256_next_block(&ctx, buffer);
 
 		fastmemcpy(ret->data + offset, buffer, 32);
 	}
@@ -128,12 +128,12 @@ CLEANUP:
 
 PUBLIC void bible_sbox8_64(u64 sbox[256]) {
 	__attribute__((aligned(32))) u8 buf[32] = {0};
-	StormContext ctx;
-	storm_init(&ctx, BIBLE_SBOX_DOMAIN);
+	Storm256Context ctx;
+	storm256_init(&ctx, BIBLE_SBOX_DOMAIN);
 
 	u8 *sbox_u8 = (void *)sbox;
 	for (u32 i = 0; i < 256 / 4; i++) {
-		storm_next_block(&ctx, buf);
+		storm256_next_block(&ctx, buf);
 		fastmemcpy(sbox_u8 + i * 32, buf, 32);
 	}
 }

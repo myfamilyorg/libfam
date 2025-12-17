@@ -233,7 +233,7 @@ static u32 rej_uniform(i32 *a, u32 len, const u8 *buf, u32 buflen) {
  **************************************************/
 #define POLY_UNIFORM_NBLOCKS \
 	((768 + STREAM128_BLOCKBYTES - 1) / STREAM128_BLOCKBYTES)
-void poly_uniform(poly *a, StormContext *ctx) {
+void poly_uniform(poly *a, Storm256Context *ctx) {
 	static u64 value = U64_MAX / 2;
 	u32 ctr = 0;
 	__attribute__((aligned(32))) u8 buf[32];
@@ -241,7 +241,7 @@ void poly_uniform(poly *a, StormContext *ctx) {
 		((u64 *)buf)[i] = (i + value) * 0x9E3779B97F4A7C15ULL;
 
 	while (ctr < N) {
-		storm_next_block(ctx, buf);
+		storm256_next_block(ctx, buf);
 		ctr += rej_uniform(a->coeffs + ctr, N - ctr, buf, 32);
 	}
 }
@@ -304,7 +304,7 @@ static u32 rej_eta(i32 *a, u32 len, const u8 *buf, u32 buflen) {
 #define POLY_UNIFORM_ETA_NBLOCKS \
 	((227 + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
 #endif
-void poly_uniform_eta(poly *a, StormContext *ctx) {
+void poly_uniform_eta(poly *a, Storm256Context *ctx) {
 	static u64 value = U64_MAX / 2;
 	u32 ctr = 0;
 	__attribute__((aligned(32))) u8 buf[32];
@@ -312,7 +312,7 @@ void poly_uniform_eta(poly *a, StormContext *ctx) {
 		((u64 *)buf)[i] = (i + value) * 0x9E3779B97F4A7C15ULL;
 
 	while (ctr < N) {
-		storm_next_block(ctx, buf);
+		storm256_next_block(ctx, buf);
 		ctr += rej_eta(a->coeffs + ctr, N - ctr, buf, 32);
 	}
 }
@@ -330,14 +330,14 @@ void poly_uniform_eta(poly *a, StormContext *ctx) {
  **************************************************/
 #define POLY_UNIFORM_GAMMA1_NBLOCKS \
 	((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
-void poly_uniform_gamma1(poly *a, StormContext *ctx, u64 nonce) {
+void poly_uniform_gamma1(poly *a, Storm256Context *ctx, u64 nonce) {
 	__attribute__((aligned(32))) u8 buf[704];
 
 	if (IS_VALGRIND()) fastmemset(buf, 0, 704);
 
 	for (u64 i = 0; i < 4; i++)
 		((u64 *)buf)[i] = (i + nonce) * 0x9E3779B97F4A7C15ULL;
-	for (u32 i = 0; i < 704; i += 32) storm_next_block(ctx, buf + i);
+	for (u32 i = 0; i < 704; i += 32) storm256_next_block(ctx, buf + i);
 
 	polyz_unpack(a, buf);
 }
@@ -357,11 +357,11 @@ void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]) {
 	u32 i, b, pos;
 	u64 signs;
 	__attribute__((aligned(32))) u8 buf[STORM_RATE] = {0};
-	StormContext state;
+	Storm256Context state;
 
-	storm_init(&state, POLY_CHALLENGE_DOMAIN);
+	storm256_init(&state, POLY_CHALLENGE_DOMAIN);
 	fastmemcpy(buf, seed, 32);
-	storm_next_block(&state, buf);
+	storm256_next_block(&state, buf);
 
 	signs = 0;
 	for (i = 0; i < 8; ++i) signs |= (u64)buf[i] << 8 * i;
@@ -371,7 +371,7 @@ void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]) {
 	for (i = N - TAU; i < N; ++i) {
 		do {
 			if (pos >= STORM_RATE) {
-				storm_next_block(&state, buf);
+				storm256_next_block(&state, buf);
 				pos = 0;
 			}
 
