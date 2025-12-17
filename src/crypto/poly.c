@@ -335,8 +335,7 @@ void poly_uniform_gamma1(poly *a, Storm256Context *ctx, u64 nonce) {
 
 	if (IS_VALGRIND()) fastmemset(buf, 0, 704);
 
-	for (u64 i = 0; i < 4; i++)
-		((u64 *)buf)[i] = (i + nonce) * 0x9E3779B97F4A7C15ULL;
+	((u64 *)buf)[0] ^= nonce;
 	for (u32 i = 0; i < 704; i += 32) storm256_next_block(ctx, buf + i);
 
 	polyz_unpack(a, buf);
