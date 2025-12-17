@@ -567,9 +567,9 @@ Test(aes_bitflip) {
 Test(storm_bitflip) {
 	Storm256Context ctx;
 	Rng rng;
-	u8 plaintext[32] = {0};
-	u8 plaintext2[32] = {0};
-	u8 plaintext3[32] = {0};
+	__attribute__((aligned(32))) u8 plaintext[32] = {0};
+	__attribute__((aligned(32))) u8 plaintext2[32] = {0};
+	__attribute__((aligned(32))) u8 plaintext3[32] = {0};
 	u32 iter = 10000;
 	u32 trials = 100;
 	u32 total_fail = 0;
@@ -579,9 +579,8 @@ Test(storm_bitflip) {
 	rng_init(&rng, NULL);
 	f64 max = 0.0, min = 100.0;
 
-	u8 key[32] = {0}, iv[16] = {0};
+	__attribute__((aligned(32))) u8 key[32] = {0};
 	rng_gen(&rng, key, 32);
-	rng_gen(&rng, iv, 16);
 	storm256_init(&ctx, key);
 
 	for (u32 i = 0; i < iter; i++) {
