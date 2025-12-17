@@ -113,5 +113,6 @@ u128 verihash(const u8 *in, u64 len) {
 	for (u64 i = 0; i < FIELD_SIZE; i++) field[i] %= GLOCKS;
 	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++)
 		verihash_round(field, i);
-	return ((u128 *)field)[0];
+	u128 *ret = (void *)field;
+	return ret[0];
 }

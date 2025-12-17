@@ -371,9 +371,12 @@ PUBLIC void storm_init(StormContext *ctx, const u8 key[32]) {
 PUBLIC void storm_next_block(StormContext *ctx, u8 buf[32]) {
 #ifdef USE_AVX2
 	storm_next_block_avx2(ctx, buf);
+	storm_next_block_avx2(ctx, buf);
 #elif defined(USE_NEON)
 	storm_next_block_neon(ctx, buf);
+	storm_next_block_neon(ctx, buf);
 #else
+	storm_next_block_scalar(ctx, buf);
 	storm_next_block_scalar(ctx, buf);
 #endif /* !USE_AVX2 */
 }

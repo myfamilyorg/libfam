@@ -105,17 +105,15 @@ Test(storm_vectors) {
 	storm_init(&ctx, SEED);
 	storm_next_block(&ctx, buf1);
 
-	u8 exp1[32] = {0x90, 0xC0, 0xC6, 0x22, 0xE6, 0x25, 0x85, 0x38,
-		       0x17, 0x59, 0x2F, 0x3,  0xA,  0x3C, 0xD9, 0x98,
-		       0x1C, 0x41, 0x99, 0xC6, 0x9D, 0x5C, 0x79, 0x36,
-		       0xED, 0x98, 0x94, 0xF5, 0xB3, 0xEF, 0x7F, 0xE2};
+	u8 exp1[32] = {113, 239, 171, 69,  83, 52,  28,	 60,  225, 220, 56,
+		       50,  138, 6,   245, 3,  222, 255, 209, 83,  227, 154,
+		       122, 141, 75,  208, 13, 154, 100, 84,  30,  167};
 	ASSERT(!memcmp(buf1, exp1, sizeof(buf1)), "buf1");
 	storm_next_block(&ctx, buf1);
 
-	u8 exp2[32] = {0x71, 0xEF, 0xAB, 0x45, 0x53, 0x34, 0x1C, 0x3C,
-		       0xE1, 0xDC, 0x38, 0x32, 0x8A, 0x6,  0xF5, 0x3,
-		       0xDE, 0xFF, 0xD1, 0x53, 0xE3, 0x9A, 0x7A, 0x8D,
-		       0x4B, 0xD0, 0xD,	 0x9A, 0x64, 0x54, 0x1E, 0xA7};
+	u8 exp2[32] = {216, 99,	 190, 197, 23, 62, 52,	69, 122, 216, 104,
+		       172, 177, 212, 82,  30, 94, 143, 49, 165, 80,  125,
+		       202, 141, 190, 39,  54, 25, 41,	91, 222, 187};
 
 	ASSERT(!memcmp(buf1, exp2, sizeof(buf1)), "buf1 round2");
 
@@ -125,18 +123,16 @@ Test(storm_vectors) {
 	storm_init(&ctx, SEED);
 	storm_next_block(&ctx, buf2);
 
-	u8 exp3[32] = {0x80, 0xFA, 0x57, 0x25, 0xD2, 0xE9, 0x6C, 0x6,
-		       0x96, 0x5C, 0x62, 0x1D, 0xF2, 0x5B, 0xD6, 0x1,
-		       0x5E, 0x6A, 0xFE, 0x3B, 0x32, 0xD3, 0x49, 0xB8,
-		       0xDD, 0xA2, 0xDF, 0xB0, 0x74, 0x6F, 0x4A, 0xBD};
+	u8 exp3[32] = {143, 21,	 148, 109, 114, 92, 230, 180, 146, 121, 254,
+		       239, 133, 56,  85,  33,	46, 112, 188, 217, 252, 243,
+		       167, 220, 74,  79,  155, 68, 36,	 117, 44,  170};
 	ASSERT(!memcmp(buf2, exp3, sizeof(buf2)), "buf2");
 
 	storm_next_block(&ctx, buf2);
 
-	u8 exp4[32] = {0x8F, 0x15, 0x94, 0x6D, 0x72, 0x5C, 0xE6, 0xB4,
-		       0x92, 0x79, 0xFE, 0xEF, 0x85, 0x38, 0x55, 0x21,
-		       0x2E, 0x70, 0xBC, 0xD9, 0xFC, 0xF3, 0xA7, 0xDC,
-		       0x4A, 0x4F, 0x9B, 0x44, 0x24, 0x75, 0x2C, 0xAA};
+	u8 exp4[32] = {236, 147, 161, 174, 97,	88,  15,  113, 127, 129, 63,
+		       218, 158, 77,  178, 47,	24,  201, 25,  228, 93,	 64,
+		       30,  138, 254, 76,  147, 187, 165, 1,   215, 237};
 	ASSERT(!memcmp(buf2, exp4, sizeof(buf2)), "buf2 round2");
 }
 
@@ -176,10 +172,10 @@ Test(bible) {
 	bible_sbox8_64(sbox);
 	bible_hash(b, input, output, sbox);
 
-	u8 expected[32] = {0xDE, 0x2A, 0x3A, 0xB2, 0xF0, 0x58, 0xF0, 0x72,
-			   0x25, 0x26, 0x1C, 0x18, 0x8F, 0x35, 0x27, 0x45,
-			   0xD0, 0x3F, 0x98, 0x31, 0x86, 0xFF, 0x32, 0x61,
-			   0xC9, 0xAE, 0x6B, 0x5A, 0x78, 0x7F, 0xF0, 0x62};
+	u8 expected[32] = {207, 224, 174, 241, 87,  29,	 16,  104,
+			   213, 206, 113, 110, 70,  253, 8,   204,
+			   226, 97,  128, 240, 236, 201, 208, 224,
+			   190, 95,  44,  52,  123, 32,	 233, 202};
 
 	ASSERT(!memcmp(output, expected, 32), "hash");
 	bible_destroy(b);
@@ -209,12 +205,11 @@ Test(bible_mine) {
 	bible_sbox8_64(sbox);
 	mine_block(b, header, target, output, &nonce, U32_MAX, sbox);
 
-	ASSERT_EQ(nonce, 97178, "nonce");
-	ASSERT(!memcmp(output,
-		       (u8[]){0x0,  0x0,  0xB1, 0x34, 0x74, 0xE0, 0xB5, 0xF7,
-			      0xA6, 0xE2, 0xA6, 0xA1, 0x70, 0x7A, 0x80, 0x6C,
-			      0xF5, 0x9D, 0x21, 0x76, 0x52, 0xB7, 0x4C, 0xED,
-			      0x64, 0x56, 0xC,	0xD4, 0xCD, 0xFD, 0xD2, 0x2E},
+	ASSERT_EQ(nonce, 7628, "nonce");
+	ASSERT(!memcmp(output, (u8[]){0,   0,	224, 81,  219, 95,  106, 205,
+				      21,  240, 26,  133, 170, 98,  59,	 64,
+				      146, 2,	210, 31,  102, 168, 233, 183,
+				      81,  64,	169, 112, 128, 13,  165, 196},
 		       32),
 	       "hash");
 	bible_destroy(b);
@@ -235,7 +230,7 @@ Test(perfx) {
 
 	c = cycle_counter() - c;
 
-	ASSERT_EQ(buf[0], 239, "check 0 index");
+	ASSERT_EQ(buf[0], 110, "check 0 index 1");
 
 	const Bible *b;
 	u64 sbox[256];
@@ -252,7 +247,7 @@ Test(perfx) {
 	c = cycle_counter();
 	bible_hash(b, header, output, sbox);
 	c = cycle_counter() - c;
-	ASSERT_EQ(output[0], 197, "check 0 index");
+	ASSERT_EQ(output[0], 253, "check 0 index 2");
 }
 
 void ntt(i32 a[256]);
@@ -430,10 +425,11 @@ Test(dilithium_perf) {
 Test(verihash) {
 	verihash_init();
 	u128 v = verihash("abc", 3);
-	println("v={}", v);
+	(void)v;
+	// println("v={}", v);
 }
 
-Test(verihash_longneighbors) {
+Test(verihash_bitflip) {
 	Rng rng;
 	u8 plaintext[32] = {0};
 	u8 plaintext2[32] = {0};
@@ -488,8 +484,10 @@ Test(verihash_longneighbors) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
+	/*
 	println("total_failed(verihash)={}/{},diff={}", total_fail, iter * 128,
 		max - min);
+		*/
 }
 
 #include <libfam/aes.h>
@@ -500,7 +498,7 @@ Test(aes_bitflip) {
 	u8 plaintext[32] = {0};
 	u8 plaintext2[32] = {0};
 	u8 plaintext3[32] = {0};
-	u32 iter = 10;
+	u32 iter = 10000;
 	u32 trials = 100;
 	u32 total_fail = 0;
 
@@ -560,7 +558,150 @@ Test(aes_bitflip) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
+	/*
 	println("total_failed(aes)={}/{},diff={}", total_fail, iter * 256,
 		max - min);
+		*/
+}
+
+Test(storm_bitflip) {
+	StormContext ctx;
+	Rng rng;
+	u8 plaintext[32] = {0};
+	u8 plaintext2[32] = {0};
+	u8 plaintext3[32] = {0};
+	u32 iter = 10000;
+	u32 trials = 100;
+	u32 total_fail = 0;
+
+	(void)total_fail;
+
+	rng_init(&rng, NULL);
+	f64 max = 0.0, min = 100.0;
+
+	u8 key[32] = {0}, iv[16] = {0};
+	rng_gen(&rng, key, 32);
+	rng_gen(&rng, iv, 16);
+	storm_init(&ctx, key);
+
+	for (u32 i = 0; i < iter; i++) {
+		rng_gen(&rng, plaintext, 32);
+		u64 zeros[256] = {0};
+		u64 ones[256] = {0};
+
+		for (u32 j = 0; j < trials; j++) {
+			StormContext ctx2;
+			fastmemcpy(&ctx2, &ctx, sizeof(ctx2));
+			fastmemcpy(plaintext2, plaintext, 32);
+			fastmemcpy(plaintext3, plaintext, 32);
+			storm_next_block(&ctx, plaintext2);
+			u64 byte_pos = 0;
+			rng_gen(&rng, &byte_pos, sizeof(u64));
+			byte_pos %= 16;
+			u8 bit_pos = 0;
+			rng_gen(&rng, &bit_pos, sizeof(u8));
+			bit_pos %= 8;
+
+			plaintext3[byte_pos] ^= (u8)(1 << bit_pos);
+			ASSERT(memcmp(plaintext2, plaintext3, 32), "pt");
+			storm_next_block(&ctx2, plaintext3);
+			u8 *a = plaintext2;
+			u8 *b = plaintext3;
+
+			ASSERT(memcmp(a, b, 32), "a==b");
+
+			for (u32 k = 0; k < 32; k++) {
+				u8 diff = a[k] ^ b[k];
+				for (u32 bit = 0; bit < 8; bit++) {
+					if (diff & (1 << bit)) {
+						ones[k * 8 + bit]++;
+					} else {
+						zeros[k * 8 + bit]++;
+					}
+				}
+			}
+		}
+
+		for (u32 j = 0; j < 256; j++) {
+			f64 avg = (zeros[j] * 1000) / (zeros[j] + ones[j]);
+			avg /= 10.0;
+			if (avg > max) max = avg;
+			if (avg < min) min = avg;
+			if (avg > 55.0 || avg < 45.0) total_fail++;
+		}
+	}
+	/*
+	println("total_failed(storm)={}/{},diff={}", total_fail, iter * 256,
+		max - min);
+		*/
+}
+
+static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
+static __attribute__((aligned(32))) u8 ONE_SEED[32] = {1};
+static __attribute__((aligned(32))) u8 TWO_SEED[32] = {2};
+static __attribute__((aligned(32))) u8 THREE_SEED[32] = {3};
+static __attribute__((aligned(32))) u8 FOUR_SEED[32] = {4};
+static __attribute__((aligned(32))) u8 FIVE_SEED[32] = {5};
+#define STORM_PERF2_COUNT (1000000000 / 32)
+
+Test(storm_perf2) {
+	i64 timer;
+	__attribute__((aligned(32))) u8 buf1[64] = {0};
+	__attribute__((aligned(32))) u8 buf2[64] = {0};
+	__attribute__((aligned(32))) u8 buf3[64] = {0};
+	__attribute__((aligned(32))) u8 buf4[64] = {0};
+	__attribute__((aligned(32))) u8 buf5[64] = {0};
+	__attribute__((aligned(32))) u8 buf6[64] = {0};
+
+	StormContext ctx1;
+	StormContext ctx2;
+	StormContext ctx3;
+	StormContext ctx4;
+	StormContext ctx5;
+	StormContext ctx6;
+
+	u64 sum = 0;
+
+	(void)sum;
+
+	storm_init(&ctx1, ZERO_SEED);
+	storm_init(&ctx2, ONE_SEED);
+	storm_init(&ctx3, TWO_SEED);
+	storm_init(&ctx4, THREE_SEED);
+	storm_init(&ctx5, FOUR_SEED);
+	storm_init(&ctx6, FIVE_SEED);
+
+	timer = micros();
+	for (u32 i = 0; i < STORM_PERF2_COUNT; i++) {
+		u8 *block1 = buf1 + (i & 32);
+		u8 *block2 = buf2 + (i & 32);
+		u8 *block3 = buf3 + (i & 32);
+		u8 *block4 = buf4 + (i & 32);
+		u8 *block5 = buf5 + (i & 32);
+		u8 *block6 = buf6 + (i & 32);
+		storm_xcrypt_buffer(&ctx1, block1);
+		sum += ((u64 *)block1)[0];
+		storm_xcrypt_buffer(&ctx2, block2);
+		sum += ((u64 *)block2)[0];
+		storm_xcrypt_buffer(&ctx3, block3);
+		sum += ((u64 *)block3)[0];
+		storm_xcrypt_buffer(&ctx4, block4);
+		sum += ((u64 *)block4)[0];
+		storm_xcrypt_buffer(&ctx5, block5);
+		sum += ((u64 *)block6)[0];
+		storm_xcrypt_buffer(&ctx6, block6);
+		sum += ((u64 *)block6)[0];
+	}
+	timer = micros() - timer;
+	(void)buf2;
+	(void)buf3;
+	(void)buf4;
+	(void)buf5;
+	(void)buf6;
+
+	/*
+	println("time={}us, sum={}, avg={}ns", timer, sum,
+		(timer * 1000) / STORM_PERF2_COUNT);
+		*/
 }
 
