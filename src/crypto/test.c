@@ -31,6 +31,7 @@
 #include <libfam/sign.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
+#include <libfam/verihash.h>
 
 Test(aighthash) {
 	u32 v1, v2, v3;
@@ -424,5 +425,142 @@ Test(dilithium_perf) {
 	println("keygen={},sign={},verify={}", keygen_sum / DILITHIUM_COUNT,
 		sign_sum / DILITHIUM_COUNT, verify_sum / DILITHIUM_COUNT);
 		*/
+}
+
+Test(verihash) {
+	verihash_init();
+	u128 v = verihash("abc", 3);
+	println("v={}", v);
+}
+
+Test(verihash_longneighbors) {
+	Rng rng;
+	u8 plaintext[32] = {0};
+	u8 plaintext2[32] = {0};
+	u32 iter = 20;
+	u32 trials = 100;
+	u32 total_fail = 0;
+
+	(void)total_fail;
+
+	rng_init(&rng, NULL);
+	// rng_test_seed(&rng, ZERO_SEED);
+	f64 max = 0.0, min = 100.0;
+	verihash_init();
+
+	for (u32 i = 0; i < iter; i++) {
+		rng_gen(&rng, plaintext, 32);
+		u64 zeros[256] = {0};
+		u64 ones[256] = {0};
+
+		u128 r1 = verihash(plaintext, 32);
+
+		for (u32 j = 0; j < trials; j++) {
+			fastmemcpy(plaintext2, plaintext, 32);
+			u64 byte_pos = 0;
+			rng_gen(&rng, &byte_pos, sizeof(u64));
+			byte_pos %= 16;
+			u8 bit_pos = 0;
+			rng_gen(&rng, &bit_pos, sizeof(u8));
+			bit_pos %= 8;
+
+			plaintext2[byte_pos] ^= (u8)(1 << bit_pos);
+			u128 r2 = verihash(plaintext2, 32);
+			u8 *a = (void *)&r1;
+			u8 *b = (void *)&r2;
+
+			for (u32 k = 0; k < 16; k++) {
+				u8 diff = a[k] ^ b[k];
+				for (u32 bit = 0; bit < 8; bit++) {
+					if (diff & (1 << bit)) {
+						ones[k * 8 + bit]++;
+					} else {
+						zeros[k * 8 + bit]++;
+					}
+				}
+			}
+		}
+		for (u32 j = 0; j < 128; j++) {
+			f64 avg = (zeros[j] * 1000) / (zeros[j] + ones[j]);
+			avg /= 10.0;
+			if (avg > max) max = avg;
+			if (avg < min) min = avg;
+			if (avg > 55.0 || avg < 45.0) total_fail++;
+		}
+	}
+	println("total_failed(verihash)={}/{},diff={}", total_fail, iter * 128,
+		max - min);
+}
+
+#include <libfam/aes.h>
+
+Test(aes_bitflip) {
+	AesContext aes;
+	Rng rng;
+	u8 plaintext[32] = {0};
+	u8 plaintext2[32] = {0};
+	u8 plaintext3[32] = {0};
+	u32 iter = 10;
+	u32 trials = 100;
+	u32 total_fail = 0;
+
+	(void)total_fail;
+
+	rng_init(&rng, NULL);
+	f64 max = 0.0, min = 100.0;
+
+	u8 key[32] = {0}, iv[16] = {0};
+	rng_gen(&rng, key, 32);
+	rng_gen(&rng, iv, 16);
+	aes_init(&aes, key, iv);
+
+	for (u32 i = 0; i < iter; i++) {
+		rng_gen(&rng, plaintext, 32);
+		u64 zeros[256] = {0};
+		u64 ones[256] = {0};
+
+		for (u32 j = 0; j < trials; j++) {
+			AesContext aes2;
+			fastmemcpy(&aes2, &aes, sizeof(aes2));
+			fastmemcpy(plaintext2, plaintext, 32);
+			fastmemcpy(plaintext3, plaintext, 32);
+			aes_ctr_xcrypt_buffer(&aes, plaintext2, 32);
+			u64 byte_pos = 0;
+			rng_gen(&rng, &byte_pos, sizeof(u64));
+			byte_pos %= 16;
+			u8 bit_pos = 0;
+			rng_gen(&rng, &bit_pos, sizeof(u8));
+			bit_pos %= 8;
+
+			plaintext3[byte_pos] ^= (u8)(1 << bit_pos);
+			ASSERT(memcmp(plaintext2, plaintext3, 32), "pt");
+			aes_ctr_xcrypt_buffer(&aes, plaintext3, 32);
+			u8 *a = plaintext2;
+			u8 *b = plaintext3;
+
+			ASSERT(memcmp(a, b, 32), "a==b");
+
+			for (u32 k = 0; k < 32; k++) {
+				u8 diff = a[k] ^ b[k];
+				for (u32 bit = 0; bit < 8; bit++) {
+					if (diff & (1 << bit)) {
+						ones[k * 8 + bit]++;
+					} else {
+						zeros[k * 8 + bit]++;
+					}
+				}
+			}
+		}
+
+		for (u32 j = 0; j < 256; j++) {
+			f64 avg = (zeros[j] * 1000) / (zeros[j] + ones[j]);
+			avg /= 10.0;
+			if (avg > max) max = avg;
+			if (avg < min) min = avg;
+			if (avg > 55.0 || avg < 45.0) total_fail++;
+		}
+	}
+	println("total_failed(aes)={}/{},diff={}", total_fail, iter * 256,
+		max - min);
 }
 

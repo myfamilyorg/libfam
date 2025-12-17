@@ -27,57 +27,116 @@
 #include <libfam/types.h>
 #include <libfam/utils.h>
 
-PUBLIC u128 __umodti3(u128 a, u128 b) {
-	u64 a_hi, a_lo, b_lo;
-	u128 rem;
-	i32 shift;
+typedef union {
+	u128 all;
+	struct {
+		u64 low;
+		u64 high;
+	} s;
+} utwords;
 
-	if (!b) trap();
-	if (a < b) return a;
-	if (!(b >> 64)) {
-		b_lo = (u64)b;
-		a_hi = (u64)(a >> 64);
-		a_lo = (u64)a;
-		if (!a_hi) return a_lo % b_lo;
-		rem = a_hi % b_lo;
-		rem = (rem << 32) | (a_lo >> 32);
-		rem = rem % b_lo;
-		rem = (rem << 32) | (a_lo & 0xffffffff);
-		rem = (u64)rem % b_lo;
-		return rem;
+static inline u64 udiv128by64to64(u64 u1, u64 u0, u64 v, u64 *r) {
+	const unsigned n_udword_bits = sizeof(u64) * 8;
+	const u64 b = (1ULL << (n_udword_bits / 2));  // Number base (32 bits)
+	u64 un1, un0;				      // Norm. dividend LSD's
+	u64 vn1, vn0;				      // Norm. divisor digits
+	u64 q1, q0;				      // Quotient digits
+	u64 un64, un21, un10;			      // Dividend digit pairs
+	u64 rhat;				      // A remainder
+	i32 s;	// Shift amount for normalization
+
+	s = __builtin_clzll(v);
+	if (s > 0) {
+		// Normalize the divisor.
+		v = v << s;
+		un64 = (u1 << s) | (u0 >> (n_udword_bits - s));
+		un10 = u0 << s;	 // Shift dividend left
+	} else {
+		// Avoid undefined behavior of (u0 >> 64).
+		un64 = u1;
+		un10 = u0;
 	}
 
-	rem = a;
-	shift = (i32)clz_u128(b) - (i32)clz_u128(rem);
-	if (shift < 0) shift = 0;
-	b <<= shift;
-	while (shift >= 0) {
-		if (rem >= b) rem -= b;
-		b >>= 1;
-		shift--;
+	// Break divisor up into two 32-bit digits.
+	vn1 = v >> (n_udword_bits / 2);
+	vn0 = v & 0xFFFFFFFF;
+
+	un1 = un10 >> (n_udword_bits / 2);
+	un0 = un10 & 0xFFFFFFFF;
+
+	q1 = un64 / vn1;
+	rhat = un64 - q1 * vn1;
+
+	while (q1 >= b || q1 * vn0 > b * rhat + un1) {
+		q1 = q1 - 1;
+		rhat = rhat + vn1;
+		if (rhat >= b) break;
 	}
-	return rem;
+
+	un21 = un64 * b + un1 - q1 * v;
+
+	q0 = un21 / vn1;
+	rhat = un21 - q0 * vn1;
+
+	while (q0 >= b || q0 * vn0 > b * rhat + un0) {
+		q0 = q0 - 1;
+		rhat = rhat + vn1;
+		if (rhat >= b) break;
+	}
+
+	*r = (un21 * b + un0 - q0 * v) >> s;
+	return q1 * b + q0;
 }
 
-PUBLIC u128 __udivti3(u128 a, u128 b) {
-	i32 shift;
-	u128 quot, rem;
-	if (!b) trap();
-	if (a < b) return 0;
-	quot = 0;
-	rem = a;
-	shift = (i32)clz_u128(b) - (i32)clz_u128(rem);
-	if (shift < 0) shift = 0;
-
-	b <<= shift;
-
-	while (shift >= 0) {
-		if (rem >= b) {
-			rem -= b;
-			quot |= ((u128)1 << shift);
+u128 __udivmodti4(u128 a, u128 b, u128 *rem) {
+	const unsigned n_utword_bits = sizeof(u128) * 8;
+	utwords dividend;
+	dividend.all = a;
+	utwords divisor;
+	divisor.all = b;
+	utwords quotient;
+	utwords remainder;
+	if (divisor.all > dividend.all) {
+		if (rem) *rem = dividend.all;
+		return 0;
+	}
+	if (divisor.s.high == 0) {
+		remainder.s.high = 0;
+		if (dividend.s.high < divisor.s.low) {
+			quotient.s.low =
+			    udiv128by64to64(dividend.s.high, dividend.s.low,
+					    divisor.s.low, &remainder.s.low);
+			quotient.s.high = 0;
+		} else {
+			quotient.s.high = dividend.s.high / divisor.s.low;
+			dividend.s.high = dividend.s.high % divisor.s.low;
+			quotient.s.low =
+			    udiv128by64to64(dividend.s.high, dividend.s.low,
+					    divisor.s.low, &remainder.s.low);
 		}
-		b >>= 1;
-		shift--;
+		if (rem) *rem = remainder.all;
+		return quotient.all;
 	}
-	return quot;
+	i32 shift =
+	    __builtin_clzll(divisor.s.high) - __builtin_clzll(dividend.s.high);
+	divisor.all <<= shift;
+	quotient.s.high = 0;
+	quotient.s.low = 0;
+	for (; shift >= 0; --shift) {
+		quotient.s.low <<= 1;
+		const i128 s = (i128)(divisor.all - dividend.all - 1) >>
+			       (n_utword_bits - 1);
+		quotient.s.low |= s & 1;
+		dividend.all -= divisor.all & s;
+		divisor.all >>= 1;
+	}
+	if (rem) *rem = dividend.all;
+	return quotient.all;
 }
+
+u128 __umodti3(u128 a, u128 b) {
+	u128 r;
+	__udivmodti4(a, b, &r);
+	return r;
+}
+
