@@ -642,7 +642,7 @@ static __attribute__((aligned(32))) u8 TWO_SEED[32] = {2};
 static __attribute__((aligned(32))) u8 THREE_SEED[32] = {3};
 static __attribute__((aligned(32))) u8 FOUR_SEED[32] = {4};
 static __attribute__((aligned(32))) u8 FIVE_SEED[32] = {5};
-#define STORM_PERF2_COUNT (1000000000 / 32)
+#define STORM_PERF2_COUNT (1000000 / 32)
 
 Test(storm_perf2) {
 	i64 timer;
