@@ -98,7 +98,7 @@ STATIC void verihash_round(u64 field[FIELD_SIZE], u64 round) {
 	for (u64 i = 0; i < FIELD_SIZE; i++) field[i] = temp[i];
 }
 
-u128 verihash(const u8 *in, u64 len) {
+u128 verihash128(const u8 *in, u64 len) {
 	u64 field[FIELD_SIZE] = {0};
 	for (u64 i = 0; i < len; i++)
 		((u8 *)field)[i % (FIELD_SIZE * 8)] ^= in[i];
@@ -108,4 +108,15 @@ u128 verihash(const u8 *in, u64 len) {
 		verihash_round(field, i);
 	u128 *ret = (void *)field;
 	return ret[0];
+}
+
+void verihash256(const u8 *in, u64 len, u8 out[32]) {
+	u64 field[FIELD_SIZE] = {0};
+	for (u64 i = 0; i < len; i++)
+		((u8 *)field)[i % (FIELD_SIZE * 8)] ^= in[i];
+	field[0] ^= (1 + len);
+	for (u64 i = 0; i < FIELD_SIZE; i++) field[i] %= GLOCKS;
+	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++)
+		verihash_round(field, i);
+	fastmemcpy(out, field, 32);
 }

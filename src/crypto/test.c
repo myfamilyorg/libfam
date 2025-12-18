@@ -424,7 +424,7 @@ Test(dilithium_perf) {
 }
 
 Test(verihash) {
-	u128 v = verihash("abc", 3);
+	u128 v = verihash128("abc", 3);
 	(void)v;
 	// println("v={}", v);
 }
@@ -433,7 +433,7 @@ Test(verihash_bitflip) {
 	Rng rng;
 	u8 plaintext[32] = {0};
 	u8 plaintext2[32] = {0};
-	u32 iter = 1;
+	u32 iter = 10;
 	u32 trials = 10000;
 	u32 total_fail = 0;
 
@@ -448,7 +448,7 @@ Test(verihash_bitflip) {
 		u64 zeros[256] = {0};
 		u64 ones[256] = {0};
 
-		u128 r1 = verihash(plaintext, 32);
+		u128 r1 = verihash128(plaintext, 32);
 
 		for (u32 j = 0; j < trials; j++) {
 			fastmemcpy(plaintext2, plaintext, 32);
@@ -460,7 +460,7 @@ Test(verihash_bitflip) {
 			bit_pos %= 8;
 
 			plaintext2[byte_pos] ^= (u8)(1 << bit_pos);
-			u128 r2 = verihash(plaintext2, 32);
+			u128 r2 = verihash128(plaintext2, 32);
 			u8 *a = (void *)&r1;
 			u8 *b = (void *)&r2;
 
@@ -736,12 +736,12 @@ Test(verihash_preimage) {
 	rng_init(&rng, NULL);
 	for (u32 i = 0; i < trials; i++) {
 		rng_gen(&rng, input, 32);
-		target = verihash(input, 32);
+		target = verihash128(input, 32);
 		fastmemcpy(flipped, input, 32);
 		u64 byte_pos = i % 32;
 		u8 bit_pos = (i / 32) % 8;
 		flipped[byte_pos] ^= (1 << bit_pos);
-		u128 result = verihash(flipped, 32);
+		u128 result = verihash128(flipped, 32);
 		if (result == target) matches++;
 		u128 diff = result > target ? result - target : target - result;
 		min_diff = diff < min_diff ? diff : min_diff;
@@ -760,3 +760,34 @@ Test(verihash_preimage) {
 	println("Preimage test: {} trials, {} matches (expected 0)", trials,
 		matches);
 }
+
+Test(verihash256_preimage) {
+	Rng rng;
+	u8 input[32] = {0}, flipped[32] = {0};
+	__attribute__((aligned(32))) u8 target[32];
+	u32 min_hamm = 256;
+	u32 trials = 1 << 15;
+
+	rng_init(&rng, NULL);
+	for (u32 i = 0; i < trials; i++) {
+		rng_gen(&rng, input, 32);
+		verihash256(input, 32, target);
+		fastmemcpy(flipped, input, 32);
+		u64 byte_pos = i % 32;
+		u8 bit_pos = (i / 32) % 8;
+		flipped[byte_pos] ^= (1 << bit_pos);
+		u8 result[32];
+		verihash256(flipped, 32, result);
+
+		u128 hamm_diff1 = ((u128 *)target)[0] ^ ((u128 *)result)[0];
+		u128 hamm_diff2 = ((u128 *)target)[1] ^ ((u128 *)result)[1];
+		u32 hamm = __builtin_popcountll((u64)hamm_diff1) +
+			   __builtin_popcountll((u64)(hamm_diff1 >> 64)) +
+			   __builtin_popcountll((u64)hamm_diff2) +
+			   __builtin_popcountll((u64)(hamm_diff2 >> 64));
+		min_hamm = hamm < min_hamm ? hamm : min_hamm;
+
+		if (i % 10000 == 0) println("i={},min_hamm={}", i, min_hamm);
+	}
+}
+

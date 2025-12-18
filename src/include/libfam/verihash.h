@@ -125,6 +125,7 @@ static const __attribute__((
      17099290005589039325ULL, 1280251341598391758ULL, 6163326578315864090ULL,
      18380003598250534603ULL, 4005464516269337158ULL}};
 
-u128 verihash(const u8 *in, u64 len);
+u128 verihash128(const u8 *in, u64 len);
+void verihash256(const u8 *in, u64 len, u8 out[32]);
 
 #endif /* _VERIHASH_H */
