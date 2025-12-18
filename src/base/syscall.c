@@ -105,7 +105,7 @@ extern bool _debug_no_exit;
 #define SYSCALL_EXIT                 \
 	if (_debug_no_exit) return;  \
 	__asm__ volatile(            \
-	    "mov x8, #93\n"          \
+	    "mov x8, #94\n"          \
 	    "mov x0, %0\n"           \
 	    "svc #0\n"               \
 	    :                        \
@@ -117,7 +117,7 @@ extern bool _debug_no_exit;
 #define SYSCALL_EXIT                                     \
 	if (_debug_no_exit) return;                      \
 	__asm__ volatile(                                \
-	    "movq $60, %%rax\n"                          \
+	    "movq $231, %%rax\n"                         \
 	    "movq %0, %%rdi\n"                           \
 	    "syscall\n"                                  \
 	    :                                            \
