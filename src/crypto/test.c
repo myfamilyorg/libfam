@@ -695,8 +695,6 @@ Test(storm256_perf) {
 	(void)buf5;
 	(void)buf6;
 
-	ASSERT(0, "fail");
-
 	/*println("time={}us, sum={}, avg={}ns", timer, sum,
 		(timer * 1000) / STORM_PERF2_COUNT);*/
 }
