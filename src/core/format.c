@@ -133,10 +133,14 @@ CLEANUP:
 	RETURN;
 }
 
+#include <libfam/test_base.h>
+
 STATIC const u8 *find_next_placeholder(const u8 *p, FormatSpec *spec) {
 	while (*p) {
 		if (*p == '{') {
-			if (format_parse_spec(p, spec) < 0) return NULL;
+			if (format_parse_spec(p, spec) < 0) {
+				return NULL;
+			}
 			return p;
 		} else if (*p == '}' && p[1] == '}') {
 			*spec =
@@ -253,7 +257,8 @@ INIT:
 	__builtin_va_start(args, p);
 	while (*p != '\0') {
 		const u8 *np = find_next_placeholder(p, &spec);
-		if (np) {
+		const u8 *pp1 = p + 1;
+		if (np && *pp1) {
 			len = np - p;
 			if (format_try_resize(f, len) < 0) ERROR();
 			memcpy(f->buf + f->pos, p, len);

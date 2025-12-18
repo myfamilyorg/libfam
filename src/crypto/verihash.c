@@ -28,9 +28,6 @@
 #include <libfam/verihash.h>
 
 #define GLOCKS 18446744069414584321ULL
-#define FIELD_SIZE 8
-#define FULL_ROUNDS 8
-#define PARTIAL_ROUNDS 22
 #define EXPONENT 7
 
 static const u64 full_matrix[8][8] = {
@@ -40,11 +37,6 @@ static const u64 full_matrix[8][8] = {
     {1, 3, 5, 7, 2, 6, 10, 14}, {1, 1, 4, 6, 2, 2, 8, 12}};
 
 static const u64 mu[FIELD_SIZE] = {3, 5, 7, 11, 13, 17, 19, 23};
-
-__attribute__((aligned(32))) static const u8 VERIHASH_DOMAIN[32] = {1, 2, 39,
-								    99};
-__attribute__((aligned(
-    32))) static u64 const_data[FULL_ROUNDS + PARTIAL_ROUNDS][FIELD_SIZE];
 
 STATIC u64 mul_mod(u64 a, u64 b, u64 modulus) {
 	u128 v = (u128)a * (u128)b;
@@ -105,18 +97,6 @@ STATIC void verihash_round(u64 field[FIELD_SIZE], u64 round) {
 	}
 	for (u64 i = 0; i < FIELD_SIZE; i++) field[i] = temp[i];
 }
-
-void verihash_init(void) {
-	Storm256Context ctx;
-	storm256_init(&ctx, VERIHASH_DOMAIN);
-	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++) {
-		for (u64 j = 0; j < FIELD_SIZE / 4; j++)
-			storm256_next_block(&ctx,
-					    (((u8 *)const_data[i]) + j * 32));
-	}
-}
-
-#include <libfam/aighthash.h>
 
 u128 verihash(const u8 *in, u64 len) {
 	u64 field[FIELD_SIZE] = {0};

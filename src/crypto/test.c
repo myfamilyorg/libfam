@@ -424,7 +424,6 @@ Test(dilithium_perf) {
 }
 
 Test(verihash) {
-	verihash_init();
 	u128 v = verihash("abc", 3);
 	(void)v;
 	// println("v={}", v);
@@ -443,7 +442,6 @@ Test(verihash_bitflip) {
 	rng_init(&rng, NULL);
 	// rng_test_seed(&rng, ZERO_SEED);
 	f64 max = 0.0, min = 100.0;
-	verihash_init();
 
 	for (u32 i = 0; i < iter; i++) {
 		rng_gen(&rng, plaintext, 32);
@@ -703,6 +701,27 @@ u64 pow_mod(u64 base, u64 exponent, u64 modulus);
 Test(pow_mod) {
 	ASSERT_EQ(pow_mod(3, 3, 1000000), 27, "27");
 	ASSERT_EQ(pow_mod(3, 3, 26), 1, "1");
+}
+
+__attribute__((aligned(32))) static const u8 VERIHASH_DOMAIN[32] = {1, 2, 39,
+								    99};
+
+Test(verihash_consts) {
+	__attribute__((aligned(32))) static u64
+	    local_const_data[FULL_ROUNDS + PARTIAL_ROUNDS][FIELD_SIZE];
+	Storm256Context ctx;
+	storm256_init(&ctx, VERIHASH_DOMAIN);
+	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++) {
+		for (u64 j = 0; j < FIELD_SIZE / 4; j++)
+			storm256_next_block(
+			    &ctx, (((u8 *)local_const_data[i]) + j * 32));
+	}
+	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++) {
+		for (u64 j = 0; j < FIELD_SIZE; j++) {
+			ASSERT_EQ(local_const_data[i][j], const_data[i][j],
+				  "consts");
+		}
+	}
 }
 
 Test(verihash_preimage) {

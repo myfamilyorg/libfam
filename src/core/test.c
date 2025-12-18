@@ -653,3 +653,4 @@ Test(strstr) {
 	ASSERT_EQ(strstr(s, "x"), NULL, "no match");
 }
 
+// Test(fmta) { println("{"); }
