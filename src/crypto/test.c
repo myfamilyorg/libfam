@@ -485,10 +485,8 @@ Test(verihash_bitflip) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
-	/*
-	println("total_failed(verihash)={}/{},diff={}", total_fail, iter * 128,
-		max - min);
-		*/
+	println("total_failed(verihash)={}/{},diff={},ratio={}", total_fail,
+		iter * 128, max - min, (f64)total_fail / (f64)(iter * 128));
 }
 
 #include <libfam/aes.h>
@@ -559,10 +557,8 @@ Test(aes_bitflip) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
-	/*
-	println("total_failed(aes)={}/{},diff={}", total_fail, iter * 256,
-		max - min);
-		*/
+	println("total_failed(aes)={}/{},diff={},ratio={}", total_fail,
+		iter * 256, max - min, (f64)total_fail / (f64)(iter * 256));
 }
 
 Test(storm256_bitflip) {

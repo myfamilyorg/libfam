@@ -101,7 +101,7 @@ void verihash_init(void) {
 	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++) {
 		for (u64 j = 0; j < FIELD_SIZE / 4; j++)
 			storm256_next_block(&ctx,
-					 (((u8 *)const_data[i]) + j * 32));
+					    (((u8 *)const_data[i]) + j * 32));
 	}
 }
 

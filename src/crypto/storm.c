@@ -292,7 +292,7 @@ STATIC void storm256_xcrypt_buffer_neon(Storm256Context *ctx, u8 buf[32]) {
 	vst1q_u8(ctr_block, ctr_lo);
 	vst1q_u8(ctr_block + 16, ctr_hi);
 
-	storm256_next_block_neon(ctx, ctr_block);
+	storm256_next_block(ctx, ctr_block);
 
 	uint8x16_t keystream_lo = vld1q_u8(ctr_block);
 	uint8x16_t keystream_hi = vld1q_u8(ctr_block + 16);
