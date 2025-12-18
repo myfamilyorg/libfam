@@ -34,24 +34,26 @@
 #define EXPONENT 7
 
 static const u64 full_matrix[8][8] = {
-    {5, 7, 1, 3, 0, 0, 0, 0}, {4, 6, 1, 1, 0, 0, 0, 0},
-    {1, 3, 5, 7, 0, 0, 0, 0}, {1, 1, 4, 6, 0, 0, 0, 0},
-    {0, 0, 0, 0, 5, 7, 1, 3}, {0, 0, 0, 0, 4, 6, 1, 1},
-    {0, 0, 0, 0, 1, 3, 5, 7}, {0, 0, 0, 0, 1, 1, 4, 6}};
+    {10, 14, 2, 6, 5, 7, 1, 3}, {8, 12, 2, 2, 4, 6, 1, 1},
+    {2, 6, 10, 14, 1, 3, 5, 7}, {2, 2, 8, 12, 1, 1, 4, 6},
+    {5, 7, 1, 3, 10, 14, 2, 6}, {4, 6, 1, 1, 8, 12, 2, 2},
+    {1, 3, 5, 7, 2, 6, 10, 14}, {1, 1, 4, 6, 2, 2, 8, 12}};
 
 static const u64 partial_matrix[8][8] = {
-    {2, 1, 1, 1, 1, 1, 1, 1}, {1, 3, 1, 1, 1, 1, 1, 1},
-    {1, 1, 4, 1, 1, 1, 1, 1}, {1, 1, 1, 5, 1, 1, 1, 1},
-    {1, 1, 1, 1, 6, 1, 1, 1}, {1, 1, 1, 1, 1, 7, 1, 1},
-    {1, 1, 1, 1, 1, 1, 8, 1}, {1, 1, 1, 1, 1, 1, 1, 9}};
-
+    {2, 1, 1, 1, 1, 1, 1, 1},  {1, 3, 1, 1, 1, 1, 1, 1},
+    {1, 1, 5, 1, 1, 1, 1, 1},  {1, 1, 1, 7, 1, 1, 1, 1},
+    {1, 1, 1, 1, 11, 1, 1, 1}, {1, 1, 1, 1, 1, 13, 1, 1},
+    {1, 1, 1, 1, 1, 1, 17, 1}, {1, 1, 1, 1, 1, 1, 1, 19}};
 __attribute__((aligned(32))) static const u8 VERIHASH_DOMAIN[32] = {1, 2, 39,
 								    99};
 __attribute__((aligned(
     32))) static u64 const_data[FULL_ROUNDS + PARTIAL_ROUNDS][FIELD_SIZE];
 
 STATIC u64 mul_mod(u64 a, u64 b, u64 modulus) {
-	return ((u128)a * b) % modulus;
+	u128 v = (u128)a * (u128)b;
+	u128 m = modulus;
+
+	return v % m;
 }
 
 STATIC u64 pow_mod(u64 base, u64 exponent, u64 modulus) {
@@ -74,9 +76,15 @@ STATIC void verihash_round(u64 field[FIELD_SIZE], u64 round) {
 	if (round < FULL_ROUNDS)
 		for (u64 i = 0; i < FIELD_SIZE; i++)
 			field[i] = pow_mod(field[i], EXPONENT, GLOCKS);
-	else
-		field[0] = pow_mod(field[0], EXPONENT, GLOCKS);
+	else {
+		if (round & 0x1) {
+			for (u64 i = 0; i < FIELD_SIZE; i++)
+				field[i] = pow_mod(field[i], EXPONENT, GLOCKS);
 
+		} else {
+			field[0] = pow_mod(field[0], EXPONENT, GLOCKS);
+		}
+	}
 	u64 temp[FIELD_SIZE] = {0};
 	for (u64 i = 0; i < FIELD_SIZE; i++) {
 		for (u64 j = 0; j < FIELD_SIZE; j++) {
@@ -93,6 +101,8 @@ STATIC void verihash_round(u64 field[FIELD_SIZE], u64 round) {
 		}
 	}
 	for (u64 i = 0; i < FIELD_SIZE; i++) field[i] = temp[i];
+	(void)full_matrix;
+	(void)partial_matrix;
 }
 
 void verihash_init(void) {
@@ -104,6 +114,8 @@ void verihash_init(void) {
 					    (((u8 *)const_data[i]) + j * 32));
 	}
 }
+
+#include <libfam/aighthash.h>
 
 u128 verihash(const u8 *in, u64 len) {
 	u64 field[FIELD_SIZE] = {0};

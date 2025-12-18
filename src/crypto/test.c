@@ -30,7 +30,7 @@
 #include <libfam/rng.h>
 #include <libfam/sign.h>
 #include <libfam/storm.h>
-#include <libfam/test_base.h>
+#include <libfam/test.h>
 #include <libfam/verihash.h>
 
 Test(aighthash) {
@@ -435,7 +435,7 @@ Test(verihash_bitflip) {
 	u8 plaintext[32] = {0};
 	u8 plaintext2[32] = {0};
 	u32 iter = 20;
-	u32 trials = 10;
+	u32 trials = 10000;
 	u32 total_fail = 0;
 
 	(void)total_fail;
@@ -456,7 +456,7 @@ Test(verihash_bitflip) {
 			fastmemcpy(plaintext2, plaintext, 32);
 			u64 byte_pos = 0;
 			rng_gen(&rng, &byte_pos, sizeof(u64));
-			byte_pos %= 16;
+			byte_pos %= 32;
 			u8 bit_pos = 0;
 			rng_gen(&rng, &bit_pos, sizeof(u8));
 			bit_pos %= 8;
@@ -478,8 +478,9 @@ Test(verihash_bitflip) {
 			}
 		}
 		for (u32 j = 0; j < 128; j++) {
-			f64 avg = (zeros[j] * 1000) / (zeros[j] + ones[j]);
-			avg /= 10.0;
+			f64 avg = (f64)(((f64)zeros[j] * (f64)1000)) /
+				  (f64)(((f64)zeros[j] + (f64)ones[j]));
+			avg /= 10.00000;
 			if (avg > max) max = avg;
 			if (avg < min) min = avg;
 			if (avg > 55.0 || avg < 45.0) total_fail++;
@@ -498,7 +499,7 @@ Test(aes_bitflip) {
 	u8 plaintext2[32] = {0};
 	u8 plaintext3[32] = {0};
 	u32 iter = 100;
-	u32 trials = 100;
+	u32 trials = 10000;
 	u32 total_fail = 0;
 
 	(void)total_fail;
@@ -568,7 +569,7 @@ Test(storm256_bitflip) {
 	__attribute__((aligned(32))) u8 plaintext2[32] = {0};
 	__attribute__((aligned(32))) u8 plaintext3[32] = {0};
 	u32 iter = 100;
-	u32 trials = 100;
+	u32 trials = 10000;
 	u32 total_fail = 0;
 
 	(void)total_fail;
@@ -626,10 +627,8 @@ Test(storm256_bitflip) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
-	/*
-	println("total_failed(storm256)={}/{},diff={}", total_fail, iter * 256,
-		max - min);
-		*/
+	println("total_failed(storm256)={}/{},diff={},ratio={}", total_fail,
+		iter * 256, max - min, (f64)total_fail / (f64)(iter * 256));
 }
 
 static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
@@ -699,3 +698,46 @@ Test(storm256_perf) {
 		(timer * 1000) / STORM_PERF2_COUNT);*/
 }
 
+u64 pow_mod(u64 base, u64 exponent, u64 modulus);
+
+Test(pow_mod) {
+	ASSERT_EQ(pow_mod(3, 3, 1000000), 27, "27");
+	ASSERT_EQ(pow_mod(3, 3, 26), 1, "1");
+}
+
+Test(verihash_preimage) {
+	Rng rng;
+	u8 input[32] = {0}, flipped[32] = {0};
+	u128 target = 0;
+	u128 min_diff = U128_MAX;
+	u8 min_hamm = 128;
+	u32 trials = 1 << 10;
+	u32 matches = 0;
+
+	rng_init(&rng, NULL);
+	for (u32 i = 0; i < trials; i++) {
+		rng_gen(&rng, input, 32);
+		target = verihash(input, 32);
+		fastmemcpy(flipped, input, 32);
+		u64 byte_pos = i % 32;
+		u8 bit_pos = (i / 32) % 8;
+		flipped[byte_pos] ^= (1 << bit_pos);
+		u128 result = verihash(flipped, 32);
+		if (result == target) matches++;
+		u128 diff = result > target ? result - target : target - result;
+		min_diff = diff < min_diff ? diff : min_diff;
+
+		u128 hamm_diff = target ^ result;
+		u32 hamm = __builtin_popcountll((u64)hamm_diff) +
+			   __builtin_popcountll((u64)(hamm_diff >> 64));
+		min_hamm = hamm < min_hamm ? hamm : min_hamm;
+
+		if (i % 10000 == 0)
+			println(
+			    "i={},matches={},min_diff={},diff={},min_hamm={}",
+			    i, matches, min_diff, diff, min_hamm);
+	}
+	ASSERT(matches == 0, "Preimage matches: {}", matches);
+	println("Preimage test: {} trials, {} matches (expected 0)", trials,
+		matches);
+}
