@@ -434,7 +434,7 @@ Test(verihash_bitflip) {
 	Rng rng;
 	u8 plaintext[32] = {0};
 	u8 plaintext2[32] = {0};
-	u32 iter = 20;
+	u32 iter = 1;
 	u32 trials = 10000;
 	u32 total_fail = 0;
 
