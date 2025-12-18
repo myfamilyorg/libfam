@@ -28,7 +28,8 @@
 #include <libfam/verihash.h>
 
 #define GLOCKS 18446744069414584321ULL
-#define EXPONENT 7
+#define GLOCKS_INV 0xFFFFFFFEFFFFFFFFULL
+#define EXPONENT 5
 
 static const u64 full_matrix[8][8] = {
     {10, 14, 2, 6, 5, 7, 1, 3}, {8, 12, 2, 2, 4, 6, 1, 1},
@@ -38,40 +39,44 @@ static const u64 full_matrix[8][8] = {
 
 static const u64 mu[FIELD_SIZE] = {3, 5, 7, 11, 13, 17, 19, 23};
 
-STATIC u64 mul_mod(u64 a, u64 b, u64 modulus) {
+STATIC u64 mul_mod(u64 a, u64 b) {
 	u128 v = (u128)a * (u128)b;
-	u128 m = modulus;
-
-	return v % m;
+	u64 m = (u64)v * GLOCKS_INV;
+	u128 t = (v + (u128)m * GLOCKS) >> 64;
+	return (t >= GLOCKS) ? (u64)(t - GLOCKS) : (u64)t;
 }
 
-STATIC u64 pow_mod(u64 base, u64 exponent, u64 modulus) {
+STATIC u64 pow_mod_mont(u64 base, u64 exponent) {
 	u64 result = 1;
-	base %= modulus;
+	u64 m = base * GLOCKS_INV;
+	u128 t = (base + (u128)m * GLOCKS) >> 64;
+	base = (t >= GLOCKS) ? (u64)(t - GLOCKS) : (u64)t;
 	if (base == 0) return 0;
 
 	while (exponent > 0) {
-		if (exponent & 1) result = mul_mod(result, base, modulus);
-		base = mul_mod(base, base, modulus);
+		if (exponent & 1) result = mul_mod(result, base);
+		base = mul_mod(base, base);
 		exponent >>= 1;
 	}
 	return result;
 }
 
 STATIC void verihash_round(u64 field[FIELD_SIZE], u64 round) {
-	for (u64 i = 0; i < FIELD_SIZE; i++)
-		field[i] = (field[i] + const_data[round][i]) % GLOCKS;
+	for (u64 i = 0; i < FIELD_SIZE; i++) {
+		field[i] = field[i] + const_data[round][i];
+		field[i] = field[i] >= GLOCKS ? GLOCKS - field[i] : field[i];
+	}
 
 	if (round < FULL_ROUNDS)
 		for (u64 i = 0; i < FIELD_SIZE; i++)
-			field[i] = pow_mod(field[i], EXPONENT, GLOCKS);
+			field[i] = pow_mod_mont(field[i], EXPONENT);
 	else {
 		if (round & 0x1) {
 			for (u64 i = 0; i < FIELD_SIZE; i++)
-				field[i] = pow_mod(field[i], EXPONENT, GLOCKS);
+				field[i] = pow_mod_mont(field[i], EXPONENT);
 
 		} else {
-			field[0] = pow_mod(field[0], EXPONENT, GLOCKS);
+			field[0] = pow_mod_mont(field[0], EXPONENT);
 		}
 	}
 
@@ -79,20 +84,22 @@ STATIC void verihash_round(u64 field[FIELD_SIZE], u64 round) {
 	if (round < FULL_ROUNDS) {
 		for (u64 i = 0; i < FIELD_SIZE; i++) {
 			for (u64 j = 0; j < FIELD_SIZE; j++) {
-				temp[i] =
-				    (temp[i] + mul_mod(full_matrix[i][j],
-						       field[j], GLOCKS)) %
-				    GLOCKS;
+				temp[i] = temp[i] +
+					  mul_mod(full_matrix[i][j], field[j]);
+				temp[i] = temp[i] >= GLOCKS ? GLOCKS - temp[i]
+							    : temp[i];
 			}
 		}
 	} else {
 		u64 s = 0;
 		for (u64 j = 0; j < FIELD_SIZE; j++) {
-			s = (s + field[j]) % GLOCKS;
+			s += field[j];
+			s = s >= GLOCKS ? GLOCKS - s : s;
 		}
 		for (u64 i = 0; i < FIELD_SIZE; i++) {
+			temp[i] = mul_mod(mu[i], field[i]) + s;
 			temp[i] =
-			    (mul_mod(mu[i], field[i], GLOCKS) + s) % GLOCKS;
+			    temp[i] >= GLOCKS ? GLOCKS - temp[i] : temp[i];
 		}
 	}
 	for (u64 i = 0; i < FIELD_SIZE; i++) field[i] = temp[i];
@@ -100,10 +107,10 @@ STATIC void verihash_round(u64 field[FIELD_SIZE], u64 round) {
 
 u128 verihash128(const u8 *in, u64 len) {
 	u64 field[FIELD_SIZE] = {0};
-	for (u64 i = 0; i < len; i++)
-		((u8 *)field)[i % (FIELD_SIZE * 8)] ^= in[i];
+	for (u64 i = 0; i < len; i++) ((u8 *)field)[i & FIELD_MASK] ^= in[i];
 	field[0] ^= (1 + len);
-	for (u64 i = 0; i < FIELD_SIZE; i++) field[i] %= GLOCKS;
+	for (u64 i = 0; i < FIELD_SIZE; i++)
+		field[i] = field[i] >= GLOCKS ? field[i] - GLOCKS : field[i];
 	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++)
 		verihash_round(field, i);
 	u128 *ret = (void *)field;
@@ -112,10 +119,10 @@ u128 verihash128(const u8 *in, u64 len) {
 
 void verihash256(const u8 *in, u64 len, u8 out[32]) {
 	u64 field[FIELD_SIZE] = {0};
-	for (u64 i = 0; i < len; i++)
-		((u8 *)field)[i % (FIELD_SIZE * 8)] ^= in[i];
+	for (u64 i = 0; i < len; i++) ((u8 *)field)[i & FIELD_MASK] ^= in[i];
 	field[0] ^= (1 + len);
-	for (u64 i = 0; i < FIELD_SIZE; i++) field[i] %= GLOCKS;
+	for (u64 i = 0; i < FIELD_SIZE; i++)
+		field[i] = field[i] >= GLOCKS ? field[i] - GLOCKS : field[i];
 	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++)
 		verihash_round(field, i);
 	fastmemcpy(out, field, 32);

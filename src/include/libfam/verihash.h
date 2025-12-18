@@ -29,6 +29,7 @@
 #include <libfam/types.h>
 
 #define FIELD_SIZE 8
+#define FIELD_MASK 63
 #define FULL_ROUNDS 8
 #define PARTIAL_ROUNDS 22
 

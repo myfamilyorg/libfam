@@ -696,19 +696,12 @@ Test(storm256_perf) {
 		(timer * 1000) / STORM_PERF2_COUNT);*/
 }
 
-u64 pow_mod(u64 base, u64 exponent, u64 modulus);
-
-Test(pow_mod) {
-	ASSERT_EQ(pow_mod(3, 3, 1000000), 27, "27");
-	ASSERT_EQ(pow_mod(3, 3, 26), 1, "1");
-}
-
 __attribute__((aligned(32))) static const u8 VERIHASH_DOMAIN[32] = {1, 2, 39,
 								    99};
 
 Test(verihash_consts) {
 	__attribute__((aligned(32))) static u64
-	    local_const_data[FULL_ROUNDS + PARTIAL_ROUNDS][FIELD_SIZE];
+	    local_const_data[FULL_ROUNDS + PARTIAL_ROUNDS][FIELD_SIZE] = {0};
 	Storm256Context ctx;
 	storm256_init(&ctx, VERIHASH_DOMAIN);
 	for (u64 i = 0; i < FULL_ROUNDS + PARTIAL_ROUNDS; i++) {
@@ -761,15 +754,26 @@ Test(verihash_preimage) {
 		matches);
 }
 
+Test(verihash256_vector) {
+	u8 output[32];
+	verihash256((u8[32]){1}, 32, output);
+	u8 expected[32] = {1,	234, 21,  162, 57,  185, 194, 20,
+			   44,	171, 197, 101, 161, 140, 208, 121,
+			   71,	204, 119, 192, 229, 34,	 218, 120,
+			   110, 94,  131, 20,  38,  4,	 247, 63};
+	ASSERT(!memcmp(output, expected, 32), "vector1");
+}
+
 Test(verihash256_preimage) {
 	Rng rng;
 	u8 input[32] = {0}, flipped[32] = {0};
 	__attribute__((aligned(32))) u8 target[32];
 	u32 min_hamm = 256;
-	u32 trials = 1 << 15;
+	u64 trials = 1 << 18;
+	u64 timer = micros();
 
 	rng_init(&rng, NULL);
-	for (u32 i = 0; i < trials; i++) {
+	for (u64 i = 0; i < trials; i++) {
 		rng_gen(&rng, input, 32);
 		verihash256(input, 32, target);
 		fastmemcpy(flipped, input, 32);
@@ -787,7 +791,12 @@ Test(verihash256_preimage) {
 			   __builtin_popcountll((u64)(hamm_diff2 >> 64));
 		min_hamm = hamm < min_hamm ? hamm : min_hamm;
 
-		if (i % 10000 == 0) println("i={},min_hamm={}", i, min_hamm);
+		if (i && (i % 100000 == 0)) {
+			u64 elapsed = micros() - timer;
+			println("i={},min_hamm={},elapsed={}ms", i, min_hamm,
+				elapsed / 1000);
+			timer = micros();
+		}
 	}
 }
 
