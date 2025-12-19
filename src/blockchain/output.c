@@ -23,37 +23,45 @@
  *
  *******************************************************************************/
 
-#ifndef _LAMPORT_H
-#define _LAMPORT_H
-
+#include <libfam/errno.h>
+#include <libfam/memory.h>
+#include <libfam/output.h>
+#include <libfam/string.h>
 #include <libfam/types.h>
+#include <libfam/verihash.h>
 
-#define LAMPORT_SECKEY_SIZE (512 * 32)
-#define LAMPORT_PUBKEY_SIZE (512 * 32)
-#define LAMPORT_SIG_SIZE (256 * 32)
+struct Output {
+	OutputType t;
+	u64 amount;
+	u8 extra[];
+};
 
-typedef enum { LamportTypeStorm256, LamportTypeVeriHash } LamportType;
+const Output *output_create_plain(LamportPubKey *pk, u64 amount) {
+	Output *ret;
+	ret = alloc(sizeof(Output) + LAMPORT_PUBKEY_SIZE);
+	if (!ret) return NULL;
+	ret->t = OutputTypePlain;
+	ret->amount = amount;
+	fastmemcpy(ret->extra, pk->data, LAMPORT_PUBKEY_SIZE);
+	return ret;
+}
 
-typedef struct {
-	LamportType t;
-	__attribute__((aligned(32))) u8 data[LAMPORT_SECKEY_SIZE];
-} LamportSecKey;
+const Output *output_create_commitment(u8 commitment[32]) {
+	Output *ret;
+	ret = alloc(sizeof(Output) + 32);
+	if (!ret) return NULL;
+	ret->t = OutputTypeCommitment;
+	ret->amount = 0;
+	fastmemcpy(ret->extra, commitment, 32);
+	return ret;
+}
 
-typedef struct {
-	LamportType t;
-	__attribute__((aligned(32))) u8 data[LAMPORT_PUBKEY_SIZE];
-} LamportPubKey;
+void output_destroy(const Output *o) { release((void *)o); }
 
-typedef struct {
-	LamportType t;
-	__attribute__((aligned(32))) u8 data[LAMPORT_SIG_SIZE];
-} LamportSig;
-
-void lamport_keyfrom(const u8 seed[32], LamportPubKey *pk, LamportSecKey *sk,
-		     LamportType t);
-void lamport_sign(const LamportSecKey *sk, const u8 message[32],
-		  LamportSig *sig);
-i32 lamport_verify(const LamportPubKey *pk, const LamportSig *sig,
-		   const u8 message[32]);
-
-#endif /* _LAMPORT_H */
+void output_hash(const Output *o, u8 hash_out[32]) {
+	if (o->t == OutputTypePlain)
+		verihash256((void *)o, sizeof(Output) + LAMPORT_PUBKEY_SIZE,
+			    hash_out);
+	else
+		verihash256((void *)o, sizeof(Output) + 32, hash_out);
+}

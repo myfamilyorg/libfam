@@ -26,6 +26,7 @@
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/format.h>
+#include <libfam/lamport.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/sign.h>
@@ -800,3 +801,82 @@ Test(verihash256_preimage) {
 	}
 }
 
+Test(lamport_storm) {
+	u8 key[32] = {1, 2, 3, 4, 5};
+	LamportPubKey pk;
+	LamportSecKey sk;
+	LamportSig sig;
+	u8 msg[32] = {9, 9, 9, 9, 9, 4};
+
+	u64 timer = cycle_counter();
+	lamport_keyfrom(key, &pk, &sk, LamportTypeStorm256);
+	timer = cycle_counter() - timer;
+	println("keygen={}", timer);
+	timer = cycle_counter();
+	lamport_sign(&sk, msg, &sig);
+	timer = cycle_counter() - timer;
+	println("sign={}", timer);
+	timer = cycle_counter();
+	ASSERT(!lamport_verify(&pk, &sig, msg), "verify");
+	timer = cycle_counter() - timer;
+	println("verify={}", timer);
+	msg[0]++;
+	ASSERT(lamport_verify(&pk, &sig, msg), "!verify");
+}
+
+Test(lamport_verihash) {
+	u8 key[32] = {1, 2, 3, 4, 5};
+	LamportPubKey pk;
+	LamportSecKey sk;
+	LamportSig sig;
+	u8 msg[32] = {9, 9, 9, 9, 9, 4};
+
+	u64 timer = cycle_counter();
+	lamport_keyfrom(key, &pk, &sk, LamportTypeVeriHash);
+	timer = cycle_counter() - timer;
+	println("keygen={}", timer);
+	timer = cycle_counter();
+	lamport_sign(&sk, msg, &sig);
+	timer = cycle_counter() - timer;
+	println("sign={}", timer);
+	timer = cycle_counter();
+	ASSERT(!lamport_verify(&pk, &sig, msg), "verify");
+	timer = cycle_counter() - timer;
+	println("verify={}", timer);
+	msg[0]++;
+	ASSERT(lamport_verify(&pk, &sig, msg), "!verify");
+}
+
+#define LAMPORT_LOOPS 100000
+
+Test(lamport_perf) {
+	Rng rng;
+	LamportPubKey pk;
+	LamportSecKey sk;
+	LamportSig sig;
+	u64 keygen_cycles = 0, sign_cycles = 0, verify_cycles = 0, timer;
+	__attribute__((aligned(32))) u8 msg[32];
+	__attribute__((aligned(32))) u8 key[32];
+	rng_init(&rng, NULL);
+
+	for (u32 i = 0; i < LAMPORT_LOOPS; i++) {
+		rng_gen(&rng, key, 32);
+		rng_gen(&rng, msg, 32);
+		timer = cycle_counter();
+		lamport_keyfrom(key, &pk, &sk, LamportTypeStorm256);
+		keygen_cycles += cycle_counter() - timer;
+		timer = cycle_counter();
+		lamport_sign(&sk, msg, &sig);
+		sign_cycles += cycle_counter() - timer;
+		timer = cycle_counter();
+		i32 res = lamport_verify(&pk, &sig, msg);
+		verify_cycles += cycle_counter() - timer;
+
+		ASSERT(!res, "verify");
+
+		sig.data[7]++;
+		ASSERT_EQ(lamport_verify(&pk, &sig, msg), -1, "err");
+	}
+	println("keygen={},sign={},verify={}", keygen_cycles / LAMPORT_LOOPS,
+		sign_cycles / LAMPORT_LOOPS, verify_cycles / LAMPORT_LOOPS);
+}

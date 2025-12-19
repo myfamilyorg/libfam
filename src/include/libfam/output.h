@@ -23,37 +23,16 @@
  *
  *******************************************************************************/
 
-#ifndef _LAMPORT_H
-#define _LAMPORT_H
+#ifndef _OUTPUT_H
+#define _OUTPUT_H
 
-#include <libfam/types.h>
+#include <libfam/lamport.h>
 
-#define LAMPORT_SECKEY_SIZE (512 * 32)
-#define LAMPORT_PUBKEY_SIZE (512 * 32)
-#define LAMPORT_SIG_SIZE (256 * 32)
+typedef struct Output Output;
 
-typedef enum { LamportTypeStorm256, LamportTypeVeriHash } LamportType;
+typedef enum { OutputTypePlain, OutputTypeCommitment } OutputType;
+const Output *output_create_plain(LamportPubKey *pk, u64 amount);
+const Output *output_create_commitment(u8 commitment[32]);
+void output_destroy(const Output *o);
 
-typedef struct {
-	LamportType t;
-	__attribute__((aligned(32))) u8 data[LAMPORT_SECKEY_SIZE];
-} LamportSecKey;
-
-typedef struct {
-	LamportType t;
-	__attribute__((aligned(32))) u8 data[LAMPORT_PUBKEY_SIZE];
-} LamportPubKey;
-
-typedef struct {
-	LamportType t;
-	__attribute__((aligned(32))) u8 data[LAMPORT_SIG_SIZE];
-} LamportSig;
-
-void lamport_keyfrom(const u8 seed[32], LamportPubKey *pk, LamportSecKey *sk,
-		     LamportType t);
-void lamport_sign(const LamportSecKey *sk, const u8 message[32],
-		  LamportSig *sig);
-i32 lamport_verify(const LamportPubKey *pk, const LamportSig *sig,
-		   const u8 message[32]);
-
-#endif /* _LAMPORT_H */
+#endif /* _OUTPUT_H */
