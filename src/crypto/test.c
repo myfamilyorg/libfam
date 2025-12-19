@@ -33,6 +33,7 @@
 #include <libfam/storm.h>
 #include <libfam/test.h>
 #include <libfam/verihash.h>
+#include <libfam/wots.h>
 
 Test(aighthash) {
 	u32 v1, v2, v3;
@@ -809,30 +810,7 @@ Test(lamport_storm) {
 	u8 msg[32] = {9, 9, 9, 9, 9, 4};
 
 	u64 timer = cycle_counter();
-	lamport_keyfrom(key, &pk, &sk, LamportTypeStorm256);
-	timer = cycle_counter() - timer;
-	println("keygen={}", timer);
-	timer = cycle_counter();
-	lamport_sign(&sk, msg, &sig);
-	timer = cycle_counter() - timer;
-	println("sign={}", timer);
-	timer = cycle_counter();
-	ASSERT(!lamport_verify(&pk, &sig, msg), "verify");
-	timer = cycle_counter() - timer;
-	println("verify={}", timer);
-	msg[0]++;
-	ASSERT(lamport_verify(&pk, &sig, msg), "!verify");
-}
-
-Test(lamport_verihash) {
-	u8 key[32] = {1, 2, 3, 4, 5};
-	LamportPubKey pk;
-	LamportSecKey sk;
-	LamportSig sig;
-	u8 msg[32] = {9, 9, 9, 9, 9, 4};
-
-	u64 timer = cycle_counter();
-	lamport_keyfrom(key, &pk, &sk, LamportTypeVeriHash);
+	lamport_keyfrom(key, &pk, &sk);
 	timer = cycle_counter() - timer;
 	println("keygen={}", timer);
 	timer = cycle_counter();
@@ -863,7 +841,7 @@ Test(lamport_perf) {
 		rng_gen(&rng, key, 32);
 		rng_gen(&rng, msg, 32);
 		timer = cycle_counter();
-		lamport_keyfrom(key, &pk, &sk, LamportTypeStorm256);
+		lamport_keyfrom(key, &pk, &sk);
 		keygen_cycles += cycle_counter() - timer;
 		timer = cycle_counter();
 		lamport_sign(&sk, msg, &sig);
@@ -880,3 +858,61 @@ Test(lamport_perf) {
 	println("keygen={},sign={},verify={}", keygen_cycles / LAMPORT_LOOPS,
 		sign_cycles / LAMPORT_LOOPS, verify_cycles / LAMPORT_LOOPS);
 }
+
+Test(wots) {
+	u8 key[32] = {1, 2, 3, 4, 5};
+	WotsPubKey pk;
+	WotsSecKey sk;
+	WotsSig sig;
+	u8 msg[32] = {9, 9, 9, 9, 9, 4};
+
+	u64 timer = cycle_counter();
+	wots_keyfrom(key, &pk, &sk);
+	timer = cycle_counter() - timer;
+	println("keygen={}", timer);
+	timer = cycle_counter();
+	wots_sign(&sk, msg, &sig);
+	timer = cycle_counter() - timer;
+	println("sign={}", timer);
+	timer = cycle_counter();
+	ASSERT(!wots_verify(&pk, &sig, msg), "verify");
+	timer = cycle_counter() - timer;
+	println("verify={}", timer);
+	msg[0]++;
+	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+}
+
+#define WOTS_LOOPS 1000
+
+Test(wots_perf) {
+	Rng rng;
+	WotsPubKey pk;
+	WotsSecKey sk;
+	WotsSig sig;
+	u64 keygen_cycles = 0, sign_cycles = 0, verify_cycles = 0, timer;
+	__attribute__((aligned(32))) u8 msg[32];
+	__attribute__((aligned(32))) u8 key[32];
+	rng_init(&rng, NULL);
+
+	for (u32 i = 0; i < WOTS_LOOPS; i++) {
+		rng_gen(&rng, key, 32);
+		rng_gen(&rng, msg, 32);
+		timer = cycle_counter();
+		wots_keyfrom(key, &pk, &sk);
+		keygen_cycles += cycle_counter() - timer;
+		timer = cycle_counter();
+		wots_sign(&sk, msg, &sig);
+		sign_cycles += cycle_counter() - timer;
+		timer = cycle_counter();
+		i32 res = wots_verify(&pk, &sig, msg);
+		verify_cycles += cycle_counter() - timer;
+
+		ASSERT(!res, "verify");
+
+		sig.data[7]++;
+		ASSERT_EQ(wots_verify(&pk, &sig, msg), -1, "err");
+	}
+	println("keygen={},sign={},verify={}", keygen_cycles / WOTS_LOOPS,
+		sign_cycles / WOTS_LOOPS, verify_cycles / WOTS_LOOPS);
+}
+

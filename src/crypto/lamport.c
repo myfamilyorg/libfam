@@ -31,38 +31,21 @@
 static const __attribute__((aligned(32))) u8 LAMPORT_DOMAIN[32] = {1,  1, 1, 1,
 								   17, 7, 7, 7};
 
-void lamport_keyfrom(const u8 seed[32], LamportPubKey *pk, LamportSecKey *sk,
-		     LamportType t) {
-	sk->t = t;
-	pk->t = t;
-	if (t == LamportTypeStorm256) {
-		Storm256Context ctx;
+void lamport_keyfrom(const u8 seed[32], LamportPubKey *pk, LamportSecKey *sk) {
+	Storm256Context ctx;
+	storm256_init(&ctx, LAMPORT_DOMAIN);
+	fastmemcpy(sk->data, seed, 32);
+	for (u32 i = 0; i < 512; i++)
+		storm256_next_block(&ctx, sk->data + i * 32);
+	fastmemcpy(pk->data, sk->data, 32 * 512);
+	for (u32 i = 0; i < 512; i++) {
 		storm256_init(&ctx, LAMPORT_DOMAIN);
-		fastmemcpy(sk->data, seed, 32);
-		for (u32 i = 0; i < 512; i++)
-			storm256_next_block(&ctx, sk->data + i * 32);
-		for (u32 i = 0; i < 512; i++) {
-			storm256_init(&ctx, LAMPORT_DOMAIN);
-			fastmemcpy(pk->data + i * 32, sk->data + i * 32, 32);
-			storm256_next_block(&ctx, pk->data + i * 32);
-		}
-	} else {
-		u8 buffer[32];
-		fastmemcpy(buffer, seed, 32);
-
-		for (u32 i = 0; i < 512; i++) {
-			verihash256(buffer, 32, sk->data + i * 32);
-			buffer[0]++;
-			buffer[1] += i == 256;
-		}
-		for (u32 i = 0; i < 512; i++)
-			verihash256(sk->data + i * 32, 32, pk->data + i * 32);
+		storm256_next_block(&ctx, pk->data + i * 32);
 	}
 }
 
 void lamport_sign(const LamportSecKey *sk, const u8 message[32],
 		  LamportSig *sig) {
-	sig->t = sk->t;
 	for (u32 i = 0; i < 256; i++) {
 		u32 bit = (message[i >> 3] >> (i & 7)) & 1;
 		u32 sk_idx = i + bit * 256;
@@ -76,19 +59,11 @@ i32 lamport_verify(const LamportPubKey *pk, const LamportSig *sig,
 	for (u32 i = 0; i < 256; i++) {
 		u32 bit = (message[i >> 3] >> (i & 7)) & 1;
 		u32 pk_idx = i + bit * 256;
-		if (pk->t == LamportTypeStorm256) {
-			fastmemcpy(hash_out, sig->data + i * 32, 32);
-			storm256_init(&ctx, LAMPORT_DOMAIN);
-			storm256_next_block(&ctx, hash_out);
-			if (fastmemcmp(hash_out, pk->data + pk_idx * 32, 32) !=
-			    0)
-				return -1;
-		} else {
-			verihash256(sig->data + i * 32, 32, hash_out);
-			if (fastmemcmp(hash_out, pk->data + pk_idx * 32, 32) !=
-			    0)
-				return -1;
-		}
+		fastmemcpy(hash_out, sig->data + i * 32, 32);
+		storm256_init(&ctx, LAMPORT_DOMAIN);
+		storm256_next_block(&ctx, hash_out);
+		if (fastmemcmp(hash_out, pk->data + pk_idx * 32, 32) != 0)
+			return -1;
 	}
 	return 0;
 }

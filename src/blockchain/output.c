@@ -37,10 +37,6 @@ struct Output {
 
 const Output *output_create(LamportPubKey *pk, u64 amount) {
 	Output *ret;
-	if (pk->t != LamportTypeVeriHash) {
-		errno = EINVAL;
-		return NULL;
-	}
 	ret = alloc(sizeof(Output));
 	if (!ret) return NULL;
 	ret->amount = amount;

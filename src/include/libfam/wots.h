@@ -23,31 +23,33 @@
  *
  *******************************************************************************/
 
-#ifndef _LAMPORT_H
-#define _LAMPORT_H
+#ifndef _WOTS_H
+#define _WOTS_H
 
 #include <libfam/types.h>
 
-#define LAMPORT_SECKEY_SIZE (512 * 32)
-#define LAMPORT_PUBKEY_SIZE (512 * 32)
-#define LAMPORT_SIG_SIZE (256 * 32)
+#define WOTS_CHAINS 34
+#define WOTS_CHAIN_LEN 256
+#define WOTS_HASH_BYTES 32
+
+#define WOTS_SECKEY_SIZE (WOTS_CHAINS * WOTS_HASH_BYTES)
+#define WOTS_PUBKEY_SIZE (WOTS_CHAINS * WOTS_HASH_BYTES)
+#define WOTS_SIG_SIZE (WOTS_CHAINS * WOTS_HASH_BYTES)
 
 typedef struct {
-	__attribute__((aligned(32))) u8 data[LAMPORT_SECKEY_SIZE];
-} LamportSecKey;
+	__attribute__((aligned(32))) u8 data[WOTS_SECKEY_SIZE];
+} WotsSecKey;
 
 typedef struct {
-	__attribute__((aligned(32))) u8 data[LAMPORT_PUBKEY_SIZE];
-} LamportPubKey;
+	__attribute__((aligned(32))) u8 data[WOTS_PUBKEY_SIZE];
+} WotsPubKey;
 
 typedef struct {
-	__attribute__((aligned(32))) u8 data[LAMPORT_SIG_SIZE];
-} LamportSig;
+	__attribute__((aligned(32))) u8 data[WOTS_SIG_SIZE];
+} WotsSig;
 
-void lamport_keyfrom(const u8 seed[32], LamportPubKey *pk, LamportSecKey *sk);
-void lamport_sign(const LamportSecKey *sk, const u8 message[32],
-		  LamportSig *sig);
-i32 lamport_verify(const LamportPubKey *pk, const LamportSig *sig,
-		   const u8 message[32]);
+void wots_keyfrom(const u8 seed[32], WotsPubKey *pk, WotsSecKey *sk);
+void wots_sign(const WotsSecKey *sk, const u8 message[32], WotsSig *sig);
+i32 wots_verify(const WotsPubKey *pk, const WotsSig *sig, const u8 message[32]);
 
-#endif /* _LAMPORT_H */
+#endif /* _WOTS_H */
