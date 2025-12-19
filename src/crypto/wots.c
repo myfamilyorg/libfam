@@ -43,17 +43,14 @@ static const u8 DOMAIN_BASE[32] = {0x01, 'W', 'O', 'T', 'S',
 
 /* Iterate a chain: start from `in`, apply hash `steps` times */
 static void wots_chain(u8 out[32], const u8 in[32], unsigned steps) {
-	u8 tmp[32];
+	__attribute__((aligned(32))) u8 tmp[32];
 	Storm256Context ctx;
 	fastmemcpy(tmp, in, 32);
 	storm256_init(&ctx, DOMAIN_CHAIN);
 
 	for (u32 i = 0; i < steps; ++i) {
-		__attribute__((aligned(32))) u8 block[32];
-		fastmemcpy(block, tmp, 32);
 		storm256_init(&ctx, DOMAIN_CHAIN);
-		storm256_next_block(&ctx, block);
-		fastmemcpy(tmp, block, 32);
+		storm256_next_block(&ctx, tmp);
 	}
 	fastmemcpy(out, tmp, 32);
 }
