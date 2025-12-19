@@ -30,9 +30,8 @@
 
 typedef struct Output Output;
 
-typedef enum { OutputTypePlain, OutputTypeCommitment } OutputType;
-const Output *output_create_plain(LamportPubKey *pk, u64 amount);
-const Output *output_create_commitment(u8 commitment[32]);
+const Output *output_create(LamportPubKey *pk, u64 amount);
+void output_hash(const Output *o, u8 hash[32]);
 void output_destroy(const Output *o);
 
 #endif /* _OUTPUT_H */

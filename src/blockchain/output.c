@@ -31,37 +31,25 @@
 #include <libfam/verihash.h>
 
 struct Output {
-	OutputType t;
 	u64 amount;
-	u8 extra[];
+	u8 pk[LAMPORT_PUBKEY_SIZE];
 };
 
-const Output *output_create_plain(LamportPubKey *pk, u64 amount) {
+const Output *output_create(LamportPubKey *pk, u64 amount) {
 	Output *ret;
-	ret = alloc(sizeof(Output) + LAMPORT_PUBKEY_SIZE);
+	if (pk->t != LamportTypeVeriHash) {
+		errno = EINVAL;
+		return NULL;
+	}
+	ret = alloc(sizeof(Output));
 	if (!ret) return NULL;
-	ret->t = OutputTypePlain;
 	ret->amount = amount;
-	fastmemcpy(ret->extra, pk->data, LAMPORT_PUBKEY_SIZE);
-	return ret;
-}
-
-const Output *output_create_commitment(u8 commitment[32]) {
-	Output *ret;
-	ret = alloc(sizeof(Output) + 32);
-	if (!ret) return NULL;
-	ret->t = OutputTypeCommitment;
-	ret->amount = 0;
-	fastmemcpy(ret->extra, commitment, 32);
+	fastmemcpy(ret->pk, pk->data, LAMPORT_PUBKEY_SIZE);
 	return ret;
 }
 
 void output_destroy(const Output *o) { release((void *)o); }
 
 void output_hash(const Output *o, u8 hash_out[32]) {
-	if (o->t == OutputTypePlain)
-		verihash256((void *)o, sizeof(Output) + LAMPORT_PUBKEY_SIZE,
-			    hash_out);
-	else
-		verihash256((void *)o, sizeof(Output) + 32, hash_out);
+	verihash256((void *)o, sizeof(Output), hash_out);
 }
