@@ -44,7 +44,7 @@ static const u8 DOMAIN_BASE[32] = {0x01, 'W', 'O', 'T', 'S',
 /* Hash a single block with a domain separator */
 static void storm_hash(u8 out[32], const u8 domain[32], const u8 in[32],
 		       Storm256Context *ctx) {
-	u8 block[32];
+	__attribute__((aligned(32))) u8 block[32];
 	fastmemcpy(block, in, 32);
 	storm256_init(ctx, domain);
 	storm256_next_block(ctx, block);
@@ -67,7 +67,7 @@ static void wots_chain(u8 out[32], const u8 in[32], unsigned steps) {
 /* ------------------------------------------------------------------ */
 void wots_keyfrom(const u8 seed[32], WotsPubKey *pk, WotsSecKey *sk) {
 	Storm256Context ctx;
-	u8 block[32];
+	__attribute((aligned(32))) u8 block[32];
 
 	/* Expand seed into secret key (34 random 32-byte values) */
 	storm256_init(&ctx, DOMAIN_BASE);
@@ -75,9 +75,8 @@ void wots_keyfrom(const u8 seed[32], WotsPubKey *pk, WotsSecKey *sk) {
 	storm256_next_block(&ctx, block); /* absorb seed */
 	fastmemset(sk->data, 0, WOTS_SECKEY_SIZE);
 
-	for (unsigned i = 0; i < WOTS_LEN; ++i) {
+	for (unsigned i = 0; i < WOTS_LEN; ++i)
 		storm256_next_block(&ctx, sk->data + i * WOTS_N);
-	}
 
 	/* Compute public key: each secret chain hashed (w-1) = 255 times */
 	for (unsigned i = 0; i < WOTS_LEN; ++i) {
