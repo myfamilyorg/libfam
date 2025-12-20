@@ -25,12 +25,12 @@
 
 #include <libfam/dilithium_const.h>
 #include <libfam/dilithium_impl.h>
-#include <libfam/format.h>
 #include <libfam/rng.h>
 #include <libfam/sign.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/sysext.h>
+#include <libfam/utils.h>
 
 __attribute__((aligned(32))) static const u8 DILITHIUM_KEYGEN_DOMAIN[32] = {
     0x9e, 0x37, 0x79, 0xb9, 0x7f, 0x4a, 0x7c, 0x15, 0x85, 0xeb,
@@ -57,62 +57,8 @@ __attribute__((aligned(32))) static const u8 DILITHIUM_CTILDE_DOMAIN[32] = {
     0xca, 0x6b, 0xc2, 0xb2, 0xae, 0x37, 0x51, 0x7c, 0xc1, 0xb7,
     0x27, 0x22, 0x0a, 0x97, 0x00, 0x00, 0x00, 0x05};
 
-void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
-	u8 *pk = (void *)pk_in;
-	u8 *sk = (void *)sk_in;
-	__attribute__((aligned(32))) u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
-	u8 tr[TRBYTES] = {0};
-	const u8 *rho, *rhoprime, *key;
-	polyvec mat[K];
-	polyvec s1, s1hat;
-	polyvec s2, t1, t0;
-	StormContext ctx;
-	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES] = {0};
-
-	fastmemcpy(seedbuf, seed, 32);
-
-	seedbuf[SEEDBYTES + 0] = K;
-	seedbuf[SEEDBYTES + 1] = K;
-
-	storm_init(&ctx, DILITHIUM_KEYGEN_DOMAIN);
-	storm_next_block(&ctx, seedbuf);
-	storm_next_block(&ctx, seedbuf + 32);
-	storm_next_block(&ctx, seedbuf + 64);
-	storm_next_block(&ctx, seedbuf + 96);
-
-	rho = seedbuf;
-	rhoprime = rho + SEEDBYTES;
-	key = rhoprime + CRHBYTES;
-
-	polyvec_matrix_expand(mat, rho);
-
-	polyvec_uniform_eta(&s1, rhoprime, 0);
-	polyvec_uniform_eta(&s2, rhoprime, K);
-
-	s1hat = s1;
-	polyvec_ntt(&s1hat);
-	polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
-	polyvec_reduce(&t1);
-	polyvec_invntt_tomont(&t1);
-
-	polyvec_add(&t1, &t1, &s2);
-
-	polyvec_caddq(&t1);
-	polyveck_power2round(&t1, &t0, &t1);
-	pack_pk(pk, rho, &t1);
-
-	storm_init(&ctx, DILITHIUM_TR_DOMAIN);
-	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
-
-	for (u32 i = 0; i < 41; i++) storm_next_block(&ctx, pk_copy + i * 32);
-	storm_next_block(&ctx, tr);
-	storm_next_block(&ctx, tr + 32);
-
-	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
-}
-
-void signature_internal(u8 *sig, const u8 *m, const u8 rnd[RNDBYTES],
-			const u8 *sk) {
+STATIC void signature_internal(u8 *sig, const u8 *m, const u8 rnd[RNDBYTES],
+			       const u8 *sk) {
 	u32 n;
 	__attribute__((aligned(
 	    32))) u8 seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES] = {0};
@@ -209,21 +155,7 @@ rej:
 	pack_sig(sig, sig, &z, &h);
 }
 
-void sign(Signature *sm_in, const Message *msg, const SecretKey *sk_in) {
-	u8 *sm = (void *)sm_in;
-	const u8 *sk = (void *)sk_in;
-	const u8 *m = (void *)msg;
-	u8 rnd[RNDBYTES];
-	Rng rng;
-
-	rng_init(&rng, NULL);
-	rng_gen(&rng, rnd, RNDBYTES);
-
-	fastmemcpy(sm + CRYPTO_BYTES, m, MLEN);
-	signature_internal(sm, sm + CRYPTO_BYTES, rnd, sk);
-}
-
-i32 crypto_sign_verify_internal(const u8 *sig, const u8 *pk) {
+STATIC i32 crypto_sign_verify_internal(const u8 *sig, const u8 *pk) {
 	const u8 *m = sig + CRYPTO_BYTES;
 	u8 buf[K * POLYW1_PACKEDBYTES];
 	__attribute__((aligned(32))) u8 rho[SEEDBYTES];
@@ -288,12 +220,80 @@ i32 crypto_sign_verify_internal(const u8 *sig, const u8 *pk) {
 	return fastmemcmp(c, c2, CTILDEBYTES) == 0 ? 0 : -1;
 }
 
-i32 verify(const Signature *sm_in, const PublicKey *pk_in) {
+PUBLIC void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
+	u8 *pk = (void *)pk_in;
+	u8 *sk = (void *)sk_in;
+	__attribute__((aligned(32))) u8 seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
+	u8 tr[TRBYTES] = {0};
+	const u8 *rho, *rhoprime, *key;
+	polyvec mat[K];
+	polyvec s1, s1hat;
+	polyvec s2, t1, t0;
+	StormContext ctx;
+	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES] = {0};
+
+	fastmemcpy(seedbuf, seed, 32);
+
+	seedbuf[SEEDBYTES + 0] = K;
+	seedbuf[SEEDBYTES + 1] = K;
+
+	storm_init(&ctx, DILITHIUM_KEYGEN_DOMAIN);
+	storm_next_block(&ctx, seedbuf);
+	storm_next_block(&ctx, seedbuf + 32);
+	storm_next_block(&ctx, seedbuf + 64);
+	storm_next_block(&ctx, seedbuf + 96);
+
+	rho = seedbuf;
+	rhoprime = rho + SEEDBYTES;
+	key = rhoprime + CRHBYTES;
+
+	polyvec_matrix_expand(mat, rho);
+
+	polyvec_uniform_eta(&s1, rhoprime, 0);
+	polyvec_uniform_eta(&s2, rhoprime, K);
+
+	s1hat = s1;
+	polyvec_ntt(&s1hat);
+	polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
+	polyvec_reduce(&t1);
+	polyvec_invntt_tomont(&t1);
+
+	polyvec_add(&t1, &t1, &s2);
+
+	polyvec_caddq(&t1);
+	polyveck_power2round(&t1, &t0, &t1);
+	pack_pk(pk, rho, &t1);
+
+	storm_init(&ctx, DILITHIUM_TR_DOMAIN);
+	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
+
+	for (u32 i = 0; i < 41; i++) storm_next_block(&ctx, pk_copy + i * 32);
+	storm_next_block(&ctx, tr);
+	storm_next_block(&ctx, tr + 32);
+
+	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
+}
+
+PUBLIC void sign(Signature *sm_in, const Message *msg, const SecretKey *sk_in) {
+	u8 *sm = (void *)sm_in;
+	const u8 *sk = (void *)sk_in;
+	const u8 *m = (void *)msg;
+	u8 rnd[RNDBYTES];
+	Rng rng;
+
+	rng_init(&rng, NULL);
+	rng_gen(&rng, rnd, RNDBYTES);
+
+	fastmemcpy(sm + CRYPTO_BYTES, m, MLEN);
+	signature_internal(sm, sm + CRYPTO_BYTES, rnd, sk);
+}
+
+PUBLIC i32 verify(const Signature *sm_in, const PublicKey *pk_in) {
 	const u8 *sm = (void *)sm_in;
 	const u8 *pk = (void *)pk_in;
 	return crypto_sign_verify_internal(sm, pk);
 }
 
-void msg_from(const Signature *sig, Message *msg) {
+PUBLIC void msg_from(const Signature *sig, Message *msg) {
 	fastmemcpy(msg, (u8 *)sig + CRYPTO_BYTES, MLEN);
 }
