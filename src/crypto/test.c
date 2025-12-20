@@ -28,6 +28,7 @@
 #include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
+#include <libfam/sign.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/test_base.h>
@@ -234,5 +235,69 @@ Test(bible_mine) {
 		       32),
 	       "hash");
 	bible_destroy(b);
+}
+
+Test(dilithium) {
+	SecretKey sk;
+	PublicKey pk;
+	Signature sig;
+	Message msg = {0};
+	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
+	Rng rng;
+
+	rng_init(&rng, NULL);
+
+	for (u32 i = 0; i < 12; i++) {
+		rng_gen(&rng, rnd, 32);
+		rng_gen(&rng, &msg, MLEN);
+
+		keyfrom(&sk, &pk, rnd);
+		sign(&sig, &msg, &sk);
+		ASSERT(!verify(&sig, &pk), "verify");
+		((u8 *)&sig)[0]++;
+		ASSERT(verify(&sig, &pk), "!verify");
+		ASSERT(!memcmp(&msg, ((u8 *)&sig) + 2420, MLEN), "msg");
+	}
+}
+
+#define DILITHIUM_COUNT 100
+
+Test(dilithium_perf) {
+	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
+	Message m = {0};
+	SecretKey sk;
+	PublicKey pk;
+	Signature sm;
+
+	Rng rng;
+	u64 keygen_sum = 0;
+	u64 sign_sum = 0;
+	u64 verify_sum = 0;
+
+	rng_init(&rng, NULL);
+
+	for (u32 i = 0; i < DILITHIUM_COUNT; i++) {
+		rng_gen(&rng, rnd, 32);
+		rng_gen(&rng, &m, MLEN);
+
+		u64 start = cycle_counter();
+		keyfrom(&sk, &pk, rnd);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		sign(&sm, &m, &sk);
+		sign_sum += cycle_counter() - start;
+		start = cycle_counter();
+		verify(&sm, &pk);
+		verify_sum += cycle_counter() - start;
+	}
+
+	(void)keygen_sum;
+	(void)sign_sum;
+	(void)verify_sum;
+
+	/*
+	println("keygen={},sign={},verify={}", keygen_sum / DILITHIUM_COUNT,
+		sign_sum / DILITHIUM_COUNT, verify_sum / DILITHIUM_COUNT);
+		*/
 }
 

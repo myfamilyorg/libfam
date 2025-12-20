@@ -25,8 +25,6 @@
 #ifndef _ASM_CONSTS_H
 #define _ASM_CONSTS_H
 
-#include <libfam/dilithium_const.h>
-
 #define _8XQ 0
 #define _8XQINV 8
 #define _8XDIV_QINV 16
