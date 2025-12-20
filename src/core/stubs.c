@@ -141,25 +141,30 @@ u128 __umodti3(u128 a, u128 b) {
 }
 
 PUBLIC u128 __udivti3(u128 a, u128 b) {
-	i32 shift;
-	u128 quot, rem;
-	if (!b) trap();
-	if (a < b) return 0;
-	quot = 0;
-	rem = a;
-	shift = (i32)clz_u128(b) - (i32)clz_u128(rem);
-	if (shift < 0) shift = 0;
+	if (b == 0) trap();
 
-	b <<= shift;
+	utwords dividend = {.all = a};
+	utwords divisor = {.all = b};
 
-	while (shift >= 0) {
-		if (rem >= b) {
-			rem -= b;
-			quot |= ((u128)1 << shift);
+	if (divisor.s.high == 0) {
+		u64 rem;
+		u64 q_low;
+
+		if (dividend.s.high < divisor.s.low) {
+			q_low = udiv128by64to64(dividend.s.high, dividend.s.low,
+						divisor.s.low, &rem);
+			return (u128)q_low;
+		} else {
+			u64 q_high = dividend.s.high / divisor.s.low;
+			u64 temp = dividend.s.high % divisor.s.low;
+
+			q_low = udiv128by64to64(temp, dividend.s.low,
+						divisor.s.low, &rem);
+
+			return ((u128)q_high << 64) | q_low;
 		}
-		b >>= 1;
-		shift--;
 	}
-	return quot;
-}
 
+	u128 rem;
+	return __udivmodti4(a, b, &rem);
+}

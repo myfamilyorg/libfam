@@ -671,3 +671,21 @@ Test(mod_impl) {
 	x = a % b;
 	ASSERT_EQ(x, 13835058055282163711ULL, "x=13835058055282163711");
 }
+
+Test(div_coverage_cases) {
+	u128 a, b, c;
+
+	a = 12345;
+	b = 123;
+	c = a / b;
+	ASSERT_EQ(c, 100, "100");
+	a = ((u128)0x1) << 70;
+	b = 1;
+	c = a / b;
+	ASSERT_EQ(c, a, "c=a");
+
+	a = 1;
+	b = ((u128)0x1) << 70;
+	c = a / b;
+	ASSERT(!c, "c=0");
+}
