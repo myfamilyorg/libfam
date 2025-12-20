@@ -34,7 +34,7 @@
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/memory.h>
-#include <libfam/rng.h>
+// #include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
 
