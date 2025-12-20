@@ -293,3 +293,7 @@ i32 verify(const Signature *sm_in, const PublicKey *pk_in) {
 	const u8 *pk = (void *)pk_in;
 	return crypto_sign_verify_internal(sm, pk);
 }
+
+void msg_from(const Signature *sig, Message *msg) {
+	fastmemcpy(msg, (u8 *)sig + CRYPTO_BYTES, MLEN);
+}

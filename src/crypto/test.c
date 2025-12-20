@@ -257,6 +257,9 @@ Test(dilithium) {
 		((u8 *)&sig)[0]++;
 		ASSERT(verify(&sig, &pk), "!verify");
 		ASSERT(!memcmp(&msg, ((u8 *)&sig) + 2420, MLEN), "msg");
+		Message msgcmp = {0};
+		msg_from(&sig, &msgcmp);
+		ASSERT(!memcmp(&msg, &msgcmp, MLEN), "msg");
 	}
 }
 
