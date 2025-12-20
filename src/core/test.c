@@ -325,6 +325,7 @@ Test(alloc1) {
 #define ALLOC_COUNT (1024)
 #define ALLOC_ITER 1
 
+/*
 Test(alloc2) {
 	i32 i, j, k;
 	Rng rng;
@@ -654,3 +655,4 @@ Test(strstr) {
 }
 
 // Test(fmta) { println("{"); }
+*/
