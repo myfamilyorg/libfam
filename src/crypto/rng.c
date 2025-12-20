@@ -98,7 +98,10 @@ void rng_gen(Rng *rng, void *v, u64 size) {
 	}
 
 	if (off < size) {
-		__attribute__((aligned(32))) u8 buf[32] = {0};
+		__attribute__((aligned(32))) u8 buf[32];
+#if TEST == 1
+		fastmemset(buf, 0, sizeof(buf));
+#endif /* TEST */
 		storm_next_block(&rng->ctx, buf);
 		fastmemcpy(out + off, buf, size - off);
 		secure_zero32(buf);
