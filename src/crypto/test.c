@@ -860,7 +860,7 @@ Test(lamport_perf) {
 }
 
 Test(wots) {
-	u8 key[32] = {1, 2, 3, 4, 5};
+	__attribute__((aligned(32))) u8 key[32] = {1, 2, 3, 4, 5};
 	WotsPubKey pk;
 	WotsSecKey sk;
 	WotsSig sig;

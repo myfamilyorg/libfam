@@ -85,7 +85,7 @@ void wots_sign(const WotsSecKey *sk, const u8 message[32], WotsSig *sig) {
 i32 wots_verify(const WotsPubKey *pk, const WotsSig *sig,
 		const u8 message[32]) {
 	u16 checksum = 0;
-	u8 tmp[32];
+	__attribute__((aligned(32))) u8 tmp[32];
 	i32 ret = 0;
 
 	for (u32 i = 0; i < WOTS_LEN1; ++i) {
