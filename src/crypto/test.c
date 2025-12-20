@@ -486,8 +486,10 @@ Test(verihash_bitflip) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
+	/*
 	println("total_failed(verihash)={}/{},diff={},ratio={}", total_fail,
 		iter * 128, max - min, (f64)total_fail / (f64)(iter * 128));
+		*/
 }
 
 #include <libfam/aes.h>
@@ -558,8 +560,10 @@ Test(aes_bitflip) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
+	/*
 	println("total_failed(aes)={}/{},diff={},ratio={}", total_fail,
 		iter * 256, max - min, (f64)total_fail / (f64)(iter * 256));
+		*/
 }
 
 Test(storm256_bitflip) {
@@ -627,8 +631,10 @@ Test(storm256_bitflip) {
 			if (avg > 55.0 || avg < 45.0) total_fail++;
 		}
 	}
+	/*
 	println("total_failed(storm256)={}/{},diff={},ratio={}", total_fail,
 		iter * 256, max - min, (f64)total_fail / (f64)(iter * 256));
+		*/
 }
 
 static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
@@ -746,14 +752,17 @@ Test(verihash_preimage) {
 			   __builtin_popcountll((u64)(hamm_diff >> 64));
 		min_hamm = hamm < min_hamm ? hamm : min_hamm;
 
+		/*
 		if (i % 10000 == 0)
 			println(
 			    "i={},matches={},min_diff={},diff={},min_hamm={}",
 			    i, matches, min_diff, diff, min_hamm);
+			    */
 	}
-	ASSERT(matches == 0, "Preimage matches: {}", matches);
+	ASSERT(!matches, "matches");
+	/*
 	println("Preimage test: {} trials, {} matches (expected 0)", trials,
-		matches);
+		matches);*/
 }
 
 Test(verihash256_vector) {
@@ -795,8 +804,11 @@ Test(verihash256_preimage) {
 
 		if (i && (i % 100000 == 0)) {
 			u64 elapsed = micros() - timer;
+			/*
 			println("i={},min_hamm={},elapsed={}ms", i, min_hamm,
 				elapsed / 1000);
+				*/
+			(void)elapsed;
 			timer = micros();
 		}
 	}
@@ -812,15 +824,15 @@ Test(lamport_storm) {
 	u64 timer = cycle_counter();
 	lamport_keyfrom(key, &pk, &sk);
 	timer = cycle_counter() - timer;
-	println("keygen={}", timer);
+	// println("keygen={}", timer);
 	timer = cycle_counter();
 	lamport_sign(&sk, msg, &sig);
 	timer = cycle_counter() - timer;
-	println("sign={}", timer);
+	// println("sign={}", timer);
 	timer = cycle_counter();
 	ASSERT(!lamport_verify(&pk, &sig, msg), "verify");
 	timer = cycle_counter() - timer;
-	println("verify={}", timer);
+	// println("verify={}", timer);
 	msg[0]++;
 	ASSERT(lamport_verify(&pk, &sig, msg), "!verify");
 }
@@ -833,6 +845,9 @@ Test(lamport_perf) {
 	LamportSecKey sk;
 	LamportSig sig;
 	u64 keygen_cycles = 0, sign_cycles = 0, verify_cycles = 0, timer;
+	(void)keygen_cycles;
+	(void)sign_cycles;
+	(void)verify_cycles;
 	__attribute__((aligned(32))) u8 msg[32];
 	__attribute__((aligned(32))) u8 key[32];
 	rng_init(&rng, NULL);
@@ -855,8 +870,10 @@ Test(lamport_perf) {
 		sig.data[7]++;
 		ASSERT_EQ(lamport_verify(&pk, &sig, msg), -1, "err");
 	}
+	/*
 	println("keygen={},sign={},verify={}", keygen_cycles / LAMPORT_LOOPS,
 		sign_cycles / LAMPORT_LOOPS, verify_cycles / LAMPORT_LOOPS);
+		*/
 }
 
 Test(wots) {
@@ -869,15 +886,15 @@ Test(wots) {
 	u64 timer = cycle_counter();
 	wots_keyfrom(key, &pk, &sk);
 	timer = cycle_counter() - timer;
-	println("keygen={}", timer);
+	// println("keygen={}", timer);
 	timer = cycle_counter();
 	wots_sign(&sk, msg, &sig);
 	timer = cycle_counter() - timer;
-	println("sign={}", timer);
+	// println("sign={}", timer);
 	timer = cycle_counter();
 	ASSERT(!wots_verify(&pk, &sig, msg), "verify");
 	timer = cycle_counter() - timer;
-	println("verify={}", timer);
+	// println("verify={}", timer);
 	msg[0]++;
 	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 }
@@ -890,6 +907,9 @@ Test(wots_perf) {
 	WotsSecKey sk;
 	WotsSig sig;
 	u64 keygen_cycles = 0, sign_cycles = 0, verify_cycles = 0, timer;
+	(void)keygen_cycles;
+	(void)sign_cycles;
+	(void)verify_cycles;
 	__attribute__((aligned(32))) u8 msg[32];
 	__attribute__((aligned(32))) u8 key[32];
 	rng_init(&rng, NULL);
@@ -912,7 +932,6 @@ Test(wots_perf) {
 		sig.data[7]++;
 		ASSERT_EQ(wots_verify(&pk, &sig, msg), -1, "err");
 	}
-	println("keygen={},sign={},verify={}", keygen_cycles / WOTS_LOOPS,
-		sign_cycles / WOTS_LOOPS, verify_cycles / WOTS_LOOPS);
+	// println("keygen={},sign={},verify={}", keygen_cycles / WOTS_LOOPS,
+	// sign_cycles / WOTS_LOOPS, verify_cycles / WOTS_LOOPS);
 }
-
