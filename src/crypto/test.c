@@ -23,11 +23,15 @@
  *
  *******************************************************************************/
 
+#include <libfam/aighthash.h>
+#include <libfam/bible.h>
 #include <libfam/format.h>
+#include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/test_base.h>
+#include <libfam/wots.h>
 
 Test(storm_vectors) {
 	StormContext ctx;
@@ -137,3 +141,98 @@ Test(rng) {
 	    254, 89,  4,  142, 192, 9,	 239, 202, 158, 195, 83,  165};
 	ASSERT_EQ(memcmp(z, expected, 64), 0, "z");
 }
+
+Test(aighthash) {
+	u32 v1, v2, v3;
+
+	v1 = aighthash32("11111111abc", 11, 0);
+	v2 = aighthash32("11111111abc\0", 12, 0);
+	v3 = aighthash32("11111111abc", 11, 0);
+	ASSERT(v1 != v2, "v1 != v2");
+	ASSERT(v1 == v3, "v1 == v3");
+
+	u64 h1, h2, h3;
+
+	h1 = aighthash64("XXXXXXXXXXXXXXXXxyz", 19, 0);
+	h2 = aighthash64("XXXXXXXXXXXXXXXXxyz\0", 20, 0);
+	h3 = aighthash64("XXXXXXXXXXXXXXXXxyz", 19, 0);
+	ASSERT(h1 != h2, "h1 != h2");
+	ASSERT(h1 == h3, "h1 == h3");
+}
+
+Test(wots) {
+	__attribute__((aligned(32))) u8 key[32] = {1, 2, 3, 4, 5};
+	WotsPubKey pk;
+	WotsSecKey sk;
+	WotsSig sig;
+	u8 msg[32] = {9, 9, 9, 9, 9, 4};
+
+	wots_keyfrom(key, &pk, &sk);
+	wots_sign(&sk, msg, &sig);
+	ASSERT(!wots_verify(&pk, &sig, msg), "verify");
+	msg[0]++;
+	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+}
+
+#define BIBLE_PATH "resources/test_bible.dat"
+
+Test(bible) {
+	const Bible *b;
+	u64 sbox[256];
+	__attribute__((aligned(32))) static const u8 input[128] = {
+	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
+	    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+	__attribute__((aligned(32))) u8 output[32];
+
+	if (!exists(BIBLE_PATH)) {
+		b = bible_gen();
+		bible_store(b, BIBLE_PATH);
+	} else
+		b = bible_load(BIBLE_PATH);
+
+	bible_sbox8_64(sbox);
+	bible_hash(b, input, output, sbox);
+
+	u8 expected[32] = {155, 115, 44,  19,  62,  253, 241, 244,
+			   190, 79,  245, 217, 85,  195, 38,  108,
+			   244, 44,  203, 158, 122, 32,	 229, 32,
+			   56,	172, 212, 236, 89,  111, 233, 183};
+
+	ASSERT(!memcmp(output, expected, 32), "hash");
+	bible_destroy(b);
+	b = bible_load(BIBLE_PATH);
+	bible_destroy(b);
+}
+
+Test(bible_mine) {
+	const Bible *b;
+	u32 nonce = 0;
+	u64 sbox[256];
+	__attribute__((aligned(32))) u8 output[32] = {0};
+	u8 target[32];
+	__attribute((aligned(32))) u8 header[HASH_INPUT_LEN];
+
+	for (u32 i = 0; i < HASH_INPUT_LEN; i++) header[i] = i;
+
+	if (!exists(BIBLE_PATH)) {
+		b = bible_gen();
+		bible_store(b, BIBLE_PATH);
+	} else
+		b = bible_load(BIBLE_PATH);
+
+	memset(target, 0xFF, 32);
+	target[0] = 0;
+	target[1] = 0;
+	bible_sbox8_64(sbox);
+	mine_block(b, header, target, output, &nonce, U32_MAX, sbox);
+
+	ASSERT_EQ(nonce, 34264, "nonce");
+	ASSERT(!memcmp(output, (u8[]){0,   0,	30, 233, 156, 138, 107, 143,
+				      57,  175, 10, 239, 101, 30,  32,	154,
+				      249, 219, 21, 189, 4,   220, 79,	104,
+				      144, 104, 71, 40,	 223, 159, 75,	174},
+		       32),
+	       "hash");
+	bible_destroy(b);
+}
+
