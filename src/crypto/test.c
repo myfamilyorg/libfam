@@ -26,6 +26,7 @@
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/format.h>
+#include <libfam/kem.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/sign.h>
@@ -321,3 +322,13 @@ Test(dilithium_perf) {
 		*/
 }
 
+Test(kyber1) {
+	u8 sk[KYBER_SECRETKEYBYTES];
+	u8 pk[KYBER_PUBLICKEYBYTES];
+	u8 ct[KYBER_CIPHERTEXTBYTES];
+	u8 ss_bob[KYBER_SSBYTES] = {0}, ss_alice[KYBER_SSBYTES] = {1};
+	pqcrystals_kyber768_ref_keypair(pk, sk);
+	pqcrystals_kyber768_ref_enc(ct, ss_bob, pk);
+	pqcrystals_kyber768_ref_dec(ss_alice, ct, sk);
+	ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES), "shared secret");
+}
