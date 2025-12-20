@@ -83,20 +83,20 @@ i32 strncmp(const char *x, const char *y, u64 n) {
 	return (char)*x - (char)*y;
 }
 
-void *memset(void *dest, i32 c, u64 n) {
+PUBLIC void *memset(void *dest, i32 c, u64 n) {
 	u8 *tmp = dest;
 	while (n--) *tmp++ = (char)c;
 	return dest;
 }
 
-void *memcpy(void *dest, const void *src, u64 n) {
+PUBLIC void *memcpy(void *dest, const void *src, u64 n) {
 	u8 *d = (u8 *)dest;
 	const u8 *s = (void *)src;
 	while (n--) *d++ = *s++;
 	return dest;
 }
 
-i32 memcmp(const void *s1, const void *s2, u64 n) {
+PUBLIC i32 memcmp(const void *s1, const void *s2, u64 n) {
 	const u8 *p1 = (void *)s1;
 	const u8 *p2 = (void *)s2;
 	while (n--) {
