@@ -288,12 +288,10 @@ PUBLIC void sign(Signature *sm_in, const Message *msg, const SecretKey *sk_in) {
 	signature_internal(sm, sm + CRYPTO_BYTES, rnd, sk);
 }
 
-PUBLIC i32 verify(const Signature *sm_in, const PublicKey *pk_in) {
+PUBLIC i32 verify(const Signature *sm_in, const PublicKey *pk_in,
+		  const Message *msg) {
 	const u8 *sm = (void *)sm_in;
 	const u8 *pk = (void *)pk_in;
+	if (fastmemcmp(msg, ((u8 *)sm_in) + CRYPTO_BYTES, MLEN)) return -1;
 	return crypto_sign_verify_internal(sm, pk);
-}
-
-PUBLIC void msg_from(const Signature *sig, Message *msg) {
-	fastmemcpy(msg, (u8 *)sig + CRYPTO_BYTES, MLEN);
 }

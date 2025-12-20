@@ -52,7 +52,6 @@ typedef struct {
 
 void keyfrom(SecretKey *sk, PublicKey *pk, u8 seed[SEEDLEN]);
 void sign(Signature *sig, const Message *msg, const SecretKey *sk);
-void msg_from(const Signature *sig, Message *msg);
-i32 verify(const Signature *sig, const PublicKey *pk);
+i32 verify(const Signature *sig, const PublicKey *pk, const Message *msg);
 
 #endif /* _SIGN_H */

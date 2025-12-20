@@ -253,14 +253,31 @@ Test(dilithium) {
 
 		keyfrom(&sk, &pk, rnd);
 		sign(&sig, &msg, &sk);
-		ASSERT(!verify(&sig, &pk), "verify");
+		ASSERT(!verify(&sig, &pk, &msg), "verify");
 		((u8 *)&sig)[0]++;
-		ASSERT(verify(&sig, &pk), "!verify");
+		ASSERT(verify(&sig, &pk, &msg), "!verify");
 		ASSERT(!memcmp(&msg, ((u8 *)&sig) + 2420, MLEN), "msg");
-		Message msgcmp = {0};
-		msg_from(&sig, &msgcmp);
-		ASSERT(!memcmp(&msg, &msgcmp, MLEN), "msg");
 	}
+}
+
+Test(dilithium_bad_msg) {
+	SecretKey sk;
+	PublicKey pk;
+	Signature sig;
+	Message msg = {0};
+	Message bad_msg = {0};
+	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
+	Rng rng;
+
+	rng_init(&rng, NULL);
+
+	rng_gen(&rng, rnd, 32);
+	rng_gen(&rng, &msg, MLEN);
+
+	keyfrom(&sk, &pk, rnd);
+	sign(&sig, &msg, &sk);
+	ASSERT(!verify(&sig, &pk, &msg), "verify");
+	ASSERT(verify(&sig, &pk, &bad_msg), "bad msg");
 }
 
 #define DILITHIUM_COUNT 100
@@ -290,7 +307,7 @@ Test(dilithium_perf) {
 		sign(&sm, &m, &sk);
 		sign_sum += cycle_counter() - start;
 		start = cycle_counter();
-		verify(&sm, &pk);
+		verify(&sm, &pk, &m);
 		verify_sum += cycle_counter() - start;
 	}
 
