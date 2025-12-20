@@ -34,7 +34,7 @@
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/memory.h>
-// #include <libfam/rng.h>
+#include <libfam/rng.h>
 #include <libfam/sysext.h>
 #include <libfam/test.h>
 
@@ -325,7 +325,6 @@ Test(alloc1) {
 #define ALLOC_COUNT (1024)
 #define ALLOC_ITER 1
 
-/*
 Test(alloc2) {
 	i32 i, j, k;
 	Rng rng;
@@ -654,5 +653,21 @@ Test(strstr) {
 	ASSERT_EQ(strstr(s, "x"), NULL, "no match");
 }
 
-// Test(fmta) { println("{"); }
-*/
+Test(mod_impl) {
+	u128 a = (u128)0xFFFFFFFFFFFFFFFF << 64 | 0xFFFFFFFFFFFFFFFF;
+	u128 b = (u128)0x8000000000000000ULL;
+	u128 x = a % b;
+	ASSERT_EQ(x, 9223372036854775807, "9223372036854775807");
+	a = (u128)0xFFFFFFFFFFFFFFFF << 64 | 0xFFFFFFFFFFFFFFFF;
+	b = (u128)0xFFFFFFFFFFFFFFFFULL;
+	x = a % b;
+	ASSERT(!x, "x=0");
+	a = (u128)0x0000000100000000 << 64 | 0xFFFFFFFFFFFFFFFF;
+	b = (u128)0x0000000100000001ULL;
+	x = a % b;
+	ASSERT_EQ(x, 4294967296, "x=4294967296");
+	a = ((u128)0xFFFFFFFF00000000ULL << 64) | 0xFFFFFFFFFFFFFFFFULL;
+	b = 0xFFFFFFFF80000000ULL;
+	x = a % b;
+	ASSERT_EQ(x, 13835058055282163711ULL, "x=13835058055282163711");
+}
