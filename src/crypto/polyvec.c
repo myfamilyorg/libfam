@@ -29,11 +29,10 @@
 #include <libfam/storm.h>
 #include <libfam/string.h>
 
-#define STORM_RATE 32
 __attribute__((aligned(32))) static const u8 POLY_CHALLENGE_DOMAIN[32] = {2, 3,
 									  4};
 
-static u32 rej_uniform(i32 *a, u32 len, const u8 *buf, u32 buflen) {
+STATIC u32 rej_uniform(i32 *a, u32 len, const u8 *buf, u32 buflen) {
 	u32 ctr, pos;
 	u32 t;
 
@@ -51,7 +50,7 @@ static u32 rej_uniform(i32 *a, u32 len, const u8 *buf, u32 buflen) {
 	return ctr;
 }
 
-u32 poly_make_hint(poly *h, const poly *a0, const poly *a1) {
+STATIC u32 poly_make_hint(poly *h, const poly *a0, const poly *a1) {
 	u32 i, s = 0;
 	for (i = 0; i < N; ++i) {
 		h->coeffs[i] = make_hint(a0->coeffs[i], a1->coeffs[i]);
@@ -60,7 +59,7 @@ u32 poly_make_hint(poly *h, const poly *a0, const poly *a1) {
 	return s;
 }
 
-void polyw1_pack(u8 *r, const poly *a) {
+STATIC void polyw1_pack(u8 *r, const poly *a) {
 	u32 i;
 	for (i = 0; i < N / 4; ++i) {
 		r[3 * i + 0] = a->coeffs[4 * i + 0];
@@ -74,7 +73,7 @@ void polyw1_pack(u8 *r, const poly *a) {
 
 #define POLY_UNIFORM_NBLOCKS \
 	((768 + STREAM128_BLOCKBYTES - 1) / STREAM128_BLOCKBYTES)
-void poly_uniform(poly *a, StormContext *ctx) {
+STATIC void poly_uniform(poly *a, StormContext *ctx) {
 	static u64 value = U64_MAX / 2;
 	u32 ctr = 0;
 	__attribute__((aligned(32))) u8 buf[32];
@@ -87,7 +86,7 @@ void poly_uniform(poly *a, StormContext *ctx) {
 	}
 }
 
-void poly_pointwise_montgomery(poly *c, const poly *a, const poly *b) {
+STATIC void poly_pointwise_montgomery(poly *c, const poly *a, const poly *b) {
 #ifdef USE_AVX2
 	pointwise_avx((void *)c, (void *)a, (void *)b, qdata.vec);
 #else
@@ -98,13 +97,13 @@ void poly_pointwise_montgomery(poly *c, const poly *a, const poly *b) {
 #endif /* USE_AVX2 */
 }
 
-void poly_power2round(poly *a1, poly *a0, const poly *a) {
+STATIC void poly_power2round(poly *a1, poly *a0, const poly *a) {
 	u32 i;
 	for (i = 0; i < N; ++i)
 		a1->coeffs[i] = power2round(&a0->coeffs[i], a->coeffs[i]);
 }
 
-int poly_chknorm(const poly *a, i32 B) {
+STATIC int poly_chknorm(const poly *a, i32 B) {
 	u32 i;
 	i32 t;
 
@@ -122,13 +121,13 @@ int poly_chknorm(const poly *a, i32 B) {
 	return 0;
 }
 
-void poly_use_hint(poly *b, const poly *a, const poly *h) {
+STATIC void poly_use_hint(poly *b, const poly *a, const poly *h) {
 	u32 i;
 	for (i = 0; i < N; ++i)
 		b->coeffs[i] = use_hint(a->coeffs[i], h->coeffs[i]);
 }
 
-void poly_uniform_gamma1(poly *a, StormContext *ctx, u64 nonce) {
+STATIC void poly_uniform_gamma1(poly *a, StormContext *ctx, u64 nonce) {
 	__attribute__((aligned(32))) u8 buf[704] = {0};
 
 	((u64 *)buf)[0] ^= nonce;
@@ -182,7 +181,7 @@ void poly_decompose(poly *a1, poly *a0, const poly *a) {
 void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]) {
 	u32 i, b, pos;
 	u64 signs;
-	__attribute__((aligned(32))) u8 buf[STORM_RATE] = {0};
+	__attribute__((aligned(32))) u8 buf[32] = {0};
 	StormContext state;
 
 	storm_init(&state, POLY_CHALLENGE_DOMAIN);
@@ -196,7 +195,7 @@ void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]) {
 	fastmemset(c->coeffs, 0, sizeof(c->coeffs));
 	for (i = N - TAU; i < N; ++i) {
 		do {
-			if (pos >= STORM_RATE) {
+			if (pos >= 32) {
 				storm_next_block(&state, buf);
 				pos = 0;
 			}
