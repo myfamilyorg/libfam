@@ -34,6 +34,7 @@ static const __attribute__((aligned(32))) u8 LAMPORT_DOMAIN[32] = {1,  1, 1, 1,
 void lamport_keyfrom(const u8 seed[32], LamportPubKey *pk, LamportSecKey *sk) {
 	Storm256Context ctx;
 	storm256_init(&ctx, LAMPORT_DOMAIN);
+	fastmemset(sk->data, 0, LAMPORT_SECKEY_SIZE);
 	fastmemcpy(sk->data, seed, 32);
 	for (u32 i = 0; i < 512; i++)
 		storm256_next_block(&ctx, sk->data + i * 32);

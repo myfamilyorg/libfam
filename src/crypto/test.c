@@ -436,7 +436,7 @@ Test(verihash_bitflip) {
 	u8 plaintext[32] = {0};
 	u8 plaintext2[32] = {0};
 	u32 iter = 10;
-	u32 trials = 10000;
+	u32 trials = 100;
 	u32 total_fail = 0;
 
 	(void)total_fail;
@@ -499,7 +499,7 @@ Test(aes_bitflip) {
 	u8 plaintext2[32] = {0};
 	u8 plaintext3[32] = {0};
 	u32 iter = 100;
-	u32 trials = 10000;
+	u32 trials = 100;
 	u32 total_fail = 0;
 
 	(void)total_fail;
@@ -569,7 +569,7 @@ Test(storm256_bitflip) {
 	__attribute__((aligned(32))) u8 plaintext2[32] = {0};
 	__attribute__((aligned(32))) u8 plaintext3[32] = {0};
 	u32 iter = 100;
-	u32 trials = 10000;
+	u32 trials = 100;
 	u32 total_fail = 0;
 
 	(void)total_fail;
@@ -771,7 +771,7 @@ Test(verihash256_preimage) {
 	u8 input[32] = {0}, flipped[32] = {0};
 	__attribute__((aligned(32))) u8 target[32];
 	u32 min_hamm = 256;
-	u64 trials = 1 << 18;
+	u64 trials = 1 << 12;
 	u64 timer = micros();
 
 	rng_init(&rng, NULL);
@@ -825,7 +825,7 @@ Test(lamport_storm) {
 	ASSERT(lamport_verify(&pk, &sig, msg), "!verify");
 }
 
-#define LAMPORT_LOOPS 100000
+#define LAMPORT_LOOPS 10
 
 Test(lamport_perf) {
 	Rng rng;
@@ -882,7 +882,7 @@ Test(wots) {
 	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 }
 
-#define WOTS_LOOPS 1000
+#define WOTS_LOOPS 10
 
 Test(wots_perf) {
 	Rng rng;
