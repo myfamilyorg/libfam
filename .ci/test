@@ -2,20 +2,20 @@
 
 ARCH=$(uname -m)
 
-./build clean test --novalgrind || exit 1;
+./build clean test || exit 1;
 
-./build clean test --cflags="-g -std=c11" $1 || exit 1;
+./build clean test --valgrind --cflags="-g -std=c11" $1 || exit 1;
 
-./build clean test --cc=clang $1 || exit 1;
+./build clean test --valgrind --cc=clang $1 || exit 1;
 
-./build clean test --cc=gcc $1 || exit 1;
+./build clean test --valgrind --cc=gcc $1 || exit 1;
 
-./build clean test --cc=clang $1 --quick --cflags="-O0 -std=c11" || exit 1;
+./build clean test --valgrind --cc=clang $1 --quick --cflags="-O0 -std=c11" || exit 1;
 
 if [[ "${ARCH}" = "aarch64" ]]; then
-./build clean test --cc=gcc $1 --quick --cflags="-O0 -mno-outline-atomics -std=c11" || exit 1;
+./build clean test --valgrind --cc=gcc $1 --quick --cflags="-O0 -mno-outline-atomics -std=c11" || exit 1;
 else
-        ./build clean test --cc=gcc $1 --quick --cflags="-O0 -std=c11" || exit 1;
+        ./build clean test --valgrind --cc=gcc $1 --quick --cflags="-O0 -std=c11" || exit 1;
 fi
 
 echo "All tests successfully completed!";
