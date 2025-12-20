@@ -12,7 +12,7 @@ PROJECT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 # Defaults
 : "${CC:=clang}"
 : "${BASE_CFLAGS:=}"
-: "${VALGRIND:=1}"
+: "${VALGRIND:=0}"
 : "${FILTER:=*}"
 : "${SILENT:=0}"
 : "${MEM_TRACKING:=0}"
@@ -25,8 +25,8 @@ for arg in "$@"; do
         all|test|cov|clean|install)
             TARGETS="$TARGETS $arg"
             ;;
-        --novalgrind)
-            VALGRIND=0
+        --valgrind)
+            VALGRIND=1
             ;;
         --quick)
             NO_LTO=1
