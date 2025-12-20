@@ -26,6 +26,7 @@
 #include <libfam/dilithium_const.h>
 #include <libfam/dilithium_impl.h>
 #include <libfam/format.h>
+#include <libfam/rng.h>
 #include <libfam/sign.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
@@ -83,24 +84,19 @@ void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	rhoprime = rho + SEEDBYTES;
 	key = rhoprime + CRHBYTES;
 
-	/* Expand matrix */
 	polyvec_matrix_expand(mat, rho);
 
-	/* Sample short vectors s1 and s2 */
 	polyvec_uniform_eta(&s1, rhoprime, 0);
 	polyvec_uniform_eta(&s2, rhoprime, K);
 
-	/* Matrix-vector multiplication */
 	s1hat = s1;
 	polyvec_ntt(&s1hat);
 	polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
 	polyvec_reduce(&t1);
 	polyvec_invntt_tomont(&t1);
 
-	/* Add error vector s2 */
 	polyvec_add(&t1, &t1, &s2);
 
-	/* Extract t1 and write public key */
 	polyvec_caddq(&t1);
 	polyveck_power2round(&t1, &t0, &t1);
 	pack_pk(pk, rho, &t1);
@@ -115,26 +111,8 @@ void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
 }
 
-/*************************************************
- * Name:        crypto_sign_signature_internal
- *
- * Description: Computes signature. Internal API.
- *
- * Arguments:   - u8 *sig:   pointer to output signature (of length
- *CRYPTO_BYTES)
- *              - u64 *siglen: pointer to output length of signature
- *              - u8 *m:     pointer to message to be signed
- *              - u64 mlen:    length of message
- *              - u8 *pre:   pointer to prefix string
- *              - u64 prelen:  length of prefix string
- *              - u8 *rnd:   pointer to random seed
- *              - u8 *sk:    pointer to bit-packed secret key
- *
- * Returns 0 (success)
- **************************************************/
-void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
-				    const u8 *pre, u64 prelen,
-				    const u8 rnd[RNDBYTES], const u8 *sk) {
+void signature_internal(u8 *sig, const u8 *m, const u8 rnd[RNDBYTES],
+			const u8 *sk) {
 	u32 n;
 	__attribute__((aligned(
 	    32))) u8 seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES] = {0};
@@ -176,24 +154,20 @@ void crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	storm_next_block(&ctx, rhoprime);
 	storm_next_block(&ctx, rhoprime + 32);
 
-	/* Expand matrix and transform vectors */
 	polyvec_matrix_expand(mat, rho);
 	polyvec_ntt(&s1);
 	polyvec_ntt(&s2);
 	polyvec_ntt(&t0);
 
 rej:
-	/* Sample intermediate vector y */
 	polyvecl_uniform_gamma1(&y, rhoprime, nonce++);
 
-	/* Matrix-vector multiplication */
 	z = y;
 	polyvec_ntt(&z);
 	polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
 	polyvec_reduce(&w1);
 	polyvec_invntt_tomont(&w1);
 
-	/* Decompose w and call the random oracle */
 	polyvec_caddq(&w1);
 	polyveck_decompose(&w1, &w0, &w1);
 	polyveck_pack_w1(sig, &w1);
@@ -211,22 +185,18 @@ rej:
 	poly_challenge(&cp, sig);
 	ntt(cp.coeffs);
 
-	/* Compute z, reject if it reveals secret */
 	polyvecl_pointwise_poly_montgomery(&z, &cp, &s1);
 	polyvec_invntt_tomont(&z);
 	polyvec_add(&z, &z, &y);
 	polyvec_reduce(&z);
 	if (polyvecl_chknorm(&z, GAMMA1 - BETA)) goto rej;
 
-	/* Check that subtracting cs2 does not change high bits of w and low
-	 * bits do not reveal secret information */
 	polyveck_pointwise_poly_montgomery(&h, &cp, &s2);
 	polyvec_invntt_tomont(&h);
 	polyvec_sub(&w0, &w0, &h);
 	polyvec_reduce(&w0);
 	if (polyveck_chknorm(&w0, GAMMA2 - BETA)) goto rej;
 
-	/* Compute hints for w1 */
 	polyveck_pointwise_poly_montgomery(&h, &cp, &t0);
 	polyvec_invntt_tomont(&h);
 	polyvec_reduce(&h);
@@ -236,98 +206,25 @@ rej:
 	n = polyveck_make_hint(&h, &w0, &w1);
 	if (n > OMEGA) goto rej;
 
-	/* Write signature */
 	pack_sig(sig, sig, &z, &h);
-	*siglen = CRYPTO_BYTES;
 }
 
-/*************************************************
- * Name:        crypto_sign_signature
- *
- * Description: Computes signature.
- *
- * Arguments:   - u8 *sig:   pointer to output signature (of length
- *CRYPTO_BYTES)
- *              - u64 *siglen: pointer to output length of signature
- *              - u8 *m:     pointer to message to be signed
- *              - u64 mlen:    length of message
- *              - u8 *ctx:   pointer to contex string
- *              - u64 ctxlen:  length of contex string
- *              - u8 *sk:    pointer to bit-packed secret key
- *
- * Returns 0 (success) or -1 (context string too long)
- **************************************************/
-int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
-			  const u8 *ctx, u64 ctxlen, const u8 *sk) {
-	u64 i;
-	u8 pre[257];
-	u8 rnd[RNDBYTES];
-
-	if (ctxlen > 255) return -1;
-
-	/* Prepare pre = (0, ctxlen, ctx) */
-	pre[0] = 0;
-	pre[1] = ctxlen;
-	for (i = 0; i < ctxlen; i++) pre[2 + i] = ctx[i];
-
-#ifdef DILITHIUM_RANDOMIZED_SIGNING
-	random32(rnd);
-#else
-	fastmemset(rnd, 0, RNDBYTES);
-#endif
-
-	crypto_sign_signature_internal(sig, siglen, m, mlen, pre, 2 + ctxlen,
-				       rnd, sk);
-	return 0;
-}
-
-/*************************************************
- * Name:        crypto_sign
- *
- * Description: Compute signed message.
- *
- * Arguments:   - u8 *sm: pointer to output signed message (allocated
- *                             array with CRYPTO_BYTES + mlen bytes),
- *                             can be equal to m
- *              - u64 *smlen: pointer to output length of signed
- *                               message
- *              - const u8 *m: pointer to message to be signed
- *              - u64 mlen: length of message
- *              - const u8 *ctx: pointer to context string
- *              - u64 ctxlen: length of context string
- *              - const u8 *sk: pointer to bit-packed secret key
- *
- * Returns 0 (success) or -1 (context string too long)
- **************************************************/
 void sign(Signature *sm_in, const Message *msg, const SecretKey *sk_in) {
 	u8 *sm = (void *)sm_in;
 	const u8 *sk = (void *)sk_in;
 	const u8 *m = (void *)msg;
-	u64 i, smlen;
+	u8 rnd[RNDBYTES];
+	Rng rng;
 
-	for (i = 0; i < MLEN; ++i) sm[CRYPTO_BYTES + i] = m[i];
-	crypto_sign_signature(sm, &smlen, sm + CRYPTO_BYTES, MLEN, NULL, 0, sk);
+	rng_init(&rng, NULL);
+	rng_gen(&rng, rnd, RNDBYTES);
+
+	fastmemcpy(sm + CRYPTO_BYTES, m, MLEN);
+	signature_internal(sm, sm + CRYPTO_BYTES, rnd, sk);
 }
 
-/*************************************************
- * Name:        crypto_sign_verify_internal
- *
- * Description: Verifies signature. Internal API.
- *
- * Arguments:   - u8 *m: pointer to input signature
- *              - u64 siglen: length of signature
- *              - const u8 *m: pointer to message
- *              - u64 mlen: length of message
- *              - const u8 *pre: pointer to prefix string
- *              - u64 prelen: length of prefix string
- *              - const u8 *pk: pointer to bit-packed public key
- *
- * Returns 0 if signature could be verified correctly and -1 otherwise
- **************************************************/
-int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
-				u64 mlen, const u8 *pre, u64 prelen,
-				const u8 *pk) {
-	u32 i;
+i32 crypto_sign_verify_internal(const u8 *sig, const u8 *pk) {
+	const u8 *m = sig + CRYPTO_BYTES;
 	u8 buf[K * POLYW1_PACKEDBYTES];
 	__attribute__((aligned(32))) u8 rho[SEEDBYTES];
 	u8 mu[CRHBYTES] = {0};
@@ -339,17 +236,10 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	polyvec t1, w1, h;
 	StormContext ctx;
 
-	if (siglen != CRYPTO_BYTES) {
-		return -1;
-	}
-
 	unpack_pk(rho, &t1, pk);
-	if (unpack_sig(c, &z, &h, sig)) {
-		return -1;
-	}
-	if (polyvecl_chknorm(&z, GAMMA1 - BETA)) {
-		return -1;
-	}
+	if (unpack_sig(c, &z, &h, sig)) return -1;
+
+	if (polyvecl_chknorm(&z, GAMMA1 - BETA)) return -1;
 
 	storm_init(&ctx, DILITHIUM_TR_DOMAIN);
 	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
@@ -360,14 +250,13 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	storm_init(&ctx, DILITHIUM_MU_DOMAIN);
 	__attribute__((aligned(32))) u8 mu_copy[TRBYTES + MLEN] = {0};
 	fastmemcpy(mu_copy, mu, TRBYTES);
-	fastmemcpy(mu_copy + TRBYTES, m, mlen);
+	fastmemcpy(mu_copy + TRBYTES, m, MLEN);
 	for (u32 i = 0; i < TRBYTES + MLEN; i += 32)
 		storm_next_block(&ctx, mu_copy + i);
 	fastmemset(mu, 0, CRHBYTES);
 	storm_next_block(&ctx, mu);
 	storm_next_block(&ctx, mu + 32);
 
-	/* Matrix-vector multiplication; compute Az - c2^dt1 */
 	poly_challenge(&cp, c);
 	polyvec_matrix_expand(mat, rho);
 
@@ -383,7 +272,6 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	polyvec_reduce(&w1);
 	polyvec_invntt_tomont(&w1);
 
-	/* Reconstruct w1 */
 	polyvec_caddq(&w1);
 	polyveck_use_hint(&w1, &w1, &h);
 	polyveck_pack_w1(buf, &w1);
@@ -397,64 +285,11 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 		storm_next_block(&ctx, ctilde_buffer + i);
 	storm_next_block(&ctx, c2);
 
-	for (i = 0; i < CTILDEBYTES; ++i)
-		if (c[i] != c2[i]) {
-			return -1;
-		}
-
-	return 0;
+	return fastmemcmp(c, c2, CTILDEBYTES) == 0 ? 0 : -1;
 }
 
-/*************************************************
- * Name:        crypto_sign_verify
- *
- * Description: Verifies signature.
- *
- * Arguments:   - u8 *m: pointer to input signature
- *              - u64 siglen: length of signature
- *              - const u8 *m: pointer to message
- *              - u64 mlen: length of message
- *              - const u8 *ctx: pointer to context string
- *              - u64 ctxlen: length of context string
- *              - const u8 *pk: pointer to bit-packed public key
- *
- * Returns 0 if signature could be verified correctly and -1 otherwise
- **************************************************/
-int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
-		       const u8 *ctx, u64 ctxlen, const u8 *pk) {
-	u64 i;
-	u8 pre[257];
-
-	if (ctxlen > 255) return -1;
-
-	pre[0] = 0;
-	pre[1] = ctxlen;
-	for (i = 0; i < ctxlen; i++) pre[2 + i] = ctx[i];
-
-	return crypto_sign_verify_internal(sig, siglen, m, mlen, pre,
-					   2 + ctxlen, pk);
-}
-
-/*************************************************
- * Name:        crypto_verify
- *
- * Description: Verify signed message.
- *
- * Arguments:   - u8 *m: pointer to output message (allocated
- *                            array with smlen bytes), can be equal to sm
- *              - u64 *mlen: pointer to output length of message
- *              - const u8 *sm: pointer to signed message
- *              - u64 smlen: length of signed message
- *              - const u8 *ctx: pointer to context tring
- *              - u64 ctxlen: length of context string
- *              - const u8 *pk: pointer to bit-packed public key
- *
- * Returns 0 if signed message could be verified correctly and -1 otherwise
- **************************************************/
 i32 verify(const Signature *sm_in, const PublicKey *pk_in) {
 	const u8 *sm = (void *)sm_in;
 	const u8 *pk = (void *)pk_in;
-	i32 res = crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, MLEN,
-				     NULL, 0, pk);
-	return res == 0 ? 0 : -1;
+	return crypto_sign_verify_internal(sm, pk);
 }
