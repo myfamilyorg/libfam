@@ -106,7 +106,7 @@ STATIC void signature_internal(u8 *sig, const u8 *m, const u8 rnd[RNDBYTES],
 	polyvec_ntt(&t0);
 
 rej:
-	polyvecl_uniform_gamma1(&y, rhoprime, nonce++);
+	polyvec_uniform_gamma1(&y, rhoprime, nonce++);
 
 	z = y;
 	polyvec_ntt(&z);
@@ -115,8 +115,8 @@ rej:
 	polyvec_invntt_tomont(&w1);
 
 	polyvec_caddq(&w1);
-	polyveck_decompose(&w1, &w0, &w1);
-	polyveck_pack_w1(sig, &w1);
+	polyvec_decompose(&w1, &w0, &w1);
+	polyvec_pack_w1(sig, &w1);
 
 	storm_init(&ctx, DILITHIUM_CTILDE_DOMAIN);
 	__attribute__((
@@ -131,25 +131,25 @@ rej:
 	poly_challenge(&cp, sig);
 	ntt(cp.coeffs);
 
-	polyvecl_pointwise_poly_montgomery(&z, &cp, &s1);
+	polyvec_pointwise_poly_montgomery(&z, &cp, &s1);
 	polyvec_invntt_tomont(&z);
 	polyvec_add(&z, &z, &y);
 	polyvec_reduce(&z);
-	if (polyvecl_chknorm(&z, GAMMA1 - BETA)) goto rej;
+	if (polyvec_chknorm(&z, GAMMA1 - BETA)) goto rej;
 
-	polyveck_pointwise_poly_montgomery(&h, &cp, &s2);
+	polyvec_pointwise_poly_montgomery(&h, &cp, &s2);
 	polyvec_invntt_tomont(&h);
 	polyvec_sub(&w0, &w0, &h);
 	polyvec_reduce(&w0);
-	if (polyveck_chknorm(&w0, GAMMA2 - BETA)) goto rej;
+	if (polyvec_chknorm(&w0, GAMMA2 - BETA)) goto rej;
 
-	polyveck_pointwise_poly_montgomery(&h, &cp, &t0);
+	polyvec_pointwise_poly_montgomery(&h, &cp, &t0);
 	polyvec_invntt_tomont(&h);
 	polyvec_reduce(&h);
-	if (polyveck_chknorm(&h, GAMMA2)) goto rej;
+	if (polyvec_chknorm(&h, GAMMA2)) goto rej;
 
 	polyvec_add(&w0, &w0, &h);
-	n = polyveck_make_hint(&h, &w0, &w1);
+	n = polyvec_make_hint(&h, &w0, &w1);
 	if (n > OMEGA) goto rej;
 
 	pack_sig(sig, sig, &z, &h);
@@ -171,7 +171,7 @@ STATIC i32 crypto_sign_verify_internal(const u8 *sig, const u8 *pk) {
 	unpack_pk(rho, &t1, pk);
 	if (unpack_sig(c, &z, &h, sig)) return -1;
 
-	if (polyvecl_chknorm(&z, GAMMA1 - BETA)) return -1;
+	if (polyvec_chknorm(&z, GAMMA1 - BETA)) return -1;
 
 	storm_init(&ctx, DILITHIUM_TR_DOMAIN);
 	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
@@ -198,15 +198,15 @@ STATIC i32 crypto_sign_verify_internal(const u8 *sig, const u8 *pk) {
 	ntt(cp.coeffs);
 	polyvec_shiftl(&t1);
 	polyvec_ntt(&t1);
-	polyveck_pointwise_poly_montgomery(&t1, &cp, &t1);
+	polyvec_pointwise_poly_montgomery(&t1, &cp, &t1);
 
 	polyvec_sub(&w1, &w1, &t1);
 	polyvec_reduce(&w1);
 	polyvec_invntt_tomont(&w1);
 
 	polyvec_caddq(&w1);
-	polyveck_use_hint(&w1, &w1, &h);
-	polyveck_pack_w1(buf, &w1);
+	polyvec_use_hint(&w1, &w1, &h);
+	polyvec_pack_w1(buf, &w1);
 
 	storm_init(&ctx, DILITHIUM_CTILDE_DOMAIN);
 	__attribute__((
@@ -261,7 +261,7 @@ PUBLIC void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	polyvec_add(&t1, &t1, &s2);
 
 	polyvec_caddq(&t1);
-	polyveck_power2round(&t1, &t0, &t1);
+	polyvec_power2round(&t1, &t0, &t1);
 	pack_pk(pk, rho, &t1);
 
 	storm_init(&ctx, DILITHIUM_TR_DOMAIN);

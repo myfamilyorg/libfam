@@ -71,16 +71,16 @@ void poly_uniform_eta(poly *a, StormContext *ctx);
 void poly_uniform_gamma1(poly *a, StormContext *ctx, u64 nonce);
 void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]);
 
-void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u64 nonce);
+void polyvec_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u64 nonce);
 
 void polyvec_reduce(polyvec *v);
 
-void polyvecl_pointwise_poly_montgomery(polyvec *r, const poly *a,
+void polyvec_pointwise_poly_montgomery(polyvec *r, const poly *a,
 					const polyvec *v);
 void polyvec_pointwise_acc_montgomery(poly *w, const polyvec *u,
 				      const polyvec *v);
 
-int polyvecl_chknorm(const polyvec *v, i32 B);
+int polyvec_chknorm(const polyvec *v, i32 B);
 
 void polyvec_uniform_eta(polyvec *v, const u8 seed[CRHBYTES], u16 nonce);
 
@@ -92,17 +92,17 @@ void polyvec_shiftl(polyvec *v);
 
 void polyvec_ntt(polyvec *v);
 void polyvec_invntt_tomont(polyvec *v);
-void polyveck_pointwise_poly_montgomery(polyvec *r, const poly *a,
+void polyvec_pointwise_poly_montgomery(polyvec *r, const poly *a,
 					const polyvec *v);
 
-int polyveck_chknorm(const polyvec *v, i32 B);
+int polyvec_chknorm(const polyvec *v, i32 B);
 
-void polyveck_power2round(polyvec *v1, polyvec *v0, const polyvec *v);
-void polyveck_decompose(polyvec *v1, polyvec *v0, const polyvec *v);
-u32 polyveck_make_hint(polyvec *h, const polyvec *v0, const polyvec *v1);
-void polyveck_use_hint(polyvec *w, const polyvec *v, const polyvec *h);
+void polyvec_power2round(polyvec *v1, polyvec *v0, const polyvec *v);
+void polyvec_decompose(polyvec *v1, polyvec *v0, const polyvec *v);
+u32 polyvec_make_hint(polyvec *h, const polyvec *v0, const polyvec *v1);
+void polyvec_use_hint(polyvec *w, const polyvec *v, const polyvec *h);
 
-void polyveck_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyvec *w1);
+void polyvec_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyvec *w1);
 
 void polyvec_matrix_expand(polyvec mat[K], const u8 rho[SEEDBYTES]);
 

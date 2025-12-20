@@ -227,7 +227,7 @@ void polyvec_matrix_pointwise_montgomery(polyvec *t, const polyvec mat[K],
 		polyvec_pointwise_acc_montgomery(&t->vec[i], &mat[i], v);
 }
 
-void polyvecl_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u64 nonce) {
+void polyvec_uniform_gamma1(polyvec *v, const u8 seed[CRHBYTES], u64 nonce) {
 	u32 i;
 	StormContext ctx;
 	storm_init(&ctx, seed);
@@ -244,14 +244,6 @@ void polyvec_invntt_tomont(polyvec *v) {
 	for (u32 i = 0; i < K; ++i) invntt_tomont(v->vec[i].coeffs);
 }
 
-void polyvecl_pointwise_poly_montgomery(polyvec *r, const poly *a,
-					const polyvec *v) {
-	u32 i;
-
-	for (i = 0; i < K; ++i)
-		poly_pointwise_montgomery(&r->vec[i], a, &v->vec[i]);
-}
-
 void polyvec_pointwise_acc_montgomery(poly *w, const polyvec *u,
 				      const polyvec *v) {
 	poly t;
@@ -264,7 +256,7 @@ void polyvec_pointwise_acc_montgomery(poly *w, const polyvec *u,
 	}
 }
 
-int polyvecl_chknorm(const polyvec *v, i32 bound) {
+int polyvec_chknorm(const polyvec *v, i32 bound) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
@@ -314,38 +306,29 @@ void polyvec_shiftl(polyvec *v) {
 		for (u32 j = 0; j < N; j++) v->vec[i].coeffs[j] <<= D;
 }
 
-void polyveck_pointwise_poly_montgomery(polyvec *r, const poly *a,
-					const polyvec *v) {
+void polyvec_pointwise_poly_montgomery(polyvec *r, const poly *a,
+				       const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
 		poly_pointwise_montgomery(&r->vec[i], a, &v->vec[i]);
 }
 
-int polyveck_chknorm(const polyvec *v, i32 bound) {
-	u32 i;
-
-	for (i = 0; i < K; ++i)
-		if (poly_chknorm(&v->vec[i], bound)) return 1;
-
-	return 0;
-}
-
-void polyveck_power2round(polyvec *v1, polyvec *v0, const polyvec *v) {
+void polyvec_power2round(polyvec *v1, polyvec *v0, const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
 		poly_power2round(&v1->vec[i], &v0->vec[i], &v->vec[i]);
 }
 
-void polyveck_decompose(polyvec *v1, polyvec *v0, const polyvec *v) {
+void polyvec_decompose(polyvec *v1, polyvec *v0, const polyvec *v) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
 		poly_decompose(&v1->vec[i], &v0->vec[i], &v->vec[i]);
 }
 
-u32 polyveck_make_hint(polyvec *h, const polyvec *v0, const polyvec *v1) {
+u32 polyvec_make_hint(polyvec *h, const polyvec *v0, const polyvec *v1) {
 	u32 i, s = 0;
 
 	for (i = 0; i < K; ++i)
@@ -354,14 +337,14 @@ u32 polyveck_make_hint(polyvec *h, const polyvec *v0, const polyvec *v1) {
 	return s;
 }
 
-void polyveck_use_hint(polyvec *w, const polyvec *u, const polyvec *h) {
+void polyvec_use_hint(polyvec *w, const polyvec *u, const polyvec *h) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
 		poly_use_hint(&w->vec[i], &u->vec[i], &h->vec[i]);
 }
 
-void polyveck_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyvec *w1) {
+void polyvec_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyvec *w1) {
 	u32 i;
 
 	for (i = 0; i < K; ++i)
