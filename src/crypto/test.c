@@ -327,6 +327,8 @@ Test(kyber) {
 	u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
 	u8 ss_bob[KYBER_SSBYTES] = {0}, ss_alice[KYBER_SSBYTES] = {1};
 	Rng rng1, rng2;
+	rng_init(&rng1);
+	rng_init(&rng2);
 	kem_keypair(pk, sk, &rng1);
 	kem_enc(ct, ss_bob, pk, &rng2);
 	kem_dec(ss_alice, ct, sk);

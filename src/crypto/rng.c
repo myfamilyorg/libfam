@@ -128,7 +128,7 @@ void rng_gen(Rng *rng, void *v, u64 size) {
 #if TEST == 1
 		fastmemset(buf, 0, sizeof(buf));
 #endif /* TEST */
-		fastmemcpy(buf, v, size - off);
+		fastmemcpy(buf, out, size - off);
 		storm_next_block(&rng->ctx, buf);
 		fastmemcpy(out + off, buf, size - off);
 		secure_zero32(buf);
