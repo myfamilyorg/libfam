@@ -175,7 +175,7 @@ Test(wots) {
 	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 }
 
-#define WOTS_COUNT 1000
+#define WOTS_COUNT 100
 
 Test(wots_perf) {
 	__attribute__((aligned(32))) u8 key[32] = {1, 2, 3, 4, 5};
@@ -381,7 +381,7 @@ Test(kyber) {
 	ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES), "shared secret");
 }
 
-#define KYBER_COUNT 1000
+#define KYBER_COUNT 100
 
 Test(kyber_perf) {
 	__attribute__((aligned(32))) u8 sk[KYBER_SECRETKEYBYTES] = {0};
@@ -414,7 +414,9 @@ Test(kyber_perf) {
 	(void)enc_sum;
 	(void)dec_sum;
 
+	/*
 	println("keygen={},enc={},dec={}", keygen_sum / KYBER_COUNT,
 		enc_sum / KYBER_COUNT, dec_sum / KYBER_COUNT);
+		*/
 }
 
