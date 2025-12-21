@@ -5,7 +5,7 @@
 #include <kyber/poly.h>
 
 typedef struct {
-	poly vec[KYBER_K];
+	__attribute__((aligned(32))) poly vec[KYBER_K];
 } polyvec;
 
 void polyvec_compress(u8 r[KYBER_POLYVECCOMPRESSEDBYTES], const polyvec *a);

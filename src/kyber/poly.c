@@ -3,8 +3,9 @@
 #include <kyber/params.h>
 #include <kyber/poly.h>
 #include <kyber/reduce.h>
-#include <kyber/symmetric.h>
 #include <kyber/verify.h>
+#include <libfam/storm.h>
+#include <libfam/string.h>
 
 /*************************************************
  * Name:        poly_compress
@@ -166,8 +167,14 @@ void poly_tomsg(u8 msg[KYBER_INDCPA_MSGBYTES], const poly *a) {
  *              - u8 nonce: one-byte input nonce
  **************************************************/
 void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
-	u8 buf[KYBER_ETA1 * KYBER_N / 4];
-	prf(buf, sizeof(buf), seed, nonce);
+	__attribute__((aligned(32))) u8 buf[KYBER_ETA1 * KYBER_N / 4] = {0};
+	StormContext ctx;
+	__attribute__((aligned(32))) u8 key[32];
+	fastmemcpy(key, seed, 32);
+	key[0] = nonce;
+	storm_init(&ctx, key);
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
 	poly_cbd_eta1(r, buf);
 }
 
@@ -184,8 +191,14 @@ void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
  *              - u8 nonce: one-byte input nonce
  **************************************************/
 void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
-	u8 buf[KYBER_ETA2 * KYBER_N / 4];
-	prf(buf, sizeof(buf), seed, nonce);
+	u8 buf[KYBER_ETA2 * KYBER_N / 4] = {0};
+	StormContext ctx;
+	__attribute__((aligned(32))) u8 key[32];
+	fastmemcpy(key, seed, 32);
+	key[0] = nonce;
+	storm_init(&ctx, key);
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
 	poly_cbd_eta2(r, buf);
 }
 

@@ -72,9 +72,9 @@ int kem_keypair(u8 *pk, u8 *sk, Rng *rng) {
  * Returns 0 (success)
  **************************************************/
 int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins) {
-	u8 buf[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES];
 	/* Will contain key, coins */
-	u8 kr[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES];
 
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 
@@ -130,11 +130,11 @@ int kem_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng) {
  **************************************************/
 int kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
 	int fail;
-	u8 buf[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES];
 	/* Will contain key, coins */
-	u8 kr[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES];
 	//  u8 cmp[KYBER_CIPHERTEXTBYTES+KYBER_SYMBYTES];
-	u8 cmp[KYBER_CIPHERTEXTBYTES];
+	__attribute__((aligned(32))) u8 cmp[KYBER_CIPHERTEXTBYTES];
 	const u8 *pk = sk + KYBER_INDCPA_SECRETKEYBYTES;
 
 	indcpa_dec(buf, ct, sk);
