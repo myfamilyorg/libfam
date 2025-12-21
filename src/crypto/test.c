@@ -175,6 +175,50 @@ Test(wots) {
 	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 }
 
+#define WOTS_COUNT 1000
+
+Test(wots_perf) {
+	__attribute__((aligned(32))) u8 key[32] = {1, 2, 3, 4, 5};
+	WotsPubKey pk;
+	WotsSecKey sk;
+	WotsSig sig;
+	u8 msg[32] = {9, 9, 9, 9, 9, 4};
+
+	Rng rng;
+	u64 keygen_sum = 0;
+	u64 sign_sum = 0;
+	u64 verify_sum = 0;
+
+	rng_init(&rng);
+
+	for (u32 i = 0; i < WOTS_COUNT; i++) {
+		rng_gen(&rng, key, 32);
+		rng_gen(&rng, msg, 32);
+
+		u64 start = cycle_counter();
+		wots_keyfrom(key, &pk, &sk);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		wots_sign(&sk, msg, &sig);
+		sign_sum += cycle_counter() - start;
+		start = cycle_counter();
+		i32 res = wots_verify(&pk, &sig, msg);
+		verify_sum += cycle_counter() - start;
+		ASSERT(!res, "verify");
+		msg[0]++;
+		ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+	}
+
+	(void)keygen_sum;
+	(void)sign_sum;
+	(void)verify_sum;
+
+	/*
+	println("keygen={},sign={},verify={}", keygen_sum / WOTS_COUNT,
+		sign_sum / WOTS_COUNT, verify_sum / WOTS_COUNT);
+		*/
+}
+
 #define BIBLE_PATH "resources/test_bible.dat"
 
 Test(bible) {
@@ -337,4 +381,40 @@ Test(kyber) {
 	ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES), "shared secret");
 }
 
-Test(kyber_perf) {}
+#define KYBER_COUNT 1000
+
+Test(kyber_perf) {
+	__attribute__((aligned(32))) u8 sk[KYBER_SECRETKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 pk[KYBER_PUBLICKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_bob[KYBER_SSBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_alice[KYBER_SSBYTES] = {1};
+	Rng rng1, rng2;
+	u64 keygen_sum = 0;
+	u64 enc_sum = 0;
+	u64 dec_sum = 0;
+
+	for (u32 i = 0; i < KYBER_COUNT; i++) {
+		rng_init(&rng1);
+		rng_init(&rng2);
+		u64 start = cycle_counter();
+		kem_keypair(pk, sk, &rng1);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		kem_enc(ct, ss_bob, pk, &rng2);
+		enc_sum += cycle_counter() - start;
+		start = cycle_counter();
+		kem_dec(ss_alice, ct, sk);
+		dec_sum += cycle_counter() - start;
+		ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES),
+		       "shared secret");
+	}
+
+	(void)keygen_sum;
+	(void)enc_sum;
+	(void)dec_sum;
+
+	println("keygen={},enc={},dec={}", keygen_sum / KYBER_COUNT,
+		enc_sum / KYBER_COUNT, dec_sum / KYBER_COUNT);
+}
+

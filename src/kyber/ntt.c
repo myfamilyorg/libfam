@@ -1,3 +1,4 @@
+#include <kyber/consts.h>
 #include <kyber/ntt.h>
 #include <kyber/params.h>
 #include <kyber/reduce.h>

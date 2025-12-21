@@ -8,7 +8,7 @@
  * coeffs[0] + X*coeffs[1] + X^2*coeffs[2] + ... + X^{n-1}*coeffs[n-1]
  */
 typedef struct {
-	i16 coeffs[KYBER_N];
+	__attribute__((aligned(32))) i16 coeffs[KYBER_N];
 } poly;
 
 void poly_compress(u8 r[KYBER_POLYCOMPRESSEDBYTES], const poly *a);
