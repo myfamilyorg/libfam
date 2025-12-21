@@ -1,6 +1,8 @@
 #ifndef PARAMS_H
 #define PARAMS_H
 
+#include <libfam/types.h>
+
 #ifndef KYBER_K
 #define KYBER_K 2 /* Change this for different security strengths */
 #endif
