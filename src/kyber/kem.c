@@ -6,7 +6,7 @@
 #include <libfam/storm.h>
 #include <libfam/string.h>
 
-__attribute__((aligned(32))) u8 HASH_H_DOMAIN[32] = {1, 1, 2, 1, 2, 1};
+__attribute__((aligned(32))) u8 HASH_DOMAIN[32] = {1, 1, 2, 1, 2, 1};
 
 /*************************************************
  * Name:        crypto_kem_keypair_derand
@@ -31,7 +31,7 @@ int crypto_kem_keypair_derand(u8 *pk, u8 *sk, const u8 *coins) {
 
 	fastmemcpy(sk + KYBER_INDCPA_SECRETKEYBYTES, pk, KYBER_PUBLICKEYBYTES);
 
-	storm_init(&ctx, HASH_H_DOMAIN);
+	storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(pk_copy, pk, KYBER_PUBLICKEYBYTES);
 	for (u32 i = 0; i < KYBER_PUBLICKEYBYTES; i += 32)
 		storm_next_block(&ctx, pk_copy + i);
@@ -84,27 +84,29 @@ int kem_keypair(u8 *pk, u8 *sk, Rng *rng) {
  * Returns 0 (success)
  **************************************************/
 int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins) {
-	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES];
-	/* Will contain key, coins */
-	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES];
 	StormContext ctx;
+	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 buf_copy[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES] = {0};
 	__attribute__((aligned(32))) u8 pk_copy[KYBER_PUBLICKEYBYTES];
 
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 
-	/* Multitarget countermeasure for coins + contributory KEM */
-	storm_init(&ctx, HASH_H_DOMAIN);
+	storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(pk_copy, pk, KYBER_PUBLICKEYBYTES);
 	for (u32 i = 0; i < KYBER_PUBLICKEYBYTES; i += 32)
 		storm_next_block(&ctx, pk_copy + i);
 	fastmemset(buf + KYBER_SYMBYTES, 0, 32);
 	storm_next_block(&ctx, buf + KYBER_SYMBYTES);
 
-	hash_g(kr, buf, 2 * KYBER_SYMBYTES);
+	fastmemcpy(buf_copy, buf, 2 * KYBER_SYMBYTES);
+	storm_init(&ctx, HASH_DOMAIN);
+	storm_next_block(&ctx, buf_copy);
+	storm_next_block(&ctx, buf_copy + 32);
+	storm_next_block(&ctx, kr);
+	storm_next_block(&ctx, kr + 32);
 
-	/* coins are in kr+KYBER_SYMBYTES */
 	indcpa_enc(ct, buf, pk, kr + KYBER_SYMBYTES);
-
 	fastmemcpy(ss, kr, KYBER_SYMBYTES);
 	return 0;
 }
@@ -149,30 +151,27 @@ int kem_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng) {
  * On failure, ss will contain a pseudo-random value.
  **************************************************/
 int kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
+	StormContext ctx;
 	int fail;
 	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES];
-	/* Will contain key, coins */
-	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 buf_copy[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES] = {0};
 	__attribute__((aligned(32))) u8 cmp[KYBER_CIPHERTEXTBYTES];
 	const u8 *pk = sk + KYBER_INDCPA_SECRETKEYBYTES;
 
 	indcpa_dec(buf, ct, sk);
-
-	/* Multitarget countermeasure for coins + contributory KEM */
 	fastmemcpy(buf + KYBER_SYMBYTES,
 		   sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES,
 		   KYBER_SYMBYTES);
-	hash_g(kr, buf, 2 * KYBER_SYMBYTES);
-
-	/* coins are in kr+KYBER_SYMBYTES */
+	fastmemcpy(buf_copy, buf, 2 * KYBER_SYMBYTES);
+	storm_init(&ctx, HASH_DOMAIN);
+	storm_next_block(&ctx, buf_copy);
+	storm_next_block(&ctx, buf_copy + 32);
+	storm_next_block(&ctx, kr);
+	storm_next_block(&ctx, kr + 32);
 	indcpa_enc(cmp, buf, pk, kr + KYBER_SYMBYTES);
-
 	fail = kyber_verify(ct, cmp, KYBER_CIPHERTEXTBYTES);
-
-	/* Compute rejection key */
 	rkprf(ss, sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES, ct);
-
-	/* Copy true key to return buffer if fail is false */
 	cmov(ss, kr, KYBER_SYMBYTES, !fail);
 
 	return 0;
