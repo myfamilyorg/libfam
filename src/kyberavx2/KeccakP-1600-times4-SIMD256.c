@@ -20,6 +20,7 @@ http://creativecommons.org/publicdomain/zero/1.0/
 #include <kyberavx2/KeccakP-SIMD256-config.h>
 #include <kyberavx2/KeccakP-align.h>
 #include <kyberavx2/KeccakP-brg_endian.h>
+#include <libfam/string.h>
 #include <smmintrin.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -109,8 +110,8 @@ void KeccakP1600times4_AddBytes(void *states, unsigned int instanceIndex,
 		unsigned int bytesInLane = SnP_laneLengthInBytes - offsetInLane;
 		UINT64 lane = 0;
 		if (bytesInLane > sizeLeft) bytesInLane = sizeLeft;
-		memcpy((unsigned char *)&lane + offsetInLane, curData,
-		       bytesInLane);
+		fastmemcpy((unsigned char *)&lane + offsetInLane, curData,
+			   bytesInLane);
 		statesAsLanes[laneIndex(instanceIndex, lanePosition)] ^= lane;
 		sizeLeft -= bytesInLane;
 		lanePosition++;
@@ -127,7 +128,7 @@ void KeccakP1600times4_AddBytes(void *states, unsigned int instanceIndex,
 
 	if (sizeLeft > 0) {
 		UINT64 lane = 0;
-		memcpy(&lane, curData, sizeLeft);
+		fastmemcpy(&lane, curData, sizeLeft);
 		statesAsLanes[laneIndex(instanceIndex, lanePosition)] ^= lane;
 	}
 }
@@ -193,10 +194,10 @@ void KeccakP1600times4_OverwriteBytes(void *states, unsigned int instanceIndex,
 	if ((sizeLeft > 0) && (offsetInLane != 0)) {
 		unsigned int bytesInLane = SnP_laneLengthInBytes - offsetInLane;
 		if (bytesInLane > sizeLeft) bytesInLane = sizeLeft;
-		memcpy(((unsigned char *)&statesAsLanes[laneIndex(
-			   instanceIndex, lanePosition)]) +
-			   offsetInLane,
-		       curData, bytesInLane);
+		fastmemcpy(((unsigned char *)&statesAsLanes[laneIndex(
+			       instanceIndex, lanePosition)]) +
+			       offsetInLane,
+			   curData, bytesInLane);
 		sizeLeft -= bytesInLane;
 		lanePosition++;
 		curData += bytesInLane;
@@ -211,8 +212,9 @@ void KeccakP1600times4_OverwriteBytes(void *states, unsigned int instanceIndex,
 	}
 
 	if (sizeLeft > 0) {
-		memcpy(&statesAsLanes[laneIndex(instanceIndex, lanePosition)],
-		       curData, sizeLeft);
+		fastmemcpy(
+		    &statesAsLanes[laneIndex(instanceIndex, lanePosition)],
+		    curData, sizeLeft);
 	}
 }
 
@@ -297,11 +299,11 @@ void KeccakP1600times4_ExtractBytes(const void *states,
 	if ((sizeLeft > 0) && (offsetInLane != 0)) {
 		unsigned int bytesInLane = SnP_laneLengthInBytes - offsetInLane;
 		if (bytesInLane > sizeLeft) bytesInLane = sizeLeft;
-		memcpy(curData,
-		       ((unsigned char *)&statesAsLanes[laneIndex(
-			   instanceIndex, lanePosition)]) +
-			   offsetInLane,
-		       bytesInLane);
+		fastmemcpy(curData,
+			   ((unsigned char *)&statesAsLanes[laneIndex(
+			       instanceIndex, lanePosition)]) +
+			       offsetInLane,
+			   bytesInLane);
 		sizeLeft -= bytesInLane;
 		lanePosition++;
 		curData += bytesInLane;
@@ -316,9 +318,10 @@ void KeccakP1600times4_ExtractBytes(const void *states,
 	}
 
 	if (sizeLeft > 0) {
-		memcpy(curData,
-		       &statesAsLanes[laneIndex(instanceIndex, lanePosition)],
-		       sizeLeft);
+		fastmemcpy(
+		    curData,
+		    &statesAsLanes[laneIndex(instanceIndex, lanePosition)],
+		    sizeLeft);
 	}
 }
 
