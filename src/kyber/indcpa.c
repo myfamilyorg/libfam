@@ -3,7 +3,8 @@
 #include <kyber/params.h>
 #include <kyber/poly.h>
 #include <kyber/polyvec.h>
-#include <kyber/symmetric.h>
+#include <libfam/format.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 
 /*************************************************
@@ -148,33 +149,29 @@ static unsigned int rej_uniform(i16 *r, unsigned int len, const u8 *buf,
  *              - const u8 *seed: pointer to input seed
  *              - int transposed: boolean deciding whether A or A^T is generated
  **************************************************/
-#define GEN_MATRIX_NBLOCKS                                           \
-	((12 * KYBER_N / 8 * (1 << 12) / KYBER_Q + XOF_BLOCKBYTES) / \
-	 XOF_BLOCKBYTES)
-// Not static for benchmarking
 void gen_matrix(polyvec *a, const u8 seed[KYBER_SYMBYTES], int transposed) {
-	unsigned int ctr, i, j;
-	unsigned int buflen;
-	u8 buf[GEN_MATRIX_NBLOCKS * XOF_BLOCKBYTES];
-	xof_state state;
+	u32 ctr, i, j;
+	__attribute__((aligned(32))) u8 buf[32] = {0};
+	StormContext state;
+
+	fastmemcpy(buf, seed, 32);
 
 	for (i = 0; i < KYBER_K; i++) {
 		for (j = 0; j < KYBER_K; j++) {
+			fastmemcpy(buf, seed, 32);
 			if (transposed)
-				xof_absorb(&state, seed, i, j);
+				buf[0] = i, buf[1] = j;
 			else
-				xof_absorb(&state, seed, j, i);
+				buf[1] = i, buf[0] = j;
 
-			xof_squeezeblocks(buf, GEN_MATRIX_NBLOCKS, &state);
-			buflen = GEN_MATRIX_NBLOCKS * XOF_BLOCKBYTES;
-			ctr = rej_uniform(a[i].vec[j].coeffs, KYBER_N, buf,
-					  buflen);
+			storm_init(&state, buf);
+			storm_next_block(&state, buf);
+			ctr = rej_uniform(a[i].vec[j].coeffs, KYBER_N, buf, 32);
 
 			while (ctr < KYBER_N) {
-				xof_squeezeblocks(buf, 1, &state);
-				buflen = XOF_BLOCKBYTES;
+				storm_next_block(&state, buf);
 				ctr += rej_uniform(a[i].vec[j].coeffs + ctr,
-						   KYBER_N - ctr, buf, buflen);
+						   KYBER_N - ctr, buf, 32);
 			}
 		}
 	}
@@ -197,15 +194,21 @@ void indcpa_keypair_derand(u8 pk[KYBER_INDCPA_PUBLICKEYBYTES],
 			   u8 sk[KYBER_INDCPA_SECRETKEYBYTES],
 			   const u8 coins[KYBER_SYMBYTES]) {
 	unsigned int i;
-	u8 buf[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) static u8 KEYPAIR_HASH_DOMAIN[32] = {
+	    1, 9, 8, 201, 23};
+	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES] = {0};
 	const u8 *publicseed = buf;
 	const u8 *noiseseed = buf + KYBER_SYMBYTES;
 	u8 nonce = 0;
+	StormContext ctx;
 	polyvec a[KYBER_K], e, pkpv, skpv;
 
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 	buf[KYBER_SYMBYTES] = KYBER_K;
-	hash_g(buf, buf, KYBER_SYMBYTES + 1);
+
+	storm_init(&ctx, KEYPAIR_HASH_DOMAIN);
+	storm_next_block(&ctx, buf);
+	storm_next_block(&ctx, buf + 32);
 
 	gen_a(a, publicseed);
 
@@ -251,7 +254,7 @@ void indcpa_enc(u8 c[KYBER_INDCPA_BYTES], const u8 m[KYBER_INDCPA_MSGBYTES],
 	unsigned int i;
 	u8 seed[KYBER_SYMBYTES];
 	u8 nonce = 0;
-	polyvec sp, pkpv, ep, at[KYBER_K], b;
+	polyvec sp, pkpv, ep, __attribute__((aligned(32))) at[KYBER_K], b;
 	poly v, k, epp;
 
 	unpack_pk(&pkpv, seed, pk);
