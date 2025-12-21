@@ -335,3 +335,60 @@ Test(kyber_perf) {
 		*/
 }
 
+i32 pqcrystals_kyber512_avx2_keypair(u8 *pk, u8 *sk);
+i32 pqcrystals_kyber512_avx2_enc(u8 *ct, u8 *ss, const u8 *pk);
+i32 pqcrystals_kyber512_avx2_dec(u8 *ss, const u8 *ct, const u8 *sk);
+
+Test(kyberavx) {
+	__attribute__((aligned(32))) u8 sk[KYBER_SECRETKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 pk[KYBER_PUBLICKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_bob[KYBER_SSBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_alice[KYBER_SSBYTES] = {1};
+
+	Rng rng1, rng2;
+	rng_init(&rng1);
+	rng_init(&rng2);
+	pqcrystals_kyber512_avx2_keypair(pk, sk);
+	pqcrystals_kyber512_avx2_enc(ct, ss_bob, pk);
+	pqcrystals_kyber512_avx2_dec(ss_alice, ct, sk);
+	ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES), "shared secret");
+}
+
+Test(kyberavx_perf) {
+	__attribute__((aligned(32))) u8 sk[KYBER_SECRETKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 pk[KYBER_PUBLICKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_bob[KYBER_SSBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_alice[KYBER_SSBYTES] = {1};
+	Rng rng1, rng2;
+	u64 keygen_sum = 0;
+	u64 enc_sum = 0;
+	u64 dec_sum = 0;
+
+	for (u32 i = 0; i < KYBER_COUNT; i++) {
+		rng_init(&rng1);
+		rng_init(&rng2);
+		u64 start = cycle_counter();
+		pqcrystals_kyber512_avx2_keypair(pk, sk);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		pqcrystals_kyber512_avx2_enc(ct, ss_bob, pk);
+		enc_sum += cycle_counter() - start;
+		start = cycle_counter();
+		pqcrystals_kyber512_avx2_dec(ss_alice, ct, sk);
+		dec_sum += cycle_counter() - start;
+		ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES),
+		       "shared secret");
+	}
+
+	(void)keygen_sum;
+	(void)enc_sum;
+	(void)dec_sum;
+
+	/*
+	println("keygen={},enc={},dec={}", keygen_sum / KYBER_COUNT,
+		enc_sum / KYBER_COUNT, dec_sum / KYBER_COUNT);
+		*/
+}
+
