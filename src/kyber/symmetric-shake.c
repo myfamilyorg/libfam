@@ -1,9 +1,7 @@
 #include <kyber/fips202.h>
 #include <kyber/params.h>
 #include <kyber/symmetric.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
+#include <libfam/string.h>
 
 /*************************************************
  * Name:        kyber_shake128_absorb
@@ -12,17 +10,16 @@
  *
  * Arguments:   - keccak_state *state: pointer to (uninitialized) output Keccak
  *state
- *              - const uint8_t *seed: pointer to KYBER_SYMBYTES input to be
+ *              - const u8 *seed: pointer to KYBER_SYMBYTES input to be
  *absorbed into state
- *              - uint8_t i: additional byte of input
- *              - uint8_t j: additional byte of input
+ *              - u8 i: additional byte of input
+ *              - u8 j: additional byte of input
  **************************************************/
-void kyber_shake128_absorb(keccak_state *state,
-			   const uint8_t seed[KYBER_SYMBYTES], uint8_t x,
-			   uint8_t y) {
-	uint8_t extseed[KYBER_SYMBYTES + 2];
+void kyber_shake128_absorb(keccak_state *state, const u8 seed[KYBER_SYMBYTES],
+			   u8 x, u8 y) {
+	u8 extseed[KYBER_SYMBYTES + 2];
 
-	memcpy(extseed, seed, KYBER_SYMBYTES);
+	fastmemcpy(extseed, seed, KYBER_SYMBYTES);
 	extseed[KYBER_SYMBYTES + 0] = x;
 	extseed[KYBER_SYMBYTES + 1] = y;
 
@@ -35,17 +32,17 @@ void kyber_shake128_absorb(keccak_state *state,
  * Description: Usage of SHAKE256 as a PRF, concatenates secret and public input
  *              and then generates outlen bytes of SHAKE256 output
  *
- * Arguments:   - uint8_t *out: pointer to output
+ * Arguments:   - u8 *out: pointer to output
  *              - size_t outlen: number of requested output bytes
- *              - const uint8_t *key: pointer to the key (of length
+ *              - const u8 *key: pointer to the key (of length
  *KYBER_SYMBYTES)
- *              - uint8_t nonce: single-byte nonce (public PRF input)
+ *              - u8 nonce: single-byte nonce (public PRF input)
  **************************************************/
-void kyber_shake256_prf(uint8_t *out, size_t outlen,
-			const uint8_t key[KYBER_SYMBYTES], uint8_t nonce) {
-	uint8_t extkey[KYBER_SYMBYTES + 1];
+void kyber_shake256_prf(u8 *out, size_t outlen, const u8 key[KYBER_SYMBYTES],
+			u8 nonce) {
+	u8 extkey[KYBER_SYMBYTES + 1];
 
-	memcpy(extkey, key, KYBER_SYMBYTES);
+	fastmemcpy(extkey, key, KYBER_SYMBYTES);
 	extkey[KYBER_SYMBYTES] = nonce;
 
 	shake256(out, outlen, extkey, sizeof(extkey));
@@ -57,15 +54,14 @@ void kyber_shake256_prf(uint8_t *out, size_t outlen,
  * Description: Usage of SHAKE256 as a PRF, concatenates secret and public input
  *              and then generates outlen bytes of SHAKE256 output
  *
- * Arguments:   - uint8_t *out: pointer to output
+ * Arguments:   - u8 *out: pointer to output
  *              - size_t outlen: number of requested output bytes
- *              - const uint8_t *key: pointer to the key (of length
+ *              - const u8 *key: pointer to the key (of length
  *KYBER_SYMBYTES)
- *              - uint8_t nonce: single-byte nonce (public PRF input)
+ *              - u8 nonce: single-byte nonce (public PRF input)
  **************************************************/
-void kyber_shake256_rkprf(uint8_t out[KYBER_SSBYTES],
-			  const uint8_t key[KYBER_SYMBYTES],
-			  const uint8_t input[KYBER_CIPHERTEXTBYTES]) {
+void kyber_shake256_rkprf(u8 out[KYBER_SSBYTES], const u8 key[KYBER_SYMBYTES],
+			  const u8 input[KYBER_CIPHERTEXTBYTES]) {
 	keccak_state s;
 
 	shake256_init(&s);

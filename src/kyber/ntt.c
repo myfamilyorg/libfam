@@ -1,13 +1,12 @@
 #include <kyber/ntt.h>
 #include <kyber/params.h>
 #include <kyber/reduce.h>
-#include <stdint.h>
 
 /* Code to generate zetas and zetas_inv used in the number-theoretic transform:
 
 #define KYBER_ROOT_OF_UNITY 17
 
-static const uint8_t tree[128] = {
+static const u8 tree[128] = {
   0, 64, 32, 96, 16, 80, 48, 112, 8, 72, 40, 104, 24, 88, 56, 120,
   4, 68, 36, 100, 20, 84, 52, 116, 12, 76, 44, 108, 28, 92, 60, 124,
   2, 66, 34, 98, 18, 82, 50, 114, 10, 74, 42, 106, 26, 90, 58, 122,
@@ -61,7 +60,7 @@ const int16_t zetas[128] = {
  * Returns 16-bit integer congruent to a*b*R^{-1} mod q
  **************************************************/
 static int16_t fqmul(int16_t a, int16_t b) {
-	return montgomery_reduce((int32_t)a * b);
+	return montgomery_reduce((i32)a * b);
 }
 
 /*************************************************
