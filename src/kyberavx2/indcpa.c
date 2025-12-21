@@ -9,6 +9,7 @@
 #include <kyberavx2/polyvec.h>
 #include <kyberavx2/randombytes.h>
 #include <kyberavx2/rejsample.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -249,15 +250,21 @@ void gen_matrix(polyvec *a, const uint8_t seed[32], int transposed) {
 void indcpa_keypair_derand(uint8_t pk[KYBER_INDCPA_PUBLICKEYBYTES],
 			   uint8_t sk[KYBER_INDCPA_SECRETKEYBYTES],
 			   const uint8_t coins[KYBER_SYMBYTES]) {
+	__attribute__((aligned(32))) static const u8 KEYPAIR_HASH_DOMAIN[32] = {
+	    1, 9, 8, 201, 23, 94};
+	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES] = {0};
+
 	unsigned int i;
-	uint8_t buf[2 * KYBER_SYMBYTES];
 	const uint8_t *publicseed = buf;
 	const uint8_t *noiseseed = buf + KYBER_SYMBYTES;
 	polyvec a[KYBER_K], e, pkpv, skpv;
 
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 	buf[KYBER_SYMBYTES] = KYBER_K;
-	hash_g(buf, buf, KYBER_SYMBYTES + 1);
+	StormContext ctx;
+	storm_init(&ctx, KEYPAIR_HASH_DOMAIN);
+	storm_next_block(&ctx, buf);
+	storm_next_block(&ctx, buf + 32);
 
 	gen_a(a, publicseed);
 
