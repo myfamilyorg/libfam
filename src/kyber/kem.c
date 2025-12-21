@@ -1,6 +1,7 @@
 #include <kyber/indcpa.h>
 #include <kyber/params.h>
 #include <kyber/verify.h>
+#include <libfam/format.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
@@ -107,6 +108,7 @@ int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins) {
 
 	indcpa_enc(ct, buf, pk, kr + KYBER_SYMBYTES);
 	fastmemcpy(ss, kr, KYBER_SYMBYTES);
+
 	return 0;
 }
 
@@ -126,7 +128,7 @@ int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins) {
  * Returns 0 (success)
  **************************************************/
 int kem_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng) {
-	u8 coins[KYBER_SYMBYTES] = {0};
+	__attribute__((aligned(32))) u8 coins[KYBER_SYMBYTES] = {0};
 	rng_gen(rng, coins, KYBER_SYMBYTES);
 	crypto_kem_enc_derand(ct, ss, pk, coins);
 	return 0;

@@ -168,8 +168,9 @@ void poly_tomsg(u8 msg[KYBER_INDCPA_MSGBYTES], const poly *a) {
  **************************************************/
 void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
 	__attribute__((aligned(32))) u8 buf[KYBER_ETA1 * KYBER_N / 4] = {0};
-	StormContext ctx;
 	__attribute__((aligned(32))) u8 key[32];
+	StormContext ctx;
+
 	fastmemcpy(key, seed, 32);
 	key[0] = nonce;
 	storm_init(&ctx, key);
@@ -191,9 +192,10 @@ void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
  *              - u8 nonce: one-byte input nonce
  **************************************************/
 void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
-	u8 buf[KYBER_ETA2 * KYBER_N / 4] = {0};
-	StormContext ctx;
+	__attribute__((aligned(32))) u8 buf[KYBER_ETA2 * KYBER_N / 4] = {0};
 	__attribute__((aligned(32))) u8 key[32];
+	StormContext ctx;
+
 	fastmemcpy(key, seed, 32);
 	key[0] = nonce;
 	storm_init(&ctx, key);

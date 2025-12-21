@@ -252,7 +252,7 @@ void indcpa_enc(u8 c[KYBER_INDCPA_BYTES], const u8 m[KYBER_INDCPA_MSGBYTES],
 		const u8 pk[KYBER_INDCPA_PUBLICKEYBYTES],
 		const u8 coins[KYBER_SYMBYTES]) {
 	unsigned int i;
-	u8 seed[KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 seed[KYBER_SYMBYTES];
 	u8 nonce = 0;
 	polyvec sp, pkpv, ep, __attribute__((aligned(32))) at[KYBER_K], b;
 	poly v, k, epp;

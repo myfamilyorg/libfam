@@ -322,10 +322,12 @@ Test(dilithium_perf) {
 }
 
 Test(kyber) {
-	u8 sk[KYBER_SECRETKEYBYTES] = {0};
-	u8 pk[KYBER_PUBLICKEYBYTES] = {0};
-	u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
-	u8 ss_bob[KYBER_SSBYTES] = {0}, ss_alice[KYBER_SSBYTES] = {1};
+	__attribute__((aligned(32))) u8 sk[KYBER_SECRETKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 pk[KYBER_PUBLICKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_bob[KYBER_SSBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_alice[KYBER_SSBYTES] = {1};
+
 	Rng rng1, rng2;
 	rng_init(&rng1);
 	rng_init(&rng2);
