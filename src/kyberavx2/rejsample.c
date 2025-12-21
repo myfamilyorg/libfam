@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <immintrin.h>
 #include <kyberavx2/consts.h>
 #include <kyberavx2/params.h>
@@ -274,3 +275,4 @@ unsigned int rej_uniform_avx(int16_t *restrict r, const uint8_t *buf) {
 
 	return ctr;
 }
+#endif /* __AVX2__ */

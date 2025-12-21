@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <immintrin.h>
 #include <kyberavx2/verify.h>
 #include <stdint.h>
@@ -77,3 +78,4 @@ void cmov(uint8_t *restrict r, const uint8_t *x, size_t len, uint8_t b) {
 	len -= 32 * i;
 	for (i = 0; i < len; i++) r[i] ^= -b & (x[i] ^ r[i]);
 }
+#endif /* __AVX2__ */

@@ -335,6 +335,7 @@ Test(kyber_perf) {
 		*/
 }
 
+#ifdef __AVX2__
 i32 pqcrystals_kyber512_avx2_keypair(u8 *pk, u8 *sk);
 i32 pqcrystals_kyber512_avx2_enc(u8 *ct, u8 *ss, const u8 *pk);
 i32 pqcrystals_kyber512_avx2_dec(u8 *ss, const u8 *ct, const u8 *sk);
@@ -391,4 +392,4 @@ Test(kyberavx_perf) {
 		enc_sum / KYBER_COUNT, dec_sum / KYBER_COUNT);
 		*/
 }
-
+#endif /* __AVX2__ */

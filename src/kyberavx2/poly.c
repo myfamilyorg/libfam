@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <immintrin.h>
 #include <kyberavx2/align.h>
 #include <kyberavx2/cbd.h>
@@ -516,3 +517,4 @@ void poly_sub(poly *r, const poly *a, const poly *b) {
 		_mm256_store_si256(&r->vec[i], f0);
 	}
 }
+#endif /* __AVX2__ */
