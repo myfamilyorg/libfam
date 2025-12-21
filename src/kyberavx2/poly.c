@@ -341,7 +341,7 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES],
 void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 			   const uint8_t seed[32], uint8_t nonce0,
 			   uint8_t nonce1, uint8_t nonce2, uint8_t nonce3) {
-	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE) buf[4];
+	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE) buf[4] = {0};
 	__attribute__((aligned(32))) u8 keys[4][32];
 	StormContext ctx1, ctx2, ctx3, ctx4;
 
