@@ -148,11 +148,6 @@ static unsigned int rej_uniform(i16 *r, unsigned int len, const u8 *buf,
  *              - const u8 *seed: pointer to input seed
  *              - int transposed: boolean deciding whether A or A^T is generated
  **************************************************/
-#if (XOF_BLOCKBYTES % 3)
-#error \
-    "Implementation of gen_matrix assumes that XOF_BLOCKBYTES is a multiple of 3"
-#endif
-
 #define GEN_MATRIX_NBLOCKS                                           \
 	((12 * KYBER_N / 8 * (1 << 12) / KYBER_Q + XOF_BLOCKBYTES) / \
 	 XOF_BLOCKBYTES)
@@ -219,8 +214,8 @@ void indcpa_keypair_derand(u8 pk[KYBER_INDCPA_PUBLICKEYBYTES],
 	for (i = 0; i < KYBER_K; i++)
 		poly_getnoise_eta1(&e.vec[i], noiseseed, nonce++);
 
-	polyvec_ntt(&skpv);
-	polyvec_ntt(&e);
+	kyber_polyvec_ntt(&skpv);
+	kyber_polyvec_ntt(&e);
 
 	// matrix-vector multiplication
 	for (i = 0; i < KYBER_K; i++) {
@@ -228,8 +223,8 @@ void indcpa_keypair_derand(u8 pk[KYBER_INDCPA_PUBLICKEYBYTES],
 		poly_tomont(&pkpv.vec[i]);
 	}
 
-	polyvec_add(&pkpv, &pkpv, &e);
-	polyvec_reduce(&pkpv);
+	kyber_polyvec_add(&pkpv, &pkpv, &e);
+	kyber_polyvec_reduce(&pkpv);
 
 	pack_sk(sk, &skpv);
 	pack_pk(pk, &pkpv, publicseed);
@@ -269,7 +264,7 @@ void indcpa_enc(u8 c[KYBER_INDCPA_BYTES], const u8 m[KYBER_INDCPA_MSGBYTES],
 		poly_getnoise_eta2(ep.vec + i, coins, nonce++);
 	poly_getnoise_eta2(&epp, coins, nonce++);
 
-	polyvec_ntt(&sp);
+	kyber_polyvec_ntt(&sp);
 
 	// matrix-vector multiplication
 	for (i = 0; i < KYBER_K; i++)
@@ -277,13 +272,13 @@ void indcpa_enc(u8 c[KYBER_INDCPA_BYTES], const u8 m[KYBER_INDCPA_MSGBYTES],
 
 	polyvec_basemul_acc_montgomery(&v, &pkpv, &sp);
 
-	polyvec_invntt_tomont(&b);
+	kyber_polyvec_invntt_tomont(&b);
 	poly_invntt_tomont(&v);
 
-	polyvec_add(&b, &b, &ep);
+	kyber_polyvec_add(&b, &b, &ep);
 	poly_add(&v, &v, &epp);
 	poly_add(&v, &v, &k);
-	polyvec_reduce(&b);
+	kyber_polyvec_reduce(&b);
 	poly_reduce(&v);
 
 	pack_ciphertext(c, &b, &v);
@@ -310,7 +305,7 @@ void indcpa_dec(u8 m[KYBER_INDCPA_MSGBYTES], const u8 c[KYBER_INDCPA_BYTES],
 	unpack_ciphertext(&b, &v, c);
 	unpack_sk(&skpv, sk);
 
-	polyvec_ntt(&b);
+	kyber_polyvec_ntt(&b);
 	polyvec_basemul_acc_montgomery(&mp, &skpv, &b);
 	poly_invntt_tomont(&mp);
 

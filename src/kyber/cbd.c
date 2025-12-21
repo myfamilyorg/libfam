@@ -31,7 +31,6 @@ static u32 load32_littleendian(const u8 x[4]) {
  *
  * Returns 32-bit unsigned integer loaded from x (most significant byte is zero)
  **************************************************/
-#if KYBER_ETA1 == 3
 static u32 load24_littleendian(const u8 x[3]) {
 	u32 r;
 	r = (u32)x[0];
@@ -39,7 +38,6 @@ static u32 load24_littleendian(const u8 x[3]) {
 	r |= (u32)x[2] << 16;
 	return r;
 }
-#endif
 
 /*************************************************
  * Name:        cbd2
@@ -80,7 +78,6 @@ static void cbd2(poly *r, const u8 buf[2 * KYBER_N / 4]) {
  * Arguments:   - poly *r: pointer to output polynomial
  *              - const u8 *buf: pointer to input byte array
  **************************************************/
-#if KYBER_ETA1 == 3
 static void cbd3(poly *r, const u8 buf[3 * KYBER_N / 4]) {
 	unsigned int i, j;
 	u32 t, d;
@@ -99,22 +96,11 @@ static void cbd3(poly *r, const u8 buf[3 * KYBER_N / 4]) {
 		}
 	}
 }
-#endif
 
 void poly_cbd_eta1(poly *r, const u8 buf[KYBER_ETA1 * KYBER_N / 4]) {
-#if KYBER_ETA1 == 2
-	cbd2(r, buf);
-#elif KYBER_ETA1 == 3
 	cbd3(r, buf);
-#else
-#error "This implementation requires eta1 in {2,3}"
-#endif
 }
 
 void poly_cbd_eta2(poly *r, const u8 buf[KYBER_ETA2 * KYBER_N / 4]) {
-#if KYBER_ETA2 == 2
 	cbd2(r, buf);
-#else
-#error "This implementation requires eta2 = 2"
-#endif
 }
