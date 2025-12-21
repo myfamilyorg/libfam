@@ -54,7 +54,7 @@ static u32 load24_littleendian(const u8 x[3]) {
 static void cbd2(poly *r, const u8 buf[2 * KYBER_N / 4]) {
 	unsigned int i, j;
 	u32 t, d;
-	int16_t a, b;
+	i16 a, b;
 
 	for (i = 0; i < KYBER_N / 8; i++) {
 		t = load32_littleendian(buf + 4 * i);
@@ -84,7 +84,7 @@ static void cbd2(poly *r, const u8 buf[2 * KYBER_N / 4]) {
 static void cbd3(poly *r, const u8 buf[3 * KYBER_N / 4]) {
 	unsigned int i, j;
 	u32 t, d;
-	int16_t a, b;
+	i16 a, b;
 
 	for (i = 0; i < KYBER_N / 4; i++) {
 		t = load24_littleendian(buf + 3 * i);

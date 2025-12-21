@@ -12,10 +12,10 @@
  *
  * Returns:     integer in {-q+1,...,q-1} congruent to a * R^-1 modulo q.
  **************************************************/
-int16_t montgomery_reduce(i32 a) {
-	int16_t t;
+i16 montgomery_reduce(i32 a) {
+	i16 t;
 
-	t = (int16_t)a * QINV;
+	t = (i16)a * QINV;
 	t = (a - (i32)t * KYBER_Q) >> 16;
 	return t;
 }
@@ -27,13 +27,13 @@ int16_t montgomery_reduce(i32 a) {
  *              centered representative congruent to a mod q in
  *{-(q-1)/2,...,(q-1)/2}
  *
- * Arguments:   - int16_t a: input integer to be reduced
+ * Arguments:   - i16 a: input integer to be reduced
  *
  * Returns:     integer in {-(q-1)/2,...,(q-1)/2} congruent to a modulo q.
  **************************************************/
-int16_t barrett_reduce(int16_t a) {
-	int16_t t;
-	const int16_t v = ((1 << 26) + KYBER_Q / 2) / KYBER_Q;
+i16 barrett_reduce(i16 a) {
+	i16 t;
+	const i16 v = ((1 << 26) + KYBER_Q / 2) / KYBER_Q;
 
 	t = ((i32)v * a + (1 << 25)) >> 26;
 	t *= KYBER_Q;

@@ -33,12 +33,12 @@ void kyber_shake128_absorb(keccak_state *state, const u8 seed[KYBER_SYMBYTES],
  *              and then generates outlen bytes of SHAKE256 output
  *
  * Arguments:   - u8 *out: pointer to output
- *              - size_t outlen: number of requested output bytes
+ *              - u64 outlen: number of requested output bytes
  *              - const u8 *key: pointer to the key (of length
  *KYBER_SYMBYTES)
  *              - u8 nonce: single-byte nonce (public PRF input)
  **************************************************/
-void kyber_shake256_prf(u8 *out, size_t outlen, const u8 key[KYBER_SYMBYTES],
+void kyber_shake256_prf(u8 *out, u64 outlen, const u8 key[KYBER_SYMBYTES],
 			u8 nonce) {
 	u8 extkey[KYBER_SYMBYTES + 1];
 
@@ -55,7 +55,7 @@ void kyber_shake256_prf(u8 *out, size_t outlen, const u8 key[KYBER_SYMBYTES],
  *              and then generates outlen bytes of SHAKE256 output
  *
  * Arguments:   - u8 *out: pointer to output
- *              - size_t outlen: number of requested output bytes
+ *              - u64 outlen: number of requested output bytes
  *              - const u8 *key: pointer to the key (of length
  *KYBER_SYMBYTES)
  *              - u8 nonce: single-byte nonce (public PRF input)

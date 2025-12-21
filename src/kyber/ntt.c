@@ -19,7 +19,7 @@ static const u8 tree[128] = {
 
 void init_ntt() {
   unsigned int i;
-  int16_t tmp[128];
+  i16 tmp[128];
 
   tmp[0] = MONT;
   for(i=1;i<128;i++)
@@ -35,7 +35,7 @@ void init_ntt() {
 }
 */
 
-const int16_t zetas[128] = {
+const i16 zetas[128] = {
     -1044, -758,  -359,	 -1517, 1493,  1422,  287,   202,  -171,  622,	 1577,
     182,   962,	  -1202, -1474, 1468,  573,   -1325, 264,  383,	  -829,	 1458,
     -1602, -130,  -681,	 1017,	732,   608,   -1542, 411,  -205,  -1571, 1223,
@@ -54,12 +54,12 @@ const int16_t zetas[128] = {
  *
  * Description: Multiplication followed by Montgomery reduction
  *
- * Arguments:   - int16_t a: first factor
- *              - int16_t b: second factor
+ * Arguments:   - i16 a: first factor
+ *              - i16 b: second factor
  *
  * Returns 16-bit integer congruent to a*b*R^{-1} mod q
  **************************************************/
-static int16_t fqmul(int16_t a, int16_t b) {
+static i16 fqmul(i16 a, i16 b) {
 	return montgomery_reduce((i32)a * b);
 }
 
@@ -69,12 +69,12 @@ static int16_t fqmul(int16_t a, int16_t b) {
  * Description: Inplace number-theoretic transform (NTT) in Rq.
  *              input is in standard order, output is in bitreversed order
  *
- * Arguments:   - int16_t r[256]: pointer to input/output vector of elements of
+ * Arguments:   - i16 r[256]: pointer to input/output vector of elements of
  *Zq
  **************************************************/
-void ntt(int16_t r[256]) {
+void ntt(i16 r[256]) {
 	unsigned int len, start, j, k;
-	int16_t t, zeta;
+	i16 t, zeta;
 
 	k = 1;
 	for (len = 128; len >= 2; len >>= 1) {
@@ -96,13 +96,13 @@ void ntt(int16_t r[256]) {
  *              multiplication by Montgomery factor 2^16.
  *              Input is in bitreversed order, output is in standard order
  *
- * Arguments:   - int16_t r[256]: pointer to input/output vector of elements of
+ * Arguments:   - i16 r[256]: pointer to input/output vector of elements of
  *Zq
  **************************************************/
-void invntt(int16_t r[256]) {
+void invntt(i16 r[256]) {
 	unsigned int start, len, j, k;
-	int16_t t, zeta;
-	const int16_t f = 1441;	 // mont^2/128
+	i16 t, zeta;
+	const i16 f = 1441;	 // mont^2/128
 
 	k = 127;
 	for (len = 2; len <= 128; len <<= 1) {
@@ -126,13 +126,13 @@ void invntt(int16_t r[256]) {
  * Description: Multiplication of polynomials in Zq[X]/(X^2-zeta)
  *              used for multiplication of elements in Rq in NTT domain
  *
- * Arguments:   - int16_t r[2]: pointer to the output polynomial
- *              - const int16_t a[2]: pointer to the first factor
- *              - const int16_t b[2]: pointer to the second factor
- *              - int16_t zeta: integer defining the reduction polynomial
+ * Arguments:   - i16 r[2]: pointer to the output polynomial
+ *              - const i16 a[2]: pointer to the first factor
+ *              - const i16 b[2]: pointer to the second factor
+ *              - i16 zeta: integer defining the reduction polynomial
  **************************************************/
-void basemul(int16_t r[2], const int16_t a[2], const int16_t b[2],
-	     int16_t zeta) {
+void basemul(i16 r[2], const i16 a[2], const i16 b[2],
+	     i16 zeta) {
 	r[0] = fqmul(a[1], b[1]);
 	r[0] = fqmul(r[0], zeta);
 	r[0] += fqmul(a[0], b[0]);

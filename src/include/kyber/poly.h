@@ -1,37 +1,36 @@
 #ifndef POLY_H
 #define POLY_H
 
-#include <stdint.h>
-#include "params.h"
+#include <kyber/params.h>
 
 /*
  * Elements of R_q = Z_q[X]/(X^n + 1). Represents polynomial
  * coeffs[0] + X*coeffs[1] + X^2*coeffs[2] + ... + X^{n-1}*coeffs[n-1]
  */
-typedef struct{
-  int16_t coeffs[KYBER_N];
+typedef struct {
+	i16 coeffs[KYBER_N];
 } poly;
 
 #define poly_compress KYBER_NAMESPACE(poly_compress)
-void poly_compress(uint8_t r[KYBER_POLYCOMPRESSEDBYTES], const poly *a);
+void poly_compress(u8 r[KYBER_POLYCOMPRESSEDBYTES], const poly *a);
 #define poly_decompress KYBER_NAMESPACE(poly_decompress)
-void poly_decompress(poly *r, const uint8_t a[KYBER_POLYCOMPRESSEDBYTES]);
+void poly_decompress(poly *r, const u8 a[KYBER_POLYCOMPRESSEDBYTES]);
 
 #define poly_tobytes KYBER_NAMESPACE(poly_tobytes)
-void poly_tobytes(uint8_t r[KYBER_POLYBYTES], const poly *a);
+void poly_tobytes(u8 r[KYBER_POLYBYTES], const poly *a);
 #define poly_frombytes KYBER_NAMESPACE(poly_frombytes)
-void poly_frombytes(poly *r, const uint8_t a[KYBER_POLYBYTES]);
+void poly_frombytes(poly *r, const u8 a[KYBER_POLYBYTES]);
 
 #define poly_frommsg KYBER_NAMESPACE(poly_frommsg)
-void poly_frommsg(poly *r, const uint8_t msg[KYBER_INDCPA_MSGBYTES]);
+void poly_frommsg(poly *r, const u8 msg[KYBER_INDCPA_MSGBYTES]);
 #define poly_tomsg KYBER_NAMESPACE(poly_tomsg)
-void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *r);
+void poly_tomsg(u8 msg[KYBER_INDCPA_MSGBYTES], const poly *r);
 
 #define poly_getnoise_eta1 KYBER_NAMESPACE(poly_getnoise_eta1)
-void poly_getnoise_eta1(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t nonce);
+void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce);
 
 #define poly_getnoise_eta2 KYBER_NAMESPACE(poly_getnoise_eta2)
-void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t nonce);
+void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce);
 
 #define poly_ntt KYBER_NAMESPACE(poly_ntt)
 void poly_ntt(poly *r);

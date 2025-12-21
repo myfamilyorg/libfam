@@ -17,7 +17,7 @@
  **************************************************/
 void poly_compress(u8 r[KYBER_POLYCOMPRESSEDBYTES], const poly *a) {
 	unsigned int i, j;
-	int16_t u;
+	i16 u;
 	u32 d0;
 	u8 t[8];
 
@@ -128,9 +128,9 @@ void poly_tobytes(u8 r[KYBER_POLYBYTES], const poly *a) {
 	for (i = 0; i < KYBER_N / 2; i++) {
 		// map to positive standard representatives
 		t0 = a->coeffs[2 * i];
-		t0 += ((int16_t)t0 >> 15) & KYBER_Q;
+		t0 += ((i16)t0 >> 15) & KYBER_Q;
 		t1 = a->coeffs[2 * i + 1];
-		t1 += ((int16_t)t1 >> 15) & KYBER_Q;
+		t1 += ((i16)t1 >> 15) & KYBER_Q;
 		r[3 * i + 0] = (t0 >> 0);
 		r[3 * i + 1] = (t0 >> 8) | (t1 << 4);
 		r[3 * i + 2] = (t1 >> 4);
@@ -197,7 +197,7 @@ void poly_tomsg(u8 msg[KYBER_INDCPA_MSGBYTES], const poly *a) {
 		msg[i] = 0;
 		for (j = 0; j < 8; j++) {
 			t = a->coeffs[8 * i + j];
-			// t += ((int16_t)t >> 15) & KYBER_Q;
+			// t += ((i16)t >> 15) & KYBER_Q;
 			// t  = (((t << 1) + KYBER_Q/2)/KYBER_Q) & 1;
 			t <<= 1;
 			t += 1665;
@@ -301,7 +301,7 @@ void poly_basemul_montgomery(poly *r, const poly *a, const poly *b) {
  **************************************************/
 void poly_tomont(poly *r) {
 	unsigned int i;
-	const int16_t f = (1ULL << 32) % KYBER_Q;
+	const i16 f = (1ULL << 32) % KYBER_Q;
 	for (i = 0; i < KYBER_N; i++)
 		r->coeffs[i] = montgomery_reduce((i32)r->coeffs[i] * f);
 }
