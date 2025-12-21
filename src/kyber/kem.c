@@ -1,6 +1,5 @@
 #include <kyber/indcpa.h>
 #include <kyber/params.h>
-#include <kyber/symmetric.h>
 #include <kyber/verify.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
@@ -157,6 +156,8 @@ int kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
 	__attribute__((aligned(32))) u8 buf_copy[2 * KYBER_SYMBYTES];
 	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES] = {0};
 	__attribute__((aligned(32))) u8 cmp[KYBER_CIPHERTEXTBYTES];
+	__attribute__((aligned(32))) u8 sk_copy[32];
+
 	const u8 *pk = sk + KYBER_INDCPA_SECRETKEYBYTES;
 
 	indcpa_dec(buf, ct, sk);
@@ -171,8 +172,17 @@ int kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
 	storm_next_block(&ctx, kr + 32);
 	indcpa_enc(cmp, buf, pk, kr + KYBER_SYMBYTES);
 	fail = kyber_verify(ct, cmp, KYBER_CIPHERTEXTBYTES);
-	rkprf(ss, sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES, ct);
+
+	fastmemset(ss, 0, 32);
+	fastmemcpy(sk_copy, sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES, 32);
+	storm_init(&ctx, sk_copy);
+	for (u32 i = 0; i < KYBER_CIPHERTEXTBYTES; i += 32)
+		storm_next_block(&ctx, cmp + i);
+	storm_next_block(&ctx, ss);
+
 	cmov(ss, kr, KYBER_SYMBYTES, !fail);
+	secure_zero(sk_copy, 32);
+	secure_zero(cmp, KYBER_CIPHERTEXTBYTES);
 
 	return 0;
 }
