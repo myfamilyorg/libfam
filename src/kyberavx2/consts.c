@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <kyberavx2/align.h>
 #include <kyberavx2/consts.h>
 #include <kyberavx2/params.h>
@@ -137,3 +138,4 @@ const qdata_t qdata = {{
     SHIFT,    SHIFT,	SHIFT,	  SHIFT,    SHIFT,    SHIFT,	SHIFT,
     SHIFT,    SHIFT,	SHIFT,	  SHIFT,    SHIFT,    SHIFT,	SHIFT,
     SHIFT,    SHIFT}};
+#endif /* __AVX2__ */

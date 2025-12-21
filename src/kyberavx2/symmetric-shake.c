@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <kyberavx2/fips202.h>
 #include <kyberavx2/params.h>
 #include <kyberavx2/symmetric.h>
@@ -74,3 +75,4 @@ void kyber_shake256_rkprf(uint8_t out[KYBER_SSBYTES],
 	shake256_finalize(&s);
 	shake256_squeeze(out, KYBER_SSBYTES, &s);
 }
+#endif /* __AVX2__ */

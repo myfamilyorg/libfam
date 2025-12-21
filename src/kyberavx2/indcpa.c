@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <immintrin.h>
 #include <kyberavx2/align.h>
 #include <kyberavx2/cbd.h>
@@ -599,3 +600,4 @@ void indcpa_dec(uint8_t m[KYBER_INDCPA_MSGBYTES],
 
 	poly_tomsg(m, &mp);
 }
+#endif /* __AVX2__ */

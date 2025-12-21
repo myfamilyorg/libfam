@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <immintrin.h>
 #include <kyberavx2/cbd.h>
 #include <kyberavx2/params.h>
@@ -139,3 +140,4 @@ void poly_cbd_eta2(poly *r, const __m256i buf[KYBER_ETA2 * KYBER_N / 128]) {
 #error "This implementation requires eta2 = 2"
 #endif
 }
+#endif /* __AVX2__ */

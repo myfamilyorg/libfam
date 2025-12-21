@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <kyberavx2/indcpa.h>
 #include <kyberavx2/kem.h>
 #include <kyberavx2/params.h>
@@ -248,4 +249,4 @@ int crypto_kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
 
 	return 0;
 }
-
+#endif /* __AVX2__ */

@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <immintrin.h>
 #include <kyberavx2/consts.h>
 #include <kyberavx2/ntt.h>
@@ -293,3 +294,4 @@ void polyvec_add(polyvec *r, const polyvec *a, const polyvec *b) {
 	for (i = 0; i < KYBER_K; i++)
 		poly_add(&r->vec[i], &a->vec[i], &b->vec[i]);
 }
+#endif /* __AVX2__ */

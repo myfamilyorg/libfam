@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 #include <immintrin.h>
 #include <kyberavx2/fips202.h>
 #include <kyberavx2/fips202x4.h>
@@ -169,3 +170,4 @@ void shake256x4(uint8_t *out0, uint8_t *out1, uint8_t *out2, uint8_t *out3,
 		}
 	}
 }
+#endif /* __AVX2__ */

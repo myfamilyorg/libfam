@@ -1,3 +1,4 @@
+#ifdef __AVX2__
 /*
 Implementation by the Keccak, Keyak and Ketje Teams, namely, Guido Bertoni,
 Joan Daemen, Michaël Peeters, Gilles Van Assche and Ronny Van Keer, hereby
@@ -1072,3 +1073,4 @@ size_t KeccakP1600times4_12rounds_FastLoop_Absorb(
 		return data - dataStart;
 	}
 }
+#endif /* __AVX2__ */
