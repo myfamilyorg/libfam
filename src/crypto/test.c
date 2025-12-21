@@ -125,11 +125,10 @@ Test(rng) {
 	u64 x, y;
 	__attribute__((aligned(32))) u8 z[64] = {0};
 	Rng rng;
-	__attribute__((aligned(32))) u8 entropy[32] = {1, 2, 3, 4, 5};
 	__attribute__((aligned(32))) u8 key[32] = {5, 5, 5, 5};
-	rng_init(&rng, entropy);
+	rng_init(&rng);
 	rng_gen(&rng, &x, sizeof(x));
-	rng_reseed(&rng, NULL);
+	rng_reseed(&rng);
 	rng_gen(&rng, &y, sizeof(y));
 	ASSERT(x != y, "x!=y");
 
@@ -246,7 +245,7 @@ Test(dilithium) {
 	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
 	Rng rng;
 
-	rng_init(&rng, NULL);
+	rng_init(&rng);
 
 	for (u32 i = 0; i < 12; i++) {
 		rng_gen(&rng, rnd, 32);
@@ -270,7 +269,7 @@ Test(dilithium_bad_msg) {
 	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
 	Rng rng;
 
-	rng_init(&rng, NULL);
+	rng_init(&rng);
 
 	rng_gen(&rng, rnd, 32);
 	rng_gen(&rng, &msg, MLEN);
@@ -295,7 +294,7 @@ Test(dilithium_perf) {
 	u64 sign_sum = 0;
 	u64 verify_sum = 0;
 
-	rng_init(&rng, NULL);
+	rng_init(&rng);
 
 	for (u32 i = 0; i < DILITHIUM_COUNT; i++) {
 		rng_gen(&rng, rnd, 32);
@@ -322,13 +321,15 @@ Test(dilithium_perf) {
 		*/
 }
 
-Test(kyber1) {
+Test(kyber) {
 	u8 sk[KYBER_SECRETKEYBYTES] = {0};
 	u8 pk[KYBER_PUBLICKEYBYTES] = {0};
 	u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
 	u8 ss_bob[KYBER_SSBYTES] = {0}, ss_alice[KYBER_SSBYTES] = {1};
-	pqcrystals_kyber768_ref_keypair(pk, sk);
-	pqcrystals_kyber768_ref_enc(ct, ss_bob, pk);
-	pqcrystals_kyber768_ref_dec(ss_alice, ct, sk);
+	kem_keypair(pk, sk);
+	kem_enc(ct, ss_bob, pk);
+	kem_dec(ss_alice, ct, sk);
 	ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES), "shared secret");
 }
+
+Test(kyber_perf) {}

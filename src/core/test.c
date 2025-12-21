@@ -329,7 +329,7 @@ Test(alloc2) {
 	i32 i, j, k;
 	Rng rng;
 
-	rng_init(&rng, NULL);
+	rng_init(&rng);
 	Alloc *a = alloc_init(AllocMap, 32);
 	u8 **ptrs = map(sizeof(u8 *) * ALLOC_COUNT);
 	ASSERT(a, "alloc");
@@ -379,7 +379,7 @@ Test(alloc3) {
 		pids[i] = fork();
 		if (!pids[i]) {
 			Rng rng;
-			rng_init(&rng, NULL);
+			rng_init(&rng);
 			i32 j, k;
 			u8 **ptrs = map(sizeof(u8 *) * ALLOC_TCOUNT);
 			u16 *sizes = map(sizeof(u16) * ALLOC_TCOUNT);

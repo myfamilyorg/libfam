@@ -25,6 +25,7 @@
 
 #include <libfam/atomic.h>
 #include <libfam/env.h>
+#include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/rng.h>
@@ -35,6 +36,49 @@
 #include <libfam/utils.h>
 
 static u64 global_entropy_counter = U64_MAX / 2;
+
+STATIC i32 try_fill_hardware(u8 buf[32]) {
+#if defined(__x86_64__)
+	u64 *p = (u64 *)buf;
+	for (int attempt = 0; attempt < 10; ++attempt) {
+		int ok = 1;
+		for (int i = 0; i < 4; ++i) {
+			u64 val;
+			unsigned char cf;
+			__asm__ volatile(
+			    "rdrand %0\n\t"
+			    "setc %1"
+			    : "=r"(val), "=qm"(cf)
+			    :
+			    : "cc");
+			if (!cf) {
+				ok = 0;
+				break;
+			}
+			p[i] = val;
+		}
+		if (ok) return 0;
+	}
+#endif
+#if defined(__aarch64__)
+	static int has_rng = -1;
+	if (has_rng < 0) {
+		u64 isar0;
+		__asm__ volatile("mrs %0, ID_AA64ISAR0_EL1" : "=r"(isar0));
+		has_rng = ((isar0 >> 60) & 0xF) != 0;
+	}
+	if (has_rng) {
+		u64 *p = (u64 *)buf;
+		for (int i = 0; i < 4; ++i) {
+			u64 val;
+			__asm__ volatile("mrs %0, RNDR" : "=r"(val));
+			p[i] = val;
+		}
+		return 0;
+	}
+#endif
+	return -1;
+}
 
 STATIC void random32(u8 out[32]) {
 	__attribute__((aligned(32))) u8 tmp[32];
@@ -62,17 +106,18 @@ STATIC void random32(u8 out[32]) {
 	secure_zero(&ctx, sizeof(ctx));
 }
 
-STATIC void random_stir(u8 current[32], const u8 stir_in[32]) {
+STATIC void random_stir(u8 current[32]) {
 	StormContext ctx;
+	__attribute__((aligned(32))) u8 stir_in[32] = {0};
 
-	storm_init(&ctx, current);
-	fastmemcpy(current, stir_in, 32);
+	try_fill_hardware(stir_in);
+	storm_init(&ctx, stir_in);
 	storm_next_block(&ctx, current);
-
 	secure_zero(&ctx, sizeof(ctx));
+	secure_zero(stir_in, sizeof(stir_in));
 }
 
-void rng_init(Rng *rng, const void *opt_entropy) {
+void rng_init(Rng *rng) {
 	__attribute__((aligned(32))) u8 key[32];
 
 #if TEST == 1
@@ -80,14 +125,12 @@ void rng_init(Rng *rng, const void *opt_entropy) {
 #endif /* TEST */
 
 	random32(key);
-	if (opt_entropy) random_stir(key, opt_entropy);
+	random_stir(key);
 	storm_init(&rng->ctx, key);
 	secure_zero32(key);
 }
 
-void rng_reseed(Rng *rng, const void *opt_entropy) {
-	rng_init(rng, opt_entropy);
-}
+void rng_reseed(Rng *rng) { rng_init(rng); }
 
 void rng_gen(Rng *rng, void *v, u64 size) {
 	u8 *out = v;

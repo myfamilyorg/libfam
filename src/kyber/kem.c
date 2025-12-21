@@ -50,7 +50,7 @@ int crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins) {
  * Returns 0 (success)
  **************************************************/
 
-int crypto_kem_keypair(uint8_t *pk, uint8_t *sk) {
+int kem_keypair(uint8_t *pk, uint8_t *sk) {
 	__attribute__((aligned(32))) uint8_t coins[2 * KYBER_SYMBYTES];
 	randombytes(coins, 2 * KYBER_SYMBYTES);
 	crypto_kem_keypair_derand(pk, sk, coins);
@@ -109,7 +109,7 @@ int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
  *
  * Returns 0 (success)
  **************************************************/
-int crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
+int kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
 	uint8_t coins[KYBER_SYMBYTES];
 	randombytes(coins, KYBER_SYMBYTES);
 	crypto_kem_enc_derand(ct, ss, pk, coins);
@@ -133,7 +133,7 @@ int crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
  *
  * On failure, ss will contain a pseudo-random value.
  **************************************************/
-int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
+int kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
 	int fail;
 	uint8_t buf[2 * KYBER_SYMBYTES];
 	/* Will contain key, coins */

@@ -281,7 +281,7 @@ PUBLIC void sign(Signature *sm_in, const Message *msg, const SecretKey *sk_in) {
 	u8 rnd[RNDBYTES];
 	Rng rng;
 
-	rng_init(&rng, NULL);
+	rng_init(&rng);
 	rng_gen(&rng, rnd, RNDBYTES);
 
 	fastmemcpy(sm + CRYPTO_BYTES, m, MLEN);

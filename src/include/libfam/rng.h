@@ -33,8 +33,8 @@ typedef struct {
 	StormContext ctx;
 } Rng;
 
-void rng_init(Rng *rng, const void *opt_entropy);
-void rng_reseed(Rng *rng, const void *opt_entropy);
+void rng_init(Rng *rng);
+void rng_reseed(Rng *rng);
 void rng_gen(Rng *rng, void *v, u64 size);
 
 #if TEST == 1
