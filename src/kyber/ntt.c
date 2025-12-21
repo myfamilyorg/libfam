@@ -35,7 +35,7 @@ void init_ntt() {
 }
 */
 
-const i16 zetas[128] = {
+const i16 kyber_zetas[128] = {
     -1044, -758,  -359,	 -1517, 1493,  1422,  287,   202,  -171,  622,	 1577,
     182,   962,	  -1202, -1474, 1468,  573,   -1325, 264,  383,	  -829,	 1458,
     -1602, -130,  -681,	 1017,	732,   608,   -1542, 411,  -205,  -1571, 1223,
@@ -70,14 +70,14 @@ static i16 fqmul(i16 a, i16 b) { return montgomery_reduce16((i32)a * b); }
  * Arguments:   - i16 r[256]: pointer to input/output vector of elements of
  *Zq
  **************************************************/
-void ntt(i16 r[256]) {
+void kyber_ntt(i16 r[256]) {
 	unsigned int len, start, j, k;
 	i16 t, zeta;
 
 	k = 1;
 	for (len = 128; len >= 2; len >>= 1) {
 		for (start = 0; start < 256; start = j + len) {
-			zeta = zetas[k++];
+			zeta = kyber_zetas[k++];
 			for (j = start; j < start + len; j++) {
 				t = fqmul(zeta, r[j + len]);
 				r[j + len] = r[j] - t;
@@ -97,7 +97,7 @@ void ntt(i16 r[256]) {
  * Arguments:   - i16 r[256]: pointer to input/output vector of elements of
  *Zq
  **************************************************/
-void invntt(i16 r[256]) {
+void kyber_invntt(i16 r[256]) {
 	unsigned int start, len, j, k;
 	i16 t, zeta;
 	const i16 f = 1441;  // mont^2/128
@@ -105,7 +105,7 @@ void invntt(i16 r[256]) {
 	k = 127;
 	for (len = 2; len <= 128; len <<= 1) {
 		for (start = 0; start < 256; start = j + len) {
-			zeta = zetas[k--];
+			zeta = kyber_zetas[k--];
 			for (j = start; j < start + len; j++) {
 				t = r[j];
 				r[j] = barrett_reduce(t + r[j + len]);

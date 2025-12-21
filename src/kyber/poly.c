@@ -256,7 +256,7 @@ void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
  * Arguments:   - u16 *r: pointer to in/output polynomial
  **************************************************/
 void poly_ntt(poly *r) {
-	ntt(r->coeffs);
+	kyber_ntt(r->coeffs);
 	poly_reduce(r);
 }
 
@@ -270,7 +270,7 @@ void poly_ntt(poly *r) {
  *
  * Arguments:   - u16 *a: pointer to in/output polynomial
  **************************************************/
-void poly_invntt_tomont(poly *r) { invntt(r->coeffs); }
+void poly_invntt_tomont(poly *r) { kyber_invntt(r->coeffs); }
 
 /*************************************************
  * Name:        poly_basemul_montgomery
@@ -285,9 +285,9 @@ void poly_basemul_montgomery(poly *r, const poly *a, const poly *b) {
 	unsigned int i;
 	for (i = 0; i < KYBER_N / 4; i++) {
 		basemul(&r->coeffs[4 * i], &a->coeffs[4 * i], &b->coeffs[4 * i],
-			zetas[64 + i]);
+			kyber_zetas[64 + i]);
 		basemul(&r->coeffs[4 * i + 2], &a->coeffs[4 * i + 2],
-			&b->coeffs[4 * i + 2], -zetas[64 + i]);
+			&b->coeffs[4 * i + 2], -kyber_zetas[64 + i]);
 	}
 }
 
