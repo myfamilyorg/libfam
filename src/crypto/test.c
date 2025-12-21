@@ -122,7 +122,7 @@ Test(storm_cipher) {
 }
 
 Test(rng) {
-	u64 x, y;
+	u64 x = 0, y = 0;
 	__attribute__((aligned(32))) u8 z[64] = {0};
 	Rng rng;
 	__attribute__((aligned(32))) u8 key[32] = {5, 5, 5, 5};
@@ -137,9 +137,9 @@ Test(rng) {
 	u8 expected[64] = {
 	    92,	 76,  15, 74,  85,  157, 30,  92,  90,	59,  107, 147, 160,
 	    157, 236, 35, 0,   42,  84,	 59,  133, 69,	15,  170, 206, 78,
-	    49,	 164, 66, 231, 142, 24,	 102, 179, 152, 211, 220, 200, 122,
-	    81,	 132, 50, 78,  54,  19,	 156, 20,  189, 118, 255, 211, 252,
-	    254, 89,  4,  142, 192, 9,	 239, 202, 158, 195, 83,  165};
+	    49,	 164, 66, 231, 142, 24,	 73,  51,  97,	88,  100, 70,  102,
+	    247, 191, 91, 118, 240, 16,	 238, 24,  105, 171, 108, 133, 166,
+	    87,	 105, 86, 214, 101, 23,	 209, 144, 254, 12,  116, 246};
 	ASSERT_EQ(memcmp(z, expected, 64), 0, "z");
 }
 
@@ -252,7 +252,7 @@ Test(dilithium) {
 		rng_gen(&rng, &msg, MLEN);
 
 		keyfrom(&sk, &pk, rnd);
-		sign(&sig, &msg, &sk);
+		sign(&sig, &msg, &sk, NULL);
 		ASSERT(!verify(&sig, &pk, &msg), "verify");
 		((u8 *)&sig)[0]++;
 		ASSERT(verify(&sig, &pk, &msg), "!verify");
@@ -275,7 +275,7 @@ Test(dilithium_bad_msg) {
 	rng_gen(&rng, &msg, MLEN);
 
 	keyfrom(&sk, &pk, rnd);
-	sign(&sig, &msg, &sk);
+	sign(&sig, &msg, &sk, NULL);
 	ASSERT(!verify(&sig, &pk, &msg), "verify");
 	ASSERT(verify(&sig, &pk, &bad_msg), "bad msg");
 }
@@ -304,7 +304,7 @@ Test(dilithium_perf) {
 		keyfrom(&sk, &pk, rnd);
 		keygen_sum += cycle_counter() - start;
 		start = cycle_counter();
-		sign(&sm, &m, &sk);
+		sign(&sm, &m, &sk, NULL);
 		sign_sum += cycle_counter() - start;
 		start = cycle_counter();
 		verify(&sm, &pk, &m);
@@ -326,8 +326,9 @@ Test(kyber) {
 	u8 pk[KYBER_PUBLICKEYBYTES] = {0};
 	u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
 	u8 ss_bob[KYBER_SSBYTES] = {0}, ss_alice[KYBER_SSBYTES] = {1};
-	kem_keypair(pk, sk);
-	kem_enc(ct, ss_bob, pk);
+	Rng rng1, rng2;
+	kem_keypair(pk, sk, &rng1);
+	kem_enc(ct, ss_bob, pk, &rng2);
 	kem_dec(ss_alice, ct, sk);
 	ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES), "shared secret");
 }

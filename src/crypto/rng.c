@@ -60,23 +60,6 @@ STATIC i32 try_fill_hardware(u8 buf[32]) {
 		if (ok) return 0;
 	}
 #endif
-#if defined(__aarch64__) && defined(__ARM_FEATURE_RNDR)
-	static int has_rng = -1;
-	if (has_rng < 0) {
-		u64 isar0;
-		__asm__ volatile("mrs %0, ID_AA64ISAR0_EL1" : "=r"(isar0));
-		has_rng = ((isar0 >> 60) & 0xF) != 0;
-	}
-	if (has_rng) {
-		u64 *p = (u64 *)buf;
-		for (int i = 0; i < 4; ++i) {
-			u64 val;
-			__asm__ volatile("mrs %0, RNDR" : "=r"(val));
-			p[i] = val;
-		}
-		return 0;
-	}
-#endif
 	return -1;
 }
 
@@ -145,6 +128,7 @@ void rng_gen(Rng *rng, void *v, u64 size) {
 #if TEST == 1
 		fastmemset(buf, 0, sizeof(buf));
 #endif /* TEST */
+		fastmemcpy(buf, v, size - off);
 		storm_next_block(&rng->ctx, buf);
 		fastmemcpy(out + off, buf, size - off);
 		secure_zero32(buf);

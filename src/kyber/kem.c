@@ -1,14 +1,13 @@
-#include "kem.h"
-
+#include <libfam/rng.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "indcpa.h"
 #include "params.h"
-#include "randombytes.h"
 #include "symmetric.h"
 #include "verify.h"
+
 /*************************************************
  * Name:        crypto_kem_keypair_derand
  *
@@ -50,9 +49,9 @@ int crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins) {
  * Returns 0 (success)
  **************************************************/
 
-int kem_keypair(uint8_t *pk, uint8_t *sk) {
+int kem_keypair(uint8_t *pk, uint8_t *sk, Rng *rng) {
 	__attribute__((aligned(32))) uint8_t coins[2 * KYBER_SYMBYTES];
-	randombytes(coins, 2 * KYBER_SYMBYTES);
+	rng_gen(rng, coins, 2 * KYBER_SYMBYTES);
 	crypto_kem_keypair_derand(pk, sk, coins);
 	return 0;
 }
@@ -109,9 +108,9 @@ int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
  *
  * Returns 0 (success)
  **************************************************/
-int kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
+int kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk, Rng *rng) {
 	uint8_t coins[KYBER_SYMBYTES];
-	randombytes(coins, KYBER_SYMBYTES);
+	rng_gen(rng, coins, KYBER_SYMBYTES);
 	crypto_kem_enc_derand(ct, ss, pk, coins);
 	return 0;
 }

@@ -2,6 +2,7 @@
 #define KEM_H
 
 #include <libfam/kyber_params.h>
+#include <libfam/rng.h>
 #include <stdint.h>
 
 #define CRYPTO_SECRETKEYBYTES KYBER_SECRETKEYBYTES
@@ -20,13 +21,13 @@
 #define crypto_kem_keypair_derand KYBER_NAMESPACE(keypair_derand)
 int crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins);
 
-int kem_keypair(uint8_t *pk, uint8_t *sk);
+int kem_keypair(uint8_t *pk, uint8_t *sk, Rng *rng);
 
 #define crypto_kem_enc_derand KYBER_NAMESPACE(enc_derand)
 int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
 			  const uint8_t *coins);
 
-int kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk);
+int kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk, Rng *rng);
 
 int kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk);
 

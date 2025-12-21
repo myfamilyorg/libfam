@@ -274,15 +274,13 @@ PUBLIC void keyfrom(SecretKey *sk_in, PublicKey *pk_in, u8 seed[32]) {
 	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
 }
 
-PUBLIC void sign(Signature *sm_in, const Message *msg, const SecretKey *sk_in) {
+PUBLIC void sign(Signature *sm_in, const Message *msg, const SecretKey *sk_in,
+		 Rng *rng) {
 	u8 *sm = (void *)sm_in;
 	const u8 *sk = (void *)sk_in;
 	const u8 *m = (void *)msg;
-	u8 rnd[RNDBYTES];
-	Rng rng;
-
-	rng_init(&rng);
-	rng_gen(&rng, rnd, RNDBYTES);
+	u8 rnd[RNDBYTES] = {0};
+	if (rng) rng_gen(rng, rnd, RNDBYTES);
 
 	fastmemcpy(sm + CRYPTO_BYTES, m, MLEN);
 	signature_internal(sm, sm + CRYPTO_BYTES, rnd, sk);
