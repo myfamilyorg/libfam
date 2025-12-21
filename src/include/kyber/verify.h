@@ -3,13 +3,8 @@
 
 #include <kyber/params.h>
 
-#define verify KYBER_NAMESPACE(verify)
-int verify(const u8 *a, const u8 *b, u64 len);
-
-#define cmov KYBER_NAMESPACE(cmov)
+int kyber_verify(const u8 *a, const u8 *b, u64 len);
 void cmov(u8 *r, const u8 *x, u64 len, u8 b);
-
-#define cmov_int16 KYBER_NAMESPACE(cmov_int16)
 void cmov_int16(i16 *r, i16 v, u16 b);
 
 #endif

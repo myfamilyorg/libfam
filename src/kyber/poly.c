@@ -303,7 +303,7 @@ void poly_tomont(poly *r) {
 	unsigned int i;
 	const i16 f = (1ULL << 32) % KYBER_Q;
 	for (i = 0; i < KYBER_N; i++)
-		r->coeffs[i] = montgomery_reduce((i32)r->coeffs[i] * f);
+		r->coeffs[i] = montgomery_reduce16((i32)r->coeffs[i] * f);
 }
 
 /*************************************************

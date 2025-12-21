@@ -12,7 +12,7 @@
  *
  * Returns:     integer in {-q+1,...,q-1} congruent to a * R^-1 modulo q.
  **************************************************/
-i16 montgomery_reduce(i32 a) {
+i16 montgomery_reduce16(i32 a) {
 	i16 t;
 
 	t = (i16)a * QINV;

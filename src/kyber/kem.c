@@ -148,7 +148,7 @@ int kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
 	/* coins are in kr+KYBER_SYMBYTES */
 	indcpa_enc(cmp, buf, pk, kr + KYBER_SYMBYTES);
 
-	fail = verify(ct, cmp, KYBER_CIPHERTEXTBYTES);
+	fail = kyber_verify(ct, cmp, KYBER_CIPHERTEXTBYTES);
 
 	/* Compute rejection key */
 	rkprf(ss, sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES, ct);

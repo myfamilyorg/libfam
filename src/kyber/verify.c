@@ -11,7 +11,7 @@
  *
  * Returns 0 if the byte arrays are equal, 1 otherwise
  **************************************************/
-int verify(const u8 *a, const u8 *b, u64 len) {
+int kyber_verify(const u8 *a, const u8 *b, u64 len) {
 	u64 i;
 	u8 r = 0;
 
