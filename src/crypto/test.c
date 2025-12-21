@@ -296,7 +296,7 @@ Test(kyber) {
 	ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES), "shared secret");
 }
 
-#define KYBER_COUNT 100
+#define KYBER_COUNT 10000
 
 Test(kyber_perf) {
 	__attribute__((aligned(32))) u8 sk[KYBER_SECRETKEYBYTES] = {0};
@@ -387,9 +387,7 @@ Test(kyberavx_perf) {
 	(void)enc_sum;
 	(void)dec_sum;
 
-	/*
 	println("keygen={},enc={},dec={}", keygen_sum / KYBER_COUNT,
 		enc_sum / KYBER_COUNT, dec_sum / KYBER_COUNT);
-		*/
 }
 #endif /* __AVX2__ */

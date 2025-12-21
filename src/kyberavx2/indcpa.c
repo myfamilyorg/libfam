@@ -134,6 +134,7 @@ static void unpack_ciphertext(polyvec *b, poly *v,
  *
  * Returns number of sampled 16-bit integers (at most len)
  **************************************************/
+/*
 static unsigned int rej_uniform(int16_t *r, unsigned int len,
 				const uint8_t *buf, unsigned int buflen) {
 	unsigned int ctr, pos;
@@ -153,6 +154,7 @@ static unsigned int rej_uniform(int16_t *r, unsigned int len,
 
 	return ctr;
 }
+*/
 
 #define gen_a(A, B) gen_matrix(A, B, 0)
 #define gen_at(A, B) gen_matrix(A, B, 1)
@@ -170,10 +172,9 @@ static unsigned int rej_uniform(int16_t *r, unsigned int len,
  *              - int transposed: boolean deciding whether A or A^T is generated
  **************************************************/
 void gen_matrix(polyvec *a, const uint8_t seed[32], int transposed) {
-	unsigned int ctr0, ctr1, ctr2, ctr3;
-	ALIGNED_UINT8(REJ_UNIFORM_AVX_NBLOCKS * SHAKE128_RATE) buf[4];
+	unsigned int ctr0 = 0, ctr1 = 0, ctr2 = 0, ctr3 = 0;
+	ALIGNED_UINT8(REJ_UNIFORM_AVX_NBLOCKS * SHAKE128_RATE) buf[4] = {0};
 	__m256i f;
-	keccakx4_state state;
 
 	f = _mm256_loadu_si256((__m256i *)seed);
 	_mm256_store_si256(buf[0].vec, f);
@@ -182,25 +183,53 @@ void gen_matrix(polyvec *a, const uint8_t seed[32], int transposed) {
 	_mm256_store_si256(buf[3].vec, f);
 
 	if (transposed) {
-		buf[0].coeffs[32] = 0;
-		buf[0].coeffs[33] = 0;
-		buf[1].coeffs[32] = 0;
-		buf[1].coeffs[33] = 1;
-		buf[2].coeffs[32] = 1;
-		buf[2].coeffs[33] = 0;
-		buf[3].coeffs[32] = 1;
-		buf[3].coeffs[33] = 1;
+		buf[0].coeffs[0] = 0;
+		buf[0].coeffs[1] = 0;
+		buf[1].coeffs[0] = 0;
+		buf[1].coeffs[1] = 1;
+		buf[2].coeffs[0] = 1;
+		buf[2].coeffs[1] = 0;
+		buf[3].coeffs[0] = 1;
+		buf[3].coeffs[1] = 1;
 	} else {
-		buf[0].coeffs[32] = 0;
-		buf[0].coeffs[33] = 0;
-		buf[1].coeffs[32] = 1;
-		buf[1].coeffs[33] = 0;
-		buf[2].coeffs[32] = 0;
-		buf[2].coeffs[33] = 1;
-		buf[3].coeffs[32] = 1;
-		buf[3].coeffs[33] = 1;
+		buf[0].coeffs[0] = 0;
+		buf[0].coeffs[1] = 0;
+		buf[1].coeffs[0] = 1;
+		buf[1].coeffs[1] = 0;
+		buf[2].coeffs[0] = 0;
+		buf[2].coeffs[1] = 1;
+		buf[3].coeffs[0] = 1;
+		buf[3].coeffs[1] = 1;
 	}
 
+	__attribute__((aligned(32))) static const u8 MAT_DOMAIN[32] = {
+	    1, 1, 1, 5, 6, 7, 3, 3, 2};
+	StormContext ctx1, ctx2, ctx3, ctx4;
+	storm_init(&ctx1, MAT_DOMAIN);
+	storm_init(&ctx2, MAT_DOMAIN);
+	storm_init(&ctx3, MAT_DOMAIN);
+	storm_init(&ctx4, MAT_DOMAIN);
+	storm_next_block(&ctx1, (u8 *)buf[0].coeffs);
+	storm_next_block(&ctx2, (u8 *)buf[1].coeffs);
+	storm_next_block(&ctx3, (u8 *)buf[2].coeffs);
+	storm_next_block(&ctx4, (u8 *)buf[3].coeffs);
+
+	while (ctr0 < KYBER_N || ctr1 < KYBER_N || ctr2 < KYBER_N ||
+	       ctr3 < KYBER_N) {
+		for (u32 i = 0; i < sizeof(buf[0].coeffs); i += 32) {
+			storm_next_block(&ctx1, (u8 *)buf[0].coeffs + i);
+			storm_next_block(&ctx2, (u8 *)buf[1].coeffs + i);
+			storm_next_block(&ctx3, (u8 *)buf[2].coeffs + i);
+			storm_next_block(&ctx4, (u8 *)buf[3].coeffs + i);
+		}
+
+		ctr0 = rej_uniform_avx(a[0].vec[0].coeffs, buf[0].coeffs);
+		ctr1 = rej_uniform_avx(a[0].vec[1].coeffs, buf[1].coeffs);
+		ctr2 = rej_uniform_avx(a[1].vec[0].coeffs, buf[2].coeffs);
+		ctr3 = rej_uniform_avx(a[1].vec[1].coeffs, buf[3].coeffs);
+	}
+
+	/*
 	shake128x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
 			       buf[2].coeffs, buf[3].coeffs, 34);
 	shake128x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs, buf[2].coeffs,
@@ -227,6 +256,7 @@ void gen_matrix(polyvec *a, const uint8_t seed[32], int transposed) {
 		ctr3 += rej_uniform(a[1].vec[1].coeffs + ctr3, KYBER_N - ctr3,
 				    buf[3].coeffs, SHAKE128_RATE);
 	}
+	*/
 
 	poly_nttunpack(&a[0].vec[0]);
 	poly_nttunpack(&a[0].vec[1]);
