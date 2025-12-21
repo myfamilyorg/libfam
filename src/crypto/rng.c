@@ -60,7 +60,7 @@ STATIC i32 try_fill_hardware(u8 buf[32]) {
 		if (ok) return 0;
 	}
 #endif
-#if defined(__aarch64__)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_RNDR)
 	static int has_rng = -1;
 	if (has_rng < 0) {
 		u64 isar0;
