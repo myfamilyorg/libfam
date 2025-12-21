@@ -1,12 +1,11 @@
+#include <kyber/indcpa.h>
+#include <kyber/params.h>
+#include <kyber/symmetric.h>
+#include <kyber/verify.h>
 #include <libfam/rng.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-#include "indcpa.h"
-#include "params.h"
-#include "symmetric.h"
-#include "verify.h"
 
 /*************************************************
  * Name:        crypto_kem_keypair_derand

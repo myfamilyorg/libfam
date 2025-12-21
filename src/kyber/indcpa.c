@@ -1,14 +1,12 @@
-#include "indcpa.h"
-
+#include <kyber/indcpa.h>
+#include <kyber/ntt.h>
+#include <kyber/params.h>
+#include <kyber/poly.h>
+#include <kyber/polyvec.h>
+#include <kyber/symmetric.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-#include "ntt.h"
-#include "params.h"
-#include "poly.h"
-#include "polyvec.h"
-#include "symmetric.h"
 
 /*************************************************
  * Name:        pack_pk
