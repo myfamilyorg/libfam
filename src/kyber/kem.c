@@ -3,7 +3,10 @@
 #include <kyber/symmetric.h>
 #include <kyber/verify.h>
 #include <libfam/rng.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
+
+__attribute__((aligned(32))) u8 HASH_H_DOMAIN[32] = {1, 1, 2, 1, 2, 1};
 
 /*************************************************
  * Name:        crypto_kem_keypair_derand
@@ -22,10 +25,19 @@
  * Returns 0 (success)
  **************************************************/
 int crypto_kem_keypair_derand(u8 *pk, u8 *sk, const u8 *coins) {
+	StormContext ctx;
 	indcpa_keypair_derand(pk, sk, coins);
+	__attribute__((aligned(32))) u8 pk_copy[KYBER_PUBLICKEYBYTES];
+
 	fastmemcpy(sk + KYBER_INDCPA_SECRETKEYBYTES, pk, KYBER_PUBLICKEYBYTES);
-	hash_h(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, pk,
-	       KYBER_PUBLICKEYBYTES);
+
+	storm_init(&ctx, HASH_H_DOMAIN);
+	fastmemcpy(pk_copy, pk, KYBER_PUBLICKEYBYTES);
+	for (u32 i = 0; i < KYBER_PUBLICKEYBYTES; i += 32)
+		storm_next_block(&ctx, pk_copy + i);
+	fastmemset(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, 0, 32);
+	storm_next_block(&ctx, sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES);
+
 	/* Value z for pseudo-random output on reject */
 	fastmemcpy(sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES,
 		   coins + KYBER_SYMBYTES, KYBER_SYMBYTES);
@@ -75,11 +87,19 @@ int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins) {
 	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES];
 	/* Will contain key, coins */
 	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES];
+	StormContext ctx;
+	__attribute__((aligned(32))) u8 pk_copy[KYBER_PUBLICKEYBYTES];
 
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 
 	/* Multitarget countermeasure for coins + contributory KEM */
-	hash_h(buf + KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
+	storm_init(&ctx, HASH_H_DOMAIN);
+	fastmemcpy(pk_copy, pk, KYBER_PUBLICKEYBYTES);
+	for (u32 i = 0; i < KYBER_PUBLICKEYBYTES; i += 32)
+		storm_next_block(&ctx, pk_copy + i);
+	fastmemset(buf + KYBER_SYMBYTES, 0, 32);
+	storm_next_block(&ctx, buf + KYBER_SYMBYTES);
+
 	hash_g(kr, buf, 2 * KYBER_SYMBYTES);
 
 	/* coins are in kr+KYBER_SYMBYTES */
@@ -133,7 +153,6 @@ int kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
 	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES];
 	/* Will contain key, coins */
 	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES];
-	//  u8 cmp[KYBER_CIPHERTEXTBYTES+KYBER_SYMBYTES];
 	__attribute__((aligned(32))) u8 cmp[KYBER_CIPHERTEXTBYTES];
 	const u8 *pk = sk + KYBER_INDCPA_SECRETKEYBYTES;
 
