@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <kyber/kem.h>
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/format.h>
@@ -277,5 +278,60 @@ Test(bible_mine) {
 		       32),
 	       "hash");
 	bible_destroy(b);
+}
+
+Test(kyber) {
+	__attribute__((aligned(32))) u8 sk[KYBER_SECRETKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 pk[KYBER_PUBLICKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_bob[KYBER_SSBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_alice[KYBER_SSBYTES] = {1};
+
+	Rng rng1, rng2;
+	rng_init(&rng1);
+	rng_init(&rng2);
+	kem_keypair(pk, sk, &rng1);
+	kem_enc(ct, ss_bob, pk, &rng2);
+	kem_dec(ss_alice, ct, sk);
+	ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES), "shared secret");
+}
+
+#define KYBER_COUNT 100
+
+Test(kyber_perf) {
+	__attribute__((aligned(32))) u8 sk[KYBER_SECRETKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 pk[KYBER_PUBLICKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 ct[KYBER_CIPHERTEXTBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_bob[KYBER_SSBYTES] = {0};
+	__attribute__((aligned(32))) u8 ss_alice[KYBER_SSBYTES] = {1};
+	Rng rng1, rng2;
+	u64 keygen_sum = 0;
+	u64 enc_sum = 0;
+	u64 dec_sum = 0;
+
+	for (u32 i = 0; i < KYBER_COUNT; i++) {
+		rng_init(&rng1);
+		rng_init(&rng2);
+		u64 start = cycle_counter();
+		kem_keypair(pk, sk, &rng1);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		kem_enc(ct, ss_bob, pk, &rng2);
+		enc_sum += cycle_counter() - start;
+		start = cycle_counter();
+		kem_dec(ss_alice, ct, sk);
+		dec_sum += cycle_counter() - start;
+		ASSERT(!fastmemcmp(ss_bob, ss_alice, KYBER_SSBYTES),
+		       "shared secret");
+	}
+
+	(void)keygen_sum;
+	(void)enc_sum;
+	(void)dec_sum;
+
+	/*
+	println("keygen={},enc={},dec={}", keygen_sum / KYBER_COUNT,
+		enc_sum / KYBER_COUNT, dec_sum / KYBER_COUNT);
+		*/
 }
 
