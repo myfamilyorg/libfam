@@ -126,7 +126,7 @@ Test(rng) {
 	__attribute__((aligned(32))) u8 key[32] = {5, 5, 5, 5};
 	rng_init(&rng);
 	rng_gen(&rng, &x, sizeof(x));
-	rng_reseed(&rng);
+	rng_init(&rng);
 	rng_gen(&rng, &y, sizeof(y));
 	ASSERT(x != y, "x!=y");
 

@@ -34,7 +34,6 @@ typedef struct {
 } Rng;
 
 void rng_init(Rng *rng);
-void rng_reseed(Rng *rng);
 void rng_gen(Rng *rng, void *v, u64 size);
 
 #if TEST == 1
