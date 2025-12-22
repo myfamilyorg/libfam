@@ -1,7 +1,7 @@
 #ifndef KEM_H
 #define KEM_H
 
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
 #include <libfam/rng.h>
 #include <stdint.h>
 

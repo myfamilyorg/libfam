@@ -2,8 +2,8 @@
 #define CBD_H
 
 #include <immintrin.h>
-#include <kyber_avx2/params.h>
 #include <kyber_avx2/poly.h>
+#include <kyber_common/params.h>
 #include <stdint.h>
 
 #define poly_cbd_eta1 KYBER_NAMESPACE(poly_cbd_eta1)

@@ -1,7 +1,8 @@
 #ifndef REDUCE_H
 #define REDUCE_H
 
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
+#include <kyber_scalar/namespace.h>
 #include <stdint.h>
 
 #define MONT -1044  // 2^16 mod q

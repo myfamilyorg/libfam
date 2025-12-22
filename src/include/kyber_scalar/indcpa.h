@@ -1,7 +1,7 @@
 #ifndef INDCPA_H
 #define INDCPA_H
 
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
 #include <kyber_scalar/polyvec.h>
 #include <stdint.h>
 

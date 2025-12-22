@@ -1,7 +1,7 @@
 #ifndef REJSAMPLE_H
 #define REJSAMPLE_H
 
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 #include <stdint.h>
 
 #define REJ_UNIFORM_AVX_NBLOCKS 3

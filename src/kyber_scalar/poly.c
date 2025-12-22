@@ -1,6 +1,6 @@
 #include <kyber_scalar/cbd.h>
 #include <kyber_scalar/ntt.h>
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/reduce.h>
 #include <kyber_scalar/verify.h>

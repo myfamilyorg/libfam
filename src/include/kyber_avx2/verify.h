@@ -1,7 +1,8 @@
 #ifndef VERIFY_H
 #define VERIFY_H
 
-#include <kyber_avx2/params.h>
+#include <kyber_avx2/namespace.h>
+#include <kyber_common/params.h>
 #include <stddef.h>
 #include <stdint.h>
 

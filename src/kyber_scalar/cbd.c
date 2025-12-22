@@ -1,5 +1,5 @@
 #include <kyber_scalar/cbd.h>
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
 #include <stdint.h>
 
 /*************************************************

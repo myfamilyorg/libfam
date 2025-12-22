@@ -1,7 +1,7 @@
 #ifndef CBD_H
 #define CBD_H
 
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
 #include <kyber_scalar/poly.h>
 #include <stdint.h>
 

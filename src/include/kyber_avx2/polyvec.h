@@ -1,7 +1,7 @@
 #ifndef POLYVEC_H
 #define POLYVEC_H
 
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 #include <kyber_avx2/poly.h>
 #include <stdint.h>
 

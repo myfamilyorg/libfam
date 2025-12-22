@@ -1,7 +1,8 @@
 #ifndef VERIFY_H
 #define VERIFY_H
 
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
+#include <kyber_scalar/namespace.h>
 #include <stddef.h>
 #include <stdint.h>
 

@@ -1,7 +1,7 @@
 #ifndef INDCPA_H
 #define INDCPA_H
 
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 #include <kyber_avx2/polyvec.h>
 #include <stdint.h>
 

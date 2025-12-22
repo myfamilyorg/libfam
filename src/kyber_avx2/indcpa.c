@@ -3,7 +3,7 @@
 #include <kyber_avx2/cbd.h>
 #include <kyber_avx2/indcpa.h>
 #include <kyber_avx2/ntt.h>
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 #include <kyber_avx2/poly.h>
 #include <kyber_avx2/polyvec.h>
 #include <kyber_avx2/randombytes.h>

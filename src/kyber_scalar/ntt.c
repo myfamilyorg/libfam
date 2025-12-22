@@ -1,5 +1,5 @@
 #include <kyber_scalar/ntt.h>
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
 #include <kyber_scalar/reduce.h>
 #include <stdint.h>
 

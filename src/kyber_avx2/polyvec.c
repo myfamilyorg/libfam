@@ -1,7 +1,7 @@
 #include <immintrin.h>
 #include <kyber_avx2/consts.h>
 #include <kyber_avx2/ntt.h>
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 #include <kyber_avx2/poly.h>
 #include <kyber_avx2/polyvec.h>
 #include <libfam/string.h>

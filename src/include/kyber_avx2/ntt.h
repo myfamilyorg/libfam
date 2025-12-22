@@ -1,8 +1,9 @@
 #ifndef NTT_H
 #define NTT_H
 
-#include <stdint.h>
 #include <immintrin.h>
+#include <kyber_avx2/namespace.h>
+#include <stdint.h>
 
 #define ntt_avx KYBER_NAMESPACE(ntt_avx)
 void ntt_avx(__m256i *r, const __m256i *qdata);
@@ -15,10 +16,8 @@ void nttpack_avx(__m256i *r, const __m256i *qdata);
 void nttunpack_avx(__m256i *r, const __m256i *qdata);
 
 #define basemul_avx KYBER_NAMESPACE(basemul_avx)
-void basemul_avx(__m256i *r,
-                 const __m256i *a,
-                 const __m256i *b,
-                 const __m256i *qdata);
+void basemul_avx(__m256i *r, const __m256i *a, const __m256i *b,
+		 const __m256i *qdata);
 
 #define ntttobytes_avx KYBER_NAMESPACE(ntttobytes_avx)
 void ntttobytes_avx(uint8_t *r, const __m256i *a, const __m256i *qdata);

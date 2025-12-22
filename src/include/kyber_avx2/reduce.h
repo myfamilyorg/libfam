@@ -2,7 +2,7 @@
 #define REDUCE_H
 
 #include <immintrin.h>
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 
 #define reduce_avx KYBER_NAMESPACE(reduce_avx)
 void reduce_avx(__m256i *r, const __m256i *qdata);

@@ -1,7 +1,8 @@
 #ifndef CONSTS_H
 #define CONSTS_H
 
-#include <kyber_avx2/params.h>
+#include <kyber_avx2/namespace.h>
+#include <kyber_common/params.h>
 
 #define _16XQ 0
 #define _16XQINV 16

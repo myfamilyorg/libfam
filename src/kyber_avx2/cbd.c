@@ -1,6 +1,6 @@
 #include <immintrin.h>
 #include <kyber_avx2/cbd.h>
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 #include <stdint.h>
 
 /*************************************************

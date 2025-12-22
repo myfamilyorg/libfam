@@ -1,7 +1,8 @@
 #ifndef POLY_H
 #define POLY_H
 
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
+#include <kyber_scalar/namespace.h>
 #include <stdint.h>
 
 /*

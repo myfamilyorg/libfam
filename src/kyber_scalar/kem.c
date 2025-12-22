@@ -1,6 +1,6 @@
 #include <kyber_scalar/indcpa.h>
 #include <kyber_scalar/kem.h>
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
 #include <kyber_scalar/randombytes.h>
 #include <kyber_scalar/verify.h>
 #include <libfam/kem_impl.h>
