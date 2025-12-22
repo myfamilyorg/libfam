@@ -28,7 +28,7 @@
 
 #include <libfam/types.h>
 
-#define WOTS_CHAINS 34
+#define WOTS_CHAINS 18
 #define WOTS_CHAIN_LEN 256
 #define WOTS_HASH_BYTES 32
 

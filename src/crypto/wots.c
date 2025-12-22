@@ -28,9 +28,8 @@
 #include <libfam/wots.h>
 
 #define WOTS_W 256
-#define WOTS_LOG_W 8
 #define WOTS_N 32
-#define WOTS_LEN1 32
+#define WOTS_LEN1 16
 #define WOTS_LEN2 2
 #define WOTS_LEN (WOTS_LEN1 + WOTS_LEN2)
 
