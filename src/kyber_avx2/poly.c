@@ -6,11 +6,12 @@
 #include <kyber_avx2/params.h>
 #include <kyber_avx2/poly.h>
 #include <kyber_avx2/reduce.h>
-#include <kyber_avx2/symmetric.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <stdint.h>
 #include <string.h>
+
+#define SHAKE256_RATE 136
 
 /*************************************************
  * Name:        poly_compress

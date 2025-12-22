@@ -3,7 +3,6 @@
 #include <kyber_scalar/params.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/reduce.h>
-#include <kyber_scalar/symmetric.h>
 #include <kyber_scalar/verify.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
