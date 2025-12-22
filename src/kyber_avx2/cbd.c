@@ -1,18 +1,33 @@
+/********************************************************************************
+ * MIT License
+ *
+ * Copyright (c) 2025 Christopher Gilliard
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+
 #include <immintrin.h>
 #include <kyber_avx2/cbd.h>
 #include <kyber_common/params.h>
 
-/*************************************************
- * Name:        cbd2
- *
- * Description: Given an array of uniformly random bytes, compute
- *              polynomial with coefficients distributed according to
- *              a centered binomial distribution with parameter eta=2
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const __m256i *buf: pointer to aligned input byte array
- **************************************************/
-static void cbd2(poly *restrict r, const __m256i buf[2 * KYBER_N / 128]) {
+STATIC void cbd2(poly *restrict r, const __m256i buf[2 * KYBER_N / 128]) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;
 	const __m256i mask55 = _mm256_set1_epi32(0x55555555);
@@ -55,19 +70,7 @@ static void cbd2(poly *restrict r, const __m256i buf[2 * KYBER_N / 128]) {
 	}
 }
 
-#if KYBER_ETA1 == 3
-/*************************************************
- * Name:        cbd3
- *
- * Description: Given an array of uniformly random bytes, compute
- *              polynomial with coefficients distributed according to
- *              a centered binomial distribution with parameter eta=3
- *              This function is only needed for Kyber-512
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const __m256i *buf: pointer to aligned input byte array
- **************************************************/
-static void cbd3(poly *restrict r, const u8 buf[3 * KYBER_N / 4 + 8]) {
+STATIC void cbd3(poly *restrict r, const u8 buf[3 * KYBER_N / 4 + 8]) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;
 	const __m256i mask249 = _mm256_set1_epi32(0x249249);
@@ -118,23 +121,11 @@ static void cbd3(poly *restrict r, const u8 buf[3 * KYBER_N / 4 + 8]) {
 		_mm256_store_si256(&r->vec[2 * i + 1], f1);
 	}
 }
-#endif
 
-/* buf 32 bytes longer for cbd3 */
 void poly_cbd_eta1(poly *r, const __m256i buf[KYBER_ETA1 * KYBER_N / 128 + 1]) {
-#if KYBER_ETA1 == 2
-	cbd2(r, buf);
-#elif KYBER_ETA1 == 3
 	cbd3(r, (u8 *)buf);
-#else
-#error "This implementation requires eta1 in {2,3}"
-#endif
 }
 
 void poly_cbd_eta2(poly *r, const __m256i buf[KYBER_ETA2 * KYBER_N / 128]) {
-#if KYBER_ETA2 == 2
 	cbd2(r, buf);
-#else
-#error "This implementation requires eta2 = 2"
-#endif
 }

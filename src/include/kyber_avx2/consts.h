@@ -4,6 +4,11 @@
 #include <kyber_avx2/namespace.h>
 #include <kyber_common/params.h>
 
+#define cdecl(s) KYBER_NAMESPACE(##s)
+
+#define STORM128_RATE 168
+#define XOF_BLOCKBYTES 168
+#define STORM_RATE 136
 #define _16XQ 0
 #define _16XQINV 16
 #define _16XV 32
@@ -17,22 +22,16 @@
 #define _ZETAS_EXP 160
 #define _16XSHIFT 624
 
-/* The C ABI on MacOS exports all symbols with a leading
- * underscore. This means that any symbols we refer to from
- * C files (functions) can't be found, and all symbols we
- * refer to from ASM also can't be found.
- *
- * This define helps us get around this
- */
-#ifdef __ASSEMBLER__
-#if defined(__WIN32__) || defined(__APPLE__)
-#define decorate(s) _##s
-#define cdecl2(s) decorate(s)
-#define cdecl(s) cdecl2(KYBER_NAMESPACE(##s))
-#else
-#define cdecl(s) KYBER_NAMESPACE(##s)
-#endif
-#endif
+#define Q KYBER_Q
+#define MONT -1044	// 2^16 mod q
+#define QINV -3327	// q^-1 mod 2^16
+#define V 20159		// floor(2^26/q + 0.5)
+#define FHI 1441	// mont^2/128
+#define FLO -10079	// qinv*FHI
+#define MONTSQHI 1353	// mont^2
+#define MONTSQLO 20553	// qinv*MONTSQHI
+#define MASK 4095
+#define SHIFT 32
 
 #ifndef __ASSEMBLER__
 #include <kyber_avx2/align.h>

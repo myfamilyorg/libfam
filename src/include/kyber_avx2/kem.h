@@ -18,18 +18,18 @@
 #endif
 
 #define crypto_kem_keypair_derand KYBER_NAMESPACE(keypair_derand)
-int crypto_kem_keypair_derand(u8 *pk, u8 *sk, const u8 *coins);
+void crypto_kem_keypair_derand(u8 *pk, u8 *sk, const u8 *coins);
 
 #define crypto_kem_keypair KYBER_NAMESPACE(keypair)
-int crypto_kem_keypair(u8 *pk, u8 *sk, Rng *rng);
+void crypto_kem_keypair(u8 *pk, u8 *sk, Rng *rng);
 
 #define crypto_kem_enc_derand KYBER_NAMESPACE(enc_derand)
-int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins);
+void crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins);
 
 #define crypto_kem_enc KYBER_NAMESPACE(enc)
-int crypto_kem_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng);
+void crypto_kem_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng);
 
 #define crypto_kem_dec KYBER_NAMESPACE(dec)
-int crypto_kem_dec(u8 *ss, const u8 *ct, const u8 *sk);
+void crypto_kem_dec(u8 *ss, const u8 *ct, const u8 *sk);
 
 #endif
