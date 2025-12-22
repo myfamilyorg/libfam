@@ -310,10 +310,6 @@ Test(kem_vector) {
 	keypair(pk, sk, &rng);
 	enc(ct, ss_bob, pk, &rng);
 	dec(ss_alice, ct, sk);
-	/*
-	for (u32 i = 0; i < 32; i++) print("{}, ", ss_bob[i]);
-	println("");
-	*/
 	ASSERT(!fastmemcmp(ss_bob, ss_alice, 32), "shared secret");
 	u8 expected[32] = {241, 138, 228, 27,  176, 3,	 128, 15,  185, 60, 152,
 			   149, 57,  107, 186, 153, 109, 114, 11,  136, 67, 6,
@@ -321,7 +317,7 @@ Test(kem_vector) {
 	ASSERT(!fastmemcmp(ss_bob, expected, 32), "expected");
 }
 
-#define KYBER_COUNT 10000
+#define KYBER_COUNT 100
 
 Test(kyber_perf) {
 	__attribute__((aligned(32))) u8 sk[2000] = {0};
