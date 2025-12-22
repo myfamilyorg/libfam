@@ -165,31 +165,29 @@ static unsigned int rej_uniform(int16_t *r, unsigned int len,
 	((12 * KYBER_N / 8 * (1 << 12) / KYBER_Q + XOF_BLOCKBYTES) / \
 	 XOF_BLOCKBYTES)
 // Not static for benchmarking
-#include <libfam/format.h>
-void gen_matrix(polyvec *a, const uint8_t seed[KYBER_SYMBYTES],
-		int transposed) {
-	unsigned int ctr, i, j;
-	unsigned int buflen;
-	uint8_t buf[GEN_MATRIX_NBLOCKS * XOF_BLOCKBYTES] = {0};
-	xof_state state;
+void gen_matrix(polyvec *a, const u8 seed[KYBER_SYMBYTES], int transposed) {
+	u32 ctr, i, j;
+	__attribute__((aligned(32))) u8 buf[32] = {0};
+	StormContext state;
+
+	fastmemcpy(buf, seed, 32);
 
 	for (i = 0; i < KYBER_K; i++) {
 		for (j = 0; j < KYBER_K; j++) {
+			fastmemcpy(buf, seed, 32);
 			if (transposed)
-				xof_absorb(&state, seed, i, j);
+				buf[0] = i, buf[1] = j;
 			else
-				xof_absorb(&state, seed, j, i);
+				buf[1] = i, buf[0] = j;
 
-			xof_squeezeblocks(buf, GEN_MATRIX_NBLOCKS, &state);
-			buflen = GEN_MATRIX_NBLOCKS * XOF_BLOCKBYTES;
-			ctr = rej_uniform(a[i].vec[j].coeffs, KYBER_N, buf,
-					  buflen);
+			storm_init(&state, buf);
+			storm_next_block(&state, buf);
+			ctr = rej_uniform(a[i].vec[j].coeffs, KYBER_N, buf, 32);
 
 			while (ctr < KYBER_N) {
-				xof_squeezeblocks(buf, 1, &state);
-				buflen = XOF_BLOCKBYTES;
+				storm_next_block(&state, buf);
 				ctr += rej_uniform(a[i].vec[j].coeffs + ctr,
-						   KYBER_N - ctr, buf, buflen);
+						   KYBER_N - ctr, buf, 32);
 			}
 		}
 	}
