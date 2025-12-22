@@ -4,7 +4,6 @@
 #include <immintrin.h>
 #include <kyber_avx2/namespace.h>
 #include <libfam/types.h>
-#include <stdint.h>
 
 #define ntt_avx KYBER_NAMESPACE(ntt_avx)
 void ntt_avx(__m256i *r, const __m256i *qdata);

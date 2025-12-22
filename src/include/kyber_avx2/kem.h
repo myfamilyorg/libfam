@@ -3,7 +3,6 @@
 
 #include <kyber_common/params.h>
 #include <libfam/rng.h>
-#include <stdint.h>
 
 #define CRYPTO_SECRETKEYBYTES KYBER_SECRETKEYBYTES
 #define CRYPTO_PUBLICKEYBYTES KYBER_PUBLICKEYBYTES
@@ -25,8 +24,7 @@ int crypto_kem_keypair_derand(u8 *pk, u8 *sk, const u8 *coins);
 int crypto_kem_keypair(u8 *pk, u8 *sk, Rng *rng);
 
 #define crypto_kem_enc_derand KYBER_NAMESPACE(enc_derand)
-int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk,
-			  const u8 *coins);
+int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins);
 
 #define crypto_kem_enc KYBER_NAMESPACE(enc)
 int crypto_kem_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng);

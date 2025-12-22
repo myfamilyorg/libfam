@@ -3,7 +3,6 @@
 
 #include <immintrin.h>
 #include <libfam/types.h>
-#include <stdint.h>
 
 #define ALIGNED_UINT8(N)                    \
 	union {                             \

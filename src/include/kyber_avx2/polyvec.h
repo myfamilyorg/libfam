@@ -1,17 +1,15 @@
 #ifndef POLYVEC_H
 #define POLYVEC_H
 
-#include <kyber_common/params.h>
 #include <kyber_avx2/poly.h>
-#include <stdint.h>
+#include <kyber_common/params.h>
 
 typedef struct {
 	poly vec[KYBER_K];
 } polyvec;
 
 #define polyvec_compress KYBER_NAMESPACE(polyvec_compress)
-void polyvec_compress(u8 r[KYBER_POLYVECCOMPRESSEDBYTES + 2],
-		      const polyvec *a);
+void polyvec_compress(u8 r[KYBER_POLYVECCOMPRESSEDBYTES + 2], const polyvec *a);
 #define polyvec_decompress KYBER_NAMESPACE(polyvec_decompress)
 void polyvec_decompress(polyvec *r,
 			const u8 a[KYBER_POLYVECCOMPRESSEDBYTES + 12]);

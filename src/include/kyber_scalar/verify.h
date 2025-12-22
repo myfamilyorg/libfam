@@ -3,8 +3,6 @@
 
 #include <kyber_common/params.h>
 #include <kyber_scalar/namespace.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #define verify KYBER_NAMESPACE(verify)
 int verify(const u8 *a, const u8 *b, u64 len);

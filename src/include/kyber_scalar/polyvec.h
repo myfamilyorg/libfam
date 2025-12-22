@@ -3,18 +3,15 @@
 
 #include <kyber_common/params.h>
 #include <kyber_scalar/poly.h>
-#include <stdint.h>
 
 typedef struct {
 	poly vec[KYBER_K];
 } polyvec;
 
 #define polyvec_compress KYBER_NAMESPACE(polyvec_compress)
-void polyvec_compress(u8 r[KYBER_POLYVECCOMPRESSEDBYTES],
-		      const polyvec *a);
+void polyvec_compress(u8 r[KYBER_POLYVECCOMPRESSEDBYTES], const polyvec *a);
 #define polyvec_decompress KYBER_NAMESPACE(polyvec_decompress)
-void polyvec_decompress(polyvec *r,
-			const u8 a[KYBER_POLYVECCOMPRESSEDBYTES]);
+void polyvec_decompress(polyvec *r, const u8 a[KYBER_POLYVECCOMPRESSEDBYTES]);
 
 #define polyvec_tobytes KYBER_NAMESPACE(polyvec_tobytes)
 void polyvec_tobytes(u8 r[KYBER_POLYVECBYTES], const polyvec *a);

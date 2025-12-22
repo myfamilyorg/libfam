@@ -1,8 +1,6 @@
 #ifndef API_H
 #define API_H
 
-#include <stdint.h>
-
 #define pqcrystals_kyber512_SECRETKEYBYTES 1632
 #define pqcrystals_kyber512_PUBLICKEYBYTES 800
 #define pqcrystals_kyber512_CIPHERTEXTBYTES 768
@@ -10,16 +8,21 @@
 #define pqcrystals_kyber512_ENCCOINBYTES 32
 #define pqcrystals_kyber512_BYTES 32
 
-#define pqcrystals_kyber512_ref_SECRETKEYBYTES pqcrystals_kyber512_SECRETKEYBYTES
-#define pqcrystals_kyber512_ref_PUBLICKEYBYTES pqcrystals_kyber512_PUBLICKEYBYTES
-#define pqcrystals_kyber512_ref_CIPHERTEXTBYTES pqcrystals_kyber512_CIPHERTEXTBYTES
-#define pqcrystals_kyber512_ref_KEYPAIRCOINBYTES pqcrystals_kyber512_KEYPAIRCOINBYTES
+#define pqcrystals_kyber512_ref_SECRETKEYBYTES \
+	pqcrystals_kyber512_SECRETKEYBYTES
+#define pqcrystals_kyber512_ref_PUBLICKEYBYTES \
+	pqcrystals_kyber512_PUBLICKEYBYTES
+#define pqcrystals_kyber512_ref_CIPHERTEXTBYTES \
+	pqcrystals_kyber512_CIPHERTEXTBYTES
+#define pqcrystals_kyber512_ref_KEYPAIRCOINBYTES \
+	pqcrystals_kyber512_KEYPAIRCOINBYTES
 #define pqcrystals_kyber512_ref_ENCCOINBYTES pqcrystals_kyber512_ENCCOINBYTES
 #define pqcrystals_kyber512_ref_BYTES pqcrystals_kyber512_BYTES
 
 int pqcrystals_kyber512_ref_keypair_derand(u8 *pk, u8 *sk, const u8 *coins);
 int pqcrystals_kyber512_ref_keypair(u8 *pk, u8 *sk);
-int pqcrystals_kyber512_ref_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins);
+int pqcrystals_kyber512_ref_enc_derand(u8 *ct, u8 *ss, const u8 *pk,
+				       const u8 *coins);
 int pqcrystals_kyber512_ref_enc(u8 *ct, u8 *ss, const u8 *pk);
 int pqcrystals_kyber512_ref_dec(u8 *ss, const u8 *ct, const u8 *sk);
 
@@ -30,16 +33,21 @@ int pqcrystals_kyber512_ref_dec(u8 *ss, const u8 *ct, const u8 *sk);
 #define pqcrystals_kyber768_ENCCOINBYTES 32
 #define pqcrystals_kyber768_BYTES 32
 
-#define pqcrystals_kyber768_ref_SECRETKEYBYTES pqcrystals_kyber768_SECRETKEYBYTES
-#define pqcrystals_kyber768_ref_PUBLICKEYBYTES pqcrystals_kyber768_PUBLICKEYBYTES
-#define pqcrystals_kyber768_ref_CIPHERTEXTBYTES pqcrystals_kyber768_CIPHERTEXTBYTES
-#define pqcrystals_kyber768_ref_KEYPAIRCOINBYTES pqcrystals_kyber768_KEYPAIRCOINBYTES
+#define pqcrystals_kyber768_ref_SECRETKEYBYTES \
+	pqcrystals_kyber768_SECRETKEYBYTES
+#define pqcrystals_kyber768_ref_PUBLICKEYBYTES \
+	pqcrystals_kyber768_PUBLICKEYBYTES
+#define pqcrystals_kyber768_ref_CIPHERTEXTBYTES \
+	pqcrystals_kyber768_CIPHERTEXTBYTES
+#define pqcrystals_kyber768_ref_KEYPAIRCOINBYTES \
+	pqcrystals_kyber768_KEYPAIRCOINBYTES
 #define pqcrystals_kyber768_ref_ENCCOINBYTES pqcrystals_kyber768_ENCCOINBYTES
 #define pqcrystals_kyber768_ref_BYTES pqcrystals_kyber768_BYTES
 
 int pqcrystals_kyber768_ref_keypair_derand(u8 *pk, u8 *sk, const u8 *coins);
 int pqcrystals_kyber768_ref_keypair(u8 *pk, u8 *sk);
-int pqcrystals_kyber768_ref_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins);
+int pqcrystals_kyber768_ref_enc_derand(u8 *ct, u8 *ss, const u8 *pk,
+				       const u8 *coins);
 int pqcrystals_kyber768_ref_enc(u8 *ct, u8 *ss, const u8 *pk);
 int pqcrystals_kyber768_ref_dec(u8 *ss, const u8 *ct, const u8 *sk);
 
@@ -50,16 +58,21 @@ int pqcrystals_kyber768_ref_dec(u8 *ss, const u8 *ct, const u8 *sk);
 #define pqcrystals_kyber1024_ENCCOINBYTES 32
 #define pqcrystals_kyber1024_BYTES 32
 
-#define pqcrystals_kyber1024_ref_SECRETKEYBYTES pqcrystals_kyber1024_SECRETKEYBYTES
-#define pqcrystals_kyber1024_ref_PUBLICKEYBYTES pqcrystals_kyber1024_PUBLICKEYBYTES
-#define pqcrystals_kyber1024_ref_CIPHERTEXTBYTES pqcrystals_kyber1024_CIPHERTEXTBYTES
-#define pqcrystals_kyber1024_ref_KEYPAIRCOINBYTES pqcrystals_kyber1024_KEYPAIRCOINBYTES
+#define pqcrystals_kyber1024_ref_SECRETKEYBYTES \
+	pqcrystals_kyber1024_SECRETKEYBYTES
+#define pqcrystals_kyber1024_ref_PUBLICKEYBYTES \
+	pqcrystals_kyber1024_PUBLICKEYBYTES
+#define pqcrystals_kyber1024_ref_CIPHERTEXTBYTES \
+	pqcrystals_kyber1024_CIPHERTEXTBYTES
+#define pqcrystals_kyber1024_ref_KEYPAIRCOINBYTES \
+	pqcrystals_kyber1024_KEYPAIRCOINBYTES
 #define pqcrystals_kyber1024_ref_ENCCOINBYTES pqcrystals_kyber1024_ENCCOINBYTES
 #define pqcrystals_kyber1024_ref_BYTES pqcrystals_kyber1024_BYTES
 
 int pqcrystals_kyber1024_ref_keypair_derand(u8 *pk, u8 *sk, const u8 *coins);
 int pqcrystals_kyber1024_ref_keypair(u8 *pk, u8 *sk);
-int pqcrystals_kyber1024_ref_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins);
+int pqcrystals_kyber1024_ref_enc_derand(u8 *ct, u8 *ss, const u8 *pk,
+					const u8 *coins);
 int pqcrystals_kyber1024_ref_enc(u8 *ct, u8 *ss, const u8 *pk);
 int pqcrystals_kyber1024_ref_dec(u8 *ss, const u8 *ct, const u8 *sk);
 

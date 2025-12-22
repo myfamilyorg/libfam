@@ -3,7 +3,6 @@
 
 #include <kyber_common/params.h>
 #include <kyber_scalar/namespace.h>
-#include <stdint.h>
 
 /*
  * Elements of R_q = Z_q[X]/(X^n + 1). Represents polynomial
@@ -29,12 +28,10 @@ void poly_frommsg(poly *r, const u8 msg[KYBER_INDCPA_MSGBYTES]);
 void poly_tomsg(u8 msg[KYBER_INDCPA_MSGBYTES], const poly *r);
 
 #define poly_getnoise_eta1 KYBER_NAMESPACE(poly_getnoise_eta1)
-void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES],
-			u8 nonce);
+void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce);
 
 #define poly_getnoise_eta2 KYBER_NAMESPACE(poly_getnoise_eta2)
-void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES],
-			u8 nonce);
+void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce);
 
 #define poly_ntt KYBER_NAMESPACE(poly_ntt)
 void poly_ntt(poly *r);
