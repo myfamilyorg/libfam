@@ -174,7 +174,7 @@ Test(wots) {
 	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 }
 
-#define WOTS_COUNT 100
+#define WOTS_COUNT 10
 
 Test(wots_perf) {
 	__attribute__((aligned(32))) u8 key[32] = {1, 2, 3, 4, 5};

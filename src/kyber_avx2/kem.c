@@ -83,10 +83,9 @@ int crypto_kem_keypair(uint8_t *pk, uint8_t *sk, Rng *rng) {
  **************************************************/
 int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
 			  const uint8_t *coins) {
-	uint8_t buf[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) uint8_t buf[2 * KYBER_SYMBYTES] = {0};
 	__attribute__((aligned(32))) u8 pk_copy[KYBER_PUBLICKEYBYTES] = {0};
-	/* Will contain key, coins */
-	uint8_t kr[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) uint8_t kr[2 * KYBER_SYMBYTES];
 	StormContext ctx;
 
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
@@ -159,10 +158,10 @@ int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
 	uint8_t cmp[KYBER_CIPHERTEXTBYTES];
 	*/
 
-	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES] = {0};
 	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES] = {0};
-	__attribute__((aligned(32))) u8 cmp[KYBER_CIPHERTEXTBYTES];
-	__attribute__((aligned(32))) u8 sk_copy[32];
+	__attribute__((aligned(32))) u8 cmp[KYBER_CIPHERTEXTBYTES] = {0};
+	__attribute__((aligned(32))) u8 sk_copy[32] = {0};
 
 	const uint8_t *pk = sk + KYBER_INDCPA_SECRETKEYBYTES;
 	StormContext ctx;
@@ -178,8 +177,6 @@ int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
 	storm_init(&ctx, HASH_DOMAIN);
 	storm_next_block(&ctx, kr);
 	storm_next_block(&ctx, kr + 32);
-
-	// hash_g(kr, buf, 2 * KYBER_SYMBYTES);
 
 	/* coins are in kr+KYBER_SYMBYTES */
 	indcpa_enc(cmp, buf, pk, kr + KYBER_SYMBYTES);

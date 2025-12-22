@@ -38,11 +38,6 @@ int crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins) {
 		storm_next_block(&ctx, pk_copy + i);
 	storm_next_block(&ctx, sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES);
 
-	/*
-	hash_h(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, pk,
-	       KYBER_PUBLICKEYBYTES);
-	       */
-	/* Value z for pseudo-random output on reject */
 	fastmemcpy(sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES,
 		   coins + KYBER_SYMBYTES, KYBER_SYMBYTES);
 	return 0;
@@ -88,9 +83,9 @@ int crypto_kem_keypair(uint8_t *pk, uint8_t *sk, Rng *rng) {
  **************************************************/
 int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
 			  const uint8_t *coins) {
-	uint8_t buf[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) uint8_t buf[2 * KYBER_SYMBYTES] = {0};
 	/* Will contain key, coins */
-	uint8_t kr[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) uint8_t kr[2 * KYBER_SYMBYTES] = {0};
 
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 
@@ -157,10 +152,10 @@ int crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk, Rng *rng) {
 int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
 	int fail;
 
-	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES] = {0};
 	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES] = {0};
-	__attribute__((aligned(32))) u8 cmp[KYBER_CIPHERTEXTBYTES];
-	__attribute__((aligned(32))) u8 sk_copy[32];
+	__attribute__((aligned(32))) u8 cmp[KYBER_CIPHERTEXTBYTES] = {0};
+	__attribute__((aligned(32))) u8 sk_copy[32] = {0};
 
 	const uint8_t *pk = sk + KYBER_INDCPA_SECRETKEYBYTES;
 	StormContext ctx;
