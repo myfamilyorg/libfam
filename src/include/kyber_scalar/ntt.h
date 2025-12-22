@@ -6,16 +6,16 @@
 #include <stdint.h>
 
 #define zetas KYBER_NAMESPACE(zetas)
-extern const int16_t zetas[128];
+extern const i16 zetas[128];
 
 #define ntt KYBER_NAMESPACE(ntt)
-void ntt(int16_t poly[256]);
+void ntt(i16 poly[256]);
 
 #define invntt KYBER_NAMESPACE(invntt)
-void invntt(int16_t poly[256]);
+void invntt(i16 poly[256]);
 
 #define basemul KYBER_NAMESPACE(basemul)
-void basemul(int16_t r[2], const int16_t a[2], const int16_t b[2],
-	     int16_t zeta);
+void basemul(i16 r[2], const i16 a[2], const i16 b[2],
+	     i16 zeta);
 
 #endif

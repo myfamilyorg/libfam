@@ -68,7 +68,7 @@ static void cbd2(poly *restrict r, const __m256i buf[2 * KYBER_N / 128]) {
  * Arguments:   - poly *r: pointer to output polynomial
  *              - const __m256i *buf: pointer to aligned input byte array
  **************************************************/
-static void cbd3(poly *restrict r, const uint8_t buf[3 * KYBER_N / 4 + 8]) {
+static void cbd3(poly *restrict r, const u8 buf[3 * KYBER_N / 4 + 8]) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;
 	const __m256i mask249 = _mm256_set1_epi32(0x249249);
@@ -126,7 +126,7 @@ void poly_cbd_eta1(poly *r, const __m256i buf[KYBER_ETA1 * KYBER_N / 128 + 1]) {
 #if KYBER_ETA1 == 2
 	cbd2(r, buf);
 #elif KYBER_ETA1 == 3
-	cbd3(r, (uint8_t *)buf);
+	cbd3(r, (u8 *)buf);
 #else
 #error "This implementation requires eta1 in {2,3}"
 #endif

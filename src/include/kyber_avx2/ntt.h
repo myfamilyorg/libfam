@@ -3,6 +3,7 @@
 
 #include <immintrin.h>
 #include <kyber_avx2/namespace.h>
+#include <libfam/types.h>
 #include <stdint.h>
 
 #define ntt_avx KYBER_NAMESPACE(ntt_avx)
@@ -20,8 +21,8 @@ void basemul_avx(__m256i *r, const __m256i *a, const __m256i *b,
 		 const __m256i *qdata);
 
 #define ntttobytes_avx KYBER_NAMESPACE(ntttobytes_avx)
-void ntttobytes_avx(uint8_t *r, const __m256i *a, const __m256i *qdata);
+void ntttobytes_avx(u8 *r, const __m256i *a, const __m256i *qdata);
 #define nttfrombytes_avx KYBER_NAMESPACE(nttfrombytes_avx)
-void nttfrombytes_avx(__m256i *r, const uint8_t *a, const __m256i *qdata);
+void nttfrombytes_avx(__m256i *r, const u8 *a, const __m256i *qdata);
 
 #endif

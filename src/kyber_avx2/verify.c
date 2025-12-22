@@ -8,15 +8,15 @@
  *
  * Description: Compare two arrays for equality in constant time.
  *
- * Arguments:   const uint8_t *a: pointer to first byte array
- *              const uint8_t *b: pointer to second byte array
+ * Arguments:   const u8 *a: pointer to first byte array
+ *              const u8 *b: pointer to second byte array
  *              size_t len: length of the byte arrays
  *
  * Returns 0 if the byte arrays are equal, 1 otherwise
  **************************************************/
-int verify(const uint8_t *a, const uint8_t *b, size_t len) {
+int verify(const u8 *a, const u8 *b, size_t len) {
 	size_t i;
-	uint64_t r;
+	u64 r;
 	__m256i f, g, h;
 
 	h = _mm256_setzero_si256();
@@ -45,12 +45,12 @@ int verify(const uint8_t *a, const uint8_t *b, size_t len) {
  *              assumes two's complement representation of negative integers.
  *              Runs in constant time.
  *
- * Arguments:   uint8_t *r: pointer to output byte array
- *              const uint8_t *x: pointer to input byte array
+ * Arguments:   u8 *r: pointer to output byte array
+ *              const u8 *x: pointer to input byte array
  *              size_t len: Amount of bytes to be copied
- *              uint8_t b: Condition bit; has to be in {0,1}
+ *              u8 b: Condition bit; has to be in {0,1}
  **************************************************/
-void cmov(uint8_t *restrict r, const uint8_t *x, size_t len, uint8_t b) {
+void cmov(u8 *restrict r, const u8 *x, size_t len, u8 b) {
 	size_t i;
 	__m256i xvec, rvec, bvec;
 
@@ -64,7 +64,7 @@ void cmov(uint8_t *restrict r, const uint8_t *x, size_t len, uint8_t b) {
 	__asm__("" : "+r"(b) : /* no inputs */);
 #endif
 
-	bvec = _mm256_set1_epi64x(-(uint64_t)b);
+	bvec = _mm256_set1_epi64x(-(u64)b);
 	for (i = 0; i < len / 32; i++) {
 		rvec = _mm256_loadu_si256((__m256i *)&r[32 * i]);
 		xvec = _mm256_loadu_si256((__m256i *)&x[32 * i]);

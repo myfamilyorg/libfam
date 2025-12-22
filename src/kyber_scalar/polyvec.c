@@ -9,23 +9,23 @@
  *
  * Description: Compress and serialize vector of polynomials
  *
- * Arguments:   - uint8_t *r: pointer to output byte array
+ * Arguments:   - u8 *r: pointer to output byte array
  *                            (needs space for KYBER_POLYVECCOMPRESSEDBYTES)
  *              - const polyvec *a: pointer to input vector of polynomials
  **************************************************/
-void polyvec_compress(uint8_t r[KYBER_POLYVECCOMPRESSEDBYTES],
+void polyvec_compress(u8 r[KYBER_POLYVECCOMPRESSEDBYTES],
 		      const polyvec *a) {
 	unsigned int i, j, k;
-	uint64_t d0;
+	u64 d0;
 
 #if (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 352))
-	uint16_t t[8];
+	u16 t[8];
 	for (i = 0; i < KYBER_K; i++) {
 		for (j = 0; j < KYBER_N / 8; j++) {
 			for (k = 0; k < 8; k++) {
 				t[k] = a->vec[i].coeffs[8 * j + k];
-				t[k] += ((int16_t)t[k] >> 15) & KYBER_Q;
-				/*      t[k]  = ((((uint32_t)t[k] << 11) +
+				t[k] += ((i16)t[k] >> 15) & KYBER_Q;
+				/*      t[k]  = ((((u32)t[k] << 11) +
 				 * KYBER_Q/2)/KYBER_Q) & 0x7ff; */
 				d0 = t[k];
 				d0 <<= 11;
@@ -50,13 +50,13 @@ void polyvec_compress(uint8_t r[KYBER_POLYVECCOMPRESSEDBYTES],
 		}
 	}
 #elif (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 320))
-	uint16_t t[4];
+	u16 t[4];
 	for (i = 0; i < KYBER_K; i++) {
 		for (j = 0; j < KYBER_N / 4; j++) {
 			for (k = 0; k < 4; k++) {
 				t[k] = a->vec[i].coeffs[4 * j + k];
-				t[k] += ((int16_t)t[k] >> 15) & KYBER_Q;
-				/*      t[k]  = ((((uint32_t)t[k] << 10) +
+				t[k] += ((i16)t[k] >> 15) & KYBER_Q;
+				/*      t[k]  = ((((u32)t[k] << 10) +
 				 * KYBER_Q/2)/ KYBER_Q) & 0x3ff; */
 				d0 = t[k];
 				d0 <<= 10;
@@ -86,49 +86,49 @@ void polyvec_compress(uint8_t r[KYBER_POLYVECCOMPRESSEDBYTES],
  *              approximate inverse of polyvec_compress
  *
  * Arguments:   - polyvec *r:       pointer to output vector of polynomials
- *              - const uint8_t *a: pointer to input byte array
+ *              - const u8 *a: pointer to input byte array
  *                                  (of length KYBER_POLYVECCOMPRESSEDBYTES)
  **************************************************/
 void polyvec_decompress(polyvec *r,
-			const uint8_t a[KYBER_POLYVECCOMPRESSEDBYTES]) {
+			const u8 a[KYBER_POLYVECCOMPRESSEDBYTES]) {
 	unsigned int i, j, k;
 
 #if (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 352))
-	uint16_t t[8];
+	u16 t[8];
 	for (i = 0; i < KYBER_K; i++) {
 		for (j = 0; j < KYBER_N / 8; j++) {
-			t[0] = (a[0] >> 0) | ((uint16_t)a[1] << 8);
-			t[1] = (a[1] >> 3) | ((uint16_t)a[2] << 5);
-			t[2] = (a[2] >> 6) | ((uint16_t)a[3] << 2) |
-			       ((uint16_t)a[4] << 10);
-			t[3] = (a[4] >> 1) | ((uint16_t)a[5] << 7);
-			t[4] = (a[5] >> 4) | ((uint16_t)a[6] << 4);
-			t[5] = (a[6] >> 7) | ((uint16_t)a[7] << 1) |
-			       ((uint16_t)a[8] << 9);
-			t[6] = (a[8] >> 2) | ((uint16_t)a[9] << 6);
-			t[7] = (a[9] >> 5) | ((uint16_t)a[10] << 3);
+			t[0] = (a[0] >> 0) | ((u16)a[1] << 8);
+			t[1] = (a[1] >> 3) | ((u16)a[2] << 5);
+			t[2] = (a[2] >> 6) | ((u16)a[3] << 2) |
+			       ((u16)a[4] << 10);
+			t[3] = (a[4] >> 1) | ((u16)a[5] << 7);
+			t[4] = (a[5] >> 4) | ((u16)a[6] << 4);
+			t[5] = (a[6] >> 7) | ((u16)a[7] << 1) |
+			       ((u16)a[8] << 9);
+			t[6] = (a[8] >> 2) | ((u16)a[9] << 6);
+			t[7] = (a[9] >> 5) | ((u16)a[10] << 3);
 			a += 11;
 
 			for (k = 0; k < 8; k++)
 				r->vec[i].coeffs[8 * j + k] =
-				    ((uint32_t)(t[k] & 0x7FF) * KYBER_Q +
+				    ((u32)(t[k] & 0x7FF) * KYBER_Q +
 				     1024) >>
 				    11;
 		}
 	}
 #elif (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 320))
-	uint16_t t[4];
+	u16 t[4];
 	for (i = 0; i < KYBER_K; i++) {
 		for (j = 0; j < KYBER_N / 4; j++) {
-			t[0] = (a[0] >> 0) | ((uint16_t)a[1] << 8);
-			t[1] = (a[1] >> 2) | ((uint16_t)a[2] << 6);
-			t[2] = (a[2] >> 4) | ((uint16_t)a[3] << 4);
-			t[3] = (a[3] >> 6) | ((uint16_t)a[4] << 2);
+			t[0] = (a[0] >> 0) | ((u16)a[1] << 8);
+			t[1] = (a[1] >> 2) | ((u16)a[2] << 6);
+			t[2] = (a[2] >> 4) | ((u16)a[3] << 4);
+			t[3] = (a[3] >> 6) | ((u16)a[4] << 2);
 			a += 5;
 
 			for (k = 0; k < 4; k++)
 				r->vec[i].coeffs[4 * j + k] =
-				    ((uint32_t)(t[k] & 0x3FF) * KYBER_Q +
+				    ((u32)(t[k] & 0x3FF) * KYBER_Q +
 				     512) >>
 				    10;
 		}
@@ -143,11 +143,11 @@ void polyvec_decompress(polyvec *r,
  *
  * Description: Serialize vector of polynomials
  *
- * Arguments:   - uint8_t *r: pointer to output byte array
+ * Arguments:   - u8 *r: pointer to output byte array
  *                            (needs space for KYBER_POLYVECBYTES)
  *              - const polyvec *a: pointer to input vector of polynomials
  **************************************************/
-void polyvec_tobytes(uint8_t r[KYBER_POLYVECBYTES], const polyvec *a) {
+void polyvec_tobytes(u8 r[KYBER_POLYVECBYTES], const polyvec *a) {
 	unsigned int i;
 	for (i = 0; i < KYBER_K; i++)
 		poly_tobytes(r + i * KYBER_POLYBYTES, &a->vec[i]);
@@ -159,11 +159,11 @@ void polyvec_tobytes(uint8_t r[KYBER_POLYVECBYTES], const polyvec *a) {
  * Description: De-serialize vector of polynomials;
  *              inverse of polyvec_tobytes
  *
- * Arguments:   - uint8_t *r:       pointer to output byte array
+ * Arguments:   - u8 *r:       pointer to output byte array
  *              - const polyvec *a: pointer to input vector of polynomials
  *                                  (of length KYBER_POLYVECBYTES)
  **************************************************/
-void polyvec_frombytes(polyvec *r, const uint8_t a[KYBER_POLYVECBYTES]) {
+void polyvec_frombytes(polyvec *r, const u8 a[KYBER_POLYVECBYTES]) {
 	unsigned int i;
 	for (i = 0; i < KYBER_K; i++)
 		poly_frombytes(&r->vec[i], a + i * KYBER_POLYBYTES);

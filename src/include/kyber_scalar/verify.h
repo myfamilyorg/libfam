@@ -7,12 +7,12 @@
 #include <stdint.h>
 
 #define verify KYBER_NAMESPACE(verify)
-int verify(const uint8_t *a, const uint8_t *b, size_t len);
+int verify(const u8 *a, const u8 *b, size_t len);
 
 #define cmov KYBER_NAMESPACE(cmov)
-void cmov(uint8_t *r, const uint8_t *x, size_t len, uint8_t b);
+void cmov(u8 *r, const u8 *x, size_t len, u8 b);
 
 #define cmov_int16 KYBER_NAMESPACE(cmov_int16)
-void cmov_int16(int16_t *r, int16_t v, uint16_t b);
+void cmov_int16(i16 *r, i16 v, u16 b);
 
 #endif
