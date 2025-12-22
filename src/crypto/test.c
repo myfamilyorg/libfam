@@ -290,8 +290,35 @@ Test(kem1) {
 	Rng rng1, rng2;
 	rng_init(&rng1);
 	rng_init(&rng2);
-	keypair(pk, sk);
-	enc(ct, ss_bob, pk);
+	keypair(pk, sk, &rng1);
+	enc(ct, ss_bob, pk, &rng2);
 	dec(ss_alice, ct, sk);
 	ASSERT(!fastmemcmp(ss_bob, ss_alice, 32), "shared secret");
 }
+
+Test(kem_vector) {
+	__attribute__((aligned(32))) u8 seed[32] = {1, 2, 3};
+	__attribute__((aligned(32))) u8 sk[16000] = {0};
+	__attribute__((aligned(32))) u8 pk[16000] = {0};
+	__attribute__((aligned(32))) u8 ct[16000] = {0};
+	__attribute__((aligned(32))) u8 ss_bob[32] = {0};
+	__attribute__((aligned(32))) u8 ss_alice[32] = {1};
+
+	Rng rng;
+	rng_init(&rng);
+	rng_test_seed(&rng, seed);
+	keypair(pk, sk, &rng);
+	enc(ct, ss_bob, pk, &rng);
+	dec(ss_alice, ct, sk);
+	/*
+	for (u32 i = 0; i < 32; i++) print("{}, ", ss_bob[i]);
+	println("");
+	*/
+	ASSERT(!fastmemcmp(ss_bob, ss_alice, 32), "shared secret");
+	u8 expected[32] = {82,	251, 249, 220, 69,  137, 170, 167,
+			   163, 202, 220, 109, 238, 239, 140, 241,
+			   38,	127, 40,  90,  135, 110, 170, 129,
+			   148, 211, 5,	  255, 154, 226, 192, 97};
+	ASSERT(!fastmemcmp(ss_bob, expected, 32), "expected");
+}
+

@@ -5,8 +5,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-void randombytes(uint8_t *out, size_t outlen) {
-	Rng rng;
-	rng_init(&rng);
-	rng_gen(&rng, out, outlen);
+void randombytes(uint8_t *out, size_t outlen, Rng *rng) {
+	rng_gen(rng, out, outlen);
 }

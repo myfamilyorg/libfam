@@ -48,9 +48,9 @@ int crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins) {
  *
  * Returns 0 (success)
  **************************************************/
-int crypto_kem_keypair(uint8_t *pk, uint8_t *sk) {
+int crypto_kem_keypair(uint8_t *pk, uint8_t *sk, Rng *rng) {
 	__attribute__((aligned(32))) uint8_t coins[2 * KYBER_SYMBYTES] = {0};
-	randombytes(coins, 2 * KYBER_SYMBYTES);
+	randombytes(coins, 2 * KYBER_SYMBYTES, rng);
 	crypto_kem_keypair_derand(pk, sk, coins);
 	return 0;
 }
@@ -107,9 +107,9 @@ int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
  *
  * Returns 0 (success)
  **************************************************/
-int crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
+int crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk, Rng *rng) {
 	__attribute__((aligned(32))) uint8_t coins[KYBER_SYMBYTES] = {0};
-	randombytes(coins, KYBER_SYMBYTES);
+	randombytes(coins, KYBER_SYMBYTES, rng);
 	crypto_kem_enc_derand(ct, ss, pk, coins);
 	return 0;
 }

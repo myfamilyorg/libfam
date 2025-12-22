@@ -23,41 +23,10 @@
  *
  *******************************************************************************/
 
-#ifndef _KEM_H
-#define _KEM_H
+#ifndef _KEM_IMPL_H
+#define _KEM_IMPL_H
 
-#include <libfam/rng.h>
-#include <libfam/types.h>
+__attribute__((aligned(32))) static const u8 HASH_DOMAIN[32] = {1, 2, 3, 99,
+								97};
 
-i32 pqcrystals_kyber512_ref_keypair(u8 *pk, u8 *sk, Rng *rng);
-i32 pqcrystals_kyber512_ref_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng);
-i32 pqcrystals_kyber512_ref_dec(u8 *ss, const u8 *ct, const u8 *sk);
-i32 pqcrystals_kyber512_avx2_keypair(u8 *pk, u8 *sk, Rng *rng);
-i32 pqcrystals_kyber512_avx2_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng);
-i32 pqcrystals_kyber512_avx2_dec(u8 *ss, const u8 *ct, const u8 *sk);
-
-static inline void keypair(u8 *pk, u8 *sk, Rng *rng) {
-#ifdef __AVX2__
-	pqcrystals_kyber512_avx2_keypair(pk, sk, rng);
-#else
-	pqcrystals_kyber512_ref_keypair(pk, sk, rng);
-#endif
-}
-
-static inline void enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng) {
-#ifdef __AVX2__
-	pqcrystals_kyber512_avx2_enc(ct, ss, pk, rng);
-#else
-	pqcrystals_kyber512_ref_enc(ct, ss, pk, rng);
-#endif
-}
-
-static inline void dec(u8 *ss, const u8 *ct, const u8 *sk) {
-#ifdef __AVX2__
-	pqcrystals_kyber512_avx2_dec(ss, ct, sk);
-#else
-	pqcrystals_kyber512_ref_dec(ss, ct, sk);
-#endif
-}
-
-#endif /* _KEM_H */
+#endif /* _KEM_IMPL_H */
