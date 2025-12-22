@@ -9,7 +9,11 @@
 TAG=$(git describe --tags --dirty 2>/dev/null || echo "unknown")
 printf '#define LIBFAM_VERSION "%s"\n' "$TAG" > "$PROJECT_DIR/src/include/libfam/version.h"
 
-SUB_DIRS="base crypto core blockchain kyber_scalar kyber_avx2"
+if [ "${ARCH}" = "x86_64" ]; then
+   SUB_DIRS="base crypto core blockchain kyber_scalar kyber_avx2"
+else
+   SUB_DIRS="base crypto core blockchain kyber_scalar"
+fi
 INCDIR="src/include"
 LIB_DIR="${OUTDIR}/lib"
 LIB_NAME="${LIB_DIR}/libfam.so";
