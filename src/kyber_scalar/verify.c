@@ -1,3 +1,5 @@
+#ifndef __AVX2__
+
 #include <kyber_scalar/verify.h>
 
 /*************************************************
@@ -65,3 +67,5 @@ void cmov_int16(i16 *r, i16 v, u16 b) {
 	b = -b;
 	*r ^= b & ((*r) ^ v);
 }
+
+#endif /* __AVX2__ */

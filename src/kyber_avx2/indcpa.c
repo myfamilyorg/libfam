@@ -23,6 +23,8 @@
  *
  *******************************************************************************/
 
+#ifdef __AVX2__
+
 #include <immintrin.h>
 #include <kyber_avx2/align.h>
 #include <kyber_avx2/cbd.h>
@@ -261,3 +263,5 @@ void indcpa_dec(u8 m[KYBER_INDCPA_MSGBYTES], const u8 c[KYBER_INDCPA_BYTES],
 
 	poly_tomsg(m, &mp);
 }
+
+#endif /* __AVX2__ */

@@ -80,7 +80,7 @@ for DIR in *; do
         COVERED=`awk "BEGIN {print int($RATIO * $LINES)}"`;
         LINESUM=`awk "BEGIN {print $LINESUM + $LINES}"`;
         COVEREDSUM=`awk "BEGIN {print ${COVEREDSUM} + ${COVERED}}"`;
-	printf "${GREEN}%-20s${RESET} %6s%% -${YELLOW} [%3s/%3s]${RESET}\n" \
+	printf "${GREEN}%-25s${RESET} %6s%% - ${YELLOW}[%3s/%3s]${RESET}\n" \
             "${DIR}/${BASENAME}" \
             "${PERCENT}" \
             "${COVERED}" \

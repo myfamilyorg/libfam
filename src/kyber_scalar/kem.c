@@ -1,3 +1,5 @@
+#ifndef __AVX2__
+
 #include <kyber_common/params.h>
 #include <kyber_scalar/indcpa.h>
 #include <kyber_scalar/kem.h>
@@ -185,3 +187,5 @@ int crypto_kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
 
 	return 0;
 }
+
+#endif /* __AVX2__ */

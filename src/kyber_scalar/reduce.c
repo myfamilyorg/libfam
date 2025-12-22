@@ -1,3 +1,5 @@
+#ifndef __AVX2__
+
 #include <kyber_common/params.h>
 #include <kyber_scalar/reduce.h>
 
@@ -39,3 +41,4 @@ i16 barrett_reduce(i16 a) {
 	t *= KYBER_Q;
 	return a - t;
 }
+#endif /* __AVX2__ */

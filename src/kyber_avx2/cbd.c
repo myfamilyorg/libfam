@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#ifdef __AVX2__
 #include <immintrin.h>
 #include <kyber_avx2/cbd.h>
 #include <kyber_common/params.h>
@@ -129,3 +130,4 @@ void poly_cbd_eta1(poly *r, const __m256i buf[KYBER_ETA1 * KYBER_N / 128 + 1]) {
 void poly_cbd_eta2(poly *r, const __m256i buf[KYBER_ETA2 * KYBER_N / 128]) {
 	cbd2(r, buf);
 }
+#endif /* __AVX2__ */

@@ -1,3 +1,5 @@
+#ifndef __AVX2__
+
 #include <kyber_common/params.h>
 #include <kyber_scalar/ntt.h>
 #include <kyber_scalar/reduce.h>
@@ -136,3 +138,4 @@ void basemul(i16 r[2], const i16 a[2], const i16 b[2], i16 zeta) {
 	r[1] = fqmul(a[0], b[1]);
 	r[1] += fqmul(a[1], b[0]);
 }
+#endif /* __AVX2__ */

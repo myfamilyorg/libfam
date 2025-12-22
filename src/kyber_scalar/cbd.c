@@ -1,3 +1,4 @@
+#ifndef __AVX2__
 #include <kyber_common/params.h>
 #include <kyber_scalar/cbd.h>
 
@@ -118,3 +119,4 @@ void poly_cbd_eta2(poly *r, const u8 buf[KYBER_ETA2 * KYBER_N / 4]) {
 #error "This implementation requires eta2 = 2"
 #endif
 }
+#endif /* __AVX2__ */

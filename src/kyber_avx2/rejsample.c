@@ -23,6 +23,8 @@
  *
  *******************************************************************************/
 
+#ifdef __AVX2__
+
 #include <immintrin.h>
 #include <kyber_avx2/consts.h>
 #include <kyber_avx2/rejsample.h>
@@ -296,3 +298,5 @@ unsigned int rej_uniform_avx(i16 *restrict r, const u8 *buf) {
 
 	return ctr;
 }
+
+#endif /* __AVX2__ */

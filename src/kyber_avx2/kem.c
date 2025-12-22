@@ -23,6 +23,8 @@
  *
  *******************************************************************************/
 
+#ifdef __AVX2__
+
 #include <kyber_avx2/indcpa.h>
 #include <kyber_avx2/kem.h>
 #include <kyber_avx2/verify.h>
@@ -118,3 +120,5 @@ void crypto_kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
 
 	cmov(ss, kr, KYBER_SYMBYTES, !fail);
 }
+
+#endif /* __AVX2__ */

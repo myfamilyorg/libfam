@@ -1,3 +1,4 @@
+#ifndef __AVX2__
 #include <kyber_common/params.h>
 #include <kyber_scalar/indcpa.h>
 #include <kyber_scalar/ntt.h>
@@ -324,3 +325,5 @@ void indcpa_dec(u8 m[KYBER_INDCPA_MSGBYTES], const u8 c[KYBER_INDCPA_BYTES],
 
 	poly_tomsg(m, &mp);
 }
+
+#endif /* __AVX2__ */

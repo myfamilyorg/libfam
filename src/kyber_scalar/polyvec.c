@@ -1,3 +1,5 @@
+#ifndef __AVX2__
+
 #include <kyber_common/params.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/polyvec.h>
@@ -240,3 +242,4 @@ void polyvec_add(polyvec *r, const polyvec *a, const polyvec *b) {
 	for (i = 0; i < KYBER_K; i++)
 		poly_add(&r->vec[i], &a->vec[i], &b->vec[i]);
 }
+#endif /* __AVX2__ */

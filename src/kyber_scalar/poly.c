@@ -1,3 +1,5 @@
+#ifndef __AVX2__
+
 #include <kyber_common/params.h>
 #include <kyber_scalar/cbd.h>
 #include <kyber_scalar/ntt.h>
@@ -366,3 +368,5 @@ void poly_sub(poly *r, const poly *a, const poly *b) {
 	for (i = 0; i < KYBER_N; i++)
 		r->coeffs[i] = a->coeffs[i] - b->coeffs[i];
 }
+
+#endif /* __AVX2__ */
