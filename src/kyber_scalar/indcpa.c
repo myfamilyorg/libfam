@@ -3,8 +3,8 @@
 #include <kyber_scalar/ntt.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/polyvec.h>
-#include <kyber_scalar/randombytes.h>
 #include <libfam/kem_impl.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 
 /*************************************************

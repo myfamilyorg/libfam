@@ -315,7 +315,7 @@ Test(kem_vector) {
 	ASSERT(!fastmemcmp(&ss_bob, expected, KEM_SS_SIZE), "expected");
 }
 
-#define KYBER_COUNT 100
+#define KYBER_COUNT 1000
 
 Test(kyber_perf) {
 	KemSecKey sk;

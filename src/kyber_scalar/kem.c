@@ -1,7 +1,6 @@
 #include <kyber_common/params.h>
 #include <kyber_scalar/indcpa.h>
 #include <kyber_scalar/kem.h>
-#include <kyber_scalar/randombytes.h>
 #include <kyber_scalar/verify.h>
 #include <libfam/kem_impl.h>
 #include <libfam/rng.h>
@@ -56,7 +55,7 @@ int crypto_kem_keypair_derand(u8 *pk, u8 *sk, const u8 *coins) {
  **************************************************/
 int crypto_kem_keypair(u8 *pk, u8 *sk, Rng *rng) {
 	__attribute__((aligned(32))) u8 coins[2 * KYBER_SYMBYTES] = {0};
-	randombytes(coins, 2 * KYBER_SYMBYTES, rng);
+	rng_gen(rng, coins, 2 * KYBER_SYMBYTES);
 	crypto_kem_keypair_derand(pk, sk, coins);
 	return 0;
 }
@@ -124,7 +123,7 @@ int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins) {
  **************************************************/
 int crypto_kem_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng) {
 	__attribute__((aligned(32))) u8 coins[KYBER_SYMBYTES] = {0};
-	randombytes(coins, KYBER_SYMBYTES, rng);
+	rng_gen(rng, coins, KYBER_SYMBYTES);
 	crypto_kem_enc_derand(ct, ss, pk, coins);
 	return 0;
 }
