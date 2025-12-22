@@ -321,7 +321,7 @@ Test(kem_vector) {
 	ASSERT(!fastmemcmp(ss_bob, expected, 32), "expected");
 }
 
-#define KYBER_COUNT 100
+#define KYBER_COUNT 10000
 
 Test(kyber_perf) {
 	__attribute__((aligned(32))) u8 sk[2000] = {0};

@@ -165,11 +165,12 @@ static unsigned int rej_uniform(int16_t *r, unsigned int len,
 	((12 * KYBER_N / 8 * (1 << 12) / KYBER_Q + XOF_BLOCKBYTES) / \
 	 XOF_BLOCKBYTES)
 // Not static for benchmarking
+#include <libfam/format.h>
 void gen_matrix(polyvec *a, const uint8_t seed[KYBER_SYMBYTES],
 		int transposed) {
 	unsigned int ctr, i, j;
 	unsigned int buflen;
-	uint8_t buf[GEN_MATRIX_NBLOCKS * XOF_BLOCKBYTES];
+	uint8_t buf[GEN_MATRIX_NBLOCKS * XOF_BLOCKBYTES] = {0};
 	xof_state state;
 
 	for (i = 0; i < KYBER_K; i++) {

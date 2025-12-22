@@ -28,5 +28,7 @@
 
 __attribute__((aligned(32))) static const u8 HASH_DOMAIN[32] = {1, 2, 3, 99,
 								97};
+__attribute__((aligned(32))) static const u8 GEN_MAT_DOMAIN[32] = {1, 2, 3, 99,
+								   98};
 
 #endif /* _KEM_IMPL_H */
