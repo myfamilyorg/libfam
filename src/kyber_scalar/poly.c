@@ -5,6 +5,7 @@
 #include <kyber_scalar/reduce.h>
 #include <kyber_scalar/symmetric.h>
 #include <kyber_scalar/verify.h>
+#include <libfam/string.h>
 #include <stdint.h>
 
 /*************************************************

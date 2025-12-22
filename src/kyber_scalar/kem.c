@@ -4,6 +4,7 @@
 #include <kyber_scalar/randombytes.h>
 #include <kyber_scalar/symmetric.h>
 #include <kyber_scalar/verify.h>
+#include <libfam/string.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -25,12 +26,12 @@
  **************************************************/
 int crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins) {
 	indcpa_keypair_derand(pk, sk, coins);
-	memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES, pk, KYBER_PUBLICKEYBYTES);
+	fastmemcpy(sk + KYBER_INDCPA_SECRETKEYBYTES, pk, KYBER_PUBLICKEYBYTES);
 	hash_h(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, pk,
 	       KYBER_PUBLICKEYBYTES);
 	/* Value z for pseudo-random output on reject */
-	memcpy(sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES,
-	       coins + KYBER_SYMBYTES, KYBER_SYMBYTES);
+	fastmemcpy(sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES,
+		   coins + KYBER_SYMBYTES, KYBER_SYMBYTES);
 	return 0;
 }
 
@@ -48,7 +49,7 @@ int crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins) {
  * Returns 0 (success)
  **************************************************/
 int crypto_kem_keypair(uint8_t *pk, uint8_t *sk) {
-	__attribute__((aligned(32))) uint8_t coins[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) uint8_t coins[2 * KYBER_SYMBYTES] = {0};
 	randombytes(coins, 2 * KYBER_SYMBYTES);
 	crypto_kem_keypair_derand(pk, sk, coins);
 	return 0;
@@ -78,7 +79,7 @@ int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
 	/* Will contain key, coins */
 	uint8_t kr[2 * KYBER_SYMBYTES];
 
-	memcpy(buf, coins, KYBER_SYMBYTES);
+	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 
 	/* Multitarget countermeasure for coins + contributory KEM */
 	hash_h(buf + KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
@@ -87,7 +88,7 @@ int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
 	/* coins are in kr+KYBER_SYMBYTES */
 	indcpa_enc(ct, buf, pk, kr + KYBER_SYMBYTES);
 
-	memcpy(ss, kr, KYBER_SYMBYTES);
+	fastmemcpy(ss, kr, KYBER_SYMBYTES);
 	return 0;
 }
 
@@ -107,7 +108,7 @@ int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
  * Returns 0 (success)
  **************************************************/
 int crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
-	__attribute__((aligned(32))) uint8_t coins[KYBER_SYMBYTES];
+	__attribute__((aligned(32))) uint8_t coins[KYBER_SYMBYTES] = {0};
 	randombytes(coins, KYBER_SYMBYTES);
 	crypto_kem_enc_derand(ct, ss, pk, coins);
 	return 0;
@@ -142,8 +143,9 @@ int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
 	indcpa_dec(buf, ct, sk);
 
 	/* Multitarget countermeasure for coins + contributory KEM */
-	memcpy(buf + KYBER_SYMBYTES,
-	       sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, KYBER_SYMBYTES);
+	fastmemcpy(buf + KYBER_SYMBYTES,
+		   sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES,
+		   KYBER_SYMBYTES);
 	hash_g(kr, buf, 2 * KYBER_SYMBYTES);
 
 	/* coins are in kr+KYBER_SYMBYTES */

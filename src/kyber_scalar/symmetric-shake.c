@@ -1,6 +1,7 @@
 #include <kyber_scalar/fips202.h>
 #include <kyber_scalar/params.h>
 #include <kyber_scalar/symmetric.h>
+#include <libfam/string.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -22,7 +23,7 @@ void kyber_shake128_absorb(keccak_state *state,
 			   uint8_t y) {
 	uint8_t extseed[KYBER_SYMBYTES + 2];
 
-	memcpy(extseed, seed, KYBER_SYMBYTES);
+	fastmemcpy(extseed, seed, KYBER_SYMBYTES);
 	extseed[KYBER_SYMBYTES + 0] = x;
 	extseed[KYBER_SYMBYTES + 1] = y;
 
@@ -45,7 +46,7 @@ void kyber_shake256_prf(uint8_t *out, size_t outlen,
 			const uint8_t key[KYBER_SYMBYTES], uint8_t nonce) {
 	uint8_t extkey[KYBER_SYMBYTES + 1];
 
-	memcpy(extkey, key, KYBER_SYMBYTES);
+	fastmemcpy(extkey, key, KYBER_SYMBYTES);
 	extkey[KYBER_SYMBYTES] = nonce;
 
 	shake256(out, outlen, extkey, sizeof(extkey));

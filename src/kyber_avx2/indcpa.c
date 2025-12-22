@@ -9,6 +9,7 @@
 #include <kyber_avx2/randombytes.h>
 #include <kyber_avx2/rejsample.h>
 #include <kyber_avx2/symmetric.h>
+#include <libfam/string.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -30,7 +31,7 @@
 static void pack_pk(uint8_t r[KYBER_INDCPA_PUBLICKEYBYTES], polyvec *pk,
 		    const uint8_t seed[KYBER_SYMBYTES]) {
 	polyvec_tobytes(r, pk);
-	memcpy(r + KYBER_POLYVECBYTES, seed, KYBER_SYMBYTES);
+	fastmemcpy(r + KYBER_POLYVECBYTES, seed, KYBER_SYMBYTES);
 }
 
 /*************************************************
@@ -47,7 +48,7 @@ static void pack_pk(uint8_t r[KYBER_INDCPA_PUBLICKEYBYTES], polyvec *pk,
 static void unpack_pk(polyvec *pk, uint8_t seed[KYBER_SYMBYTES],
 		      const uint8_t packedpk[KYBER_INDCPA_PUBLICKEYBYTES]) {
 	polyvec_frombytes(pk, packedpk);
-	memcpy(seed, packedpk + KYBER_POLYVECBYTES, KYBER_SYMBYTES);
+	fastmemcpy(seed, packedpk + KYBER_POLYVECBYTES, KYBER_SYMBYTES);
 }
 
 /*************************************************
@@ -467,7 +468,7 @@ void indcpa_keypair_derand(uint8_t pk[KYBER_INDCPA_PUBLICKEYBYTES],
 	const uint8_t *noiseseed = buf + KYBER_SYMBYTES;
 	polyvec a[KYBER_K], e, pkpv, skpv;
 
-	memcpy(buf, coins, KYBER_SYMBYTES);
+	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 	buf[KYBER_SYMBYTES] = KYBER_K;
 	hash_g(buf, buf, KYBER_SYMBYTES + 1);
 
