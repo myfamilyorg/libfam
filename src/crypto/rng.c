@@ -37,30 +37,21 @@
 
 static u64 global_entropy_counter = U64_MAX / 2;
 
-STATIC i32 try_fill_hardware(u8 buf[32]) {
+STATIC void try_fill_hardware(u8 buf[32]) {
 #if defined(__x86_64__)
 	u64 *p = (u64 *)buf;
-	for (int attempt = 0; attempt < 10; ++attempt) {
-		int ok = 1;
-		for (int i = 0; i < 4; ++i) {
-			u64 val;
-			unsigned char cf;
-			__asm__ volatile(
-			    "rdrand %0\n\t"
-			    "setc %1"
-			    : "=r"(val), "=qm"(cf)
-			    :
-			    : "cc");
-			if (!cf) {
-				ok = 0;
-				break;
-			}
-			p[i] = val;
-		}
-		if (ok) return 0;
+	for (i32 i = 0; i < 4; ++i) {
+		u64 val;
+		unsigned char cf;
+		__asm__ volatile(
+		    "rdrand %0\n\t"
+		    "setc %1"
+		    : "=r"(val), "=qm"(cf)
+		    :
+		    : "cc");
+		p[i] = val;
 	}
 #endif
-	return -1;
 }
 
 STATIC void random32(u8 out[32]) {
@@ -91,7 +82,10 @@ STATIC void random32(u8 out[32]) {
 
 STATIC void random_stir(u8 current[32]) {
 	StormContext ctx;
-	__attribute__((aligned(32))) u8 stir_in[32] = {0};
+	__attribute__((aligned(32))) u8 stir_in[32];
+#if TEST == 1
+	if (IS_VALGRIND()) fastmemset(stir_in, 0, 32);
+#endif /* TEST */
 
 	try_fill_hardware(stir_in);
 	storm_init(&ctx, stir_in);

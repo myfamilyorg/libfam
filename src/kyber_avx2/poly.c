@@ -278,33 +278,6 @@ void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *restrict a) {
 }
 
 /*************************************************
- * Name:        poly_getnoise_eta1
- *
- * Description: Sample a polynomial deterministically from a seed and a nonce,
- *              with output polynomial close to centered binomial distribution
- *              with parameter KYBER_ETA1
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const uint8_t *seed: pointer to input seed
- *                                     (of length KYBER_SYMBYTES bytes)
- *              - uint8_t nonce: one-byte input nonce
- **************************************************/
-void poly_getnoise_eta1(poly *r, const uint8_t seed[KYBER_SYMBYTES],
-			uint8_t nonce) {
-	ALIGNED_UINT8(KYBER_ETA1 * KYBER_N / 4 + 32)
-	buf = {0};
-	__attribute__((aligned(32))) u8 key[32];
-	StormContext ctx;
-
-	fastmemcpy(key, seed, 32);
-	key[0] = nonce;
-	storm_init(&ctx, key);
-	for (u32 i = 0; i < sizeof(buf); i += 32)
-		storm_next_block(&ctx, (u8 *)&buf + i);
-	poly_cbd_eta1(r, buf.vec);
-}
-
-/*************************************************
  * Name:        poly_getnoise_eta2
  *
  * Description: Sample a polynomial deterministically from a seed and a nonce,

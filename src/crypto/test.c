@@ -281,50 +281,47 @@ Test(bible_mine) {
 }
 
 Test(kem1) {
-	__attribute__((aligned(32))) u8 sk[16000] = {0};
-	__attribute__((aligned(32))) u8 pk[16000] = {0};
-	__attribute__((aligned(32))) u8 ct[16000] = {0};
-	__attribute__((aligned(32))) u8 ss_bob[32] = {0};
-	__attribute__((aligned(32))) u8 ss_alice[32] = {1};
+	KemSecKey sk;
+	KemPubKey pk;
+	KemCipherText ct;
+	KemSharedSecret ss_bob, ss_alice;
 
 	Rng rng1, rng2;
 	rng_init(&rng1);
 	rng_init(&rng2);
-	keypair(pk, sk, &rng1);
-	enc(ct, ss_bob, pk, &rng2);
-	dec(ss_alice, ct, sk);
-	ASSERT(!fastmemcmp(ss_bob, ss_alice, 32), "shared secret");
+	keypair(&pk, &sk, &rng1);
+	enc(&ct, &ss_bob, &pk, &rng2);
+	dec(&ss_alice, &ct, &sk);
+	ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE), "shared secret");
 }
 
 Test(kem_vector) {
 	__attribute__((aligned(32))) u8 seed[32] = {1, 2, 3};
-	__attribute__((aligned(32))) u8 sk[16000] = {0};
-	__attribute__((aligned(32))) u8 pk[16000] = {0};
-	__attribute__((aligned(32))) u8 ct[16000] = {0};
-	__attribute__((aligned(32))) u8 ss_bob[32] = {0};
-	__attribute__((aligned(32))) u8 ss_alice[32] = {1};
+	KemSecKey sk;
+	KemPubKey pk;
+	KemCipherText ct;
+	KemSharedSecret ss_bob, ss_alice;
 
 	Rng rng;
 	rng_init(&rng);
 	rng_test_seed(&rng, seed);
-	keypair(pk, sk, &rng);
-	enc(ct, ss_bob, pk, &rng);
-	dec(ss_alice, ct, sk);
-	ASSERT(!fastmemcmp(ss_bob, ss_alice, 32), "shared secret");
+	keypair(&pk, &sk, &rng);
+	enc(&ct, &ss_bob, &pk, &rng);
+	dec(&ss_alice, &ct, &sk);
+	ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE), "shared secret");
 	u8 expected[32] = {241, 138, 228, 27,  176, 3,	 128, 15,  185, 60, 152,
 			   149, 57,  107, 186, 153, 109, 114, 11,  136, 67, 6,
 			   128, 37,  233, 253, 178, 47,	 42,  206, 137, 23};
-	ASSERT(!fastmemcmp(ss_bob, expected, 32), "expected");
+	ASSERT(!fastmemcmp(&ss_bob, expected, KEM_SS_SIZE), "expected");
 }
 
 #define KYBER_COUNT 100
 
 Test(kyber_perf) {
-	__attribute__((aligned(32))) u8 sk[2000] = {0};
-	__attribute__((aligned(32))) u8 pk[2000] = {0};
-	__attribute__((aligned(32))) u8 ct[2000] = {0};
-	__attribute__((aligned(32))) u8 ss_bob[32] = {0};
-	__attribute__((aligned(32))) u8 ss_alice[32] = {1};
+	KemSecKey sk;
+	KemPubKey pk;
+	KemCipherText ct;
+	KemSharedSecret ss_bob, ss_alice;
 	Rng rng1, rng2;
 	u64 keygen_sum = 0;
 	u64 enc_sum = 0;
@@ -335,21 +332,21 @@ Test(kyber_perf) {
 		rng_init(&rng2);
 
 		u64 start = cycle_counter();
-		keypair(pk, sk, &rng1);
+		keypair(&pk, &sk, &rng1);
 		keygen_sum += cycle_counter() - start;
 		start = cycle_counter();
-		enc(ct, ss_bob, pk, &rng2);
+		enc(&ct, &ss_bob, &pk, &rng2);
 		enc_sum += cycle_counter() - start;
 		start = cycle_counter();
-		dec(ss_alice, ct, sk);
+		dec(&ss_alice, &ct, &sk);
 		dec_sum += cycle_counter() - start;
-		ASSERT(!fastmemcmp(ss_bob, ss_alice, 32), "shared secret");
+		ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE),
+		       "shared secret");
 	}
 
 	(void)keygen_sum;
 	(void)enc_sum;
 	(void)dec_sum;
-
 	/*
 	println("keygen={},enc={},dec={}", keygen_sum / KYBER_COUNT,
 		enc_sum / KYBER_COUNT, dec_sum / KYBER_COUNT);
