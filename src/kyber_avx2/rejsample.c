@@ -2,7 +2,7 @@
 #include <kyber_avx2/consts.h>
 #include <kyber_avx2/params.h>
 #include <kyber_avx2/rejsample.h>
-#include <kyber_avx2/symmetric.h>
+// #include <kyber_avx2/symmetric.h>
 #include <stdint.h>
 #include <string.h>
 
