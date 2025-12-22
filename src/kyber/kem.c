@@ -7,6 +7,9 @@
 #include <libfam/string.h>
 
 __attribute__((aligned(32))) u8 HASH_DOMAIN[32] = {1, 1, 2, 1, 2, 1};
+i32 pqcrystals_kyber512_avx2_keypair(u8 *pk, u8 *sk, Rng *rng);
+i32 pqcrystals_kyber512_avx2_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng);
+i32 pqcrystals_kyber512_avx2_dec(u8 *ss, const u8 *ct, const u8 *sk);
 
 /*************************************************
  * Name:        crypto_kem_keypair_derand
@@ -57,7 +60,6 @@ int crypto_kem_keypair_derand(u8 *pk, u8 *sk, const u8 *coins) {
  *
  * Returns 0 (success)
  **************************************************/
-
 int kem_keypair(u8 *pk, u8 *sk, Rng *rng) {
 	__attribute__((aligned(32))) u8 coins[2 * KYBER_SYMBYTES] = {0};
 	rng_gen(rng, coins, 2 * KYBER_SYMBYTES);

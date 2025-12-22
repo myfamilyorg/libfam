@@ -173,6 +173,8 @@ static unsigned int rej_uniform(int16_t *r, unsigned int len,
  **************************************************/
 void gen_matrix(polyvec *a, const uint8_t seed[32], int transposed) {
 	unsigned int ctr0 = 0, ctr1 = 0, ctr2 = 0, ctr3 = 0;
+	__attribute__((aligned(32))) static const u8 MAT_DOMAIN[32] = {
+	    1, 1, 1, 5, 6, 7, 3, 3, 2};
 	ALIGNED_UINT8(REJ_UNIFORM_AVX_NBLOCKS * SHAKE128_RATE) buf[4] = {0};
 	__m256i f;
 
@@ -202,8 +204,6 @@ void gen_matrix(polyvec *a, const uint8_t seed[32], int transposed) {
 		buf[3].coeffs[1] = 1;
 	}
 
-	__attribute__((aligned(32))) static const u8 MAT_DOMAIN[32] = {
-	    1, 1, 1, 5, 6, 7, 3, 3, 2};
 	StormContext ctx1, ctx2, ctx3, ctx4;
 	storm_init(&ctx1, MAT_DOMAIN);
 	storm_init(&ctx2, MAT_DOMAIN);
