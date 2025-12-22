@@ -1,12 +1,10 @@
 #include <immintrin.h>
 #include <kyber_avx2/consts.h>
 #include <kyber_avx2/ntt.h>
-#include <kyber_common/params.h>
 #include <kyber_avx2/poly.h>
 #include <kyber_avx2/polyvec.h>
+#include <kyber_common/params.h>
 #include <libfam/string.h>
-#include <stdint.h>
-#include <string.h>
 
 #if (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 320))
 static void poly_compress10(u8 r[320], const poly *restrict a) {

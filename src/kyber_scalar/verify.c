@@ -1,6 +1,4 @@
 #include <kyber_scalar/verify.h>
-#include <stddef.h>
-#include <stdint.h>
 
 /*************************************************
  * Name:        verify
@@ -9,12 +7,12 @@
  *
  * Arguments:   const u8 *a: pointer to first byte array
  *              const u8 *b: pointer to second byte array
- *              size_t len:       length of the byte arrays
+ *              u64 len:       length of the byte arrays
  *
  * Returns 0 if the byte arrays are equal, 1 otherwise
  **************************************************/
-int verify(const u8 *a, const u8 *b, size_t len) {
-	size_t i;
+int verify(const u8 *a, const u8 *b, u64 len) {
+	u64 i;
 	u8 r = 0;
 
 	for (i = 0; i < len; i++) r |= a[i] ^ b[i];
@@ -32,11 +30,11 @@ int verify(const u8 *a, const u8 *b, size_t len) {
  *
  * Arguments:   u8 *r:       pointer to output byte array
  *              const u8 *x: pointer to input byte array
- *              size_t len:       Amount of bytes to be copied
+ *              u64 len:       Amount of bytes to be copied
  *              u8 b:        Condition bit; has to be in {0,1}
  **************************************************/
-void cmov(u8 *r, const u8 *x, size_t len, u8 b) {
-	size_t i;
+void cmov(u8 *r, const u8 *x, u64 len, u8 b) {
+	u64 i;
 
 #if defined(__GNUC__) || defined(__clang__)
 	// Prevent the compiler from

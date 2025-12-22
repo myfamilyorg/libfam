@@ -2,7 +2,6 @@
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/polyvec.h>
 #include <libfam/string.h>
-#include <stdint.h>
 
 /*************************************************
  * Name:        polyvec_compress
@@ -13,8 +12,7 @@
  *                            (needs space for KYBER_POLYVECCOMPRESSEDBYTES)
  *              - const polyvec *a: pointer to input vector of polynomials
  **************************************************/
-void polyvec_compress(u8 r[KYBER_POLYVECCOMPRESSEDBYTES],
-		      const polyvec *a) {
+void polyvec_compress(u8 r[KYBER_POLYVECCOMPRESSEDBYTES], const polyvec *a) {
 	unsigned int i, j, k;
 	u64 d0;
 
@@ -89,8 +87,7 @@ void polyvec_compress(u8 r[KYBER_POLYVECCOMPRESSEDBYTES],
  *              - const u8 *a: pointer to input byte array
  *                                  (of length KYBER_POLYVECCOMPRESSEDBYTES)
  **************************************************/
-void polyvec_decompress(polyvec *r,
-			const u8 a[KYBER_POLYVECCOMPRESSEDBYTES]) {
+void polyvec_decompress(polyvec *r, const u8 a[KYBER_POLYVECCOMPRESSEDBYTES]) {
 	unsigned int i, j, k;
 
 #if (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 352))
@@ -99,20 +96,19 @@ void polyvec_decompress(polyvec *r,
 		for (j = 0; j < KYBER_N / 8; j++) {
 			t[0] = (a[0] >> 0) | ((u16)a[1] << 8);
 			t[1] = (a[1] >> 3) | ((u16)a[2] << 5);
-			t[2] = (a[2] >> 6) | ((u16)a[3] << 2) |
-			       ((u16)a[4] << 10);
+			t[2] =
+			    (a[2] >> 6) | ((u16)a[3] << 2) | ((u16)a[4] << 10);
 			t[3] = (a[4] >> 1) | ((u16)a[5] << 7);
 			t[4] = (a[5] >> 4) | ((u16)a[6] << 4);
-			t[5] = (a[6] >> 7) | ((u16)a[7] << 1) |
-			       ((u16)a[8] << 9);
+			t[5] =
+			    (a[6] >> 7) | ((u16)a[7] << 1) | ((u16)a[8] << 9);
 			t[6] = (a[8] >> 2) | ((u16)a[9] << 6);
 			t[7] = (a[9] >> 5) | ((u16)a[10] << 3);
 			a += 11;
 
 			for (k = 0; k < 8; k++)
 				r->vec[i].coeffs[8 * j + k] =
-				    ((u32)(t[k] & 0x7FF) * KYBER_Q +
-				     1024) >>
+				    ((u32)(t[k] & 0x7FF) * KYBER_Q + 1024) >>
 				    11;
 		}
 	}
@@ -128,9 +124,7 @@ void polyvec_decompress(polyvec *r,
 
 			for (k = 0; k < 4; k++)
 				r->vec[i].coeffs[4 * j + k] =
-				    ((u32)(t[k] & 0x3FF) * KYBER_Q +
-				     512) >>
-				    10;
+				    ((u32)(t[k] & 0x3FF) * KYBER_Q + 512) >> 10;
 		}
 	}
 #else

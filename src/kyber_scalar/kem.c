@@ -1,14 +1,11 @@
+#include <kyber_common/params.h>
 #include <kyber_scalar/indcpa.h>
 #include <kyber_scalar/kem.h>
-#include <kyber_common/params.h>
 #include <kyber_scalar/randombytes.h>
 #include <kyber_scalar/verify.h>
 #include <libfam/kem_impl.h>
 #include <libfam/rng.h>
 #include <libfam/string.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
 /*************************************************
  * Name:        crypto_kem_keypair_derand
  *
@@ -82,8 +79,7 @@ int crypto_kem_keypair(u8 *pk, u8 *sk, Rng *rng) {
  **
  * Returns 0 (success)
  **************************************************/
-int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk,
-			  const u8 *coins) {
+int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins) {
 	__attribute__((aligned(32))) u8 buf[2 * KYBER_SYMBYTES] = {0};
 	/* Will contain key, coins */
 	__attribute__((aligned(32))) u8 kr[2 * KYBER_SYMBYTES] = {0};

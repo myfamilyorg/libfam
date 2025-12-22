@@ -5,6 +5,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void randombytes(u8 *out, size_t outlen, Rng *rng);
+void randombytes(u8 *out, u64 outlen, Rng *rng);
 
 #endif

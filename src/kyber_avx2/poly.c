@@ -3,13 +3,11 @@
 #include <kyber_avx2/cbd.h>
 #include <kyber_avx2/consts.h>
 #include <kyber_avx2/ntt.h>
-#include <kyber_common/params.h>
 #include <kyber_avx2/poly.h>
 #include <kyber_avx2/reduce.h>
+#include <kyber_common/params.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
-#include <stdint.h>
-#include <string.h>
 
 #define SHAKE256_RATE 136
 
@@ -289,8 +287,7 @@ void poly_tomsg(u8 msg[KYBER_INDCPA_MSGBYTES], const poly *restrict a) {
  *                                     (of length KYBER_SYMBYTES bytes)
  *              - u8 nonce: one-byte input nonce
  **************************************************/
-void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES],
-			u8 nonce) {
+void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
 	ALIGNED_UINT8(KYBER_ETA2 * KYBER_N / 4) buf = {0};
 	__attribute__((aligned(32))) u8 key[32];
 	StormContext ctx;
@@ -306,8 +303,8 @@ void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES],
 #define NOISE_NBLOCKS \
 	((KYBER_ETA1 * KYBER_N / 4 + SHAKE256_RATE - 1) / SHAKE256_RATE)
 void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
-			   const u8 seed[32], u8 nonce0,
-			   u8 nonce1, u8 nonce2, u8 nonce3) {
+			   const u8 seed[32], u8 nonce0, u8 nonce1, u8 nonce2,
+			   u8 nonce3) {
 	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE) buf[4] = {0};
 	__attribute__((aligned(32))) u8 keys[4][32];
 	StormContext ctx1, ctx2, ctx3, ctx4;
@@ -339,8 +336,8 @@ void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 
 #if KYBER_K == 2
 void poly_getnoise_eta1122_4x(poly *r0, poly *r1, poly *r2, poly *r3,
-			      const u8 seed[32], u8 nonce0,
-			      u8 nonce1, u8 nonce2, u8 nonce3) {
+			      const u8 seed[32], u8 nonce0, u8 nonce1,
+			      u8 nonce2, u8 nonce3) {
 	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE) buf[4] = {0};
 
 	__attribute__((aligned(32))) u8 keys[4][32];

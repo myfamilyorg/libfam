@@ -1,12 +1,11 @@
+#include <kyber_common/params.h>
 #include <kyber_scalar/cbd.h>
 #include <kyber_scalar/ntt.h>
-#include <kyber_common/params.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/reduce.h>
 #include <kyber_scalar/verify.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
-#include <stdint.h>
 
 /*************************************************
  * Name:        poly_compress
@@ -87,10 +86,8 @@ void poly_decompress(poly *r, const u8 a[KYBER_POLYCOMPRESSEDBYTES]) {
 
 #if (KYBER_POLYCOMPRESSEDBYTES == 128)
 	for (i = 0; i < KYBER_N / 2; i++) {
-		r->coeffs[2 * i + 0] =
-		    (((u16)(a[0] & 15) * KYBER_Q) + 8) >> 4;
-		r->coeffs[2 * i + 1] =
-		    (((u16)(a[0] >> 4) * KYBER_Q) + 8) >> 4;
+		r->coeffs[2 * i + 0] = (((u16)(a[0] & 15) * KYBER_Q) + 8) >> 4;
+		r->coeffs[2 * i + 1] = (((u16)(a[0] >> 4) * KYBER_Q) + 8) >> 4;
 		a += 1;
 	}
 #elif (KYBER_POLYCOMPRESSEDBYTES == 160)
@@ -155,11 +152,9 @@ void poly_frombytes(poly *r, const u8 a[KYBER_POLYBYTES]) {
 	unsigned int i;
 	for (i = 0; i < KYBER_N / 2; i++) {
 		r->coeffs[2 * i] =
-		    ((a[3 * i + 0] >> 0) | ((u16)a[3 * i + 1] << 8)) &
-		    0xFFF;
+		    ((a[3 * i + 0] >> 0) | ((u16)a[3 * i + 1] << 8)) & 0xFFF;
 		r->coeffs[2 * i + 1] =
-		    ((a[3 * i + 1] >> 4) | ((u16)a[3 * i + 2] << 4)) &
-		    0xFFF;
+		    ((a[3 * i + 1] >> 4) | ((u16)a[3 * i + 2] << 4)) & 0xFFF;
 	}
 }
 
@@ -227,8 +222,7 @@ void poly_tomsg(u8 msg[KYBER_INDCPA_MSGBYTES], const poly *a) {
  *                                     (of length KYBER_SYMBYTES bytes)
  *              - u8 nonce: one-byte input nonce
  **************************************************/
-void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES],
-			u8 nonce) {
+void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
 	__attribute__((aligned(32))) u8 buf[KYBER_ETA1 * KYBER_N / 4] = {0};
 	__attribute__((aligned(32))) u8 key[32];
 	StormContext ctx;
@@ -254,8 +248,7 @@ void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES],
  *                                     (of length KYBER_SYMBYTES bytes)
  *              - u8 nonce: one-byte input nonce
  **************************************************/
-void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES],
-			u8 nonce) {
+void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
 	__attribute__((aligned(32))) u8 buf[KYBER_ETA2 * KYBER_N / 4] = {0};
 	__attribute__((aligned(32))) u8 key[32];
 	StormContext ctx;
