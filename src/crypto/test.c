@@ -26,6 +26,7 @@
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/format.h>
+#include <libfam/kem.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
@@ -277,4 +278,20 @@ Test(bible_mine) {
 		       32),
 	       "hash");
 	bible_destroy(b);
+}
+
+Test(kem1) {
+	__attribute__((aligned(32))) u8 sk[16000] = {0};
+	__attribute__((aligned(32))) u8 pk[16000] = {0};
+	__attribute__((aligned(32))) u8 ct[16000] = {0};
+	__attribute__((aligned(32))) u8 ss_bob[32] = {0};
+	__attribute__((aligned(32))) u8 ss_alice[32] = {1};
+
+	Rng rng1, rng2;
+	rng_init(&rng1);
+	rng_init(&rng2);
+	keypair(pk, sk);
+	enc(ct, ss_bob, pk);
+	dec(ss_alice, ct, sk);
+	ASSERT(!fastmemcmp(ss_bob, ss_alice, 32), "shared secret");
 }
