@@ -321,3 +321,42 @@ Test(kem_vector) {
 	ASSERT(!fastmemcmp(ss_bob, expected, 32), "expected");
 }
 
+#define KYBER_COUNT 100
+
+Test(kyber_perf) {
+	__attribute__((aligned(32))) u8 sk[2000] = {0};
+	__attribute__((aligned(32))) u8 pk[2000] = {0};
+	__attribute__((aligned(32))) u8 ct[2000] = {0};
+	__attribute__((aligned(32))) u8 ss_bob[32] = {0};
+	__attribute__((aligned(32))) u8 ss_alice[32] = {1};
+	Rng rng1, rng2;
+	u64 keygen_sum = 0;
+	u64 enc_sum = 0;
+	u64 dec_sum = 0;
+
+	for (u32 i = 0; i < KYBER_COUNT; i++) {
+		rng_init(&rng1);
+		rng_init(&rng2);
+
+		u64 start = cycle_counter();
+		keypair(pk, sk, &rng1);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		enc(ct, ss_bob, pk, &rng2);
+		enc_sum += cycle_counter() - start;
+		start = cycle_counter();
+		dec(ss_alice, ct, sk);
+		dec_sum += cycle_counter() - start;
+		ASSERT(!fastmemcmp(ss_bob, ss_alice, 32), "shared secret");
+	}
+
+	(void)keygen_sum;
+	(void)enc_sum;
+	(void)dec_sum;
+
+	/*
+	println("keygen={},enc={},dec={}", keygen_sum / KYBER_COUNT,
+		enc_sum / KYBER_COUNT, dec_sum / KYBER_COUNT);
+		*/
+}
+

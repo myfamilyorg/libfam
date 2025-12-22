@@ -35,6 +35,7 @@ int crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins) {
 	fastmemcpy(pk_copy, pk, KYBER_PUBLICKEYBYTES);
 	for (u32 i = 0; i < KYBER_PUBLICKEYBYTES; i += 32)
 		storm_next_block(&ctx, pk_copy + i);
+	fastmemset(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, 0, 32);
 	storm_next_block(&ctx, sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES);
 
 	/* Value z for pseudo-random output on reject */
