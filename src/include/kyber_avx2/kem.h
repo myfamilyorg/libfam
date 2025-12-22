@@ -1,10 +1,9 @@
 #ifndef KEM_H
 #define KEM_H
 
+#include <kyber_avx2/params.h>
 #include <libfam/rng.h>
 #include <stdint.h>
-
-#include "params.h"
 
 #define CRYPTO_SECRETKEYBYTES KYBER_SECRETKEYBYTES
 #define CRYPTO_PUBLICKEYBYTES KYBER_PUBLICKEYBYTES
