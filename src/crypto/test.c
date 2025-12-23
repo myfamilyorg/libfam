@@ -200,11 +200,11 @@ Test(wots) {
 #define WOTS_COUNT 100
 
 Test(wots_rand) {
-	__attribute__((aligned(32))) u8 key[32];
+	__attribute__((aligned(32))) u8 key[32] = {0};
+	u8 msg[32] = {0};
 	WotsPubKey pk;
 	WotsSecKey sk;
 	WotsSig sig;
-	u8 msg[32];
 
 	Rng rng;
 	u64 keygen_sum = 0;
@@ -247,7 +247,7 @@ Test(bible) {
 	__attribute__((aligned(32))) u8 output[32];
 
 	if (!exists(BIBLE_PATH)) {
-		b = bible_gen(false);
+		b = bible_gen(true);
 		bible_store(b, BIBLE_PATH);
 	} else
 		b = bible_load(BIBLE_PATH);

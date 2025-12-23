@@ -97,27 +97,33 @@ PUBLIC const Bible *bible_gen(bool print_status) {
 		fastmemcpy(ret->data + offset, buffer, 32);
 		if (print_status) {
 			u64 percent = offset * 100 / EXTENDED_BIBLE_SIZE;
-			if (percent != last_percent) {
+			i64 current = micros();
+			if (percent != last_percent ||
+			    (current - last_update) > 500000) {
 				static const u8 msg[] = "\rBible gen status: ";
 				pwrite(2, msg, strlen(msg), 0);
 
 				write_num(2, percent);
 				pwrite(2, "% ", 2, 0);
-				last_percent = percent;
-			}
-			i64 current = micros();
 
-			if ((current - last_update) > 100000) {
-				last_update = current;
-				if (counter % 2 == 0)
-					pwrite(2, "\\", 1, 0);
-				else
-					pwrite(2, "/", 1, 0);
+				static const u8 spinner[] = ".oOOo";
+				u8 msg2[3];
+				msg2[0] = spinner[counter % 5];
+				msg2[1] = ' ';
+				msg2[2] = ' ';
+				pwrite(2, msg2, 3, 0);
+				pwrite(2, "  ", 2, 0);
 				counter++;
+
+				last_percent = percent;
+				last_update = current;
 			}
 		}
 	}
-	if (print_status) pwrite(2, "\n", 1, 0);
+	if (print_status) {
+		static const u8 msg[] = "\rBible gen status: 100%";
+		pwrite(2, msg, strlen(msg), 0);
+	}
 
 	return ret;
 }
