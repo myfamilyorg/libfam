@@ -25,8 +25,13 @@ jobs:
             runner: ubuntu-latest
           - platform: linux-aarch64
             runner: ubuntu-24.04-arm
-        task: [buildgcc, buildgcc0, buildclang, buildclang0, test, cov]
-
+        task:
+          - buildgcc
+          - buildgcc0
+          - buildclang
+          - buildclang0
+          - test
+          - cov
     steps:
       - name: Checkout code
         uses: actions/checkout@v4  # Updated to latest version
