@@ -1,0 +1,4 @@
+#!/bin/sh
+
+./build clean test --cc=clang || exit 1;
+

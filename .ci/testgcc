@@ -1,0 +1,4 @@
+#!/bin/sh
+
+./build clean test --cc=gcc || exit 1;
+

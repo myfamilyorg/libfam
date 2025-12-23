@@ -32,6 +32,8 @@ jobs:
           - buildclang0
           - testgcc
           - testclang
+          - testgccvalgrind
+          - testclangvalgrind
           - cov
     steps:
       - name: Checkout code
