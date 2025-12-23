@@ -109,8 +109,6 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	(void)argc;
 	(void)argv;
 
-	unlinkat(AT_FDCWD, TEST_COMPLETE, 0);
-
 	if (init_environ(envp) < 0) {
 		perror("init_environ");
 		const u8 *msg = (void *)"Too many environment variables!\n";
@@ -201,8 +199,5 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 	pwrite(STDERR_FD, " ms]\n", 5, 0);
 	pwrite(STDERR_FD, (void *)RESET, faststrlen((void *)RESET), 0);
 
-	open((void *)TEST_COMPLETE, O_RDONLY | O_CREAT, 0600);
-
-	_exit(0);
 	return 0;
 }

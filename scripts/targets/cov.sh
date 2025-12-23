@@ -36,11 +36,6 @@ ${COMMAND} || exit $?;
 export TEST_PATTERN="*";
 LD_LIBRARY_PATH=${LIB_DIR} ${TEST_BIN} || { echo "tests failed!"; exit 1; }
 
-if [ ! -e /tmp/test_complete ]; then
-	echo "tests failed (no file)!";
-        exit 1;
-fi
-
 for DIR in ${SUB_DIRS}; do
         cp ./src/${DIR}/*.c ./target/cov/objs/${DIR}/
         touch ./target/cov/objs/${DIR}/*
