@@ -222,26 +222,35 @@ STATIC void storm_init_avx2(StormContext *ctx, const u8 key[32]) {
 	__m256i domain_key =
 	    _mm256_load_si256((const __m256i *)(STORM_KEY_MIX + 32));
 	st->key0 = _mm256_xor_si256(key256, domain_key);
+	domain_key = _mm256_load_si256((const __m256i *)(STORM_KEY_MIX + 64));
+	st->key1 = _mm256_xor_si256(key256, domain_key);
+	domain_key = _mm256_load_si256((const __m256i *)(STORM_KEY_MIX + 96));
+	st->key2 = _mm256_xor_si256(key256, domain_key);
+	domain_key = _mm256_load_si256((const __m256i *)(STORM_KEY_MIX + 128));
+	st->key3 = _mm256_xor_si256(key256, domain_key);
 	st->counter = _mm256_load_si256((const __m256i *)ZERO256);
 }
 STATIC void storm_next_block_avx2(StormContext *ctx, u8 buf[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 	__m256i p = _mm256_load_si256((const __m256i *)buf);
 	__m256i x = _mm256_xor_si256(st->state, p);
-	__m256i key = st->key0;
-	x = _mm256_aesenc_epi128(x, key);
+	__m256i key0 = st->key0;
+	__m256i key1 = st->key1;
+	__m256i key2 = st->key2;
+	__m256i key3 = st->key3;
+	x = _mm256_aesenc_epi128(x, key0);
 	__m128i lo = _mm256_castsi256_si128(x);
 	__m128i hi = _mm256_extracti128_si256(x, 1);
 	lo = _mm_xor_si128(lo, hi);
 	__m256i y = _mm256_set_m128i(lo, hi);
-	x = _mm256_aesenc_epi128(x, key);
+	x = _mm256_aesenc_epi128(x, key1);
 	x = _mm256_xor_si256(y, x);
-	x = _mm256_aesenc_epi128(x, key);
+	x = _mm256_aesenc_epi128(x, key2);
 	lo = _mm256_castsi256_si128(x);
 	hi = _mm256_extracti128_si256(x, 1);
 	lo = _mm_xor_si128(lo, hi);
 	st->state = _mm256_set_m128i(lo, hi);
-	x = _mm256_aesenc_epi128(x, key);
+	x = _mm256_aesenc_epi128(x, key3);
 	_mm256_store_si256((__m256i *)buf, x);
 }
 STATIC void storm_xcrypt_buffer_avx2(StormContext *ctx, u8 buf[32]) {
@@ -266,6 +275,22 @@ STATIC void storm_init_neon(StormContext *ctx, const u8 key[32]) {
 	uint8x16_t domain_key_hi = vld1q_u8(STORM_KEY_MIX + 32 + 16);
 	st->key_lo0 = veorq_u8(key_lo, domain_key_lo);
 	st->key_hi0 = veorq_u8(key_hi, domain_key_hi);
+
+	domain_key_lo = vld1q_u8(STORM_KEY_MIX + 64);
+	domain_key_hi = vld1q_u8(STORM_KEY_MIX + 64 + 16);
+	st->key_lo1 = veorq_u8(key_lo, domain_key_lo);
+	st->key_hi1 = veorq_u8(key_hi, domain_key_hi);
+
+	domain_key_lo = vld1q_u8(STORM_KEY_MIX + 96);
+	domain_key_hi = vld1q_u8(STORM_KEY_MIX + 96 + 16);
+	st->key_lo2 = veorq_u8(key_lo, domain_key_lo);
+	st->key_hi2 = veorq_u8(key_hi, domain_key_hi);
+
+	domain_key_lo = vld1q_u8(STORM_KEY_MIX + 128);
+	domain_key_hi = vld1q_u8(STORM_KEY_MIX + 128 + 16);
+	st->key_lo3 = veorq_u8(key_lo, domain_key_lo);
+	st->key_hi3 = veorq_u8(key_hi, domain_key_hi);
+
 	st->counter_lo = vdupq_n_u8(0);
 	st->counter_hi = vdupq_n_u8(0);
 	(void)ZERO256;
@@ -278,19 +303,31 @@ STATIC uint8x16_t aesenc_2x(uint8x16_t data, uint8x16_t rkey) {
 	return veorq_u8(data, rkey);
 }
 
-STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
+STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32], u8 index) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 	uint8x16_t p_lo = vld1q_u8(buf);
 	uint8x16_t p_hi = vld1q_u8(buf + 16);
 	uint8x16_t x_lo = veorq_u8(st->state_lo, p_lo);
 	uint8x16_t x_hi = veorq_u8(st->state_hi, p_hi);
-	uint8x16_t temp_lo = aesenc_2x(x_lo, st->key_lo0);
-	uint8x16_t temp_hi = aesenc_2x(x_hi, st->key_hi0);
+	uint8x16_t temp_lo, temp_hi;
+	if (index == 0) {
+		temp_lo = aesenc_2x(x_lo, st->key_lo0);
+		temp_hi = aesenc_2x(x_hi, st->key_hi0);
+	} else {
+		temp_lo = aesenc_2x(x_lo, st->key_lo2);
+		temp_hi = aesenc_2x(x_hi, st->key_hi2);
+	}
 	uint8x16_t reduced = veorq_u8(temp_lo, temp_hi);
 	st->state_lo = temp_hi;
 	st->state_hi = reduced;
-	uint8x16_t out_lo = aesenc_2x(temp_lo, st->key_lo0);
-	uint8x16_t out_hi = aesenc_2x(temp_hi, st->key_hi0);
+	uint8x16_t out_lo, out_hi;
+	if (index == 0) {
+		out_lo = aesenc_2x(temp_lo, st->key_lo1);
+		out_hi = aesenc_2x(temp_hi, st->key_hi1);
+	} else {
+		out_lo = aesenc_2x(temp_lo, st->key_lo3);
+		out_hi = aesenc_2x(temp_hi, st->key_hi3);
+	}
 	vst1q_u8(buf, out_lo);
 	vst1q_u8(buf + 16, out_hi);
 }
@@ -334,11 +371,14 @@ STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
 	for (int i = 0; i < 32; ++i) {
 		st->state[i] = key[i] ^ STORM_KEY_MIX[i];
 		st->key0[i] = key[i] ^ STORM_KEY_MIX[32 + i];
+		st->key1[i] = key[i] ^ STORM_KEY_MIX[64 + i];
+		st->key2[i] = key[i] ^ STORM_KEY_MIX[96 + i];
+		st->key3[i] = key[i] ^ STORM_KEY_MIX[128 + i];
 	}
 	fastmemcpy(st->counter, ZERO256, 32);
 }
 
-STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32]) {
+STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32], u8 index) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 
 	u8 lo[16], hi[16];
@@ -348,8 +388,13 @@ STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32]) {
 		hi[i] = st->state[i + 16] ^ buf[i + 16];
 	}
 
-	aesenc128(lo, st->key0);
-	aesenc128(hi, st->key0 + 16);
+	if (index == 0) {
+		aesenc128(lo, st->key0);
+		aesenc128(hi, st->key0 + 16);
+	} else {
+		aesenc128(lo, st->key2);
+		aesenc128(hi, st->key2 + 16);
+	}
 
 	u8 orig_lo[16], orig_hi[16];
 	fastmemcpy(orig_lo, lo, 16);
@@ -364,8 +409,13 @@ STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32]) {
 		st->state[i + 16] = lo[i];
 	}
 
-	aesenc128(orig_lo, st->key0);
-	aesenc128(orig_hi, st->key0 + 16);
+	if (index == 0) {
+		aesenc128(orig_lo, st->key1);
+		aesenc128(orig_hi, st->key1 + 16);
+	} else {
+		aesenc128(orig_lo, st->key3);
+		aesenc128(orig_hi, st->key3 + 16);
+	}
 
 	for (int i = 0; i < 16; ++i) {
 		buf[i] = orig_lo[i];
@@ -389,7 +439,6 @@ STATIC void storm_xcrypt_buffer_scalar(StormContext *ctx, u8 buf[32]) {
 	++counter[2];
 	++counter[3];
 }
-
 #endif /* !USE_AVX2 */
 
 PUBLIC void storm_init(StormContext *ctx, const u8 key[32]) {
@@ -406,11 +455,11 @@ PUBLIC void storm_next_block(StormContext *ctx, u8 buf[32]) {
 #ifdef USE_AVX2
 	storm_next_block_avx2(ctx, buf);
 #elif defined(USE_NEON)
-	storm_next_block_neon(ctx, buf);
-	storm_next_block_neon(ctx, buf);
+	storm_next_block_neon(ctx, buf, 0);
+	storm_next_block_neon(ctx, buf, 1);
 #else
-	storm_next_block_scalar(ctx, buf);
-	storm_next_block_scalar(ctx, buf);
+	storm_next_block_scalar(ctx, buf, 0);
+	storm_next_block_scalar(ctx, buf, 1);
 #endif /* !USE_AVX2 */
 }
 
