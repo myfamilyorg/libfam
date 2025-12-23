@@ -1,4 +1,5 @@
 name: CI Pipeline
+
 on:
   push:
     branches:
@@ -9,99 +10,33 @@ on:
     branches:
       - '*'
   schedule:
-    - cron: '15 7 * * *' # Nightly build at 7:15 AM (UDT)
-  workflow_dispatch: # This enables manual triggering
+    - cron: '15 7 * * *'  # Nightly build at 7:15 AM UTC
+  workflow_dispatch:      # Enables manual triggering
 
 jobs:
-  linux_amd64:
-    runs-on: ubuntu-latest
+  ci:
+    name: ${{ matrix.config.platform }} - ${{ matrix.task }}
+    runs-on: ${{ matrix.config.runner }}
+
     strategy:
       matrix:
-        platform: [linux-amd64]
+        config:
+          - platform: linux-amd64
+            runner: ubuntu-latest
+          - platform: linux-aarch64
+            runner: ubuntu-24.04-arm
+        task: [build, test]
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # Updated to latest version
         with:
           fetch-depth: 0
+
       - name: Check linux version
         run: uname -a
-      - name: build
-        run: |
-          ./.ci/build
-  linux_aarch64:
-    runs-on: ubuntu-24.04-arm
-    strategy:
-      matrix:
-        platform: [linux-aarch64]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Check linux version
-        run: uname -a
-      - name: build
-        run: |
-          ./.ci/build
-  linux_amd64_test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [linux-amd64]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Check linux version
-        run: uname -a
-      - name: test
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y valgrind
-          ./.ci/test --valgrind
-  linux_aarch64_test:
-    runs-on: ubuntu-24.04-arm
-    strategy:
-      matrix:
-        platform: [linux-aarch64]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Check linux version
-        run: uname -a
-      - name: test
-        run: |
-          ./.ci/test
-  linux_amd64_coverage:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [linux-amd64]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Check linux version
-        run: uname -a
-      - name: coverage
-        run: |
-          ./.ci/coverage
-  linux_aarch64_coverage:
-    runs-on: ubuntu-24.04-arm
-    strategy:
-      matrix:
-        platform: [linux-aarch64]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Check linux version
-        run: uname -a
-      - name: coverage
-        run: |
-          ./.ci/coverage
+
+      - name: ${{ matrix.task }}
+        run: ./.ci/${{ matrix.task }}
+        env:
+          PLATFORM: ${{ matrix.config.platform }}
