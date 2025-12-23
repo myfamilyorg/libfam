@@ -113,3 +113,31 @@ Test(storm_cipher) {
 	ASSERT(!memcmp(buffer5, "x", 1), "eq5");
 }
 
+Test(storm_cipher_vector) {
+	StormContext ctx;
+	__attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
+	__attribute__((aligned(32))) u8 buffer1[32] = {0};
+	__attribute__((aligned(32))) u8 buffer2[32] = {0};
+
+	storm_init(&ctx, SEED);
+	faststrcpy(buffer1, "test1");
+	storm_xcrypt_buffer(&ctx, buffer1);
+	faststrcpy(buffer2, "test2");
+	storm_xcrypt_buffer(&ctx, buffer2);
+	/*
+	for (u32 i = 0; i < 32; i++) {
+		write_num(2, buffer2[i]);
+		pwrite(2, ", ", 2, 0);
+	}
+	*/
+
+	u8 expected1[32] = {199, 102, 122, 215, 159, 26,  105, 89,
+			    70,	 31,  221, 242, 209, 157, 218, 103,
+			    36,	 241, 8,   82,	187, 140, 230, 109,
+			    178, 194, 17,  187, 150, 9,	  252, 129};
+	ASSERT(!memcmp(buffer1, expected1, 32), "expected1");
+	u8 expected2[32] = {84,	 181, 10,  99,	237, 230, 100, 4,   157, 73, 40,
+			    157, 54,  92,  137, 107, 185, 143, 111, 12,	 78, 3,
+			    62,	 74,  110, 131, 97,  104, 79,  70,  94,	 84};
+	ASSERT(!memcmp(buffer2, expected2, 32), "expected2");
+}

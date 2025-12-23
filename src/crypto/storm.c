@@ -74,22 +74,6 @@ typedef struct {
 } StormContextImpl;
 
 typedef struct {
-#ifdef USE_AVX2
-	__m128i state;
-	__m128i key;
-	__m128i counter;
-#elif defined(USE_NEON)
-	uint8x16_t state;
-	uint8x16_t key;
-	uint8x16_t counter;
-#else
-	u8 state[16];
-	u8 key[16];
-	u8 counter[16];
-#endif /* !USE_AVX2 */
-} Storm128ContextImpl;
-
-typedef struct {
 	StormContext ctx;
 	u64 counter;
 } StormCtrImpl;
@@ -259,7 +243,7 @@ STATIC void storm_init_neon(StormContext *ctx, const u8 key[32]) {
 	(void)ZERO256;
 }
 
-STATIC uint8x16_t aesenc_intel_match(uint8x16_t data, uint8x16_t rkey) {
+STATIC uint8x16_t aesenc_2x(uint8x16_t data, uint8x16_t rkey) {
 	uint8x16_t zero = vdupq_n_u8(0);
 	data = vaeseq_u8(data, zero);
 	data = vaesmcq_u8(data);
@@ -272,13 +256,13 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 	uint8x16_t p_hi = vld1q_u8(buf + 16);
 	uint8x16_t x_lo = veorq_u8(st->state_lo, p_lo);
 	uint8x16_t x_hi = veorq_u8(st->state_hi, p_hi);
-	uint8x16_t temp_lo = aesenc_intel_match(x_lo, st->key_lo);
-	uint8x16_t temp_hi = aesenc_intel_match(x_hi, st->key_hi);
+	uint8x16_t temp_lo = aesenc_2x(x_lo, st->key_lo);
+	uint8x16_t temp_hi = aesenc_2x(x_hi, st->key_hi);
 	uint8x16_t reduced = veorq_u8(temp_lo, temp_hi);
 	st->state_lo = temp_hi;
 	st->state_hi = reduced;
-	uint8x16_t out_lo = aesenc_intel_match(temp_lo, st->key_lo);
-	uint8x16_t out_hi = aesenc_intel_match(temp_hi, st->key_hi);
+	uint8x16_t out_lo = aesenc_2x(temp_lo, st->key_lo);
+	uint8x16_t out_hi = aesenc_2x(temp_hi, st->key_hi);
 	vst1q_u8(buf, out_lo);
 	vst1q_u8(buf + 16, out_hi);
 }
