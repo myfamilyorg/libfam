@@ -32,6 +32,8 @@ jobs:
           - buildclang0
           - testgcc
           - testclang
+          - testgcc0
+          - testclang0
           - testgccvalgrind
           - testclangvalgrind
           - cov
