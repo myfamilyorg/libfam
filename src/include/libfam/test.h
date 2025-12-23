@@ -49,32 +49,7 @@ typedef struct {
 } TestEntry;
 extern TestEntry tests[];
 
-static i64 __attribute__((unused)) write_num(i32 fd, u64 num) {
-	u8 buf[21];
-	u8 *p;
-	u64 len;
-	i64 written;
-INIT:
-	if (fd < 0) ERROR(EBADF);
-
-	p = buf + sizeof(buf) - 1;
-	*p = '\0';
-
-	if (num == 0)
-		*--p = '0';
-	else
-		while (num > 0) {
-			*--p = '0' + (num % 10);
-			num /= 10;
-		}
-
-	len = buf + sizeof(buf) - 1 - p;
-	written = pwrite(fd, p, len, 0);
-	if (written < 0) ERROR();
-	if ((u64)written != len) ERROR(EIO);
-CLEANUP:
-	RETURN;
-}
+i64 write_num(i32 fd, u64 num);
 
 #define Test(name)                                                         \
 	void __test_##name(void);                                          \

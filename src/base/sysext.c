@@ -175,6 +175,33 @@ PUBLIC i32 exists(const u8 *path) {
 	return 0;
 }
 
+PUBLIC i64 write_num(i32 fd, u64 num) {
+	u8 buf[21];
+	u8 *p;
+	u64 len;
+	i64 written;
+INIT:
+	if (fd < 0) ERROR(EBADF);
+
+	p = buf + sizeof(buf) - 1;
+	*p = '\0';
+
+	if (num == 0)
+		*--p = '0';
+	else
+		while (num > 0) {
+			*--p = '0' + (num % 10);
+			num /= 10;
+		}
+
+	len = buf + sizeof(buf) - 1 - p;
+	written = pwrite(fd, p, len, 0);
+	if (written < 0) ERROR();
+	if ((u64)written != len) ERROR(EIO);
+CLEANUP:
+	RETURN;
+}
+
 void yield(void) {
 #if defined(__x86_64__)
 	__asm__ __volatile__("pause" ::: "memory");

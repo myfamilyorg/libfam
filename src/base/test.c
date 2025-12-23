@@ -1003,3 +1003,14 @@ Test(secure_zero) {
 	u64 cc = cycle_counter();
 	ASSERT(cc, "cycle_counter");
 }
+
+Test(write_num) {
+	struct stat st;
+	i32 fd = open("/tmp/write0.dat", O_RDWR | O_CREAT, 0600);
+	ASSERT(fd > 0, "fd");
+	write_num(fd, 0);
+	fstat(fd, &st);
+	ASSERT_EQ(st.st_size, 1, "size");
+	close(fd);
+	unlinkat(AT_FDCWD, "/tmp/write0.dat", 0);
+}

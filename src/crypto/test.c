@@ -24,6 +24,8 @@
  *******************************************************************************/
 
 #include <libfam/aighthash.h>
+#include <libfam/bible.h>
+#include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
@@ -193,5 +195,107 @@ Test(wots) {
 	ASSERT(!wots_verify(&pk, &sig, msg), "verify");
 	msg[0]++;
 	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+}
+
+#define WOTS_COUNT 100
+
+Test(wots_rand) {
+	__attribute__((aligned(32))) u8 key[32];
+	WotsPubKey pk;
+	WotsSecKey sk;
+	WotsSig sig;
+	u8 msg[32];
+
+	Rng rng;
+	u64 keygen_sum = 0;
+	u64 sign_sum = 0;
+	u64 verify_sum = 0;
+
+	rng_init(&rng);
+
+	for (u32 i = 0; i < WOTS_COUNT; i++) {
+		rng_gen(&rng, key, 32);
+		rng_gen(&rng, msg, 32);
+
+		u64 start = cycle_counter();
+		wots_keyfrom(key, &pk, &sk);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		wots_sign(&sk, msg, &sig);
+		sign_sum += cycle_counter() - start;
+		start = cycle_counter();
+		i32 res = wots_verify(&pk, &sig, msg);
+		verify_sum += cycle_counter() - start;
+		ASSERT(!res, "verify");
+		msg[0]++;
+		ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+	}
+
+	(void)keygen_sum;
+	(void)sign_sum;
+	(void)verify_sum;
+}
+
+#define BIBLE_PATH "resources/test_bible.dat"
+
+Test(bible) {
+	const Bible *b;
+	u64 sbox[256];
+	__attribute__((aligned(32))) static const u8 input[128] = {
+	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
+	    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+	__attribute__((aligned(32))) u8 output[32];
+
+	if (!exists(BIBLE_PATH)) {
+		b = bible_gen(false);
+		bible_store(b, BIBLE_PATH);
+	} else
+		b = bible_load(BIBLE_PATH);
+
+	bible_sbox8_64(sbox);
+	bible_hash(b, input, output, sbox);
+
+	u8 expected[32] = {161, 219, 95,  165, 143, 81,	 8,  96,  175, 215, 101,
+			   246, 130, 254, 99,  17,  61,	 84, 7,	  110, 157, 128,
+			   179, 165, 67,  64,  193, 247, 70, 100, 54,  146};
+
+	ASSERT(!memcmp(output, expected, 32), "hash");
+	bible_destroy(b);
+	b = bible_load(BIBLE_PATH);
+	bible_destroy(b);
+}
+
+#include <libfam/format.h>
+
+Test(bible_mine) {
+	const Bible *b;
+	u32 nonce = 0;
+	u64 sbox[256];
+	__attribute__((aligned(32))) u8 output[32] = {0};
+	u8 target[32];
+	__attribute((aligned(32))) u8 header[HASH_INPUT_LEN];
+
+	for (u32 i = 0; i < HASH_INPUT_LEN; i++) header[i] = i;
+
+	if (!exists(BIBLE_PATH)) {
+		b = bible_gen(false);
+		bible_store(b, BIBLE_PATH);
+	} else
+		b = bible_load(BIBLE_PATH);
+
+	memset(target, 0xFF, 32);
+	target[0] = 0;
+	target[1] = 0;
+	bible_sbox8_64(sbox);
+	mine_block(b, header, target, output, &nonce, U32_MAX, sbox);
+
+	ASSERT_EQ(nonce, 1312, "nonce");
+	ASSERT(!memcmp(output, (u8[]){0,   0,	28,  44,  170, 182, 139, 188,
+				      55,  146, 148, 53,  14,  68,  79,	 182,
+				      130, 246, 76,  17,  102, 240, 129, 186,
+				      69,  227, 176, 231, 224, 33,  141, 0},
+		       32),
+	       "hash");
+	bible_destroy(b);
 }
 
