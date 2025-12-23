@@ -121,7 +121,7 @@ int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins) {
 		storm_next_block(&ctx, pk_copy + i);
 	storm_next_block(&ctx, buf + KYBER_SYMBYTES);
 
-	storm_init(&ctx, KEM_DERAND_DOMAIN);
+	storm_init(&ctx, ENC_DEC_DOMAIN);
 	fastmemcpy(kr, buf, 2 * KYBER_SYMBYTES);
 	storm_next_block(&ctx, kr);
 	storm_next_block(&ctx, kr + 32);
@@ -191,7 +191,7 @@ int crypto_kem_dec(u8 *ss, const u8 *ct, const u8 *sk) {
 		   KYBER_SYMBYTES);
 
 	fastmemcpy(kr, buf, 2 * KYBER_SYMBYTES);
-	storm_init(&ctx, KEM_DERAND_DOMAIN);
+	storm_init(&ctx, ENC_DEC_DOMAIN);
 	storm_next_block(&ctx, kr);
 	storm_next_block(&ctx, kr + 32);
 
