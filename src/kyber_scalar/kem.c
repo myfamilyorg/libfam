@@ -55,7 +55,7 @@ int crypto_kem_keypair_derand(u8 *pk, u8 *sk, const u8 *coins) {
 	StormContext ctx;
 	__attribute__((aligned(32))) u8 pk_copy[KYBER_PUBLICKEYBYTES] = {0};
 
-	storm_init(&ctx, HASH_DOMAIN);
+	storm_init(&ctx, KEM_DERAND_DOMAIN);
 	fastmemcpy(pk_copy, pk, KYBER_PUBLICKEYBYTES);
 	for (u32 i = 0; i < KYBER_PUBLICKEYBYTES; i += 32)
 		storm_next_block(&ctx, pk_copy + i);
@@ -115,7 +115,7 @@ int crypto_kem_enc_derand(u8 *ct, u8 *ss, const u8 *pk, const u8 *coins) {
 	__attribute__((aligned(32))) u8 pk_copy[KYBER_PUBLICKEYBYTES] = {0};
 	StormContext ctx;
 
-	storm_init(&ctx, HASH_DOMAIN);
+	storm_init(&ctx, KEM_DERAND_DOMAIN);
 	fastmemcpy(pk_copy, pk, KYBER_PUBLICKEYBYTES);
 	for (u32 i = 0; i < KYBER_PUBLICKEYBYTES; i += 32)
 		storm_next_block(&ctx, pk_copy + i);

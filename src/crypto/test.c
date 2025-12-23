@@ -377,3 +377,43 @@ Test(dilithium) {
 	}
 }
 
+#define DILITHIUM_COUNT 10
+
+Test(dilithium_perf) {
+	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
+	Message m = {0};
+	SecretKey sk;
+	PublicKey pk;
+	Signature sm;
+
+	Rng rng;
+	u64 keygen_sum = 0;
+	u64 sign_sum = 0;
+	u64 verify_sum = 0;
+
+	rng_init(&rng);
+
+	for (u32 i = 0; i < DILITHIUM_COUNT; i++) {
+		rng_gen(&rng, rnd, 32);
+		rng_gen(&rng, &m, MLEN);
+
+		u64 start = cycle_counter();
+		keyfrom(&sk, &pk, rnd);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		sign(&sm, &m, &sk, NULL);
+		sign_sum += cycle_counter() - start;
+		start = cycle_counter();
+		verify(&sm, &pk, &m);
+		verify_sum += cycle_counter() - start;
+	}
+
+	(void)keygen_sum;
+	(void)sign_sum;
+	(void)verify_sum;
+	/*
+	println("keygen={},sign={},verify={}", keygen_sum / DILITHIUM_COUNT,
+		sign_sum / DILITHIUM_COUNT, verify_sum / DILITHIUM_COUNT);
+		*/
+}
+

@@ -187,7 +187,7 @@ void indcpa_keypair_derand(u8 pk[KYBER_INDCPA_PUBLICKEYBYTES],
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 	buf[KYBER_SYMBYTES] = KYBER_K;
 
-	storm_init(&ctx, HASH_DOMAIN);
+	storm_init(&ctx, DERAND_DOMAIN);
 	storm_next_block(&ctx, buf);
 	storm_next_block(&ctx, buf + 32);
 
