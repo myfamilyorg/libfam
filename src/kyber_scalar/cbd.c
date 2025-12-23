@@ -27,7 +27,7 @@
 #include <kyber_common/params.h>
 #include <kyber_scalar/cbd.h>
 
-STAIC u32 load32_littleendian(const u8 x[4]) {
+STATIC u32 load32_littleendian(const u8 x[4]) {
 	u32 r;
 	r = (u32)x[0];
 	r |= (u32)x[1] << 8;

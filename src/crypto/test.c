@@ -29,6 +29,7 @@
 #include <libfam/kem.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
+#include <libfam/sign.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/test_base.h>
@@ -353,3 +354,22 @@ Test(kyber_perf) {
 		*/
 }
 
+Test(dilithium) {
+	__attribute__((aligned(32))) u8 seed[32] = "1234";
+	__attribute__((aligned(32))) u8 msg[32] = {1, 2, 3, 4, 5};
+	SecKey sk;
+	PubKey pk;
+	Sig sig;
+	i32 res;
+	keyfrom(&pk, &sk, seed);
+	sign(&sk, msg, &sig);
+
+	res = verify(&pk, msg, &sig);
+	println("res={}", res);
+	(void)res;
+	(void)sk;
+	(void)pk;
+	(void)sig;
+	(void)seed;
+	(void)msg;
+}
