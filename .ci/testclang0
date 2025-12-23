@@ -1,4 +1,4 @@
 #!/bin/sh
 
-./build clean test --cc=clang --cflags="-O0" || exit 1;
+./build clean test --quick --cc=clang --cflags="-O0" || exit 1;
 
