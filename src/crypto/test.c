@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/test_base.h>
@@ -125,13 +126,6 @@ Test(storm_cipher_vector) {
 	faststrcpy(buffer2, "test2");
 	storm_xcrypt_buffer(&ctx, buffer2);
 
-	/*
-	for (u32 i = 0; i < 32; i++) {
-		write_num(2, buffer2[i]);
-		pwrite(2, ", ", 2, 0);
-	}
-	*/
-
 	u8 expected1[32] = {208, 219, 23,  2,	102, 98,  157, 53,
 			    88,	 199, 188, 237, 126, 195, 16,  183,
 			    63,	 14,  194, 187, 89,  153, 201, 245,
@@ -143,3 +137,33 @@ Test(storm_cipher_vector) {
 			    13,	 252, 88,  139, 176, 20,  42,  167};
 	ASSERT(!memcmp(buffer2, expected2, 32), "expected2");
 }
+
+Test(rng) {
+	u64 x = 0, y = 0;
+	__attribute__((aligned(32))) u8 z[64] = {0};
+	Rng rng;
+	__attribute__((aligned(32))) u8 key[32] = {5, 5, 5, 5};
+	rng_init(&rng);
+	rng_gen(&rng, &x, sizeof(x));
+	rng_init(&rng);
+	rng_gen(&rng, &y, sizeof(y));
+	ASSERT(x != y, "x!=y");
+
+	rng_test_seed(&rng, key);
+	rng_gen(&rng, z, sizeof(z));
+	/*
+	for (u32 i = 0; i < 64; i++) {
+		write_num(2, z[i]);
+		pwrite(2, ", ", 2, 0);
+	}
+	*/
+
+	u8 expected[64] = {
+	    241, 172, 79,  71,	20,  35,  84,  2,   39,	 165, 18,  232, 21,
+	    84,	 178, 57,  205, 39,  187, 146, 20,  199, 114, 41,  245, 137,
+	    175, 6,   181, 187, 130, 62,  118, 58,  215, 246, 118, 155, 172,
+	    56,	 164, 205, 188, 176, 169, 1,   111, 88,	 2,   22,  98,	134,
+	    149, 225, 143, 78,	120, 153, 128, 74,  110, 64,  78,  228};
+	ASSERT_EQ(memcmp(z, expected, 64), 0, "z");
+}
+
