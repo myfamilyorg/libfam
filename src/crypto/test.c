@@ -23,10 +23,12 @@
  *
  *******************************************************************************/
 
+#include <libfam/aighthash.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
 #include <libfam/test_base.h>
+#include <libfam/wots.h>
 
 Test(storm_vectors) {
 	StormContext ctx;
@@ -151,12 +153,6 @@ Test(rng) {
 
 	rng_test_seed(&rng, key);
 	rng_gen(&rng, z, sizeof(z));
-	/*
-	for (u32 i = 0; i < 64; i++) {
-		write_num(2, z[i]);
-		pwrite(2, ", ", 2, 0);
-	}
-	*/
 
 	u8 expected[64] = {
 	    241, 172, 79,  71,	20,  35,  84,  2,   39,	 165, 18,  232, 21,
@@ -165,5 +161,37 @@ Test(rng) {
 	    56,	 164, 205, 188, 176, 169, 1,   111, 88,	 2,   22,  98,	134,
 	    149, 225, 143, 78,	120, 153, 128, 74,  110, 64,  78,  228};
 	ASSERT_EQ(memcmp(z, expected, 64), 0, "z");
+}
+
+Test(aighthash) {
+	u32 v1, v2, v3;
+
+	v1 = aighthash32("11111111abc", 11, 0);
+	v2 = aighthash32("11111111abc\0", 12, 0);
+	v3 = aighthash32("11111111abc", 11, 0);
+	ASSERT(v1 != v2, "v1 != v2");
+	ASSERT(v1 == v3, "v1 == v3");
+
+	u64 h1, h2, h3;
+
+	h1 = aighthash64("XXXXXXXXXXXXXXXXxyz", 19, 0);
+	h2 = aighthash64("XXXXXXXXXXXXXXXXxyz\0", 20, 0);
+	h3 = aighthash64("XXXXXXXXXXXXXXXXxyz", 19, 0);
+	ASSERT(h1 != h2, "h1 != h2");
+	ASSERT(h1 == h3, "h1 == h3");
+}
+
+Test(wots) {
+	__attribute__((aligned(32))) u8 key[32] = {1, 2, 3, 4, 5};
+	WotsPubKey pk;
+	WotsSecKey sk;
+	WotsSig sig;
+	u8 msg[32] = {9, 9, 9, 9, 9, 4};
+
+	wots_keyfrom(key, &pk, &sk);
+	wots_sign(&sk, msg, &sig);
+	ASSERT(!wots_verify(&pk, &sig, msg), "verify");
+	msg[0]++;
+	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 }
 
