@@ -355,21 +355,25 @@ Test(kyber_perf) {
 }
 
 Test(dilithium) {
-	__attribute__((aligned(32))) u8 seed[32] = "1234";
-	__attribute__((aligned(32))) u8 msg[32] = {1, 2, 3, 4, 5};
-	SecKey sk;
-	PubKey pk;
-	Sig sig;
-	i32 res;
-	keyfrom(&pk, &sk, seed);
-	sign(&sk, msg, &sig);
+	SecretKey sk;
+	PublicKey pk;
+	Signature sig;
+	Message msg = {0};
+	__attribute__((aligned(32))) u8 rnd[SEEDLEN] = {0};
+	Rng rng;
 
-	res = verify(&pk, msg, &sig);
-	println("res={}", res);
-	(void)res;
-	(void)sk;
-	(void)pk;
-	(void)sig;
-	(void)seed;
-	(void)msg;
+	rng_init(&rng);
+
+	for (u32 i = 0; i < 12; i++) {
+		rng_gen(&rng, rnd, 32);
+		rng_gen(&rng, &msg, MLEN);
+
+		keyfrom(&sk, &pk, rnd);
+		sign(&sig, &msg, &sk, NULL);
+		ASSERT(!verify(&sig, &pk, &msg), "verify");
+		((u8 *)&sig)[0]++;
+		ASSERT(verify(&sig, &pk, &msg), "!verify");
+		ASSERT(!memcmp(&msg, ((u8 *)&sig) + 2420, MLEN), "msg");
+	}
 }
+

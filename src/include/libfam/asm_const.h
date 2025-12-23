@@ -22,36 +22,17 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#ifndef _ASM_CONSTS_H
+#define _ASM_CONSTS_H
 
-#ifndef _SIGN_H
-#define _SIGN_H
+#define _8XQ 0
+#define _8XQINV 8
+#define _8XDIV_QINV 16
+#define _8XDIV 24
+#define _ZETAS_QINV 32
+#define _ZETAS 328
 
-#include <libfam/types.h>
+#define DIV 41978
+#define DIV_QINV -8395782
 
-#define MLEN 32
-#define SEEDLEN 32
-#define SECRET_KEY_SIZE 2560
-#define PUBLIC_KEY_SIZE 1312
-#define SIGNATURE_SIZE (2420 + MLEN)
-
-typedef struct {
-	__attribute__((aligned(32))) u8 data[SECRET_KEY_SIZE];
-} SecretKey;
-
-typedef struct {
-	__attribute__((aligned(32))) u8 data[PUBLIC_KEY_SIZE];
-} PublicKey;
-
-typedef struct {
-	__attribute__((aligned(32))) u8 data[SIGNATURE_SIZE];
-} Signature;
-
-typedef struct {
-	__attribute__((aligned(32))) u8 data[MLEN];
-} Message;
-
-void keyfrom(SecretKey *sk, PublicKey *pk, u8 seed[SEEDLEN]);
-void sign(Signature *sig, const Message *msg, const SecretKey *sk, Rng *rng);
-i32 verify(const Signature *sig, const PublicKey *pk, const Message *msg);
-
-#endif /* _SIGN_H */
+#endif /* _ASM_CONSTS_H */
