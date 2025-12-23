@@ -30,7 +30,8 @@ jobs:
           - buildgcc0
           - buildclang
           - buildclang0
-          - test
+          - testgcc
+          - testclang
           - cov
     steps:
       - name: Checkout code
