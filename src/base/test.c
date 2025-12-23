@@ -994,3 +994,12 @@ Test(fast) {
 	ASSERT(fastmemcmp(v1, v2, 5) != 0, "fastmemcmp ne");
 	ASSERT(fastmemcmp(v1, v3, 5) == 0, "fastmemcmp eq");
 }
+
+Test(secure_zero) {
+	__attribute__((aligned(32))) u8 buf[32] = "12345";
+	u8 zero[32] = {0};
+	secure_zero32(buf);
+	ASSERT(!memcmp(buf, zero, 32), "zeroed");
+	u64 cc = cycle_counter();
+	ASSERT(cc, "cycle_counter");
+}
