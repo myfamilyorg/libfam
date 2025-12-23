@@ -25,6 +25,7 @@
 
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
+#include <libfam/env.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
@@ -247,6 +248,7 @@ Test(bible) {
 	__attribute__((aligned(32))) u8 output[32];
 
 	if (!exists(BIBLE_PATH)) {
+		if (IS_VALGRIND()) return;
 		b = bible_gen(true);
 		bible_store(b, BIBLE_PATH);
 	} else
@@ -265,8 +267,6 @@ Test(bible) {
 	bible_destroy(b);
 }
 
-#include <libfam/format.h>
-
 Test(bible_mine) {
 	const Bible *b;
 	u32 nonce = 0;
@@ -278,6 +278,7 @@ Test(bible_mine) {
 	for (u32 i = 0; i < HASH_INPUT_LEN; i++) header[i] = i;
 
 	if (!exists(BIBLE_PATH)) {
+		if (IS_VALGRIND()) return;
 		b = bible_gen(false);
 		bible_store(b, BIBLE_PATH);
 	} else
