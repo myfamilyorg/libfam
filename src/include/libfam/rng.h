@@ -23,35 +23,21 @@
  *
  *******************************************************************************/
 
-#ifndef _PARAMS_H
-#define _PARAMS_H
+#ifndef _RNG_H
+#define _RNG_H
 
-#define KYBER_K 2
+#include <libfam/storm.h>
+#include <libfam/types.h>
 
-#define KYBER_N 256
-#define KYBER_Q 3329
+typedef struct {
+	StormContext ctx;
+} Rng;
 
-#define KYBER_SYMBYTES 32 /* size in bytes of hashes, and seeds */
-#define KYBER_SSBYTES 32  /* size in bytes of shared key */
+void rng_init(Rng *rng);
+void rng_gen(Rng *rng, void *v, u64 size);
 
-#define KYBER_POLYBYTES 384
-#define KYBER_POLYVECBYTES (KYBER_K * KYBER_POLYBYTES)
+#if TEST == 1
+void rng_test_seed(Rng *rng, u8 key[32]);
+#endif /* TEST */
 
-#define KYBER_ETA1 3
-#define KYBER_POLYCOMPRESSEDBYTES 128
-#define KYBER_POLYVECCOMPRESSEDBYTES (KYBER_K * 320)
-#define KYBER_ETA2 2
-
-#define KYBER_INDCPA_MSGBYTES (KYBER_SYMBYTES)
-#define KYBER_INDCPA_PUBLICKEYBYTES (KYBER_POLYVECBYTES + KYBER_SYMBYTES)
-#define KYBER_INDCPA_SECRETKEYBYTES (KYBER_POLYVECBYTES)
-#define KYBER_INDCPA_BYTES \
-	(KYBER_POLYVECCOMPRESSEDBYTES + KYBER_POLYCOMPRESSEDBYTES)
-
-#define KYBER_PUBLICKEYBYTES (KYBER_INDCPA_PUBLICKEYBYTES)
-#define KYBER_SECRETKEYBYTES                                         \
-	(KYBER_INDCPA_SECRETKEYBYTES + KYBER_INDCPA_PUBLICKEYBYTES + \
-	 2 * KYBER_SYMBYTES)
-#define KYBER_CIPHERTEXTBYTES (KYBER_INDCPA_BYTES)
-
-#endif /* _PARAMS_H */
+#endif /* _RNG_H */
