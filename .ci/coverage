@@ -1,4 +1,0 @@
-#!/bin/sh
-
-sudo ./build cov || exit 1
-
