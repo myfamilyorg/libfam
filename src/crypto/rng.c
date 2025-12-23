@@ -95,6 +95,11 @@ STATIC void random_stir(u8 current[32]) {
 
 void rng_init(Rng *rng) {
 	__attribute__((aligned(32))) u8 key[32];
+
+#if TEST == 1
+	if (IS_VALGRIND()) fastmemset(key, 0, 32);
+#endif /* TEST */
+
 	random32(key);
 	random_stir(key);
 	storm_init(&rng->ctx, key);
@@ -111,6 +116,11 @@ void rng_gen(Rng *rng, void *v, u64 size) {
 
 	if (off < size) {
 		__attribute__((aligned(32))) u8 buf[32];
+
+#if TEST == 1
+		if (IS_VALGRIND()) fastmemset(buf, 0, 32);
+#endif /* TEST */
+
 		fastmemcpy(buf, out, size - off);
 		storm_next_block(&rng->ctx, buf);
 		fastmemcpy(out + off, buf, size - off);
