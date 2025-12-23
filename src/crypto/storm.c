@@ -45,11 +45,27 @@
 #define P2 0x517cc1b727220a95ULL
 #define Nb 4
 
-static const __attribute__((aligned(32))) u128 PRIMES[4] = {
+static const __attribute__((aligned(32))) u128 PRIMES[] = {
     ((u128)0xa70413383f55618fULL << 64) | 0x376d0932e21de58fULL,
     ((u128)0xf95524bf9f2fdfa8ULL << 64) | 0xf3fb6d8bd7643b1dULL,
     ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
-    ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL};
+    ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL,
+
+    ((u128)0xf95524bf9f2fdfa8ULL << 64) | 0xf3fb6d8bd7643b1dULL,
+    ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
+    ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL,
+    ((u128)0xa70413383f55618fULL << 64) | 0x376d0932e21de58fULL,
+
+    ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
+    ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL,
+    ((u128)0xa70413383f55618fULL << 64) | 0x376d0932e21de58fULL,
+    ((u128)0xf95524bf9f2fdfa8ULL << 64) | 0xf3fb6d8bd7643b1dULL,
+
+    ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL,
+    ((u128)0xa70413383f55618fULL << 64) | 0x376d0932e21de58fULL,
+    ((u128)0xf95524bf9f2fdfa8ULL << 64) | 0xf3fb6d8bd7643b1dULL,
+    ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
+};
 static const u8 *STORM_KEY_MIX = (void *)PRIMES;
 
 static const __attribute__((aligned(32))) u8 ZERO256[32] = {0};
@@ -57,18 +73,30 @@ static const __attribute__((aligned(32))) u8 ZERO256[32] = {0};
 typedef struct {
 #ifdef USE_AVX2
 	__m256i state;
-	__m256i key;
+	__m256i key0;
+	__m256i key1;
+	__m256i key2;
+	__m256i key3;
 	__m256i counter;
 #elif defined(USE_NEON)
 	uint8x16_t state_lo;
 	uint8x16_t state_hi;
-	uint8x16_t key_lo;
-	uint8x16_t key_hi;
+	uint8x16_t key_lo0;
+	uint8x16_t key_hi0;
+	uint8x16_t key_lo1;
+	uint8x16_t key_hi1;
+	uint8x16_t key_lo2;
+	uint8x16_t key_hi2;
+	uint8x16_t key_lo3;
+	uint8x16_t key_hi3;
 	uint8x16_t counter_lo;
 	uint8x16_t counter_hi;
 #else
 	u8 state[32];
-	u8 key[32];
+	u8 key0[32];
+	u8 key1[32];
+	u8 key2[32];
+	u8 key3[32];
 	u8 counter[32];
 #endif /* !USE_AVX2 */
 } StormContextImpl;
@@ -193,14 +221,14 @@ STATIC void storm_init_avx2(StormContext *ctx, const u8 key[32]) {
 	st->state = _mm256_xor_si256(key256, domain);
 	__m256i domain_key =
 	    _mm256_load_si256((const __m256i *)(STORM_KEY_MIX + 32));
-	st->key = _mm256_xor_si256(key256, domain_key);
+	st->key0 = _mm256_xor_si256(key256, domain_key);
 	st->counter = _mm256_load_si256((const __m256i *)ZERO256);
 }
 STATIC void storm_next_block_avx2(StormContext *ctx, u8 buf[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 	__m256i p = _mm256_load_si256((const __m256i *)buf);
 	__m256i x = _mm256_xor_si256(st->state, p);
-	__m256i key = st->key;
+	__m256i key = st->key0;
 	x = _mm256_aesenc_epi128(x, key);
 	__m128i lo = _mm256_castsi256_si128(x);
 	__m128i hi = _mm256_extracti128_si256(x, 1);
@@ -236,8 +264,8 @@ STATIC void storm_init_neon(StormContext *ctx, const u8 key[32]) {
 	st->state_hi = veorq_u8(key_hi, domain_hi);
 	uint8x16_t domain_key_lo = vld1q_u8(STORM_KEY_MIX + 32);
 	uint8x16_t domain_key_hi = vld1q_u8(STORM_KEY_MIX + 32 + 16);
-	st->key_lo = veorq_u8(key_lo, domain_key_lo);
-	st->key_hi = veorq_u8(key_hi, domain_key_hi);
+	st->key_lo0 = veorq_u8(key_lo, domain_key_lo);
+	st->key_hi0 = veorq_u8(key_hi, domain_key_hi);
 	st->counter_lo = vdupq_n_u8(0);
 	st->counter_hi = vdupq_n_u8(0);
 	(void)ZERO256;
@@ -256,13 +284,13 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 	uint8x16_t p_hi = vld1q_u8(buf + 16);
 	uint8x16_t x_lo = veorq_u8(st->state_lo, p_lo);
 	uint8x16_t x_hi = veorq_u8(st->state_hi, p_hi);
-	uint8x16_t temp_lo = aesenc_2x(x_lo, st->key_lo);
-	uint8x16_t temp_hi = aesenc_2x(x_hi, st->key_hi);
+	uint8x16_t temp_lo = aesenc_2x(x_lo, st->key_lo0);
+	uint8x16_t temp_hi = aesenc_2x(x_hi, st->key_hi0);
 	uint8x16_t reduced = veorq_u8(temp_lo, temp_hi);
 	st->state_lo = temp_hi;
 	st->state_hi = reduced;
-	uint8x16_t out_lo = aesenc_2x(temp_lo, st->key_lo);
-	uint8x16_t out_hi = aesenc_2x(temp_hi, st->key_hi);
+	uint8x16_t out_lo = aesenc_2x(temp_lo, st->key_lo0);
+	uint8x16_t out_hi = aesenc_2x(temp_hi, st->key_hi0);
 	vst1q_u8(buf, out_lo);
 	vst1q_u8(buf + 16, out_hi);
 }
@@ -305,7 +333,7 @@ STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
 
 	for (int i = 0; i < 32; ++i) {
 		st->state[i] = key[i] ^ STORM_KEY_MIX[i];
-		st->key[i] = key[i] ^ STORM_KEY_MIX[32 + i];
+		st->key0[i] = key[i] ^ STORM_KEY_MIX[32 + i];
 	}
 	fastmemcpy(st->counter, ZERO256, 32);
 }
@@ -320,8 +348,8 @@ STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32]) {
 		hi[i] = st->state[i + 16] ^ buf[i + 16];
 	}
 
-	aesenc128(lo, st->key);
-	aesenc128(hi, st->key + 16);
+	aesenc128(lo, st->key0);
+	aesenc128(hi, st->key0 + 16);
 
 	u8 orig_lo[16], orig_hi[16];
 	fastmemcpy(orig_lo, lo, 16);
@@ -336,8 +364,8 @@ STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32]) {
 		st->state[i + 16] = lo[i];
 	}
 
-	aesenc128(orig_lo, st->key);
-	aesenc128(orig_hi, st->key + 16);
+	aesenc128(orig_lo, st->key0);
+	aesenc128(orig_hi, st->key0 + 16);
 
 	for (int i = 0; i < 16; ++i) {
 		buf[i] = orig_lo[i];

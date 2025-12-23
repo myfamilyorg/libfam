@@ -124,12 +124,6 @@ Test(storm_cipher_vector) {
 	storm_xcrypt_buffer(&ctx, buffer1);
 	faststrcpy(buffer2, "test2");
 	storm_xcrypt_buffer(&ctx, buffer2);
-	/*
-	for (u32 i = 0; i < 32; i++) {
-		write_num(2, buffer2[i]);
-		pwrite(2, ", ", 2, 0);
-	}
-	*/
 
 	u8 expected1[32] = {199, 102, 122, 215, 159, 26,  105, 89,
 			    70,	 31,  221, 242, 209, 157, 218, 103,
