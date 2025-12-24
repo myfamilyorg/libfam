@@ -170,8 +170,6 @@ Bench(storm) {
 
 	u64 sum = 0;
 
-	(void)sum;
-
 	storm_init(&ctx1, ZERO_SEED);
 	storm_init(&ctx2, ONE_SEED);
 	storm_init(&ctx3, TWO_SEED);

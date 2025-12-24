@@ -1,0 +1,4 @@
+#!/bin/sh
+
+./build clean bench --cc=clang || exit 1;
+
