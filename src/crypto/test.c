@@ -765,3 +765,44 @@ Bench(kempf) {
 	pwrite(2, "\n", 1, 0);
 }
 
+#include <dilithium_scalar/sign.h>
+
+#define MLEN 59
+#define CTXLEN 14
+#define NTESTS 100
+
+Test(dilithium) {
+	int ret;
+	u64 mlen, smlen;
+	u16 v = 0;
+	u8 b = 0;
+	__attribute__((aligned(32))) u8 ctx[CTXLEN] = {'t', 'e', 's', 't'};
+	__attribute__((aligned(32))) u8 m[MLEN + CRYPTO_BYTES] = {0};
+	__attribute__((aligned(32))) u8 m2[MLEN + CRYPTO_BYTES] = {0};
+	__attribute__((aligned(32))) u8 sm[MLEN + CRYPTO_BYTES] = {0};
+	__attribute__((aligned(32))) u8 pk[CRYPTO_PUBLICKEYBYTES] = {0};
+	__attribute__((aligned(32))) u8 sk[CRYPTO_SECRETKEYBYTES] = {0};
+	Rng rng;
+
+	for (u32 i = 0; i < NTESTS; i++) {
+		rng_init(&rng);
+		rng_gen(&rng, m, MLEN);
+
+		crypto_sign_keypair(pk, sk);
+		crypto_sign(sm, &smlen, m, MLEN, ctx, CTXLEN, sk);
+		ret = crypto_sign_open(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
+
+		ASSERT(!ret, "verify");
+		ASSERT_EQ(smlen, MLEN + CRYPTO_BYTES, "smlen");
+		ASSERT_EQ(mlen, MLEN, "mlen");
+		ASSERT(!memcmp(m, m2, MLEN), "msg");
+
+		rng_gen(&rng, &v, sizeof(v));
+		rng_gen(&rng, &b, sizeof(b));
+		v %= MLEN + CRYPTO_BYTES;
+		sm[v] += 7;
+		ret = crypto_sign_open(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
+		ASSERT(ret, "fail sig");
+	}
+}
+
