@@ -10,12 +10,9 @@
 
 #ifdef USE_AVX2
 
-#include <immintrin.h>
 #include <kyber_avx2/consts.h>
-#include <kyber_common/params.h>
 #include <kyber_avx2/rejsample.h>
-#include <stdint.h>
-#include <string.h>
+#include <kyber_common/params.h>
 
 // #define BMI
 
@@ -275,8 +272,7 @@ unsigned int rej_uniform_avx(i16 *restrict r, const u8 *buf) {
 	}
 
 	while (ctr < KYBER_N && pos <= REJ_UNIFORM_AVX_BUFLEN - 3) {
-		val0 = ((buf[pos + 0] >> 0) | ((u16)buf[pos + 1] << 8)) &
-		       0xFFF;
+		val0 = ((buf[pos + 0] >> 0) | ((u16)buf[pos + 1] << 8)) & 0xFFF;
 		val1 = ((buf[pos + 1] >> 4) | ((u16)buf[pos + 2] << 4));
 		pos += 3;
 

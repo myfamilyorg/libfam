@@ -10,10 +10,7 @@
 
 #ifdef USE_AVX2
 
-#include <immintrin.h>
 #include <kyber_avx2/verify.h>
-#include <stdint.h>
-#include <stdlib.h>
 
 /*************************************************
  * Name:        verify

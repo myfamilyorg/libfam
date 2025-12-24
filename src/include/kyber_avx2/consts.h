@@ -35,7 +35,7 @@
 #endif
 
 #ifndef __ASSEMBLER__
-#include "align.h"
+#include <kyber_avx2/align.h>
 typedef ALIGNED_INT16(640) qdata_t;
 #define qdata KYBER_NAMESPACE(qdata)
 extern const qdata_t qdata;

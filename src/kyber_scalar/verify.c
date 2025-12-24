@@ -11,8 +11,6 @@
 #ifndef USE_AVX2
 
 #include <kyber_scalar/verify.h>
-#include <stddef.h>
-#include <stdint.h>
 
 /*************************************************
  * Name:        verify

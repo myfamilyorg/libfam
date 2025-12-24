@@ -10,10 +10,8 @@
 
 #ifdef USE_AVX2
 
-#include <immintrin.h>
 #include <kyber_avx2/cbd.h>
 #include <kyber_common/params.h>
-#include <stdint.h>
 
 /*************************************************
  * Name:        cbd2

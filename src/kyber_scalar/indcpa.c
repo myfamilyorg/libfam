@@ -10,18 +10,15 @@
 
 #ifndef USE_AVX2
 
+#include <kyber_common/params.h>
 #include <kyber_scalar/indcpa.h>
 #include <kyber_scalar/ntt.h>
-#include <kyber_common/params.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/polyvec.h>
 #include <libfam/format.h>
 #include <libfam/kem_impl.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
 
 /*************************************************
  * Name:        pack_pk
@@ -96,8 +93,7 @@ static void unpack_sk(polyvec *sk,
  *              poly *pk: pointer to the input vector of polynomials b
  *              poly *v: pointer to the input polynomial v
  **************************************************/
-static void pack_ciphertext(u8 r[KYBER_INDCPA_BYTES], polyvec *b,
-			    poly *v) {
+static void pack_ciphertext(u8 r[KYBER_INDCPA_BYTES], polyvec *b, poly *v) {
 	polyvec_compress(r, b);
 	poly_compress(r + KYBER_POLYVECCOMPRESSEDBYTES, v);
 }
@@ -133,17 +129,15 @@ static void unpack_ciphertext(polyvec *b, poly *v,
  *
  * Returns number of sampled 16-bit integers (at most len)
  **************************************************/
-static unsigned int rej_uniform(i16 *r, unsigned int len,
-				const u8 *buf, unsigned int buflen) {
+static unsigned int rej_uniform(i16 *r, unsigned int len, const u8 *buf,
+				unsigned int buflen) {
 	unsigned int ctr, pos;
 	u16 val0, val1;
 
 	ctr = pos = 0;
 	while (ctr < len && pos + 3 <= buflen) {
-		val0 = ((buf[pos + 0] >> 0) | ((u16)buf[pos + 1] << 8)) &
-		       0xFFF;
-		val1 = ((buf[pos + 1] >> 4) | ((u16)buf[pos + 2] << 4)) &
-		       0xFFF;
+		val0 = ((buf[pos + 0] >> 0) | ((u16)buf[pos + 1] << 8)) & 0xFFF;
+		val1 = ((buf[pos + 1] >> 4) | ((u16)buf[pos + 2] << 4)) & 0xFFF;
 		pos += 3;
 
 		if (val0 < KYBER_Q) r[ctr++] = val0;
@@ -177,13 +171,12 @@ static unsigned int rej_uniform(i16 *r, unsigned int len,
 	((12 * KYBER_N / 8 * (1 << 12) / KYBER_Q + XOF_BLOCKBYTES) / \
 	 XOF_BLOCKBYTES)
 // Not static for benchmarking
-void gen_matrix(polyvec *a, const u8 seed[KYBER_SYMBYTES],
-		int transposed) {
+void gen_matrix(polyvec *a, const u8 seed[KYBER_SYMBYTES], int transposed) {
 	StormContext ctx0;
 	unsigned int ctr, i, j;
 	unsigned int buflen;
-	__attribute__((aligned(
-	    32))) u8 buf[GEN_MATRIX_NBLOCKS * XOF_BLOCKBYTES + 8] = {0};
+	__attribute__((
+	    aligned(32))) u8 buf[GEN_MATRIX_NBLOCKS * XOF_BLOCKBYTES + 8] = {0};
 
 	for (i = 0; i < KYBER_K; i++) {
 		for (j = 0; j < KYBER_K; j++) {
@@ -287,8 +280,7 @@ void indcpa_keypair_derand(u8 pk[KYBER_INDCPA_PUBLICKEYBYTES],
  *              - const u8 *coins: pointer to input random coins used as
  *seed (of length KYBER_SYMBYTES) to deterministically generate all randomness
  **************************************************/
-void indcpa_enc(u8 c[KYBER_INDCPA_BYTES],
-		const u8 m[KYBER_INDCPA_MSGBYTES],
+void indcpa_enc(u8 c[KYBER_INDCPA_BYTES], const u8 m[KYBER_INDCPA_MSGBYTES],
 		const u8 pk[KYBER_INDCPA_PUBLICKEYBYTES],
 		const u8 coins[KYBER_SYMBYTES]) {
 	unsigned int i;
@@ -340,8 +332,7 @@ void indcpa_enc(u8 c[KYBER_INDCPA_BYTES],
  *              - const u8 *sk: pointer to input secret key
  *                                   (of length KYBER_INDCPA_SECRETKEYBYTES)
  **************************************************/
-void indcpa_dec(u8 m[KYBER_INDCPA_MSGBYTES],
-		const u8 c[KYBER_INDCPA_BYTES],
+void indcpa_dec(u8 m[KYBER_INDCPA_MSGBYTES], const u8 c[KYBER_INDCPA_BYTES],
 		const u8 sk[KYBER_INDCPA_SECRETKEYBYTES]) {
 	polyvec b, skpv;
 	poly v, mp;

@@ -12,7 +12,6 @@
 
 #include <kyber_common/params.h>
 #include <kyber_scalar/reduce.h>
-#include <stdint.h>
 
 /*************************************************
  * Name:        montgomery_reduce
