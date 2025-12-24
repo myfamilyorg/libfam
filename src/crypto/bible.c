@@ -121,7 +121,7 @@ PUBLIC const Bible *bible_gen(bool print_status) {
 		}
 	}
 	if (print_status) {
-		static const u8 msg[] = "\rBible gen status: 100%\n   ";
+		static const u8 msg[] = "\rBible gen status: 100%   \n";
 		pwrite(2, msg, sizeof(msg) - 1, 0);
 	}
 
