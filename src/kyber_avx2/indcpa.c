@@ -169,11 +169,12 @@ static unsigned int rej_uniform(int16_t *r, unsigned int len,
 #define gen_a(A, B) gen_matrix(A, B, 0)
 #define gen_at(A, B) gen_matrix(A, B, 1)
 
+#include <libfam/format.h>
 void gen_matrix(polyvec *a, const uint8_t seed[32], int transposed) {
+	StormContext ctx0, ctx1, ctx2, ctx3;
 	unsigned int ctr0, ctr1, ctr2, ctr3;
-	ALIGNED_UINT8(REJ_UNIFORM_AVX_NBLOCKS * SHAKE128_RATE) buf[4];
+	ALIGNED_UINT8(REJ_UNIFORM_AVX_NBLOCKS * SHAKE128_RATE + 8) buf[4] = {0};
 	__m256i f;
-	keccakx4_state state;
 
 	f = _mm256_loadu_si256((__m256i *)seed);
 	_mm256_store_si256(buf[0].vec, f);
@@ -201,11 +202,17 @@ void gen_matrix(polyvec *a, const uint8_t seed[32], int transposed) {
 		buf[3].coeffs[33] = 1;
 	}
 
-	shake128x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
-			       buf[2].coeffs, buf[3].coeffs, 34);
-	shake128x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs, buf[2].coeffs,
-				 buf[3].coeffs, REJ_UNIFORM_AVX_NBLOCKS,
-				 &state);
+	storm_init(&ctx0, GEN_MAT_DOMAIN);
+	storm_init(&ctx1, GEN_MAT_DOMAIN);
+	storm_init(&ctx2, GEN_MAT_DOMAIN);
+	storm_init(&ctx3, GEN_MAT_DOMAIN);
+
+	for (u32 i = 0; i < sizeof(buf[0].coeffs); i += 32) {
+		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
+		storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i);
+		storm_next_block(&ctx2, (u8 *)buf[2].coeffs + i);
+		storm_next_block(&ctx3, (u8 *)buf[3].coeffs + i);
+	}
 
 	ctr0 = rej_uniform_avx(a[0].vec[0].coeffs, buf[0].coeffs);
 	ctr1 = rej_uniform_avx(a[0].vec[1].coeffs, buf[1].coeffs);
@@ -214,9 +221,16 @@ void gen_matrix(polyvec *a, const uint8_t seed[32], int transposed) {
 
 	while (ctr0 < KYBER_N || ctr1 < KYBER_N || ctr2 < KYBER_N ||
 	       ctr3 < KYBER_N) {
-		shake128x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs,
-					 buf[2].coeffs, buf[3].coeffs, 1,
-					 &state);
+		fastmemset(buf[0].coeffs, 0, SHAKE256_RATE);
+		fastmemset(buf[1].coeffs, 0, SHAKE256_RATE);
+		fastmemset(buf[2].coeffs, 0, SHAKE256_RATE);
+		fastmemset(buf[3].coeffs, 0, SHAKE256_RATE);
+		for (u32 i = 0; i < 5; i++) {
+			storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i * 32);
+			storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i * 32);
+			storm_next_block(&ctx2, (u8 *)buf[2].coeffs + i * 32);
+			storm_next_block(&ctx3, (u8 *)buf[3].coeffs + i * 32);
+		}
 
 		ctr0 += rej_uniform(a[0].vec[0].coeffs + ctr0, KYBER_N - ctr0,
 				    buf[0].coeffs, SHAKE128_RATE);
