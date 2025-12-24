@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifdef USE_AVX2
+
 #include <kyber_avx2/indcpa.h>
 #include <kyber_avx2/kem.h>
 #include <kyber_avx2/params.h>
@@ -161,3 +173,5 @@ int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
 
 	return 0;
 }
+
+#endif /* !USE_AVX2 */

@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifdef USE_AVX2
+
 #include <kyber_avx2/align.h>
 #include <kyber_avx2/consts.h>
 #include <kyber_avx2/params.h>
@@ -137,3 +149,5 @@ const qdata_t qdata = {{
     SHIFT,    SHIFT,	SHIFT,	  SHIFT,    SHIFT,    SHIFT,	SHIFT,
     SHIFT,    SHIFT,	SHIFT,	  SHIFT,    SHIFT,    SHIFT,	SHIFT,
     SHIFT,    SHIFT}};
+
+#endif /* !USE_AVX2 */

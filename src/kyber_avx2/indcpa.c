@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifdef USE_AVX2
+
 #include <immintrin.h>
 #include <kyber_avx2/align.h>
 #include <kyber_avx2/cbd.h>
@@ -600,3 +612,5 @@ void indcpa_dec(uint8_t m[KYBER_INDCPA_MSGBYTES],
 
 	poly_tomsg(m, &mp);
 }
+
+#endif /* !USE_AVX2 */

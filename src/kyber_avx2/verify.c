@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifdef USE_AVX2
+
 #include <immintrin.h>
 #include <kyber_avx2/verify.h>
 #include <stdint.h>
@@ -77,3 +89,5 @@ void cmov(uint8_t *restrict r, const uint8_t *x, size_t len, uint8_t b) {
 	len -= 32 * i;
 	for (i = 0; i < len; i++) r[i] ^= -b & (x[i] ^ r[i]);
 }
+
+#endif /* !USE_AVX2 */

@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifdef USE_AVX2
+
 #include <immintrin.h>
 #include <kyber_avx2/consts.h>
 #include <kyber_avx2/params.h>
@@ -274,3 +286,5 @@ unsigned int rej_uniform_avx(int16_t *restrict r, const uint8_t *buf) {
 
 	return ctr;
 }
+
+#endif /* !USE_AVX2 */

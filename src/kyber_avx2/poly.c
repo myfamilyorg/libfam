@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifdef USE_AVX2
+
 #include <immintrin.h>
 #include <kyber_avx2/align.h>
 #include <kyber_avx2/cbd.h>
@@ -488,3 +500,5 @@ void poly_sub(poly *r, const poly *a, const poly *b) {
 		_mm256_store_si256(&r->vec[i], f0);
 	}
 }
+
+#endif /* !USE_AVX2 */

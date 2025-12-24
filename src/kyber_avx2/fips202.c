@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifdef USE_AVX2
+
 /* Based on the public domain implementation in crypto_hash/keccakc512/simple/
  * from http://bench.cr.yp.to/supercop.html by Ronny Van Keer and the public
  * domain "TweetFips202" implementation from https://twitter.com/tweetfips202 by
@@ -737,3 +749,5 @@ void sha3_512(uint8_t h[64], const uint8_t *in, size_t inlen) {
 	KeccakF1600_StatePermute(s);
 	for (i = 0; i < 8; i++) store64(h + 8 * i, s[i]);
 }
+
+#endif /* !USE_AVX2 */

@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifdef USE_AVX2
+
 #include <immintrin.h>
 #include <kyber_avx2/fips202.h>
 #include <kyber_avx2/fips202x4.h>
@@ -169,3 +181,5 @@ void shake256x4(uint8_t *out0, uint8_t *out1, uint8_t *out2, uint8_t *out3,
 		}
 	}
 }
+
+#endif /* !USE_AVX2 */
