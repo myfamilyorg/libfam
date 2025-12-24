@@ -420,6 +420,8 @@ Test(kem) {
 	ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE), "shared secret");
 }
 
+#include <libfam/format.h>
+
 Test(kem_vector) {
 	__attribute__((aligned(32))) u8 seed[32] = {1, 2, 3};
 	KemSecKey sk;
@@ -434,10 +436,10 @@ Test(kem_vector) {
 	enc(&ct, &ss_bob, &pk, &rng);
 	dec(&ss_alice, &ct, &sk);
 	ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE), "shared secret");
-	u8 expected[32] = {197, 163, 103, 82,  166, 130, 236, 92,
-			   211, 38,  178, 205, 252, 196, 184, 10,
-			   79,	238, 216, 19,  218, 46,	 81,  40,
-			   212, 193, 102, 20,  15,  87,	 105, 175};
+	u8 expected[32] = {210, 23,  37, 111, 16,  45,	93,  110, 203, 101, 54,
+			   180, 161, 99, 43,  47,  90,	147, 16,  190, 202, 122,
+			   216, 61,  36, 0,   226, 234, 217, 194, 43,  154};
+	// for (u32 i = 0; i < 32; i++) print("{}, ", ss_bob.data[i]);
 	ASSERT(!fastmemcmp(&ss_bob, expected, KEM_SS_SIZE), "expected");
 }
 

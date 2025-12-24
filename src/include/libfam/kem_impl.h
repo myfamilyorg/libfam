@@ -26,13 +26,9 @@
 #ifndef _KEM_IMPL_H
 #define _KEM_IMPL_H
 
-__attribute__((aligned(32))) static const u8 ENC_DEC_DOMAIN[32] = {1, 2, 3, 99,
-								   97};
-__attribute__((aligned(32))) static const u8 GEN_MAT_DOMAIN[32] = {1, 2, 3, 99,
-								   98};
-__attribute__((aligned(32))) static const u8 DERAND_DOMAIN[32] = {1, 2, 3, 99,
-								  99};
-__attribute__((aligned(32))) static const u8 KEM_DERAND_DOMAIN[32] = {1, 2, 3,
-								      99, 100};
+#include <libfam/types.h>
+
+__attribute__((aligned(32))) static const u8 NOISE_ETA1_DOMAIN[32] = {1, 2, 3,
+								      99, 97};
 
 #endif /* _KEM_IMPL_H */
