@@ -16,6 +16,8 @@
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/polyvec.h>
 #include <kyber_scalar/symmetric.h>
+#include <libfam/kem_impl.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -220,8 +222,9 @@ void gen_matrix(polyvec *a, const uint8_t seed[KYBER_SYMBYTES],
 void indcpa_keypair_derand(uint8_t pk[KYBER_INDCPA_PUBLICKEYBYTES],
 			   uint8_t sk[KYBER_INDCPA_SECRETKEYBYTES],
 			   const uint8_t coins[KYBER_SYMBYTES]) {
+	StormContext ctx;
 	unsigned int i;
-	uint8_t buf[2 * KYBER_SYMBYTES];
+	__attribute__((aligned(32))) uint8_t buf[2 * KYBER_SYMBYTES] = {0};
 	const uint8_t *publicseed = buf;
 	const uint8_t *noiseseed = buf + KYBER_SYMBYTES;
 	uint8_t nonce = 0;
@@ -229,7 +232,10 @@ void indcpa_keypair_derand(uint8_t pk[KYBER_INDCPA_PUBLICKEYBYTES],
 
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 	buf[KYBER_SYMBYTES] = KYBER_K;
-	hash_g(buf, buf, KYBER_SYMBYTES + 1);
+
+	storm_init(&ctx, INDCPA_HASH_DOMAIN);
+	storm_next_block(&ctx, buf);
+	storm_next_block(&ctx, buf + 32);
 
 	gen_a(a, publicseed);
 

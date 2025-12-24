@@ -40,4 +40,7 @@ __attribute__((aligned(32))) static const u8 PUBKEY_HASH_DOMAIN[32] = {1, 2, 3,
 __attribute__((aligned(32))) static const u8 KR_HASH_DOMAIN[32] = {1, 2, 3, 99,
 								   101};
 
+__attribute__((aligned(32))) static const u8 INDCPA_HASH_DOMAIN[32] = {1, 2, 3,
+								       99, 102};
+
 #endif /* _KEM_IMPL_H */
