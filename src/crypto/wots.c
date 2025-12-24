@@ -33,8 +33,8 @@
 #define WOTS_LEN2 2
 #define WOTS_LEN (WOTS_LEN1 + WOTS_LEN2)
 
-static const u8 DOMAIN_CHAIN[32] = {0x01, 'W', 'O', 'T', 'S', '+',
-				    'c',  'h', 'a', 'i', 'n'};
+__attribute__((aligned(32))) static const u8 DOMAIN_CHAIN[32] = {
+    0x01, 'W', 'O', 'T', 'S', '+', 'c', 'h', 'a', 'i', 'n'};
 
 static void wots_chain(u8 out[32], const u8 in[32], u32 steps) {
 	fastmemcpy(out, in, 32);
