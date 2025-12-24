@@ -10,8 +10,6 @@
 
 #ifndef USE_AVX2
 
-#define XOF_BLOCKBYTES 168
-
 #include <kyber_scalar/indcpa.h>
 #include <kyber_scalar/ntt.h>
 #include <kyber_scalar/params.h>
