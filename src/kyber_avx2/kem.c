@@ -15,6 +15,8 @@
 #include <kyber_avx2/params.h>
 #include <kyber_avx2/symmetric.h>
 #include <kyber_avx2/verify.h>
+#include <libfam/kem_impl.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -37,11 +39,19 @@
  * Returns 0 (success)
  **************************************************/
 int crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins) {
+	StormContext ctx;
+	__attribute__((aligned(32))) u8 pk_copy[KYBER_PUBLICKEYBYTES] = {0};
+
 	indcpa_keypair_derand(pk, sk, coins);
 	fastmemcpy(sk + KYBER_INDCPA_SECRETKEYBYTES, pk, KYBER_PUBLICKEYBYTES);
-	hash_h(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, pk,
-	       KYBER_PUBLICKEYBYTES);
-	/* Value z for pseudo-random output on reject */
+
+	storm_init(&ctx, PUBKEY_HASH_DOMAIN);
+	fastmemcpy(pk_copy, pk, KYBER_PUBLICKEYBYTES);
+	for (u32 i = 0; i < KYBER_PUBLICKEYBYTES; i += 32)
+		storm_next_block(&ctx, pk_copy + i);
+	fastmemset(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, 0, 32);
+	storm_next_block(&ctx, sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES);
+
 	fastmemcpy(sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES,
 		   coins + KYBER_SYMBYTES, KYBER_SYMBYTES);
 	return 0;
@@ -87,19 +97,22 @@ int crypto_kem_keypair(uint8_t *pk, uint8_t *sk, Rng *rng) {
  **************************************************/
 int crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk,
 			  const uint8_t *coins) {
-	uint8_t buf[2 * KYBER_SYMBYTES];
-	/* Will contain key, coins */
-	uint8_t kr[2 * KYBER_SYMBYTES];
+	StormContext ctx;
+	__attribute__((aligned(32))) u8 pk_copy[KYBER_PUBLICKEYBYTES] = {0};
+
+	__attribute__((aligned(32))) uint8_t buf[2 * KYBER_SYMBYTES] = {0};
+	__attribute__((aligned(32))) uint8_t kr[2 * KYBER_SYMBYTES];
 
 	fastmemcpy(buf, coins, KYBER_SYMBYTES);
 
-	/* Multitarget countermeasure for coins + contributory KEM */
-	hash_h(buf + KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
+	storm_init(&ctx, PUBKEY_HASH_DOMAIN);
+	fastmemcpy(pk_copy, pk, KYBER_PUBLICKEYBYTES);
+	for (u32 i = 0; i < KYBER_PUBLICKEYBYTES; i += 32)
+		storm_next_block(&ctx, pk_copy + i);
+	storm_next_block(&ctx, buf + KYBER_SYMBYTES);
+
 	hash_g(kr, buf, 2 * KYBER_SYMBYTES);
-
-	/* coins are in kr+KYBER_SYMBYTES */
 	indcpa_enc(ct, buf, pk, kr + KYBER_SYMBYTES);
-
 	fastmemcpy(ss, kr, KYBER_SYMBYTES);
 	return 0;
 }

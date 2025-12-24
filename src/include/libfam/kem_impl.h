@@ -34,4 +34,7 @@ __attribute__((aligned(32))) static const u8 NOISE_ETA1_DOMAIN[32] = {1, 2, 3,
 __attribute__((aligned(32))) static const u8 NOISE_ETA2_DOMAIN[32] = {1, 2, 3,
 								      99, 98};
 
+__attribute__((aligned(32))) static const u8 PUBKEY_HASH_DOMAIN[32] = {1, 2, 3,
+								       99, 100};
+
 #endif /* _KEM_IMPL_H */
