@@ -411,7 +411,7 @@ Test(kem) {
 	KemSecKey sk;
 	KemPubKey pk;
 	KemCipherText ct;
-	KemSharedSecret ss_bob = {0}, ss_alice = {1};
+	KemSharedSecret ss_bob = {0}, ss_alice = {0};
 
 	Rng rng1, rng2;
 	rng_init(&rng1);
@@ -427,7 +427,7 @@ Test(kem_vector) {
 	KemSecKey sk;
 	KemPubKey pk;
 	KemCipherText ct;
-	KemSharedSecret ss_bob = {0}, ss_alice = {1};
+	KemSharedSecret ss_bob = {0}, ss_alice = {0};
 
 	Rng rng;
 	rng_init(&rng);
@@ -449,7 +449,7 @@ Bench(kempf) {
 	KemSecKey sk;
 	KemPubKey pk;
 	KemCipherText ct;
-	KemSharedSecret ss_bob = {0}, ss_alice = {1};
+	KemSharedSecret ss_bob = {0}, ss_alice = {0};
 	Rng rng1, rng2;
 	u64 keygen_sum = 0;
 	u64 enc_sum = 0;
