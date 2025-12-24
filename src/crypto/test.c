@@ -26,6 +26,7 @@
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/env.h>
+#include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
@@ -143,6 +144,69 @@ Test(storm_cipher_vector) {
 	ASSERT(!memcmp(buffer2, expected2, 32), "expected2");
 }
 
+#define STORM_COUNT (1000000000 / 32)
+static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
+static __attribute__((aligned(32))) u8 ONE_SEED[32] = {1};
+static __attribute__((aligned(32))) u8 TWO_SEED[32] = {2};
+static __attribute__((aligned(32))) u8 THREE_SEED[32] = {3};
+static __attribute__((aligned(32))) u8 FOUR_SEED[32] = {4};
+static __attribute__((aligned(32))) u8 FIVE_SEED[32] = {5};
+
+Bench(storm) {
+	i64 timer;
+	__attribute__((aligned(32))) u8 buf1[64] = {0};
+	__attribute__((aligned(32))) u8 buf2[64] = {0};
+	__attribute__((aligned(32))) u8 buf3[64] = {0};
+	__attribute__((aligned(32))) u8 buf4[64] = {0};
+	__attribute__((aligned(32))) u8 buf5[64] = {0};
+	__attribute__((aligned(32))) u8 buf6[64] = {0};
+
+	StormContext ctx1;
+	StormContext ctx2;
+	StormContext ctx3;
+	StormContext ctx4;
+	StormContext ctx5;
+	StormContext ctx6;
+
+	u64 sum = 0;
+
+	(void)sum;
+
+	storm_init(&ctx1, ZERO_SEED);
+	storm_init(&ctx2, ONE_SEED);
+	storm_init(&ctx3, TWO_SEED);
+	storm_init(&ctx4, THREE_SEED);
+	storm_init(&ctx5, FOUR_SEED);
+	storm_init(&ctx6, FIVE_SEED);
+
+	timer = micros();
+	for (u32 i = 0; i < STORM_COUNT; i++) {
+		u8* block1 = buf1 + (i & 32);
+		u8* block2 = buf2 + (i & 32);
+		u8* block3 = buf3 + (i & 32);
+		u8* block4 = buf4 + (i & 32);
+		u8* block5 = buf5 + (i & 32);
+		u8* block6 = buf6 + (i & 32);
+
+		storm_xcrypt_buffer(&ctx1, block1);
+		sum += ((u64*)block1)[0];
+		storm_xcrypt_buffer(&ctx2, block2);
+		sum += ((u64*)block2)[0];
+		storm_xcrypt_buffer(&ctx3, block3);
+		sum += ((u64*)block3)[0];
+		storm_xcrypt_buffer(&ctx4, block4);
+		sum += ((u64*)block4)[0];
+		storm_xcrypt_buffer(&ctx5, block5);
+		sum += ((u64*)block6)[0];
+		storm_xcrypt_buffer(&ctx6, block6);
+		sum += ((u64*)block6)[0];
+	}
+	timer = micros() - timer;
+
+	println("time={}us,sum={},avg={}ns", timer, sum,
+		(timer * 1000) / STORM_COUNT);
+}
+
 Test(rng) {
 	u64 x = 0, y = 0;
 	__attribute__((aligned(32))) u8 z[64] = {0};
@@ -200,7 +264,7 @@ Test(wots) {
 
 #define WOTS_COUNT 100
 
-Test(wots_rand) {
+Bench(wotsp) {
 	__attribute__((aligned(32))) u8 key[32] = {0};
 	u8 msg[32] = {0};
 	WotsPubKey pk;
@@ -232,15 +296,14 @@ Test(wots_rand) {
 		ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 	}
 
-	(void)keygen_sum;
-	(void)sign_sum;
-	(void)verify_sum;
+	println("keygen={},sign={},verify={}", keygen_sum / WOTS_COUNT,
+		sign_sum / WOTS_COUNT, verify_sum / WOTS_COUNT);
 }
 
 #define BIBLE_PATH "resources/test_bible.dat"
 
 Test(bible) {
-	const Bible *b;
+	const Bible* b;
 	u64 sbox[256];
 	__attribute__((aligned(32))) static const u8 input[128] = {
 	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
@@ -268,7 +331,7 @@ Test(bible) {
 }
 
 Test(bible_mine) {
-	const Bible *b;
+	const Bible* b;
 	u32 nonce = 0;
 	u64 sbox[256];
 	__attribute__((aligned(32))) u8 output[32] = {0};

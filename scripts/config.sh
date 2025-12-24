@@ -13,6 +13,10 @@ case "${BUILD_MODE:-all}" in
         OUTDIR="target"
         OBJDIR="target/test/objs"
         ;;
+    bench)
+	OUTDIR="target"
+	OBJDIR="target/bench/objs"
+	;;
     cov)
         OUTDIR="target/cov"
         OBJDIR="target/cov/objs"
@@ -67,6 +71,15 @@ case "$BUILD_MODE" in
 	else
         	CDEFS="-DTEST=1 -DSTATIC="
 	fi
+        COVERAGE=""
+        [ "$BUILD_MODE" = "cov" ] && COVERAGE="--coverage -DCOVERAGE" && LDFLAGS="$LDFLAGS"
+        LTO=""
+        ;;
+    bench)
+        CFLAGS="$BASE_CFLAGS"
+        LDFLAGS="$BASE_LDFLAGS"
+        VISIBILITY=""
+        CDEFS="-DSTATIC=static -DTEST=1"
         COVERAGE=""
         [ "$BUILD_MODE" = "cov" ] && COVERAGE="--coverage -DCOVERAGE" && LDFLAGS="$LDFLAGS"
         LTO=""

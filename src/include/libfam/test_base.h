@@ -37,6 +37,7 @@
 #define MAX_TEST_NAME 128
 
 void add_test_fn(void (*test_fn)(void), const u8 *name);
+void add_bench_fn(void (*bench_fn)(void), const u8 *name);
 static __attribute__((unused)) const u8 *__assertion_msg =
     "\nassertion failed in test";
 
@@ -53,6 +54,13 @@ extern TestEntry tests[];
 		add_test_fn(__test_##name, #name);                         \
 	}                                                                  \
 	void __test_##name(void)
+
+#define Bench(name)                                                         \
+	void __bench_##name(void);                                          \
+	static void __attribute__((constructor)) __add_bench_##name(void) { \
+		add_bench_fn(__bench_##name, #name);                        \
+	}                                                                   \
+	void __bench_##name(void)
 
 #define ASSERT_EQ(x, y, msg)                                                 \
 	do {                                                                 \

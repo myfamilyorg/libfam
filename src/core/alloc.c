@@ -48,19 +48,6 @@
 		return;                                 \
 	} while (0);
 
-STATIC u64 calculate_slab_index(u64 value) {
-	if (value <= 8) return 0;
-	value--;
-	return (64 - clz_u64(value)) - 3;
-}
-
-STATIC u64 calculate_slab_size(u64 value) {
-	if (value > MAX_SLAB_SIZE) return 0;
-	if (value <= 8) return 8;
-	value--;
-	return 1UL << (64 - clz_u64(value));
-}
-
 STATIC Chunk *alloc_chunk_for_offset(Alloc *a, i64 offset) {
 	return (Chunk *)((u8 *)a + sizeof(Alloc) + bitmap_bound(a->chunks) +
 			 offset * CHUNK_SIZE);
@@ -180,6 +167,19 @@ STATIC u64 current_size(Alloc *a, void *ptr) {
 		MmapChunk *chunk = (MmapChunk *)((u8 *)ptr - sizeof(MmapChunk));
 		return chunk->size;
 	}
+}
+
+u64 calculate_slab_index(u64 value) {
+	if (value <= 8) return 0;
+	value--;
+	return (64 - clz_u64(value)) - 3;
+}
+
+u64 calculate_slab_size(u64 value) {
+	if (value > MAX_SLAB_SIZE) return 0;
+	if (value <= 8) return 8;
+	value--;
+	return 1UL << (64 - clz_u64(value));
 }
 
 Alloc *alloc_init(AllocType t, u64 chunks) {

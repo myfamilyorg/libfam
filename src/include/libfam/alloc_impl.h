@@ -65,7 +65,7 @@ typedef struct {
 	u64 magic;
 } MmapChunk;
 
-STATIC u64 calculate_slab_index(u64 value);
-STATIC u64 calculate_slab_size(u64 value);
+u64 calculate_slab_index(u64 value);
+u64 calculate_slab_size(u64 value);
 
 #endif /* _ALLOC_IMPL_H */

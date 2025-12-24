@@ -22,7 +22,7 @@ PROJECT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 TARGETS=""
 for arg in "$@"; do
     case "$arg" in
-        all|test|cov|clean|install)
+        all|test|cov|bench|clean|install)
             TARGETS="$TARGETS $arg"
             ;;
         --valgrind)
@@ -50,11 +50,12 @@ for arg in "$@"; do
             cat <<EOF
 Usage: build [target...] [options...]
 
-Targets (in order): all test cov clean install
+Targets (in order): all test cov bench clean install
 Examples:
   build clean all
   build test --novalgrind --f=alloc
   build cov --quick
+  build bench
 
 Options: --novalgrind --quick --cc=... --f=... -s --mem_tracking
 EOF
@@ -80,6 +81,7 @@ for t in $TARGETS; do
     case "$t" in
         all)     BUILD_MODE=all     ;;
         test)    BUILD_MODE=test    ;;
+	bench)   BUILD_MODE=bench   ;;
         cov)     VALGRIND=0; BUILD_MODE=cov     ;;
         clean)   BUILD_MODE=clean   ;;
         install) BUILD_MODE=install ;;
