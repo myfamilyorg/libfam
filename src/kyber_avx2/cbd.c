@@ -38,16 +38,6 @@
 #include <kyber_avx2/cbd.h>
 #include <kyber_common/params.h>
 
-/*************************************************
- * Name:        cbd2
- *
- * Description: Given an array of uniformly random bytes, compute
- *              polynomial with coefficients distributed according to
- *              a centered binomial distribution with parameter eta=2
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const __m256i *buf: pointer to aligned input byte array
- **************************************************/
 static void cbd2(poly *restrict r, const __m256i buf[2 * KYBER_N / 128]) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;
@@ -91,18 +81,6 @@ static void cbd2(poly *restrict r, const __m256i buf[2 * KYBER_N / 128]) {
 	}
 }
 
-#if KYBER_ETA1 == 3
-/*************************************************
- * Name:        cbd3
- *
- * Description: Given an array of uniformly random bytes, compute
- *              polynomial with coefficients distributed according to
- *              a centered binomial distribution with parameter eta=3
- *              This function is only needed for Kyber-512
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const __m256i *buf: pointer to aligned input byte array
- **************************************************/
 static void cbd3(poly *restrict r, const u8 buf[3 * KYBER_N / 4 + 8]) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;
@@ -154,9 +132,7 @@ static void cbd3(poly *restrict r, const u8 buf[3 * KYBER_N / 4 + 8]) {
 		_mm256_store_si256(&r->vec[2 * i + 1], f1);
 	}
 }
-#endif
 
-/* buf 32 bytes longer for cbd3 */
 void poly_cbd_eta1(poly *r, const __m256i buf[KYBER_ETA1 * KYBER_N / 128 + 1]) {
 	cbd3(r, (u8 *)buf);
 }

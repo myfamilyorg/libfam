@@ -37,17 +37,6 @@
 
 #include <kyber_avx2/verify.h>
 
-/*************************************************
- * Name:        verify
- *
- * Description: Compare two arrays for equality in constant time.
- *
- * Arguments:   const u8 *a: pointer to first byte array
- *              const u8 *b: pointer to second byte array
- *              u64 len: length of the byte arrays
- *
- * Returns 0 if the byte arrays are equal, 1 otherwise
- **************************************************/
 int verify(const u8 *a, const u8 *b, u64 len) {
 	u64 i;
 	u64 r;
@@ -71,24 +60,10 @@ int verify(const u8 *a, const u8 *b, u64 len) {
 	return r;
 }
 
-/*************************************************
- * Name:        cmov
- *
- * Description: Copy len bytes from x to r if b is 1;
- *              don't modify x if b is 0. Requires b to be in {0,1};
- *              assumes two's complement representation of negative integers.
- *              Runs in constant time.
- *
- * Arguments:   u8 *r: pointer to output byte array
- *              const u8 *x: pointer to input byte array
- *              u64 len: Amount of bytes to be copied
- *              u8 b: Condition bit; has to be in {0,1}
- **************************************************/
 void cmov(u8 *restrict r, const u8 *x, u64 len, u8 b) {
 	u64 i;
 	__m256i xvec, rvec, bvec;
 
-#if defined(__GNUC__) || defined(__clang__)
 	// Prevent the compiler from
 	//    1) inferring that b is 0/1-valued, and
 	//    2) handling the two cases with a branch.
@@ -96,7 +71,6 @@ void cmov(u8 *restrict r, const u8 *x, u64 len, u8 b) {
 	// translation units, but we expect that downstream consumers will copy
 	// this code and/or change how it is built.
 	__asm__("" : "+r"(b) : /* no inputs */);
-#endif
 
 	bvec = _mm256_set1_epi64x(-(u64)b);
 	for (i = 0; i < len / 32; i++) {

@@ -52,19 +52,15 @@ void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce);
 #define poly_getnoise_eta2 KYBER_NAMESPACE(poly_getnoise_eta2)
 void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce);
 
-#ifndef KYBER_90S
 #define poly_getnoise_eta1_4x KYBER_NAMESPACE(poly_getnoise_eta2_4x)
 void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 			   const u8 seed[32], u8 nonce0, u8 nonce1, u8 nonce2,
 			   u8 nonce3);
 
-#if KYBER_K == 2
 #define poly_getnoise_eta1122_4x KYBER_NAMESPACE(poly_getnoise_eta1122_4x)
 void poly_getnoise_eta1122_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 			      const u8 seed[32], u8 nonce0, u8 nonce1,
 			      u8 nonce2, u8 nonce3);
-#endif
-#endif
 
 #define poly_ntt KYBER_NAMESPACE(poly_ntt)
 void poly_ntt(poly *r);
