@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifndef USE_AVX2
+
 #include <kyber_scalar/fips202.h>
 #include <kyber_scalar/params.h>
 #include <kyber_scalar/symmetric.h>
@@ -75,3 +87,5 @@ void kyber_shake256_rkprf(uint8_t out[KYBER_SSBYTES],
 	shake256_finalize(&s);
 	shake256_squeeze(out, KYBER_SSBYTES, &s);
 }
+
+#endif /* !USE_AVX2 */

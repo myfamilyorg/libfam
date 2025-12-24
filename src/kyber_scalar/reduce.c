@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifndef USE_AVX2
+
 #include <kyber_scalar/params.h>
 #include <kyber_scalar/reduce.h>
 #include <stdint.h>
@@ -40,3 +52,5 @@ int16_t barrett_reduce(int16_t a) {
 	t *= KYBER_Q;
 	return a - t;
 }
+
+#endif /* !USE_AVX2 */

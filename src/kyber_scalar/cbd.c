@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifndef USE_AVX2
+
 #include <kyber_scalar/cbd.h>
 #include <kyber_scalar/params.h>
 #include <stdint.h>
@@ -119,3 +131,4 @@ void poly_cbd_eta2(poly *r, const uint8_t buf[KYBER_ETA2 * KYBER_N / 4]) {
 #error "This implementation requires eta2 = 2"
 #endif
 }
+#endif /* !USE_AVX2 */

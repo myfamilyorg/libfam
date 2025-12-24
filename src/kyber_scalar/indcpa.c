@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifndef USE_AVX2
+
 #include <kyber_scalar/indcpa.h>
 #include <kyber_scalar/ntt.h>
 #include <kyber_scalar/params.h>
@@ -328,3 +340,4 @@ void indcpa_dec(uint8_t m[KYBER_INDCPA_MSGBYTES],
 
 	poly_tomsg(m, &mp);
 }
+#endif /* !USE_AVX2 */

@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifndef USE_AVX2
+
 #include <kyber_scalar/cbd.h>
 #include <kyber_scalar/ntt.h>
 #include <kyber_scalar/params.h>
@@ -356,3 +368,5 @@ void poly_sub(poly *r, const poly *a, const poly *b) {
 	for (i = 0; i < KYBER_N; i++)
 		r->coeffs[i] = a->coeffs[i] - b->coeffs[i];
 }
+
+#endif /* !USE_AVX2 */

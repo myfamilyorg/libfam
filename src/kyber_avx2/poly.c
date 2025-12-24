@@ -288,26 +288,6 @@ void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *restrict a) {
 }
 
 /*************************************************
- * Name:        poly_getnoise_eta1
- *
- * Description: Sample a polynomial deterministically from a seed and a nonce,
- *              with output polynomial close to centered binomial distribution
- *              with parameter KYBER_ETA1
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const uint8_t *seed: pointer to input seed
- *                                     (of length KYBER_SYMBYTES bytes)
- *              - uint8_t nonce: one-byte input nonce
- **************************************************/
-void poly_getnoise_eta1(poly *r, const uint8_t seed[KYBER_SYMBYTES],
-			uint8_t nonce) {
-	ALIGNED_UINT8(KYBER_ETA1 * KYBER_N / 4 + 32)
-	buf;  // +32 bytes as required by poly_cbd_eta1
-	prf(buf.coeffs, KYBER_ETA1 * KYBER_N / 4, seed, nonce);
-	poly_cbd_eta1(r, buf.vec);
-}
-
-/*************************************************
  * Name:        poly_getnoise_eta2
  *
  * Description: Sample a polynomial deterministically from a seed and a nonce,
@@ -326,7 +306,6 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES],
 	poly_cbd_eta2(r, buf.vec);
 }
 
-#ifndef KYBER_90S
 #define NOISE_NBLOCKS \
 	((KYBER_ETA1 * KYBER_N / 4 + SHAKE256_RATE - 1) / SHAKE256_RATE)
 void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
@@ -358,7 +337,6 @@ void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 	poly_cbd_eta1(r3, buf[3].vec);
 }
 
-#if KYBER_K == 2
 void poly_getnoise_eta1122_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 			      const uint8_t seed[32], uint8_t nonce0,
 			      uint8_t nonce1, uint8_t nonce2, uint8_t nonce3) {
@@ -387,8 +365,6 @@ void poly_getnoise_eta1122_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 	poly_cbd_eta2(r2, buf[2].vec);
 	poly_cbd_eta2(r3, buf[3].vec);
 }
-#endif
-#endif
 
 /*************************************************
  * Name:        poly_ntt

@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifndef USE_AVX2
+
 #include <kyber_scalar/verify.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -67,3 +79,5 @@ void cmov_int16(int16_t *r, int16_t v, uint16_t b) {
 	b = -b;
 	*r ^= b & ((*r) ^ v);
 }
+
+#endif /* !USE_AVX2 */

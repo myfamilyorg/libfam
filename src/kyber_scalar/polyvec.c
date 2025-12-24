@@ -1,3 +1,15 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
+
+#ifndef USE_AVX2
+
 #include <kyber_scalar/params.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/polyvec.h>
@@ -245,3 +257,5 @@ void polyvec_add(polyvec *r, const polyvec *a, const polyvec *b) {
 	for (i = 0; i < KYBER_K; i++)
 		poly_add(&r->vec[i], &a->vec[i], &b->vec[i]);
 }
+
+#endif /* !USE_AVX2 */
