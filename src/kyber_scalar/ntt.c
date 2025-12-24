@@ -86,27 +86,8 @@ const i16 zetas[128] = {
     -1187, -1659, -1185, -1530, -1278, 794,   -1510, -854, -870,  478,	 -108,
     -308,  996,	  991,	 958,	-1460, 1522,  1628};
 
-/*************************************************
- * Name:        fqmul
- *
- * Description: Multiplication followed by Montgomery reduction
- *
- * Arguments:   - i16 a: first factor
- *              - i16 b: second factor
- *
- * Returns 16-bit integer congruent to a*b*R^{-1} mod q
- **************************************************/
 static i16 fqmul(i16 a, i16 b) { return montgomery_reduce((i32)a * b); }
 
-/*************************************************
- * Name:        ntt
- *
- * Description: Inplace number-theoretic transform (NTT) in Rq.
- *              input is in standard order, output is in bitreversed order
- *
- * Arguments:   - i16 r[256]: pointer to input/output vector of elements of
- *Zq
- **************************************************/
 void ntt(i16 r[256]) {
 	unsigned int len, start, j, k;
 	i16 t, zeta;
@@ -124,16 +105,6 @@ void ntt(i16 r[256]) {
 	}
 }
 
-/*************************************************
- * Name:        invntt_tomont
- *
- * Description: Inplace inverse number-theoretic transform in Rq and
- *              multiplication by Montgomery factor 2^16.
- *              Input is in bitreversed order, output is in standard order
- *
- * Arguments:   - i16 r[256]: pointer to input/output vector of elements of
- *Zq
- **************************************************/
 void invntt(i16 r[256]) {
 	unsigned int start, len, j, k;
 	i16 t, zeta;
@@ -155,17 +126,6 @@ void invntt(i16 r[256]) {
 	for (j = 0; j < 256; j++) r[j] = fqmul(r[j], f);
 }
 
-/*************************************************
- * Name:        basemul
- *
- * Description: Multiplication of polynomials in Zq[X]/(X^2-zeta)
- *              used for multiplication of elements in Rq in NTT domain
- *
- * Arguments:   - i16 r[2]: pointer to the output polynomial
- *              - const i16 a[2]: pointer to the first factor
- *              - const i16 b[2]: pointer to the second factor
- *              - i16 zeta: integer defining the reduction polynomial
- **************************************************/
 void basemul(i16 r[2], const i16 a[2], const i16 b[2], i16 zeta) {
 	r[0] = fqmul(a[1], b[1]);
 	r[0] = fqmul(r[0], zeta);

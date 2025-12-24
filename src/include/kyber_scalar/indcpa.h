@@ -33,9 +33,6 @@
 #define SHAKE256_RATE 136
 #define XOF_BLOCKBYTES SHAKE128_RATE
 
-#define gen_matrix KYBER_NAMESPACE(gen_matrix)
-void gen_matrix(polyvec *a, const u8 seed[KYBER_SYMBYTES], int transposed);
-
 #define indcpa_keypair_derand KYBER_NAMESPACE(indcpa_keypair_derand)
 void indcpa_keypair_derand(u8 pk[KYBER_INDCPA_PUBLICKEYBYTES],
 			   u8 sk[KYBER_INDCPA_SECRETKEYBYTES],
