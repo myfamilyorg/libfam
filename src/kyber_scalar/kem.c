@@ -168,7 +168,7 @@ int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
 	__attribute__((aligned(32))) uint8_t buf[2 * KYBER_SYMBYTES];
 	/* Will contain key, coins */
 	__attribute__((aligned(32))) uint8_t kr[2 * KYBER_SYMBYTES];
-	uint8_t cmp[KYBER_CIPHERTEXTBYTES];
+	__attribute__((aligned(32))) uint8_t cmp[KYBER_CIPHERTEXTBYTES];
 	const uint8_t *pk = sk + KYBER_INDCPA_SECRETKEYBYTES;
 
 	indcpa_dec(buf, ct, sk);
