@@ -93,7 +93,7 @@ STATIC void random_stir(u8 current[32]) {
 	secure_zero(stir_in, sizeof(stir_in));
 }
 
-void rng_init(Rng *rng) {
+PUBLIC void rng_init(Rng *rng) {
 	__attribute__((aligned(32))) u8 key[32];
 
 #if TEST == 1
@@ -106,7 +106,7 @@ void rng_init(Rng *rng) {
 	secure_zero32(key);
 }
 
-void rng_gen(Rng *rng, void *v, u64 size) {
+PUBLIC void rng_gen(Rng *rng, void *v, u64 size) {
 	u8 *out = v;
 	u64 off = 0;
 	while (off + 32 <= size) {
