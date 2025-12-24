@@ -18,13 +18,10 @@
 #include <kyber_avx2/params.h>
 #include <kyber_avx2/poly.h>
 #include <kyber_avx2/reduce.h>
-#include <libfam/kem_impl.h>
-#include <libfam/storm.h>
+#include <kyber_avx2/symmetric.h>
 #include <libfam/string.h>
 #include <stdint.h>
 #include <string.h>
-
-#define SHAKE256_RATE 136
 
 /*************************************************
  * Name:        poly_compress
@@ -229,17 +226,8 @@ void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *restrict a) {
  **************************************************/
 void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES],
 			uint8_t nonce) {
-	ALIGNED_UINT8(KYBER_ETA2 * KYBER_N / 4) buf = {0};
-	StormContext ctx;
-
-	storm_init(&ctx, NOISE_ETA2_DOMAIN);
-	fastmemcpy((u8 *)&buf, seed, KYBER_SYMBYTES);
-	((u8 *)&buf)[KYBER_SYMBYTES] = nonce;
-	storm_next_block(&ctx, (u8 *)&buf);
-	storm_next_block(&ctx, (u8 *)&buf + 32);
-	for (u32 i = 0; i < sizeof(buf); i += 32)
-		storm_next_block(&ctx, (u8 *)&buf + i);
-
+	ALIGNED_UINT8(KYBER_ETA2 * KYBER_N / 4) buf;
+	prf(buf.coeffs, KYBER_ETA2 * KYBER_N / 4, seed, nonce);
 	poly_cbd_eta2(r, buf.vec);
 }
 
@@ -248,9 +236,9 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES],
 void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 			   const uint8_t seed[32], uint8_t nonce0,
 			   uint8_t nonce1, uint8_t nonce2, uint8_t nonce3) {
-	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE) buf[4] = {0};
+	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE) buf[4];
 	__m256i f;
-	StormContext ctx0, ctx1, ctx2, ctx3;
+	keccakx4_state state;
 
 	f = _mm256_loadu_si256((__m256i *)seed);
 	_mm256_store_si256(buf[0].vec, f);
@@ -263,24 +251,10 @@ void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 	buf[2].coeffs[32] = nonce2;
 	buf[3].coeffs[32] = nonce3;
 
-	storm_init(&ctx0, NOISE_ETA1_DOMAIN);
-	storm_init(&ctx1, NOISE_ETA1_DOMAIN);
-	storm_init(&ctx2, NOISE_ETA1_DOMAIN);
-	storm_init(&ctx3, NOISE_ETA1_DOMAIN);
-	storm_next_block(&ctx0, buf[0].coeffs);
-	storm_next_block(&ctx0, (u8 *)buf[0].coeffs + 32);
-	storm_next_block(&ctx1, buf[1].coeffs);
-	storm_next_block(&ctx1, (u8 *)buf[1].coeffs + 32);
-	storm_next_block(&ctx2, buf[2].coeffs);
-	storm_next_block(&ctx2, (u8 *)buf[2].coeffs + 32);
-	storm_next_block(&ctx3, buf[3].coeffs);
-	storm_next_block(&ctx3, (u8 *)buf[3].coeffs + 32);
-	for (u32 i = 0; i < NOISE_NBLOCKS * SHAKE256_RATE; i += 32) {
-		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
-		storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i);
-		storm_next_block(&ctx2, (u8 *)buf[2].coeffs + i);
-		storm_next_block(&ctx3, (u8 *)buf[3].coeffs + i);
-	}
+	shake256x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
+			       buf[2].coeffs, buf[3].coeffs, 33);
+	shake256x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs, buf[2].coeffs,
+				 buf[3].coeffs, NOISE_NBLOCKS, &state);
 
 	poly_cbd_eta1(r0, buf[0].vec);
 	poly_cbd_eta1(r1, buf[1].vec);
@@ -291,9 +265,9 @@ void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 void poly_getnoise_eta1122_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 			      const uint8_t seed[32], uint8_t nonce0,
 			      uint8_t nonce1, uint8_t nonce2, uint8_t nonce3) {
-	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE) buf[4] = {0};
+	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE) buf[4];
 	__m256i f;
-	StormContext ctx0, ctx1, ctx2, ctx3;
+	keccakx4_state state;
 
 	f = _mm256_loadu_si256((__m256i *)seed);
 	_mm256_store_si256(buf[0].vec, f);
@@ -306,24 +280,10 @@ void poly_getnoise_eta1122_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 	buf[2].coeffs[32] = nonce2;
 	buf[3].coeffs[32] = nonce3;
 
-	storm_init(&ctx0, NOISE_ETA2_DOMAIN);
-	storm_init(&ctx1, NOISE_ETA2_DOMAIN);
-	storm_init(&ctx2, NOISE_ETA2_DOMAIN);
-	storm_init(&ctx3, NOISE_ETA2_DOMAIN);
-	storm_next_block(&ctx0, buf[0].coeffs);
-	storm_next_block(&ctx0, (u8 *)buf[0].coeffs + 32);
-	storm_next_block(&ctx1, buf[1].coeffs);
-	storm_next_block(&ctx1, (u8 *)buf[1].coeffs + 32);
-	storm_next_block(&ctx2, buf[2].coeffs);
-	storm_next_block(&ctx2, (u8 *)buf[2].coeffs + 32);
-	storm_next_block(&ctx3, buf[3].coeffs);
-	storm_next_block(&ctx3, (u8 *)buf[3].coeffs + 32);
-	for (u32 i = 0; i < NOISE_NBLOCKS * SHAKE256_RATE; i += 32) {
-		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
-		storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i);
-		storm_next_block(&ctx2, (u8 *)buf[2].coeffs + i);
-		storm_next_block(&ctx3, (u8 *)buf[3].coeffs + i);
-	}
+	shake256x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
+			       buf[2].coeffs, buf[3].coeffs, 33);
+	shake256x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs, buf[2].coeffs,
+				 buf[3].coeffs, NOISE_NBLOCKS, &state);
 
 	poly_cbd_eta1(r0, buf[0].vec);
 	poly_cbd_eta1(r1, buf[1].vec);
