@@ -405,8 +405,6 @@ Test(bible_mine) {
 	bible_destroy(b);
 }
 
-#ifdef __AVX2__
-
 Test(kem) {
 	KemSecKey sk;
 	KemPubKey pk;
@@ -480,6 +478,4 @@ Bench(kempf) {
 	write_num(2, dec_sum / KEM_COUNT);
 	pwrite(2, "\n", 1, 0);
 }
-
-#endif /* __AVX2__ */
 
