@@ -26,6 +26,7 @@
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/env.h>
+#include <libfam/kem.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
@@ -196,7 +197,7 @@ Bench(storm) {
 	write_num(2, timer);
 	pwrite(2, ",avg=", 5, 0);
 	write_num(2, (timer * 1000) / STORM_COUNT);
-	pwrite(2, "\n", 1, 0);
+	pwrite(2, "ns\n", 3, 0);
 }
 
 Test(rng) {
@@ -298,7 +299,7 @@ Test(wots) {
 	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 }
 
-#define WOTS_COUNT 100
+#define WOTS_COUNT 1000
 
 Bench(wotsp) {
 	__attribute__((aligned(32))) u8 key[32] = {0};
@@ -402,5 +403,79 @@ Test(bible_mine) {
 		       32),
 	       "hash");
 	bible_destroy(b);
+}
+
+Test(kem) {
+	KemSecKey sk;
+	KemPubKey pk;
+	KemCipherText ct;
+	KemSharedSecret ss_bob, ss_alice;
+
+	Rng rng1, rng2;
+	rng_init(&rng1);
+	rng_init(&rng2);
+	keypair(&pk, &sk, &rng1);
+	enc(&ct, &ss_bob, &pk, &rng2);
+	dec(&ss_alice, &ct, &sk);
+	ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE), "shared secret");
+}
+
+Test(kem_vector) {
+	__attribute__((aligned(32))) u8 seed[32] = {1, 2, 3};
+	KemSecKey sk;
+	KemPubKey pk;
+	KemCipherText ct;
+	KemSharedSecret ss_bob, ss_alice;
+
+	Rng rng;
+	rng_init(&rng);
+	rng_test_seed(&rng, seed);
+	keypair(&pk, &sk, &rng);
+	enc(&ct, &ss_bob, &pk, &rng);
+	dec(&ss_alice, &ct, &sk);
+	ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE), "shared secret");
+	u8 expected[32] = {250, 184, 222, 220, 93,  207, 98,  255,
+			   19,	77,  227, 221, 54,  204, 69,  107,
+			   89,	136, 140, 251, 155, 15,	 226, 207,
+			   194, 154, 199, 145, 141, 136, 69,  174};
+	ASSERT(!fastmemcmp(&ss_bob, expected, KEM_SS_SIZE), "expected");
+}
+
+#define KEM_COUNT 10000
+
+Bench(kempf) {
+	KemSecKey sk;
+	KemPubKey pk;
+	KemCipherText ct;
+	KemSharedSecret ss_bob, ss_alice;
+	Rng rng1, rng2;
+	u64 keygen_sum = 0;
+	u64 enc_sum = 0;
+	u64 dec_sum = 0;
+
+	for (u32 i = 0; i < KEM_COUNT; i++) {
+		rng_init(&rng1);
+		rng_init(&rng2);
+
+		u64 start = cycle_counter();
+		keypair(&pk, &sk, &rng1);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		enc(&ct, &ss_bob, &pk, &rng2);
+		enc_sum += cycle_counter() - start;
+		start = cycle_counter();
+		dec(&ss_alice, &ct, &sk);
+		dec_sum += cycle_counter() - start;
+		ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE),
+		       "shared secret");
+	}
+
+	pwrite(2, "keygen=", 7, 0);
+	write_num(2, keygen_sum / KEM_COUNT);
+	pwrite(2, ",enc=", 5, 0);
+	write_num(2, enc_sum / KEM_COUNT);
+	pwrite(2, ",dec=", 5, 0);
+	write_num(2, dec_sum / KEM_COUNT);
+	pwrite(2, "\n", 1, 0);
 }
 

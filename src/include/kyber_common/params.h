@@ -1,0 +1,57 @@
+/********************************************************************************
+ * MIT License
+ *
+ * Copyright (c) 2025 Christopher Gilliard
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+
+#ifndef _PARAMS_H
+#define _PARAMS_H
+
+#define KYBER_K 2
+
+#define KYBER_N 256
+#define KYBER_Q 3329
+
+#define KYBER_SYMBYTES 32 /* size in bytes of hashes, and seeds */
+#define KYBER_SSBYTES 32  /* size in bytes of shared key */
+
+#define KYBER_POLYBYTES 384
+#define KYBER_POLYVECBYTES (KYBER_K * KYBER_POLYBYTES)
+
+#define KYBER_ETA1 3
+#define KYBER_POLYCOMPRESSEDBYTES 128
+#define KYBER_POLYVECCOMPRESSEDBYTES (KYBER_K * 320)
+#define KYBER_ETA2 2
+
+#define KYBER_INDCPA_MSGBYTES (KYBER_SYMBYTES)
+#define KYBER_INDCPA_PUBLICKEYBYTES (KYBER_POLYVECBYTES + KYBER_SYMBYTES)
+#define KYBER_INDCPA_SECRETKEYBYTES (KYBER_POLYVECBYTES)
+#define KYBER_INDCPA_BYTES \
+	(KYBER_POLYVECCOMPRESSEDBYTES + KYBER_POLYCOMPRESSEDBYTES)
+
+#define KYBER_PUBLICKEYBYTES (KYBER_INDCPA_PUBLICKEYBYTES)
+#define KYBER_SECRETKEYBYTES                                         \
+	(KYBER_INDCPA_SECRETKEYBYTES + KYBER_INDCPA_PUBLICKEYBYTES + \
+	 2 * KYBER_SYMBYTES)
+#define KYBER_CIPHERTEXTBYTES (KYBER_INDCPA_BYTES)
+
+#endif /* _PARAMS_H */

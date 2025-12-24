@@ -1,0 +1,69 @@
+/********************************************************************************
+ * MIT License
+ *
+ * Copyright (c) 2025 Christopher Gilliard
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+
+#ifndef __AVX2__
+
+#include <kyber_common/params.h>
+#include <kyber_scalar/reduce.h>
+
+/*************************************************
+ * Name:        montgomery_reduce
+ *
+ * Description: Montgomery reduction; given a 32-bit integer a, computes
+ *              16-bit integer congruent to a * R^-1 mod q, where R=2^16
+ *
+ * Arguments:   - i32 a: input integer to be reduced;
+ *                           has to be in {-q2^15,...,q2^15-1}
+ *
+ * Returns:     integer in {-q+1,...,q-1} congruent to a * R^-1 modulo q.
+ **************************************************/
+i16 montgomery_reduce(i32 a) {
+	i16 t;
+
+	t = (i16)a * QINV;
+	t = (a - (i32)t * KYBER_Q) >> 16;
+	return t;
+}
+
+/*************************************************
+ * Name:        barrett_reduce
+ *
+ * Description: Barrett reduction; given a 16-bit integer a, computes
+ *              centered representative congruent to a mod q in
+ *{-(q-1)/2,...,(q-1)/2}
+ *
+ * Arguments:   - i16 a: input integer to be reduced
+ *
+ * Returns:     integer in {-(q-1)/2,...,(q-1)/2} congruent to a modulo q.
+ **************************************************/
+i16 barrett_reduce(i16 a) {
+	i16 t;
+	const i16 v = ((1 << 26) + KYBER_Q / 2) / KYBER_Q;
+
+	t = ((i32)v * a + (1 << 25)) >> 26;
+	t *= KYBER_Q;
+	return a - t;
+}
+#endif /* __AVX2__ */
