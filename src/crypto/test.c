@@ -26,7 +26,6 @@
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/env.h>
-#include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
@@ -201,8 +200,13 @@ Bench(storm) {
 	}
 	timer = micros() - timer;
 
-	println("time={}us,sum={},avg={}ns", timer, sum,
-		(timer * 1000) / STORM_COUNT);
+	pwrite(2, "time=", 5, 0);
+	write_num(2, timer);
+	pwrite(2, "us,sum=", 7, 0);
+	write_num(2, sum);
+	pwrite(2, ",avg=", 5, 0);
+	write_num(2, (timer * 1000) / STORM_COUNT);
+	pwrite(2, "\n", 1, 0);
 }
 
 Test(rng) {
@@ -294,8 +298,13 @@ Bench(wotsp) {
 		ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 	}
 
-	println("keygen={},sign={},verify={}", keygen_sum / WOTS_COUNT,
-		sign_sum / WOTS_COUNT, verify_sum / WOTS_COUNT);
+	pwrite(2, "keygen=", 7, 0);
+	write_num(2, keygen_sum / WOTS_COUNT);
+	pwrite(2, ",sign=", 6, 0);
+	write_num(2, sign_sum / WOTS_COUNT);
+	pwrite(2, ",verify=", 8, 0);
+	write_num(2, verify_sum / WOTS_COUNT);
+	pwrite(2, "\n", 1, 0);
 }
 
 #define BIBLE_PATH "resources/test_bible.dat"
