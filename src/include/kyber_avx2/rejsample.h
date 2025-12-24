@@ -1,9 +1,7 @@
 #ifndef REJSAMPLE_H
 #define REJSAMPLE_H
 
-#include <stdint.h>
-
-#include "params.h"
+#include <kyber_common/params.h>
 
 #define SHAKE128_RATE 168
 #define SHAKE256_RATE 136
@@ -15,6 +13,6 @@
 #define REJ_UNIFORM_AVX_BUFLEN (REJ_UNIFORM_AVX_NBLOCKS * XOF_BLOCKBYTES)
 
 #define rej_uniform_avx KYBER_NAMESPACE(rej_uniform_avx)
-unsigned int rej_uniform_avx(int16_t *r, const uint8_t *buf);
+unsigned int rej_uniform_avx(i16 *r, const u8 *buf);
 
 #endif

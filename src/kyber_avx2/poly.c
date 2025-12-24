@@ -15,7 +15,7 @@
 #include <kyber_avx2/cbd.h>
 #include <kyber_avx2/consts.h>
 #include <kyber_avx2/ntt.h>
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 #include <kyber_avx2/poly.h>
 #include <kyber_avx2/reduce.h>
 #include <libfam/format.h>
@@ -35,11 +35,11 @@
  *              lie in the invertal [0,q], i.e. the polynomial must be reduced
  *              by poly_reduce().
  *
- * Arguments:   - uint8_t *r: pointer to output byte array
+ * Arguments:   - u8 *r: pointer to output byte array
  *                            (of length KYBER_POLYCOMPRESSEDBYTES)
  *              - const poly *a: pointer to input polynomial
  **************************************************/
-void poly_compress(uint8_t r[128], const poly *restrict a) {
+void poly_compress(u8 r[128], const poly *restrict a) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;
 	const __m256i v = _mm256_load_si256(&qdata.vec[_16XV / 16]);
@@ -75,7 +75,7 @@ void poly_compress(uint8_t r[128], const poly *restrict a) {
 	}
 }
 
-void poly_decompress(poly *restrict r, const uint8_t a[128]) {
+void poly_decompress(poly *restrict r, const u8 a[128]) {
 	unsigned int i;
 	__m128i t;
 	__m256i f;
@@ -107,11 +107,11 @@ void poly_decompress(poly *restrict r, const uint8_t a[128]) {
  *              poly_ntt(); the serialized output coefficients are in
  *bitreversed order.
  *
- * Arguments:   - uint8_t *r: pointer to output byte array
+ * Arguments:   - u8 *r: pointer to output byte array
  *                            (needs space for KYBER_POLYBYTES bytes)
  *              - poly *a: pointer to input polynomial
  **************************************************/
-void poly_tobytes(uint8_t r[KYBER_POLYBYTES], const poly *a) {
+void poly_tobytes(u8 r[KYBER_POLYBYTES], const poly *a) {
 	ntttobytes_avx(r, a->vec, qdata.vec);
 }
 
@@ -122,10 +122,10 @@ void poly_tobytes(uint8_t r[KYBER_POLYBYTES], const poly *a) {
  *              inverse of poly_tobytes
  *
  * Arguments:   - poly *r: pointer to output polynomial
- *              - const uint8_t *a: pointer to input byte array
+ *              - const u8 *a: pointer to input byte array
  *                                  (of KYBER_POLYBYTES bytes)
  **************************************************/
-void poly_frombytes(poly *r, const uint8_t a[KYBER_POLYBYTES]) {
+void poly_frombytes(poly *r, const u8 a[KYBER_POLYBYTES]) {
 	nttfrombytes_avx(r->vec, a, qdata.vec);
 }
 
@@ -135,9 +135,9 @@ void poly_frombytes(poly *r, const uint8_t a[KYBER_POLYBYTES]) {
  * Description: Convert 32-byte message to polynomial
  *
  * Arguments:   - poly *r: pointer to output polynomial
- *              - const uint8_t *msg: pointer to input message
+ *              - const u8 *msg: pointer to input message
  **************************************************/
-void poly_frommsg(poly *restrict r, const uint8_t msg[KYBER_INDCPA_MSGBYTES]) {
+void poly_frommsg(poly *restrict r, const u8 msg[KYBER_INDCPA_MSGBYTES]) {
 	__m256i f, g0, g1, g2, g3, h0, h1, h2, h3;
 	const __m256i shift =
 	    _mm256_broadcastsi128_si256(_mm_set_epi32(0, 1, 2, 3));
@@ -188,12 +188,12 @@ void poly_frommsg(poly *restrict r, const uint8_t msg[KYBER_INDCPA_MSGBYTES]) {
  *              lie in the invertal [0,q], i.e. the polynomial must be reduced
  *              by poly_reduce().
  *
- * Arguments:   - uint8_t *msg: pointer to output message
+ * Arguments:   - u8 *msg: pointer to output message
  *              - poly *a: pointer to input polynomial
  **************************************************/
-void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *restrict a) {
+void poly_tomsg(u8 msg[KYBER_INDCPA_MSGBYTES], const poly *restrict a) {
 	unsigned int i;
-	uint32_t small;
+	u32 small;
 	__m256i f0, f1, g0, g1;
 	const __m256i hq = _mm256_set1_epi16((KYBER_Q - 1) / 2);
 	const __m256i hhq = _mm256_set1_epi16((KYBER_Q - 1) / 4);
@@ -224,12 +224,12 @@ void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *restrict a) {
  *              with parameter KYBER_ETA2
  *
  * Arguments:   - poly *r: pointer to output polynomial
- *              - const uint8_t *seed: pointer to input seed
+ *              - const u8 *seed: pointer to input seed
  *                                     (of length KYBER_SYMBYTES bytes)
- *              - uint8_t nonce: one-byte input nonce
+ *              - u8 nonce: one-byte input nonce
  **************************************************/
-void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES],
-			uint8_t nonce) {
+void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES],
+			u8 nonce) {
 	ALIGNED_UINT8(KYBER_ETA2 * KYBER_N / 4) buf = {0};
 	StormContext ctx;
 
@@ -248,8 +248,8 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES],
 #define NOISE_NBLOCKS \
 	((KYBER_ETA1 * KYBER_N / 4 + SHAKE256_RATE - 1) / SHAKE256_RATE)
 void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
-			   const uint8_t seed[32], uint8_t nonce0,
-			   uint8_t nonce1, uint8_t nonce2, uint8_t nonce3) {
+			   const u8 seed[32], u8 nonce0,
+			   u8 nonce1, u8 nonce2, u8 nonce3) {
 	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE + 16) buf[4] = {0};
 	StormContext ctx0, ctx1, ctx2, ctx3;
 	__m256i f;
@@ -293,8 +293,8 @@ void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 }
 
 void poly_getnoise_eta1122_4x(poly *r0, poly *r1, poly *r2, poly *r3,
-			      const uint8_t seed[32], uint8_t nonce0,
-			      uint8_t nonce1, uint8_t nonce2, uint8_t nonce3) {
+			      const u8 seed[32], u8 nonce0,
+			      u8 nonce1, u8 nonce2, u8 nonce3) {
 	ALIGNED_UINT8(NOISE_NBLOCKS * SHAKE256_RATE + 16) buf[4] = {0};
 	__m256i f;
 	StormContext ctx0, ctx1, ctx2, ctx3;

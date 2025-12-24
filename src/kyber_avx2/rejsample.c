@@ -12,7 +12,7 @@
 
 #include <immintrin.h>
 #include <kyber_avx2/consts.h>
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 #include <kyber_avx2/rejsample.h>
 #include <stdint.h>
 #include <string.h>
@@ -20,7 +20,7 @@
 // #define BMI
 
 #ifndef BMI
-static const uint8_t idx[256][8] = {
+static const u8 idx[256][8] = {
     {-1, -1, -1, -1, -1, -1, -1, -1}, {0, -1, -1, -1, -1, -1, -1, -1},
     {2, -1, -1, -1, -1, -1, -1, -1},  {0, 2, -1, -1, -1, -1, -1, -1},
     {4, -1, -1, -1, -1, -1, -1, -1},  {0, 4, -1, -1, -1, -1, -1, -1},
@@ -154,12 +154,12 @@ static const uint8_t idx[256][8] = {
 #define _mm256_cmpge_epu16(a, b) _mm256_cmpeq_epi16(_mm256_max_epu16(a, b), a)
 #define _mm_cmpge_epu16(a, b) _mm_cmpeq_epi16(_mm_max_epu16(a, b), a)
 
-unsigned int rej_uniform_avx(int16_t *restrict r, const uint8_t *buf) {
+unsigned int rej_uniform_avx(i16 *restrict r, const u8 *buf) {
 	unsigned int ctr, pos;
-	uint16_t val0, val1;
-	uint32_t good;
+	u16 val0, val1;
+	u32 good;
 #ifdef BMI
-	uint64_t idx0, idx1, idx2, idx3;
+	u64 idx0, idx1, idx2, idx3;
 #endif
 	const __m256i bound = _mm256_load_si256(&qdata.vec[_16XQ / 16]);
 	const __m256i ones = _mm256_set1_epi8(1);
@@ -275,9 +275,9 @@ unsigned int rej_uniform_avx(int16_t *restrict r, const uint8_t *buf) {
 	}
 
 	while (ctr < KYBER_N && pos <= REJ_UNIFORM_AVX_BUFLEN - 3) {
-		val0 = ((buf[pos + 0] >> 0) | ((uint16_t)buf[pos + 1] << 8)) &
+		val0 = ((buf[pos + 0] >> 0) | ((u16)buf[pos + 1] << 8)) &
 		       0xFFF;
-		val1 = ((buf[pos + 1] >> 4) | ((uint16_t)buf[pos + 2] << 4));
+		val1 = ((buf[pos + 1] >> 4) | ((u16)buf[pos + 2] << 4));
 		pos += 3;
 
 		if (val0 < KYBER_Q) r[ctr++] = val0;

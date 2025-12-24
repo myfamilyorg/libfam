@@ -1,7 +1,7 @@
 #ifndef REDUCE_H
 #define REDUCE_H
 
-#include "params.h"
+#include <kyber_common/params.h>
 #include <immintrin.h>
 
 #define reduce_avx KYBER_NAMESPACE(reduce_avx)

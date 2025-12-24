@@ -11,7 +11,7 @@
 #ifndef USE_AVX2
 
 #include <kyber_scalar/cbd.h>
-#include <kyber_scalar/params.h>
+#include <kyber_common/params.h>
 #include <stdint.h>
 
 /*************************************************
@@ -20,16 +20,16 @@
  * Description: load 4 bytes into a 32-bit integer
  *              in little-endian order
  *
- * Arguments:   - const uint8_t *x: pointer to input byte array
+ * Arguments:   - const u8 *x: pointer to input byte array
  *
  * Returns 32-bit unsigned integer loaded from x
  **************************************************/
-static uint32_t load32_littleendian(const uint8_t x[4]) {
-	uint32_t r;
-	r = (uint32_t)x[0];
-	r |= (uint32_t)x[1] << 8;
-	r |= (uint32_t)x[2] << 16;
-	r |= (uint32_t)x[3] << 24;
+static u32 load32_littleendian(const u8 x[4]) {
+	u32 r;
+	r = (u32)x[0];
+	r |= (u32)x[1] << 8;
+	r |= (u32)x[2] << 16;
+	r |= (u32)x[3] << 24;
 	return r;
 }
 
@@ -40,16 +40,16 @@ static uint32_t load32_littleendian(const uint8_t x[4]) {
  *              in little-endian order.
  *              This function is only needed for Kyber-512
  *
- * Arguments:   - const uint8_t *x: pointer to input byte array
+ * Arguments:   - const u8 *x: pointer to input byte array
  *
  * Returns 32-bit unsigned integer loaded from x (most significant byte is zero)
  **************************************************/
 #if KYBER_ETA1 == 3
-static uint32_t load24_littleendian(const uint8_t x[3]) {
-	uint32_t r;
-	r = (uint32_t)x[0];
-	r |= (uint32_t)x[1] << 8;
-	r |= (uint32_t)x[2] << 16;
+static u32 load24_littleendian(const u8 x[3]) {
+	u32 r;
+	r = (u32)x[0];
+	r |= (u32)x[1] << 8;
+	r |= (u32)x[2] << 16;
 	return r;
 }
 #endif
@@ -62,12 +62,12 @@ static uint32_t load24_littleendian(const uint8_t x[3]) {
  *              a centered binomial distribution with parameter eta=2
  *
  * Arguments:   - poly *r: pointer to output polynomial
- *              - const uint8_t *buf: pointer to input byte array
+ *              - const u8 *buf: pointer to input byte array
  **************************************************/
-static void cbd2(poly *r, const uint8_t buf[2 * KYBER_N / 4]) {
+static void cbd2(poly *r, const u8 buf[2 * KYBER_N / 4]) {
 	unsigned int i, j;
-	uint32_t t, d;
-	int16_t a, b;
+	u32 t, d;
+	i16 a, b;
 
 	for (i = 0; i < KYBER_N / 8; i++) {
 		t = load32_littleendian(buf + 4 * i);
@@ -91,13 +91,13 @@ static void cbd2(poly *r, const uint8_t buf[2 * KYBER_N / 4]) {
  *              This function is only needed for Kyber-512
  *
  * Arguments:   - poly *r: pointer to output polynomial
- *              - const uint8_t *buf: pointer to input byte array
+ *              - const u8 *buf: pointer to input byte array
  **************************************************/
 #if KYBER_ETA1 == 3
-static void cbd3(poly *r, const uint8_t buf[3 * KYBER_N / 4]) {
+static void cbd3(poly *r, const u8 buf[3 * KYBER_N / 4]) {
 	unsigned int i, j;
-	uint32_t t, d;
-	int16_t a, b;
+	u32 t, d;
+	i16 a, b;
 
 	for (i = 0; i < KYBER_N / 4; i++) {
 		t = load24_littleendian(buf + 3 * i);
@@ -114,7 +114,7 @@ static void cbd3(poly *r, const uint8_t buf[3 * KYBER_N / 4]) {
 }
 #endif
 
-void poly_cbd_eta1(poly *r, const uint8_t buf[KYBER_ETA1 * KYBER_N / 4]) {
+void poly_cbd_eta1(poly *r, const u8 buf[KYBER_ETA1 * KYBER_N / 4]) {
 #if KYBER_ETA1 == 2
 	cbd2(r, buf);
 #elif KYBER_ETA1 == 3
@@ -124,7 +124,7 @@ void poly_cbd_eta1(poly *r, const uint8_t buf[KYBER_ETA1 * KYBER_N / 4]) {
 #endif
 }
 
-void poly_cbd_eta2(poly *r, const uint8_t buf[KYBER_ETA2 * KYBER_N / 4]) {
+void poly_cbd_eta2(poly *r, const u8 buf[KYBER_ETA2 * KYBER_N / 4]) {
 #if KYBER_ETA2 == 2
 	cbd2(r, buf);
 #else

@@ -12,7 +12,7 @@
 
 #include <immintrin.h>
 #include <kyber_avx2/cbd.h>
-#include <kyber_avx2/params.h>
+#include <kyber_common/params.h>
 #include <stdint.h>
 
 /*************************************************
@@ -80,7 +80,7 @@ static void cbd2(poly *restrict r, const __m256i buf[2 * KYBER_N / 128]) {
  * Arguments:   - poly *r: pointer to output polynomial
  *              - const __m256i *buf: pointer to aligned input byte array
  **************************************************/
-static void cbd3(poly *restrict r, const uint8_t buf[3 * KYBER_N / 4 + 8]) {
+static void cbd3(poly *restrict r, const u8 buf[3 * KYBER_N / 4 + 8]) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;
 	const __m256i mask249 = _mm256_set1_epi32(0x249249);
@@ -135,7 +135,7 @@ static void cbd3(poly *restrict r, const uint8_t buf[3 * KYBER_N / 4 + 8]) {
 
 /* buf 32 bytes longer for cbd3 */
 void poly_cbd_eta1(poly *r, const __m256i buf[KYBER_ETA1 * KYBER_N / 128 + 1]) {
-	cbd3(r, (uint8_t *)buf);
+	cbd3(r, (u8 *)buf);
 }
 
 void poly_cbd_eta2(poly *r, const __m256i buf[KYBER_ETA2 * KYBER_N / 128]) {

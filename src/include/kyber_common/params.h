@@ -1,9 +1,11 @@
 #ifndef PARAMS_H
 #define PARAMS_H
 
-#define KYBER_K 2
+#ifndef __ASSEMBLER__
+#include <libfam/types.h>
+#endif /* __ASSEMBLER__ */
 
-#define KYBER_NAMESPACE(s) pqcrystals_kyber512_avx2_##s
+#define KYBER_K 2 /* Change this for different security strengths */
 
 #define KYBER_N 256
 #define KYBER_Q 3329
@@ -27,7 +29,6 @@
 	(KYBER_POLYVECCOMPRESSEDBYTES + KYBER_POLYCOMPRESSEDBYTES)
 
 #define KYBER_PUBLICKEYBYTES (KYBER_INDCPA_PUBLICKEYBYTES)
-/* 32 bytes of additional space to save H(pk) */
 #define KYBER_SECRETKEYBYTES                                         \
 	(KYBER_INDCPA_SECRETKEYBYTES + KYBER_INDCPA_PUBLICKEYBYTES + \
 	 2 * KYBER_SYMBYTES)
