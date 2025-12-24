@@ -405,11 +405,13 @@ Test(bible_mine) {
 	bible_destroy(b);
 }
 
+#ifdef __AVX2__
+
 Test(kem) {
 	KemSecKey sk;
 	KemPubKey pk;
 	KemCipherText ct;
-	KemSharedSecret ss_bob, ss_alice;
+	KemSharedSecret ss_bob = {0}, ss_alice = {1};
 
 	Rng rng1, rng2;
 	rng_init(&rng1);
@@ -417,8 +419,7 @@ Test(kem) {
 	keypair(&pk, &sk, &rng1);
 	enc(&ct, &ss_bob, &pk, &rng2);
 	dec(&ss_alice, &ct, &sk);
-	// ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE), "shared
-	// secret");
+	ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE), "shared secret");
 }
 
 Test(kem_vector) {
@@ -426,7 +427,7 @@ Test(kem_vector) {
 	KemSecKey sk;
 	KemPubKey pk;
 	KemCipherText ct;
-	KemSharedSecret ss_bob, ss_alice;
+	KemSharedSecret ss_bob = {0}, ss_alice = {1};
 
 	Rng rng;
 	rng_init(&rng);
@@ -434,14 +435,12 @@ Test(kem_vector) {
 	keypair(&pk, &sk, &rng);
 	enc(&ct, &ss_bob, &pk, &rng);
 	dec(&ss_alice, &ct, &sk);
-	/*
 	ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE), "shared secret");
-	u8 expected[32] = {250, 184, 222, 220, 93,  207, 98,  255,
-			   19,	77,  227, 221, 54,  204, 69,  107,
-			   89,	136, 140, 251, 155, 15,	 226, 207,
-			   194, 154, 199, 145, 141, 136, 69,  174};
+	u8 expected[32] = {197, 163, 103, 82,  166, 130, 236, 92,
+			   211, 38,  178, 205, 252, 196, 184, 10,
+			   79,	238, 216, 19,  218, 46,	 81,  40,
+			   212, 193, 102, 20,  15,  87,	 105, 175};
 	ASSERT(!fastmemcmp(&ss_bob, expected, KEM_SS_SIZE), "expected");
-	*/
 }
 
 #define KEM_COUNT 10000
@@ -450,7 +449,7 @@ Bench(kempf) {
 	KemSecKey sk;
 	KemPubKey pk;
 	KemCipherText ct;
-	KemSharedSecret ss_bob, ss_alice;
+	KemSharedSecret ss_bob = {0}, ss_alice = {1};
 	Rng rng1, rng2;
 	u64 keygen_sum = 0;
 	u64 enc_sum = 0;
@@ -469,23 +468,18 @@ Bench(kempf) {
 		start = cycle_counter();
 		dec(&ss_alice, &ct, &sk);
 		dec_sum += cycle_counter() - start;
-		/*
 		ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE),
 		       "shared secret");
-		       */
 	}
-	(void)keygen_sum;
-	(void)enc_sum;
-	(void)dec_sum;
 
-	/*
 	pwrite(2, "keygen=", 7, 0);
 	write_num(2, keygen_sum / KEM_COUNT);
 	pwrite(2, ",enc=", 5, 0);
 	write_num(2, enc_sum / KEM_COUNT);
 	pwrite(2, ",dec=", 5, 0);
 	write_num(2, dec_sum / KEM_COUNT);
-	*/
 	pwrite(2, "\n", 1, 0);
 }
+
+#endif /* __AVX2__ */
 

@@ -43,30 +43,24 @@ i32 pqcrystals_kyber512_avx2_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng);
 i32 pqcrystals_kyber512_avx2_dec(u8 *ss, const u8 *ct, const u8 *sk);
 
 void keypair(KemPubKey *pk, KemSecKey *sk, Rng *rng) {
-	/*
-	#ifdef USE_AVX2
-		pqcrystals_kyber512_avx2_keypair(pk->data, sk->data, rng);
-	#else
-		pqcrystals_kyber512_ref_keypair(pk->data, sk->data, rng);
-	#endif
-	*/
+#ifdef USE_AVX2
+	pqcrystals_kyber512_avx2_keypair(pk->data, sk->data, rng);
+#else
+	pqcrystals_kyber512_ref_keypair(pk->data, sk->data, rng);
+#endif
 }
 void enc(KemCipherText *ct, KemSharedSecret *ss, const KemPubKey *pk,
 	 Rng *rng) {
-	/*
-	#ifdef USE_AVX2
-		pqcrystals_kyber512_avx2_enc(ct->data, ss->data, pk->data, rng);
-	#else
-		pqcrystals_kyber512_ref_enc(ct->data, ss->data, pk->data, rng);
-	#endif
-	*/
+#ifdef USE_AVX2
+	pqcrystals_kyber512_avx2_enc(ct->data, ss->data, pk->data, rng);
+#else
+	pqcrystals_kyber512_ref_enc(ct->data, ss->data, pk->data, rng);
+#endif
 }
 void dec(KemSharedSecret *ss, const KemCipherText *ct, const KemSecKey *sk) {
-	/*
-	#ifdef USE_AVX2
-		pqcrystals_kyber512_avx2_dec(ss->data, ct->data, sk->data);
-	#else
-		pqcrystals_kyber512_ref_dec(ss->data, ct->data, sk->data);
-	#endif
-	*/
+#ifdef USE_AVX2
+	pqcrystals_kyber512_avx2_dec(ss->data, ct->data, sk->data);
+#else
+	pqcrystals_kyber512_ref_dec(ss->data, ct->data, sk->data);
+#endif
 }
