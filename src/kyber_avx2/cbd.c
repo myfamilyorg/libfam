@@ -135,21 +135,11 @@ static void cbd3(poly *restrict r, const uint8_t buf[3 * KYBER_N / 4 + 8]) {
 
 /* buf 32 bytes longer for cbd3 */
 void poly_cbd_eta1(poly *r, const __m256i buf[KYBER_ETA1 * KYBER_N / 128 + 1]) {
-#if KYBER_ETA1 == 2
-	cbd2(r, buf);
-#elif KYBER_ETA1 == 3
 	cbd3(r, (uint8_t *)buf);
-#else
-#error "This implementation requires eta1 in {2,3}"
-#endif
 }
 
 void poly_cbd_eta2(poly *r, const __m256i buf[KYBER_ETA2 * KYBER_N / 128]) {
-#if KYBER_ETA2 == 2
 	cbd2(r, buf);
-#else
-#error "This implementation requires eta2 = 2"
-#endif
 }
 
 #endif /* !USE_AVX2 */

@@ -53,11 +53,11 @@ Usage: build [target...] [options...]
 Targets (in order): all test cov bench clean install
 Examples:
   build clean all
-  build test --novalgrind --f=alloc
+  build test --valgrind --f=alloc
   build cov --quick
   build bench
 
-Options: --novalgrind --quick --cc=... --f=... -s --mem_tracking
+Options: --valgrind --quick --cc=... --f=... -s --mem_tracking
 EOF
             exit 0
             ;;

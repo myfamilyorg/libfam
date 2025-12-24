@@ -15,8 +15,10 @@
 #include <kyber_scalar/params.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/reduce.h>
-#include <kyber_scalar/symmetric.h>
 #include <kyber_scalar/verify.h>
+#include <libfam/format.h>
+#include <libfam/kem_impl.h>
+#include <libfam/storm.h>
 #include <stdint.h>
 
 /*************************************************
@@ -240,8 +242,19 @@ void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *a) {
  **************************************************/
 void poly_getnoise_eta1(poly *r, const uint8_t seed[KYBER_SYMBYTES],
 			uint8_t nonce) {
-	uint8_t buf[KYBER_ETA1 * KYBER_N / 4];
-	prf(buf, sizeof(buf), seed, nonce);
+	__attribute__((aligned(32))) uint8_t buf[KYBER_ETA1 * KYBER_N / 4] = {
+	    0};
+	StormContext ctx;
+
+	storm_init(&ctx, NOISE_ETA1_DOMAIN);
+	fastmemcpy(buf, seed, KYBER_SYMBYTES);
+	buf[KYBER_SYMBYTES] = nonce;
+	storm_next_block(&ctx, buf);
+	storm_next_block(&ctx, buf + 32);
+
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
+
 	poly_cbd_eta1(r, buf);
 }
 
@@ -259,8 +272,19 @@ void poly_getnoise_eta1(poly *r, const uint8_t seed[KYBER_SYMBYTES],
  **************************************************/
 void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES],
 			uint8_t nonce) {
-	uint8_t buf[KYBER_ETA2 * KYBER_N / 4];
-	prf(buf, sizeof(buf), seed, nonce);
+	__attribute__((aligned(32))) uint8_t buf[KYBER_ETA2 * KYBER_N / 4] = {
+	    0};
+	StormContext ctx;
+
+	storm_init(&ctx, NOISE_ETA2_DOMAIN);
+	fastmemcpy(buf, seed, KYBER_SYMBYTES);
+	buf[KYBER_SYMBYTES] = nonce;
+	storm_next_block(&ctx, buf);
+	storm_next_block(&ctx, buf + 32);
+
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
+
 	poly_cbd_eta2(r, buf);
 }
 
