@@ -100,7 +100,8 @@ PUBLIC const Bible *bible_gen(bool print_status) {
 			i64 current = micros();
 			if (percent != last_percent ||
 			    (current - last_update) > 500000) {
-				static const u8 msg[] = "\rBible gen status: ";
+				static const u8 msg[] =
+				    "\rBible gen status: \0";
 				pwrite(2, msg, strlen(msg), 0);
 
 				write_num(2, percent);
