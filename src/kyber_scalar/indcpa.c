@@ -10,12 +10,13 @@
 
 #ifndef USE_AVX2
 
+#define XOF_BLOCKBYTES 168
+
 #include <kyber_scalar/indcpa.h>
 #include <kyber_scalar/ntt.h>
 #include <kyber_scalar/params.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/polyvec.h>
-#include <kyber_scalar/symmetric.h>
 #include <libfam/format.h>
 #include <libfam/kem_impl.h>
 #include <libfam/storm.h>

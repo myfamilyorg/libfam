@@ -19,7 +19,6 @@
 #include <kyber_avx2/poly.h>
 #include <kyber_avx2/polyvec.h>
 #include <kyber_avx2/rejsample.h>
-#include <kyber_avx2/symmetric.h>
 #include <libfam/kem_impl.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
