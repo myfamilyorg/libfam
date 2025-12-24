@@ -109,7 +109,7 @@ void rng_init(Rng *rng) {
 void rng_gen(Rng *rng, void *v, u64 size) {
 	u8 *out = v;
 	u64 off = 0;
-	while (off + 32 < size) {
+	while (off + 32 <= size) {
 		storm_next_block(&rng->ctx, out + off);
 		off += 32;
 	}
