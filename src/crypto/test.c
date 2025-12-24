@@ -302,7 +302,7 @@ Test(wots) {
 
 Bench(wotsp) {
 	__attribute__((aligned(32))) u8 key[32] = {0};
-	u8 msg[32] = {0};
+	__attribute__((aligned(32))) u8 msg[32] = {0};
 	WotsPubKey pk;
 	WotsSecKey sk;
 	WotsSig sig;

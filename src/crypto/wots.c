@@ -48,7 +48,6 @@ static void wots_chain(u8 out[32], const u8 in[32], u32 steps) {
 
 void wots_keyfrom(const u8 seed[32], WotsPubKey *pk, WotsSecKey *sk) {
 	StormContext ctx;
-
 	storm_init(&ctx, seed);
 	fastmemset(sk->data, 0, WOTS_SECKEY_SIZE);
 
