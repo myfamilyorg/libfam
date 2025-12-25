@@ -767,16 +767,14 @@ Bench(kempf) {
 
 #include <dilithium_scalar/sign.h>
 
-#define MLEN 59
-#define CTXLEN 14
+#define MLEN 32
 #define NTESTS 100
 
 Test(dilithium) {
-	int ret;
+	i32 ret;
 	u64 mlen, smlen;
 	u16 v = 0;
 	u8 b = 0;
-	__attribute__((aligned(32))) u8 ctx[CTXLEN] = {'t', 'e', 's', 't'};
 	__attribute__((aligned(32))) u8 m[MLEN + CRYPTO_BYTES] = {0};
 	__attribute__((aligned(32))) u8 m2[MLEN + CRYPTO_BYTES] = {0};
 	__attribute__((aligned(32))) u8 sm[MLEN + CRYPTO_BYTES] = {0};
@@ -789,8 +787,8 @@ Test(dilithium) {
 		rng_gen(&rng, m, MLEN);
 
 		crypto_sign_keypair(pk, sk);
-		crypto_sign(sm, &smlen, m, MLEN, ctx, CTXLEN, sk);
-		ret = crypto_sign_open(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
+		crypto_sign(sm, &smlen, m, MLEN, NULL, 0, sk);
+		ret = crypto_sign_open(m2, &mlen, sm, smlen, NULL, 0, pk);
 
 		ASSERT(!ret, "verify");
 		ASSERT_EQ(smlen, MLEN + CRYPTO_BYTES, "smlen");
@@ -800,9 +798,25 @@ Test(dilithium) {
 		rng_gen(&rng, &v, sizeof(v));
 		rng_gen(&rng, &b, sizeof(b));
 		v %= MLEN + CRYPTO_BYTES;
-		sm[v] += 7;
-		ret = crypto_sign_open(m2, &mlen, sm, smlen, ctx, CTXLEN, pk);
+		sm[v] += b == 0 ? 1 : b;
+		ret = crypto_sign_open(m2, &mlen, sm, smlen, NULL, 0, pk);
 		ASSERT(ret, "fail sig");
 	}
 }
 
+#include <libfam/sign.h>
+
+Test(dilithium_wrapper) {
+	__attribute__((aligned(32))) u8 seed[32] = {1, 2, 3, 4};
+	__attribute__((aligned(32))) u8 msg[32] = {5, 4, 2, 1};
+	PublicKey pk;
+	SecretKey sk;
+	Signature sig;
+	keyfrom(seed, &sk, &pk);
+	sign(msg, &sk, &sig);
+	i32 res = verify(msg, &pk, &sig);
+	ASSERT(!res, "verify");
+	msg[4]++;
+	res = verify(msg, &pk, &sig);
+	ASSERT_EQ(res, -1, "bad sig");
+}
