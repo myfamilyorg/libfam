@@ -1,3 +1,11 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+
 #include <dilithium_avx2/consts.h>
 #include <dilithium_avx2/params.h>
 #include <stdint.h>
@@ -148,3 +156,5 @@ const qdata_t qdata = {{
     1910376,	 -3833893,    -2286327,	   -3545687,	-1362209,
     1976782,
 }};
+
+#endif /* USE_AVX2 */

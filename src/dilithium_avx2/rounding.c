@@ -1,3 +1,11 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+
 #include <dilithium_avx2/consts.h>
 #include <dilithium_avx2/params.h>
 #include <dilithium_avx2/rejsample.h>
@@ -195,3 +203,5 @@ void use_hint_avx(__m256i *b, const __m256i *a, const __m256i *restrict hint) {
 		_mm256_store_si256(&b[i], g);
 	}
 }
+
+#endif /* USE_AVX2 */

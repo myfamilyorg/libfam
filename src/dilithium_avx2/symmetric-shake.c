@@ -1,3 +1,11 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+
 #include <dilithium_avx2/fips202.h>
 #include <dilithium_avx2/params.h>
 #include <dilithium_avx2/symmetric.h>
@@ -28,3 +36,5 @@ void dilithium_shake256_stream_init(keccak_state *state,
 	shake256_absorb(state, t, 2);
 	shake256_finalize(state);
 }
+
+#endif /* USE_AVX2 */

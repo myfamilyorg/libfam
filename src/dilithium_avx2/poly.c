@@ -1,3 +1,11 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+
 #include <dilithium_avx2/align.h>
 #include <dilithium_avx2/consts.h>
 #include <dilithium_avx2/fips202x4.h>
@@ -1134,3 +1142,5 @@ void polyw1_pack(uint8_t *r, const poly *restrict a) {
 	DBENCH_STOP(*tpack);
 }
 #endif
+
+#endif /* USE_AVX2 */

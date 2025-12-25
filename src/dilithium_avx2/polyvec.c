@@ -1,3 +1,11 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+
 #include <dilithium_avx2/consts.h>
 #include <dilithium_avx2/ntt.h>
 #include <dilithium_avx2/params.h>
@@ -629,3 +637,5 @@ void polyveck_pack_w1(uint8_t r[K * POLYW1_PACKEDBYTES], const polyveck *w1) {
 	for (i = 0; i < K; ++i)
 		polyw1_pack(&r[i * POLYW1_PACKEDBYTES], &w1->vec[i]);
 }
+
+#endif /* USE_AVX2 */

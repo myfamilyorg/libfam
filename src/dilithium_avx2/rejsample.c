@@ -1,3 +1,11 @@
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifdef USE_AVX2
+
 #include <dilithium_avx2/params.h>
 #include <dilithium_avx2/rejsample.h>
 #include <dilithium_avx2/symmetric.h>
@@ -346,3 +354,5 @@ unsigned int rej_eta_avx(int32_t *restrict r,
 	return ctr;
 }
 #endif
+
+#endif /* USE_AVX2 */
