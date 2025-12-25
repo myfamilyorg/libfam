@@ -7,7 +7,6 @@
 #ifdef USE_AVX2
 
 #include <dilithium_avx2/align.h>
-#include <dilithium_avx2/fips202.h>
 #include <dilithium_avx2/packing.h>
 #include <dilithium_avx2/params.h>
 #include <dilithium_avx2/poly.h>
@@ -16,6 +15,7 @@
 #include <dilithium_avx2/sign.h>
 #include <dilithium_avx2/symmetric.h>
 #include <libfam/rng.h>
+#include <libfam/string.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -74,8 +74,7 @@ static inline void polyvec_matrix_expand_row(polyvecl **row, polyvecl buf[2],
  *
  * Returns 0 (success)
  **************************************************/
-int crypto_sign_keypair(uint8_t *pk, uint8_t *sk) {
-	Rng rng;
+int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, const u8 seed[32]) {
 	unsigned int i;
 	__attribute__((
 	    aligned(32))) uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
@@ -85,11 +84,9 @@ int crypto_sign_keypair(uint8_t *pk, uint8_t *sk) {
 	polyveck s2;
 	poly t1, t0;
 
-	rng_init(&rng);
-
 	/* Get randomness for rho, rhoprime and key */
 	// randombytes(seedbuf, SEEDBYTES);
-	rng_gen(&rng, seedbuf, SEEDBYTES);
+	fastmemcpy(seedbuf, seed, 32);
 	seedbuf[SEEDBYTES + 0] = K;
 	seedbuf[SEEDBYTES + 1] = L;
 	shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
@@ -341,8 +338,7 @@ rej:
  **************************************************/
 int crypto_sign_signature(uint8_t *sig, size_t *siglen, const uint8_t *m,
 			  size_t mlen, const uint8_t *ctx, size_t ctxlen,
-			  const uint8_t *sk) {
-	Rng rng;
+			  const uint8_t *sk, Rng *rng) {
 	uint8_t pre[257];
 	__attribute__((aligned(32))) uint8_t rnd[RNDBYTES] = {0};
 
@@ -352,9 +348,7 @@ int crypto_sign_signature(uint8_t *sig, size_t *siglen, const uint8_t *m,
 	pre[0] = 0;
 	pre[1] = ctxlen;
 	memcpy(&pre[2], ctx, ctxlen);
-
-	rng_init(&rng);
-	rng_gen(&rng, rnd, RNDBYTES);
+	rng_gen(rng, rnd, RNDBYTES);
 
 	crypto_sign_signature_internal(sig, siglen, m, mlen, pre, 2 + ctxlen,
 				       rnd, sk);
@@ -380,14 +374,15 @@ int crypto_sign_signature(uint8_t *sig, size_t *siglen, const uint8_t *m,
  * Returns 0 (success)
  **************************************************/
 int crypto_sign(uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen,
-		const uint8_t *ctx, size_t ctxlen, const uint8_t *sk) {
+		const uint8_t *ctx, size_t ctxlen, const uint8_t *sk,
+		Rng *rng) {
 	size_t i;
 	int ret;
 
 	for (i = 0; i < mlen; ++i)
 		sm[CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
 	ret = crypto_sign_signature(sm, smlen, sm + CRYPTO_BYTES, mlen, ctx,
-				    ctxlen, sk);
+				    ctxlen, sk, rng);
 	*smlen += mlen;
 	return ret;
 }

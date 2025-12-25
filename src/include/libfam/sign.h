@@ -43,19 +43,19 @@
 #define DILITHIUM_PUBLICKEY_SIZE 1312
 #define DILITHIUM_SIGNATURE_SIZE 2420
 
-i32 pqcrystals_dilithium2_ref_keypair(u8 *pk, u8 *sk);
+i32 pqcrystals_dilithium2_ref_keypair(u8 *pk, u8 *sk, const u8 seed[32]);
 i32 pqcrystals_dilithium2_ref_signature(u8 *sig, u64 *siglen, const u8 *m,
 					u64 mlen, const u8 *ctx, u64 ctxlen,
-					const u8 *sk);
+					const u8 *sk, Rng *rng);
 i32 pqcrystals_dilithium2_ref_verify(const uint8_t *sig, size_t siglen,
 				     const uint8_t *m, size_t mlen,
 				     const uint8_t *ctx, size_t ctxlen,
 				     const uint8_t *pk);
 
-i32 pqcrystals_dilithium2_avx2_keypair(u8 *pk, u8 *sk);
+i32 pqcrystals_dilithium2_avx2_keypair(u8 *pk, u8 *sk, const u8 seed[32]);
 i32 pqcrystals_dilithium2_avx2_signature(u8 *sig, u64 *siglen, const u8 *m,
 					 u64 mlen, const u8 *ctx, u64 ctxlen,
-					 const u8 *sk);
+					 const u8 *sk, Rng *rng);
 i32 pqcrystals_dilithium2_avx2_verify(const uint8_t *sig, size_t siglen,
 				      const uint8_t *m, size_t mlen,
 				      const uint8_t *ctx, size_t ctxlen,
@@ -75,19 +75,20 @@ typedef struct {
 
 static inline void keyfrom(const u8 seed[32], SecretKey *sk, PublicKey *pk) {
 #ifdef USE_AVX2
-	pqcrystals_dilithium2_avx2_keypair(pk->data, sk->data);
+	pqcrystals_dilithium2_avx2_keypair(pk->data, sk->data, seed);
 #else
-	pqcrystals_dilithium2_ref_keypair(pk->data, sk->data);
+	pqcrystals_dilithium2_ref_keypair(pk->data, sk->data, seed);
 #endif
 }
-static inline void sign(const u8 msg[32], const SecretKey *sk, Signature *out) {
+static inline void sign(const u8 msg[32], const SecretKey *sk, Signature *out,
+			Rng *rng) {
 	u64 siglen;
 #ifdef USE_AVX2
 	pqcrystals_dilithium2_ref_signature(out->data, &siglen, msg, 32, NULL,
-					    0, sk->data);
+					    0, sk->data, rng);
 #else
 	pqcrystals_dilithium2_ref_signature(out->data, &siglen, msg, 32, NULL,
-					    0, sk->data);
+					    0, sk->data, rng);
 #endif
 }
 i32 verify(const u8 msg[32], const PublicKey *pk, const Signature *sig) {

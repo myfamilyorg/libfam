@@ -1,6 +1,7 @@
 #ifndef SIGN_H
 #define SIGN_H
 
+#include <libfam/rng.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -9,7 +10,7 @@
 #include "polyvec.h"
 
 #define crypto_sign_keypair DILITHIUM_NAMESPACE(keypair)
-int crypto_sign_keypair(uint8_t *pk, uint8_t *sk);
+int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, const u8 seed[32]);
 
 #define crypto_sign_signature_internal DILITHIUM_NAMESPACE(signature_internal)
 int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
@@ -21,11 +22,11 @@ int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
 #define crypto_sign_signature DILITHIUM_NAMESPACE(signature)
 int crypto_sign_signature(uint8_t *sig, size_t *siglen, const uint8_t *m,
 			  size_t mlen, const uint8_t *ctx, size_t ctxlen,
-			  const uint8_t *sk);
+			  const uint8_t *sk, Rng *rng);
 
 #define crypto_sign DILITHIUM_NAMESPACETOP
 int crypto_sign(uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen,
-		const uint8_t *ctx, size_t ctxlen, const uint8_t *sk);
+		const uint8_t *ctx, size_t ctxlen, const uint8_t *sk, Rng *rng);
 
 #define crypto_sign_verify_internal DILITHIUM_NAMESPACE(verify_internal)
 int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,

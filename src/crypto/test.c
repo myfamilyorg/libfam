@@ -780,14 +780,15 @@ Test(dilithium) {
 	__attribute__((aligned(32))) u8 sm[MLEN + CRYPTO_BYTES] = {0};
 	__attribute__((aligned(32))) u8 pk[CRYPTO_PUBLICKEYBYTES] = {0};
 	__attribute__((aligned(32))) u8 sk[CRYPTO_SECRETKEYBYTES] = {0};
+	u8 seed[32] = {1, 2, 3};
 	Rng rng;
 
 	for (u32 i = 0; i < NTESTS; i++) {
 		rng_init(&rng);
 		rng_gen(&rng, m, MLEN);
 
-		crypto_sign_keypair(pk, sk);
-		crypto_sign(sm, &smlen, m, MLEN, NULL, 0, sk);
+		crypto_sign_keypair(pk, sk, seed);
+		crypto_sign(sm, &smlen, m, MLEN, NULL, 0, sk, &rng);
 		ret = crypto_sign_open(m2, &mlen, sm, smlen, NULL, 0, pk);
 
 		ASSERT(!ret, "verify");
@@ -807,16 +808,19 @@ Test(dilithium) {
 #include <libfam/sign.h>
 
 Test(dilithium_wrapper) {
+	Rng rng;
 	__attribute__((aligned(32))) u8 seed[32] = {1, 2, 3, 4};
 	__attribute__((aligned(32))) u8 msg[32] = {5, 4, 2, 1};
 	PublicKey pk;
 	SecretKey sk;
 	Signature sig;
+	rng_init(&rng);
 	keyfrom(seed, &sk, &pk);
-	sign(msg, &sk, &sig);
+	sign(msg, &sk, &sig, &rng);
 	i32 res = verify(msg, &pk, &sig);
 	ASSERT(!res, "verify");
 	msg[4]++;
 	res = verify(msg, &pk, &sig);
 	ASSERT_EQ(res, -1, "bad sig");
 }
+
