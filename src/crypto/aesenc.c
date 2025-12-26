@@ -23,27 +23,41 @@
  *
  *******************************************************************************/
 
-#include <libfam/aesenc.h>
-#include <libfam/test_base.h>
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#elif defined(__ARM_FEATURE_CRYPTO)
+#define USE_NEON
+#endif /* __ARM_FEATURE_CRYPTO */
+#endif /* NO_VECTOR */
 
-Test(aesenc) {
-	__attribute__((aligned(32))) u8 data[32] = {
-	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
-	    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
-	__attribute__((aligned(32))) u8 key[32] = {
-	    100, 200, 103, 104, 5,  6,	7,  8,	9,  10, 11, 12, 13, 14, 15, 16,
-	    17,	 18,  19,  20,	21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
-	__attribute__((aligned(32))) u8 out[32];
-	aesenc256(data, key, out);
+#ifdef USE_NEON
+#include <arm_neon.h>
+#endif /* USE_NEON */
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
 
-	/*
-	for (u32 i = 0; i < 32; i++) {
-		write_num(2, out[i]);
-		pwrite(2, ", ", 2, 0);
-	}
-	*/
-	u8 expected[] = {204, 221, 103, 39, 254, 203, 234, 91,	166, 251, 7,
-			 191, 26,  157, 39, 39,	 11,  151, 54,	167, 96,  177,
-			 98,  126, 236, 0,  171, 53,  98,  164, 54,  237};
-	ASSERT(!memcmp(out, expected, 32), "expected");
+#ifdef USE_NEON
+STATIC uint8x16_t aesenc_2x(uint8x16_t data, uint8x16_t rkey) {
+	uint8x16_t zero = vdupq_n_u8(0);
+	data = vaeseq_u8(data, zero);
+	data = vaesmcq_u8(data);
+	return veorq_u8(data, rkey);
 }
+#endif /* USE_NEON */
+
+void aesenc256(const void *data, const void *key, void *out) {
+#ifdef USE_AVX2
+	*(__m256i *)out =
+	    _mm256_aesenc_epi128(*(__m256i *)data, *(__m256i *)key);
+#elif defined(USE_NEON)
+	uint8x16_t *lo = out;
+	uint8x16_t *hi = (u8 *)out + 16;
+	*lo = aesenc_2x(*(uint8x16_t *)data, *(uint8x16_t *)key);
+	*hi = aesenc_2x(*(uint8x16_t *)((u8 *)data + 16),
+			*(uint8x16_t *)((u8 *)key + 16));
+#else
+#endif
+}
+
