@@ -26,6 +26,6 @@
 #ifndef _AESENC_H
 #define _AESENC_H
 
-void aesenc256(const void *data, const void *key, void *out);
+void aesenc256(void *data, const void *key);
 
 #endif /* _AESENC_H */

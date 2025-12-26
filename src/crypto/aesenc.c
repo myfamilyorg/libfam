@@ -156,20 +156,19 @@ STATIC uint8x16_t aesenc_2x(uint8x16_t data, uint8x16_t rkey) {
 }
 #endif /* USE_NEON */
 
-void aesenc256(const void *data, const void *key, void *out) {
+void aesenc256(void *data, const void *key) {
 #ifdef USE_AVX2
-	*(__m256i *)out =
+	*(__m256i *)data =
 	    _mm256_aesenc_epi128(*(__m256i *)data, *(__m256i *)key);
 #elif defined(USE_NEON)
-	uint8x16_t *lo = (void *)out;
-	uint8x16_t *hi = (void *)((u8 *)out + 16);
+	uint8x16_t *lo = (void *)data;
+	uint8x16_t *hi = (void *)((u8 *)data + 16);
 	*lo = aesenc_2x(*(uint8x16_t *)data, *(uint8x16_t *)key);
 	*hi = aesenc_2x(*(uint8x16_t *)((u8 *)data + 16),
 			*(uint8x16_t *)((u8 *)key + 16));
 #else
-	fastmemcpy(out, data, 32);
-	aesenc128(out, key);
-	aesenc128((u8 *)out + 16, (u8 *)key + 16);
+	aesenc128(data, key);
+	aesenc128((u8 *)data + 16, (u8 *)key + 16);
 #endif
 }
 
