@@ -1412,8 +1412,8 @@ Bench(storm_simple) {
 Bench(aighthash64_longneighbors) {
 	Rng rng = {0};
 	int size = SIZE;
-	u8 a[SIZE] = {0};
-	u8 b[SIZE] = {0};
+	__attribute__((aligned(32))) u8 a[SIZE] = {0};
+	__attribute__((aligned(32))) u8 b[SIZE] = {0};
 
 	rng_init(&rng);
 	u8 key[16];
@@ -1468,8 +1468,8 @@ Bench(aighthash64_longneighbors) {
 
 Bench(storm_longneighbors) {
 	Rng rng = {0};
-	u8 a[32] = {0};
-	u8 b[32] = {0};
+	__attribute__((aligned(32))) u8 a[32] = {0};
+	__attribute__((aligned(32))) u8 b[32] = {0};
 
 	rng_init(&rng);
 	// rng_test_seed(&rng, ZERO_SEED);
