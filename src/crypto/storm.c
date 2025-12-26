@@ -178,7 +178,7 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 STATIC void storm_xcrypt_buffer_neon(StormContext *ctx, u8 buf[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 	uint8x16_t ctr_lo = *(uint8x16_t *)st->counter;
-	uint8x16_t ctr_hi = *(uint8x16_t *)((u8 *)st->counter_hi + 16);
+	uint8x16_t ctr_hi = *(uint8x16_t *)((u8 *)st->counter + 16);
 
 	u8 ctr_block[32] __attribute__((aligned(16)));
 	vst1q_u8(ctr_block, ctr_lo);
@@ -204,7 +204,7 @@ STATIC void storm_xcrypt_buffer_neon(StormContext *ctx, u8 buf[32]) {
 	uint64x2_t inc = vdupq_n_u64(1);
 
 	*(uint8x16_t *)st->counter = vreinterpretq_u8_u64(vaddq_u64(lo64, inc));
-	*(uint8x16_t *)((u8 *)st->counter_hi + 16) =
+	*(uint8x16_t *)((u8 *)st->counter + 16) =
 	    vreinterpretq_u8_u64(vaddq_u64(hi64, inc));
 }
 #else
