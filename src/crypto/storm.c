@@ -116,6 +116,33 @@ STATIC void storm_next_block_avx2(StormContext *ctx, u8 buf[32]) {
 	_mm256_store_si256((__m256i *)buf, x);
 }
 #elif defined(USE_NEON)
+STATIC void storm_init_neon(StormContext *ctx, const u8 key[32]) {
+	static const __attribute__((aligned(32))) u8 ZERO256[32] = {0};
+	StormContextImpl *st = (StormContextImpl *)ctx;
+
+	for (int i = 0; i < 32; ++i) {
+		st->state[i] = key[i] ^ STORM_KEY_MIX[i];
+		st->key0[i] = key[i] ^ STORM_KEY_MIX[32 + i];
+		st->key1[i] = key[i] ^ STORM_KEY_MIX[64 + i];
+		st->key2[i] = key[i] ^ STORM_KEY_MIX[96 + i];
+		st->key3[i] = key[i] ^ STORM_KEY_MIX[128 + i];
+	}
+	fastmemcpy(st->counter, ZERO256, 32);
+}
+STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32], i32 index) {
+	StormContextImpl *st = (StormContextImpl *)ctx;
+	u8 x[32], orig[32];
+	for (int i = 0; i < 32; i++) x[i] = st->state[i] ^ buf[i];
+	aesenc256(x, index == 0 ? st->key0 : st->key2);
+	fastmemcpy(orig, x, 32);
+	for (int i = 0; i < 16; ++i) {
+		st->state[i] = orig[i + 16];
+		st->state[i + 16] = orig[i] ^ orig[i + 16];
+	}
+	aesenc256(orig, index == 0 ? st->key1 : st->key3);
+	fastmemcpy(buf, orig, 32);
+}
+
 #else
 STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
 	static const __attribute__((aligned(32))) u8 ZERO256[32] = {0};
