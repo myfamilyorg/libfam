@@ -33,6 +33,7 @@
 #include <libfam/string.h>
 #include <libfam/test_base.h>
 #include <libfam/wots.h>
+#include <libfam/xxhash.h>
 
 Test(storm_vectors) {
 	StormContext ctx;
@@ -1329,11 +1330,213 @@ Test(dilithium_vector) {
 	ASSERT_EQ(verify(msg, &pk, &sig), 0, "verify");
 	ASSERT(!memcmp(expected_sig, sig.data, sizeof(expected_sig)),
 	       "expected sig");
-	for (u32 i = 0; i < sizeof(sk); i++)
-		if (sk.data[i] != expected_sk[i])
-			println("{} {} != {}", i, sk.data[i], expected_sk[i]);
 	ASSERT(!memcmp(expected_sk, sk.data, sizeof(sk)), "expected sk");
 	ASSERT(!memcmp(expected_pk, pk.data, sizeof(pk)), "expected pk");
 	(void)expected_sig;
+}
+
+#define BENCH_TESTS 10000
+Bench(dilithium) {
+	Rng rng;
+	PublicKey pk;
+	SecretKey sk;
+	Signature sig;
+	__attribute__((aligned(32))) u8 m[32];
+	__attribute__((aligned(32))) u8 seed[32];
+	u64 keyfrom_sum = 0, sign_sum = 0, verify_sum = 0;
+
+	rng_init(&rng);
+	for (u32 i = 0; i < BENCH_TESTS; i++) {
+		rng_gen(&rng, seed, 32);
+		rng_gen(&rng, m, 32);
+
+		u64 timer = cycle_counter();
+		keyfrom(seed, &sk, &pk);
+		keyfrom_sum += cycle_counter() - timer;
+		timer = cycle_counter();
+		sign(m, &sk, &sig, &rng);
+		sign_sum += cycle_counter() - timer;
+		timer = cycle_counter();
+		i32 res = verify(m, &pk, &sig);
+		verify_sum += cycle_counter() - timer;
+		ASSERT(!res, "verify");
+	}
+
+	pwrite(2, "keyfrom=", 8, 0);
+	write_num(2, keyfrom_sum / BENCH_TESTS);
+	pwrite(2, ",sign=", 6, 0);
+	write_num(2, sign_sum / BENCH_TESTS);
+	pwrite(2, ",verify=", 8, 0);
+	write_num(2, verify_sum / BENCH_TESTS);
+	pwrite(2, "\n", 1, 0);
+}
+
+#define COUNT (1024 * 1024)
+#define SIZE 8192
+
+Bench(aighthash) {
+	i64 timer = micros();
+	u8 text[SIZE] = {0};
+	u64* v = (void*)text;
+	u32 sum = 0;
+
+	for (u32 i = 0; i < COUNT; i++) {
+		u64 r = aighthash64(text, SIZE, 0);
+		(*v)++;
+		sum += r;
+	}
+	timer = micros() - timer;
+	(void)sum;
+	println("time={},r={}", timer, sum);
+}
+
+Bench(xxhash) {
+	i64 timer = micros();
+	u8 text[SIZE] = {0};
+	u64* v = (void*)text;
+	u32 sum = 0;
+
+	for (u32 i = 0; i < COUNT; i++) {
+		u64 r = XXH64(text, SIZE, 0);
+		(*v)++;
+		sum += r;
+	}
+	timer = micros() - timer;
+	(void)sum;
+	println("time={},r={}", timer, sum);
+}
+
+Bench(aighthash64_longneighbors) {
+	Rng rng = {0};
+	int size = SIZE;
+	u8 a[SIZE] = {0};
+	u8 b[SIZE] = {0};
+
+	rng_init(&rng);
+	u8 key[16];
+	rng_gen(&rng, key, 16);
+
+	int total_fail = 0;
+	int iter = 1000;
+
+	(void)total_fail;
+
+	for (u32 i = 0; i < iter; i++) {
+		int total_tests = 0;
+		int bias[64] = {0};  // now 64 bits
+		u64 seed = i;
+		for (int trial = 0; trial < 1000; ++trial) {
+			rng_gen(&rng, a, size);
+			fastmemcpy(b, a, size);
+
+			u64 byte_pos = 0;
+			rng_gen(&rng, &byte_pos, sizeof(u64));
+			byte_pos %= size;
+			u8 bit_pos = 0;
+			rng_gen(&rng, &bit_pos, sizeof(u8));
+			bit_pos %= 8;
+
+			b[byte_pos] ^= (u8)(1 << bit_pos);
+			u64 ha = aighthash64(a, size, seed);
+			u64 hb = aighthash64(b, size, seed);
+
+			u64 diff = ha ^ hb;
+
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[bit]++;
+				}
+			}
+			total_tests++;
+		}
+
+		int failed = 0;
+		for (int bit = 0; bit < 64; ++bit) {
+			f64 p = 100.0 * bias[bit] / total_tests;
+			if (p < 45 || p > 55) {
+				failed++;
+			}
+		}
+
+		total_fail += (failed != 0);
+	}
+	println("fail_rate={}%", (100.0 * total_fail) / iter);
+}
+
+Bench(xxhash_longneighbors) {
+	Rng rng = {0};
+	int size = SIZE;
+	u8 a[SIZE] = {0};
+	u8 b[SIZE] = {0};
+
+	rng_init(&rng);
+	// rng_test_seed(&rng, ZERO_SEED);
+	u8 key[16];
+	rng_gen(&rng, key, 16);
+
+	int total_fail = 0;
+	int iter = 1000;
+
+	(void)total_fail;
+
+	for (u32 i = 0; i < iter; i++) {
+		int total_tests = 0;
+		int bias[64] = {0};  // now 64 bits
+		u64 seed = i;
+		for (int trial = 0; trial < 1000; ++trial) {
+			rng_gen(&rng, a, size);
+			fastmemcpy(b, a, size);
+
+			u64 byte_pos = 0;
+			rng_gen(&rng, &byte_pos, sizeof(u64));
+			byte_pos %= size;
+			u8 bit_pos = 0;
+			rng_gen(&rng, &bit_pos, sizeof(u8));
+			bit_pos %= 8;
+
+			b[byte_pos] ^= (u8)(1 << bit_pos);
+
+			/*
+			u64 ha = aighthash64(a, size, seed);
+			u64 hb = aighthash64(b, size, seed);
+			*/
+
+			u64 ha = XXH64(a, size, seed);
+			u64 hb = XXH64(b, size, seed);
+
+			u64 diff = ha ^ hb;
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[bit]++;
+				}
+			}
+			total_tests++;
+		}
+
+		/*
+		println(
+		    "LongNeighbors64 (seed={}) — 500 single-bit diffs in 128KB "
+		    "keys:",
+		    seed);
+		    */
+		for (int bit = 0; bit < 64; ++bit) {
+			f64 percent = 100.0 * bias[bit] / total_tests;
+			/*
+			println("  bit {:2}: {:3} flips → {:5.2}", bit,
+				bias[bit], percent);
+				*/
+			(void)percent;
+		}
+		int failed = 0;
+		for (int bit = 0; bit < 64; ++bit) {
+			f64 p = 100.0 * bias[bit] / total_tests;
+			if (p < 45 || p > 55) {
+				failed++;
+			}
+		}
+
+		total_fail += (failed != 0);
+	}
+	println("fail_rate={}%", (100.0 * total_fail) / iter);
 }
 

@@ -84,8 +84,8 @@ static inline void sign(const u8 msg[32], const SecretKey *sk, Signature *out,
 			Rng *rng) {
 	u64 siglen;
 #ifdef USE_AVX2
-	pqcrystals_dilithium2_ref_signature(out->data, &siglen, msg, 32, NULL,
-					    0, sk->data, rng);
+	pqcrystals_dilithium2_avx2_signature(out->data, &siglen, msg, 32, NULL,
+					     0, sk->data, rng);
 #else
 	pqcrystals_dilithium2_ref_signature(out->data, &siglen, msg, 32, NULL,
 					    0, sk->data, rng);

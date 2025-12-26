@@ -31,7 +31,7 @@
 #define AIGHT_P1 0xc2b2ae35u
 #define AIGHT_P2 0x85ebca6bu
 
-u32 aighthash32(const void* data, u64 len, u32 seed) {
+PUBLIC u32 aighthash32(const void* data, u64 len, u32 seed) {
 	const u8* p = (const u8*)data;
 	u32 h = seed ^ AIGHT32_INIT, tail = 0;
 
@@ -55,23 +55,28 @@ u32 aighthash32(const void* data, u64 len, u32 seed) {
 	return h ^ (h >> 15);
 }
 
-u64 aighthash64(const void* data, u64 len, u64 seed) {
+PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 	const u8* p = (const u8*)data;
 	u64 h = seed ^ AIGHT64_INIT;
 
-	while (len >= 16) {
-		u64 v1 = *(u64*)p;
-		u64 v2 = *(u64*)(p + 8);
+	while (len >= 32) {
+		u64* v1 = (u64*)p;
+		u64* v2 = (u64*)(p + 8);
+		u64* v3 = (u64*)(p + 16);
+		u64* v4 = (u64*)(p + 24);
 
-		h ^= v1;
-		h *= AIGHT_P2;
-		h ^= h >> 33;
-		h ^= v2;
+		u64 t1 = *v1 * AIGHT_P2;
+		u64 t2 = *v2 * AIGHT_P1;
+		u64 t3 = *v3 * AIGHT_P2;
+		u64 t4 = *v4 * AIGHT_P1;
+
+		u64 combined = t1 ^ t2 ^ t3 ^ t4;
+		h ^= combined;
 		h *= AIGHT_P1;
 		h ^= h >> 29;
 
-		p += 16;
-		len -= 16;
+		p += 32;
+		len -= 32;
 	}
 
 	u64 tail = 0;
