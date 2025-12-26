@@ -33,7 +33,6 @@
 #include <libfam/string.h>
 #include <libfam/test_base.h>
 #include <libfam/wots.h>
-#include <libfam/xxhash.h>
 
 Test(storm_vectors) {
 	StormContext ctx;
@@ -1390,14 +1389,18 @@ Bench(aighthash) {
 	println("time={},r={}", timer, sum);
 }
 
-Bench(xxhash) {
+Bench(storm_simple) {
 	i64 timer = micros();
-	u8 text[SIZE] = {0};
+	__attribute__((aligned(32))) u8 text[SIZE] = {0};
 	u64* v = (void*)text;
 	u32 sum = 0;
+	StormContext ctx;
+	storm_init(&ctx, text);
 
 	for (u32 i = 0; i < COUNT; i++) {
-		u64 r = XXH64(text, SIZE, 0);
+		for (u32 j = 0; j < SIZE; j += 32)
+			storm_next_block(&ctx, text + j);
+		u64 r = *(u64*)(text + (SIZE - 32));
 		(*v)++;
 		sum += r;
 	}
@@ -1463,16 +1466,14 @@ Bench(aighthash64_longneighbors) {
 	println("fail_rate={}%", (100.0 * total_fail) / iter);
 }
 
-Bench(xxhash_longneighbors) {
+Bench(storm_longneighbors) {
 	Rng rng = {0};
-	int size = SIZE;
-	u8 a[SIZE] = {0};
-	u8 b[SIZE] = {0};
+	u8 a[32] = {0};
+	u8 b[32] = {0};
 
 	rng_init(&rng);
 	// rng_test_seed(&rng, ZERO_SEED);
-	u8 key[16];
-	rng_gen(&rng, key, 16);
+	__attribute__((aligned(32))) u8 key[32] = {0};
 
 	int total_fail = 0;
 	int iter = 1000;
@@ -1481,62 +1482,67 @@ Bench(xxhash_longneighbors) {
 
 	for (u32 i = 0; i < iter; i++) {
 		int total_tests = 0;
-		int bias[64] = {0};  // now 64 bits
-		u64 seed = i;
-		for (int trial = 0; trial < 1000; ++trial) {
-			rng_gen(&rng, a, size);
-			fastmemcpy(b, a, size);
+		int bias[256] = {0};
+		for (int trial = 0; trial < 10000; ++trial) {
+			StormContext ctx1, ctx2;
+
+			storm_init(&ctx1, key);
+			storm_init(&ctx2, key);
+			rng_gen(&rng, a, 32);
+			fastmemcpy(b, a, 32);
 
 			u64 byte_pos = 0;
 			rng_gen(&rng, &byte_pos, sizeof(u64));
-			byte_pos %= size;
+			byte_pos %= 32;
 			u8 bit_pos = 0;
 			rng_gen(&rng, &bit_pos, sizeof(u8));
 			bit_pos %= 8;
 
 			b[byte_pos] ^= (u8)(1 << bit_pos);
+			storm_next_block(&ctx1, a);
+			storm_next_block(&ctx2, b);
 
-			/*
-			u64 ha = aighthash64(a, size, seed);
-			u64 hb = aighthash64(b, size, seed);
-			*/
-
-			u64 ha = XXH64(a, size, seed);
-			u64 hb = XXH64(b, size, seed);
-
-			u64 diff = ha ^ hb;
+			u64 diff = *(u64*)a ^ *(u64*)b;
 			for (int bit = 0; bit < 64; ++bit) {
 				if (diff & (1ULL << bit)) {
 					bias[bit]++;
 				}
 			}
+			diff = *(u64*)(a + 8) ^ *(u64*)(b + 8);
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[64 + bit]++;
+				}
+			}
+
+			diff = *(u64*)(a + 16) ^ *(u64*)(b + 16);
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[128 + bit]++;
+				}
+			}
+
+			diff = *(u64*)((u8*)a + 24) ^ *(u64*)((u8*)b + 24);
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[192 + bit]++;
+				}
+			}
+
 			total_tests++;
 		}
 
-		/*
-		println(
-		    "LongNeighbors64 (seed={}) — 500 single-bit diffs in 128KB "
-		    "keys:",
-		    seed);
-		    */
-		for (int bit = 0; bit < 64; ++bit) {
-			f64 percent = 100.0 * bias[bit] / total_tests;
-			/*
-			println("  bit {:2}: {:3} flips → {:5.2}", bit,
-				bias[bit], percent);
-				*/
-			(void)percent;
-		}
 		int failed = 0;
-		for (int bit = 0; bit < 64; ++bit) {
+		for (int bit = 0; bit < 256; ++bit) {
 			f64 p = 100.0 * bias[bit] / total_tests;
-			if (p < 45 || p > 55) {
+			if (p < 47.5 || p > 52.5) {
 				failed++;
 			}
 		}
 
 		total_fail += (failed != 0);
+		(void)total_tests;
 	}
-	println("fail_rate={}%", (100.0 * total_fail) / iter);
+	println("fail_rate={}%", (100.0 * total_fail) / (iter * 4));
 }
 
