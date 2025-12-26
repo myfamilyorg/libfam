@@ -89,3 +89,72 @@ Test(storm_vectors) {
 	ASSERT(!memcmp(buf2, exp4, sizeof(buf2)), "buf2 round2");
 }
 
+Test(storm_cipher_vector) {
+	StormContext ctx;
+	__attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
+	__attribute__((aligned(32))) u8 buffer1[32] = {0};
+	__attribute__((aligned(32))) u8 buffer2[32] = {0};
+
+	storm_init(&ctx, SEED);
+	faststrcpy(buffer1, "test1");
+	storm_xcrypt_buffer(&ctx, buffer1);
+	faststrcpy(buffer2, "test2");
+	storm_xcrypt_buffer(&ctx, buffer2);
+
+	u8 expected1[32] = {208, 219, 23,  2,	102, 98,  157, 53,
+			    88,	 199, 188, 237, 126, 195, 16,  183,
+			    63,	 14,  194, 187, 89,  153, 201, 245,
+			    3,	 242, 121, 53,	200, 243, 205, 126};
+	ASSERT(!memcmp(buffer1, expected1, 32), "expected1");
+	u8 expected2[32] = {161, 153, 144, 19,	202, 43,  81,  154,
+			    83,	 150, 76,  209, 103, 85,  1,   74,
+			    116, 231, 230, 62,	23,  126, 208, 173,
+			    13,	 252, 88,  139, 176, 20,  42,  167};
+	ASSERT(!memcmp(buffer2, expected2, 32), "expected2");
+}
+
+Test(storm_cipher) {
+	StormContext ctx;
+	__attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
+	__attribute__((aligned(32))) u8 buffer1[32] = {0};
+	__attribute__((aligned(32))) u8 buffer2[32] = {0};
+	__attribute__((aligned(32))) u8 buffer3[32] = {0};
+	__attribute__((aligned(32))) u8 buffer4[32] = {0};
+	__attribute__((aligned(32))) u8 buffer5[32] = {0};
+
+	storm_init(&ctx, SEED);
+	faststrcpy(buffer1, "test1");
+	storm_xcrypt_buffer(&ctx, buffer1);
+	faststrcpy(buffer2, "test2");
+	storm_xcrypt_buffer(&ctx, buffer2);
+	faststrcpy(buffer3, "blahblah");
+	storm_xcrypt_buffer(&ctx, buffer3);
+	faststrcpy(buffer4, "ok");
+	storm_xcrypt_buffer(&ctx, buffer4);
+	faststrcpy(buffer5, "x");
+	storm_xcrypt_buffer(&ctx, buffer5);
+
+	ASSERT(memcmp(buffer1, "test1", 5), "ne1");
+	ASSERT(memcmp(buffer2, "test2", 5), "ne2");
+	ASSERT(memcmp(buffer3, "blahblah", 8), "ne3");
+	ASSERT(memcmp(buffer4, "ok", 2), "ne4");
+	ASSERT(memcmp(buffer5, "x", 1), "ne5");
+
+	StormContext ctx2;
+	storm_init(&ctx2, SEED);
+
+	storm_xcrypt_buffer(&ctx2, buffer1);
+	ASSERT(!memcmp(buffer1, "test1", 5), "eq1");
+	storm_xcrypt_buffer(&ctx2, buffer2);
+	ASSERT(!memcmp(buffer2, "test2", 5), "eq2");
+
+	storm_xcrypt_buffer(&ctx2, buffer3);
+	ASSERT(!memcmp(buffer3, "blahblah", 8), "eq3");
+
+	storm_xcrypt_buffer(&ctx2, buffer4);
+	ASSERT(!memcmp(buffer4, "ok", 2), "eq4");
+
+	storm_xcrypt_buffer(&ctx2, buffer5);
+	ASSERT(!memcmp(buffer5, "x", 1), "eq5");
+}
+
