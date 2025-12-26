@@ -26,6 +26,7 @@
 #include <libfam/aesenc.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
+#include <libfam/utils.h>
 
 #ifndef NO_VECTOR
 #ifdef __AVX2__
@@ -164,22 +165,37 @@ STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
 	fastmemcpy(st->counter, ZERO256, 32);
 }
 
-STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32], i32 index) {
+STATIC void storm_next_block_scalar(StormContext *ctx, u8 buf[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
+
 	u8 x[32], orig[32];
+
 	for (int i = 0; i < 32; i++) x[i] = st->state[i] ^ buf[i];
-	aesenc256(x, index == 0 ? st->key0 : st->key2);
+	aesenc256(x, st->key0);
 	fastmemcpy(orig, x, 32);
 	for (int i = 0; i < 16; ++i) {
 		st->state[i] = orig[i + 16];
 		st->state[i + 16] = orig[i] ^ orig[i + 16];
 	}
-	aesenc256(orig, index == 0 ? st->key1 : st->key3);
+
+	aesenc256(orig, st->key1);
+	fastmemcpy(buf, orig, 32);
+	for (int i = 0; i < 32; i++) x[i] = st->state[i] ^ buf[i];
+	aesenc256(x, st->key2);
+
+	fastmemcpy(orig, x, 32);
+
+	for (int i = 0; i < 16; ++i) {
+		st->state[i] = orig[i + 16];
+		st->state[i + 16] = orig[i] ^ orig[i + 16];
+	}
+
+	aesenc256(orig, st->key3);
 	fastmemcpy(buf, orig, 32);
 }
 #endif /* !USE_AVX2 */
 
-void storm_init(StormContext *ctx, const u8 key[32]) {
+PUBLIC void storm_init(StormContext *ctx, const u8 key[32]) {
 #ifdef USE_AVX2
 	storm_init_avx2(ctx, key);
 #elif defined(USE_NEON)
@@ -189,7 +205,7 @@ void storm_init(StormContext *ctx, const u8 key[32]) {
 #endif
 }
 
-void storm_next_block(StormContext *ctx, u8 block[32]) {
+PUBLIC void storm_next_block(StormContext *ctx, u8 block[32]) {
 #ifdef USE_AVX2
 	storm_next_block_avx2(ctx, block);
 #elif defined(USE_NEON)
@@ -197,7 +213,6 @@ void storm_next_block(StormContext *ctx, u8 block[32]) {
 	storm_next_block_neon(ctx, block, 1);
 
 #else
-	storm_next_block_scalar(ctx, block, 0);
-	storm_next_block_scalar(ctx, block, 1);
+	storm_next_block_scalar(ctx, block);
 #endif
 }
