@@ -131,18 +131,24 @@ STATIC void storm_init_neon(StormContext *ctx, const u8 key[32]) {
 }
 STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32], i32 index) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
-	u8 x[32], orig[32];
-	for (int i = 0; i < 32; i++) x[i] = st->state[i] ^ buf[i];
-	aesenc256(x, index == 0 ? st->key0 : st->key2);
-	fastmemcpy(orig, x, 32);
-	for (int i = 0; i < 16; ++i) {
-		st->state[i] = orig[i + 16];
-		st->state[i + 16] = orig[i] ^ orig[i + 16];
-	}
-	aesenc256(orig, index == 0 ? st->key1 : st->key3);
-	fastmemcpy(buf, orig, 32);
-}
 
+	uint8x16_t state_lo = vld1q_u8(st->state);
+	uint8x16_t state_hi = vld1q_u8(st->state + 16);
+	uint8x16_t buf_lo = vld1q_u8(buf);
+	uint8x16_t buf_hi = vld1q_u8(buf + 16);
+	uint8x16_t x_lo = veorq_u8(state_lo, buf_lo);
+	uint8x16_t x_hi = veorq_u8(state_hi, buf_hi);
+	vst1q_u8(buf, x_lo);
+	vst1q_u8(buf + 16, x_hi);
+	aesenc256(buf, index == 0 ? st->key0 : st->key2);
+	uint8x16_t orig_lo = vld1q_u8(buf);
+	uint8x16_t orig_hi = vld1q_u8(buf + 16);
+	vst1q_u8(st->state, orig_hi);
+	vst1q_u8(st->state + 16, veorq_u8(orig_lo, orig_hi));
+	vst1q_u8(buf, orig_lo);
+	vst1q_u8(buf + 16, orig_hi);
+	aesenc256(buf, index == 0 ? st->key1 : st->key3);
+}
 #else
 STATIC void storm_init_scalar(StormContext *ctx, const u8 key[32]) {
 	static const __attribute__((aligned(32))) u8 ZERO256[32] = {0};
