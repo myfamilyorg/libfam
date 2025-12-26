@@ -161,8 +161,8 @@ void aesenc256(const void *data, const void *key, void *out) {
 	*(__m256i *)out =
 	    _mm256_aesenc_epi128(*(__m256i *)data, *(__m256i *)key);
 #elif defined(USE_NEON)
-	uint8x16_t *lo = out;
-	uint8x16_t *hi = (u8 *)out + 16;
+	uint8x16_t *lo = (void *)out;
+	uint8x16_t *hi = (void *)((u8 *)out + 16);
 	*lo = aesenc_2x(*(uint8x16_t *)data, *(uint8x16_t *)key);
 	*hi = aesenc_2x(*(uint8x16_t *)((u8 *)data + 16),
 			*(uint8x16_t *)((u8 *)key + 16));
