@@ -24,7 +24,9 @@
  *******************************************************************************/
 
 #include <libfam/aesenc.h>
+#include <libfam/rng.h>
 #include <libfam/storm.h>
+#include <libfam/sysext.h>
 #include <libfam/test_base.h>
 
 Test(aesenc) {
@@ -36,12 +38,6 @@ Test(aesenc) {
 	    17,	 18,  19,  20,	21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
 	aesenc256(data, key);
 
-	/*
-	for (u32 i = 0; i < 32; i++) {
-		write_num(2, out[i]);
-		pwrite(2, ", ", 2, 0);
-	}
-	*/
 	u8 expected[] = {204, 221, 103, 39, 254, 203, 234, 91,	166, 251, 7,
 			 191, 26,  157, 39, 39,	 11,  151, 54,	167, 96,  177,
 			 98,  126, 236, 0,  171, 53,  98,  164, 54,  237};
@@ -64,9 +60,9 @@ Test(storm_vectors) {
 	ASSERT(!memcmp(buf1, exp1, sizeof(buf1)), "buf1");
 	storm_next_block(&ctx, buf1);
 
-	u8 exp2[32] = {210, 174, 13,  100, 187, 212, 168, 128, 197, 235, 213,
-		       78,  125, 115, 205, 92,	133, 242, 110, 234, 125, 133,
-		       168, 230, 240, 252, 10,	168, 89,  227, 74,  62};
+	u8 exp2[32] = {251, 118, 24, 7,	  134, 162, 181, 56,  104, 171, 241,
+		       102, 12,	 17, 194, 205, 73,  90,	 17,  78,  7,	206,
+		       216, 90,	 46, 112, 167, 0,   220, 189, 35,  152};
 
 	ASSERT(!memcmp(buf1, exp2, sizeof(buf1)), "buf1 round2");
 
@@ -83,9 +79,10 @@ Test(storm_vectors) {
 
 	storm_next_block(&ctx, buf2);
 
-	u8 exp4[32] = {162, 251, 154, 18,  139, 107, 17,  243, 220, 138, 196,
-		       181, 69,	 163, 85,  123, 226, 16,  149, 98,  13,	 154,
-		       218, 24,	 241, 200, 137, 0,   247, 150, 246, 123};
+	u8 exp4[32] = {171, 25,	 33,  63,  64,	148, 34, 113, 226, 143, 249,
+		       45,  126, 243, 149, 154, 104, 67, 52,  212, 249, 62,
+		       221, 50,	 108, 82,  89,	78,  32, 101, 129, 119};
+
 	ASSERT(!memcmp(buf2, exp4, sizeof(buf2)), "buf2 round2");
 }
 
@@ -106,10 +103,18 @@ Test(storm_cipher_vector) {
 			    63,	 14,  194, 187, 89,  153, 201, 245,
 			    3,	 242, 121, 53,	200, 243, 205, 126};
 	ASSERT(!memcmp(buffer1, expected1, 32), "expected1");
-	u8 expected2[32] = {161, 153, 144, 19,	202, 43,  81,  154,
-			    83,	 150, 76,  209, 103, 85,  1,   74,
-			    116, 231, 230, 62,	23,  126, 208, 173,
-			    13,	 252, 88,  139, 176, 20,  42,  167};
+	u8 expected2[32] = {122, 168, 177, 161, 78,  252, 56,  211,
+			    58,	 186, 147, 163, 255, 252, 96,  14,
+			    166, 29,  4,   110, 123, 47,  127, 43,
+			    234, 190, 86,  201, 179, 133, 244, 82};
+
+	/*
+	for (u32 i = 0; i < 32; i++) {
+		write_num(2, buffer2[i]);
+		pwrite(2, ", ", 2, 0);
+	}
+	*/
+
 	ASSERT(!memcmp(buffer2, expected2, 32), "expected2");
 }
 
@@ -159,7 +164,7 @@ Test(storm_cipher) {
 }
 
 Bench(storm) {
-#define STORM_COUNT (1000000000 / 32)
+#define STORM_COUNT (10000000000 / 32)
 	static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
 	static __attribute__((aligned(32))) u8 ONE_SEED[32] = {1};
 	static __attribute__((aligned(32))) u8 TWO_SEED[32] = {2};
@@ -207,7 +212,7 @@ Bench(storm) {
 	}
 	timer = micros() - timer;
 	f64 secs = timer / 1000000.0;
-	f64 gbps = 6.0 / secs;
+	f64 gbps = 60.0 / secs;
 	u8 gbps_str[MAX_F64_STRING_LEN] = {0};
 	f64_to_string(gbps_str, gbps, 3, false);
 
@@ -217,3 +222,89 @@ Bench(storm) {
 	write_num(2, (timer * 1000) / STORM_COUNT);
 	pwrite(2, "ns\n", 3, 0);
 }
+
+Bench(storm_longneighbors) {
+	Rng rng = {0};
+	__attribute__((aligned(32))) u8 a[32] = {0};
+	__attribute__((aligned(32))) u8 b[32] = {0};
+
+	rng_init(&rng);
+	// rng_test_seed(&rng, ZERO_SEED);
+	__attribute__((aligned(32))) u8 key[32] = {0};
+
+	int total_fail = 0;
+	int iter = 1000;
+
+	(void)total_fail;
+
+	for (u32 i = 0; i < iter; i++) {
+		int total_tests = 0;
+		int bias[256] = {0};
+		for (int trial = 0; trial < 10000; ++trial) {
+			StormContext ctx1, ctx2;
+
+			storm_init(&ctx1, key);
+			storm_init(&ctx2, key);
+			rng_gen(&rng, a, 32);
+			fastmemcpy(b, a, 32);
+
+			u64 byte_pos = 0;
+			rng_gen(&rng, &byte_pos, sizeof(u64));
+			byte_pos %= 32;
+			u8 bit_pos = 0;
+			rng_gen(&rng, &bit_pos, sizeof(u8));
+			bit_pos %= 8;
+
+			b[byte_pos] ^= (u8)(1 << bit_pos);
+			storm_next_block(&ctx1, a);
+			storm_next_block(&ctx2, b);
+			u64 diff = *(u64*)a ^ *(u64*)b;
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[bit]++;
+				}
+			}
+			diff = *(u64*)(a + 8) ^ *(u64*)(b + 8);
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[64 + bit]++;
+				}
+			}
+
+			diff = *(u64*)(a + 16) ^ *(u64*)(b + 16);
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[128 + bit]++;
+				}
+			}
+
+			diff = *(u64*)((u8*)a + 24) ^ *(u64*)((u8*)b + 24);
+			for (int bit = 0; bit < 64; ++bit) {
+				if (diff & (1ULL << bit)) {
+					bias[192 + bit]++;
+				}
+			}
+
+			total_tests++;
+		}
+
+		int failed = 0;
+		for (int bit = 0; bit < 256; ++bit) {
+			f64 p = 100.0 * bias[bit] / total_tests;
+			if (p < 48.0 || p > 52.0) {
+				failed++;
+			}
+		}
+
+		total_fail += (failed != 0);
+		(void)total_tests;
+	}
+
+	f64 fail_perc = (100.0 * total_fail) / (iter * 4);
+	u8 fail_str[MAX_F64_STRING_LEN] = {0};
+	f64_to_string(fail_str, fail_perc, 3, false);
+	pwrite(2, "fail_rate=", 10, 0);
+	pwrite(2, fail_str, strlen(fail_str), 0);
+	pwrite(2, "%\n", 2, 0);
+}
+
