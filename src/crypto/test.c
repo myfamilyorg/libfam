@@ -426,7 +426,7 @@ Bench(xxhash_longneighbors) {
 
 Bench(aighthash) {
 	Rng rng;
-	u8 text[SIZE] = {0};
+	__attribute__((aligned(32))) u8 text[SIZE] = {0};
 	u64* v = (void*)text;
 	u32 sum = 0;
 	u64 cycle_sum = 0;
@@ -451,7 +451,7 @@ Bench(aighthash) {
 
 Bench(xxhash) {
 	Rng rng;
-	u8 text[SIZE] = {0};
+	__attribute__((aligned(32))) u8 text[SIZE] = {0};
 	u64* v = (void*)text;
 	u32 sum = 0;
 	u64 cycle_sum = 0;
