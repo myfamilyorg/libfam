@@ -231,9 +231,6 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 	orig_lo = vld1q_u8(buf);
 	orig_hi = vld1q_u8(buf + 16);
 
-	// vst1q_u8(st->state, orig_hi);
-	// vst1q_u8(st->state + 16, veorq_u8(orig_lo, orig_hi));
-
 	vst1q_u8(buf, orig_lo);
 	vst1q_u8(buf + 16, orig_hi);
 
