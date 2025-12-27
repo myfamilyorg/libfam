@@ -11,7 +11,6 @@
 #include <dilithium_avx2/params.h>
 #include <dilithium_avx2/poly.h>
 #include <dilithium_avx2/polyvec.h>
-#include <dilithium_avx2/randombytes.h>
 #include <dilithium_avx2/sign.h>
 #include <dilithium_avx2/symmetric.h>
 #include <libfam/rng.h>
@@ -85,7 +84,6 @@ int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, const u8 seed[32]) {
 	poly t1, t0;
 
 	/* Get randomness for rho, rhoprime and key */
-	// randombytes(seedbuf, SEEDBYTES);
 	fastmemcpy(seedbuf, seed, 32);
 	seedbuf[SEEDBYTES + 0] = K;
 	seedbuf[SEEDBYTES + 1] = L;

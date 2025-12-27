@@ -8,7 +8,6 @@
 
 #include <dilithium_avx2/params.h>
 #include <dilithium_avx2/rejsample.h>
-#include <dilithium_avx2/symmetric.h>
 #include <immintrin.h>
 #include <stdint.h>
 

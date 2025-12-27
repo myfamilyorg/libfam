@@ -2,7 +2,6 @@
 #include <dilithium_scalar/params.h>
 #include <dilithium_scalar/poly.h>
 #include <dilithium_scalar/polyvec.h>
-#include <dilithium_scalar/randombytes.h>
 #include <dilithium_scalar/sign.h>
 #include <dilithium_scalar/symmetric.h>
 #include <libfam/string.h>

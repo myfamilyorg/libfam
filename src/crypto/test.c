@@ -681,8 +681,6 @@ Bench(kempf) {
 	pwrite(2, "\n", 1, 0);
 }
 
-#include <libfam/format.h>
-
 Test(kem_vector) {
 	__attribute__((aligned(32))) u8 seed[32] = {1, 2, 3};
 	KemSecKey sk;
