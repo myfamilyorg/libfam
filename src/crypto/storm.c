@@ -141,43 +141,7 @@ STATIC void storm_init_neon(StormContext *ctx, const u8 key[32]) {
 	}
 	fastmemcpy(st->counter, ZERO256, 32);
 }
-/*
-STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
-	StormContextImpl *st = (StormContextImpl *)ctx;
-	uint8x16_t state_lo = vld1q_u8(st->state);
-	uint8x16_t state_hi = vld1q_u8(st->state + 16);
-	uint8x16_t buf_lo = vld1q_u8(buf);
-	uint8x16_t buf_hi = vld1q_u8(buf + 16);
-	uint8x16_t x_lo = veorq_u8(state_lo, buf_lo);
-	uint8x16_t x_hi = veorq_u8(state_hi, buf_hi);
-	vst1q_u8(buf, x_lo);
-	vst1q_u8(buf + 16, x_hi);
-	aesenc256(buf, st->key0);
-	uint8x16_t orig_lo = vld1q_u8(buf);
-	uint8x16_t orig_hi = vld1q_u8(buf + 16);
-	vst1q_u8(st->state, orig_hi);
-	vst1q_u8(st->state + 16, veorq_u8(orig_lo, orig_hi));
-	vst1q_u8(buf, orig_lo);
-	vst1q_u8(buf + 16, orig_hi);
-	aesenc256(buf, st->key1);
-	state_lo = vld1q_u8(st->state);
-	state_hi = vld1q_u8(st->state + 16);
-	buf_lo = vld1q_u8(buf);
-	buf_hi = vld1q_u8(buf + 16);
-	x_lo = veorq_u8(state_lo, buf_lo);
-	x_hi = veorq_u8(state_hi, buf_hi);
-	vst1q_u8(buf, x_lo);
-	vst1q_u8(buf + 16, x_hi);
-	aesenc256(buf, st->key2);
-	orig_lo = vld1q_u8(buf);
-	orig_hi = vld1q_u8(buf + 16);
-	vst1q_u8(st->state, orig_hi);
-	vst1q_u8(st->state + 16, veorq_u8(orig_lo, orig_hi));
-	vst1q_u8(buf, orig_lo);
-	vst1q_u8(buf + 16, orig_hi);
-	aesenc256(buf, st->key3);
-}
-*/
+
 STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 
@@ -192,8 +156,6 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 	vst1q_u8(buf, x_lo);
 	vst1q_u8(buf + 16, x_hi);
 
-	/* ==================== Inline aesenc256(buf, st->key0)
-	 * ==================== */
 	{
 		uint8x16_t d_lo = *(const uint8x16_t *)buf;
 		uint8x16_t d_hi = *(const uint8x16_t *)(buf + 16);
@@ -223,8 +185,6 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 	vst1q_u8(buf, orig_lo);
 	vst1q_u8(buf + 16, orig_hi);
 
-	/* ==================== Inline aesenc256(buf, st->key1)
-	 * ==================== */
 	{
 		uint8x16_t d_lo = *(const uint8x16_t *)buf;
 		uint8x16_t d_hi = *(const uint8x16_t *)(buf + 16);
@@ -245,8 +205,6 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 		*(uint8x16_t *)(buf + 16) = out_hi;
 	}
 
-	/* ==================== Second iteration ==================== */
-
 	state_lo = vld1q_u8(st->state);
 	state_hi = vld1q_u8(st->state + 16);
 	buf_lo = vld1q_u8(buf);
@@ -258,8 +216,6 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 	vst1q_u8(buf, x_lo);
 	vst1q_u8(buf + 16, x_hi);
 
-	/* ==================== Inline aesenc256(buf, st->key2)
-	 * ==================== */
 	{
 		uint8x16_t d_lo = *(const uint8x16_t *)buf;
 		uint8x16_t d_hi = *(const uint8x16_t *)(buf + 16);
@@ -289,8 +245,6 @@ STATIC void storm_next_block_neon(StormContext *ctx, u8 buf[32]) {
 	vst1q_u8(buf, orig_lo);
 	vst1q_u8(buf + 16, orig_hi);
 
-	/* ==================== Inline aesenc256(buf, st->key3)
-	 * ==================== */
 	{
 		uint8x16_t d_lo = *(const uint8x16_t *)buf;
 		uint8x16_t d_hi = *(const uint8x16_t *)(buf + 16);
