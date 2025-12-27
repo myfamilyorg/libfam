@@ -23,11 +23,36 @@
  *
  *******************************************************************************/
 
-#ifndef _AIGHTHASH_H
-#define _AIGHTHASH_H
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
 
-#include <libfam/types.h>
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
 
-u64 aighthash64(const void* input, u64 len, u64 seed);
+#ifndef USE_AVX2
 
-#endif /* _AIGHTHASH_H */
+#include <kyber_common/params.h>
+#include <kyber_scalar/reduce.h>
+
+i16 montgomery_reduce(i32 a) {
+	i16 t;
+
+	t = (i16)a * QINV;
+	t = (a - (i32)t * KYBER_Q) >> 16;
+	return t;
+}
+
+i16 barrett_reduce(i16 a) {
+	i16 t;
+	const i16 v = ((1 << 26) + KYBER_Q / 2) / KYBER_Q;
+
+	t = ((i32)v * a + (1 << 25)) >> 26;
+	t *= KYBER_Q;
+	return a - t;
+}
+
+#endif /* !USE_AVX2 */

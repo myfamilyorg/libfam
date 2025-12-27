@@ -23,11 +23,47 @@
  *
  *******************************************************************************/
 
-#ifndef _AIGHTHASH_H
-#define _AIGHTHASH_H
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
 
-#include <libfam/types.h>
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
 
-u64 aighthash64(const void* input, u64 len, u64 seed);
+#ifndef USE_AVX2
 
-#endif /* _AIGHTHASH_H */
+#include <kyber_scalar/verify.h>
+
+int verify(const u8 *a, const u8 *b, u64 len) {
+	u64 i;
+	u8 r = 0;
+
+	for (i = 0; i < len; i++) r |= a[i] ^ b[i];
+
+	return (-(u64)r) >> 63;
+}
+
+void cmov(u8 *r, const u8 *x, u64 len, u8 b) {
+	u64 i;
+
+	// Prevent the compiler from
+	//    1) inferring that b is 0/1-valued, and
+	//    2) handling the two cases with a branch.
+	// This is not necessary when verify.c and kem.c are separate
+	// translation units, but we expect that downstream consumers will copy
+	// this code and/or change how it is built.
+	__asm__("" : "+r"(b) : /* no inputs */);
+
+	b = -b;
+	for (i = 0; i < len; i++) r[i] ^= b & (r[i] ^ x[i]);
+}
+
+void cmov_int16(i16 *r, i16 v, u16 b) {
+	b = -b;
+	*r ^= b & ((*r) ^ v);
+}
+
+#endif /* !USE_AVX2 */

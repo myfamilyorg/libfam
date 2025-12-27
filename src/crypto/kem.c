@@ -23,11 +23,44 @@
  *
  *******************************************************************************/
 
-#ifndef _AIGHTHASH_H
-#define _AIGHTHASH_H
+#include <libfam/kem.h>
 
-#include <libfam/types.h>
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
 
-u64 aighthash64(const void* input, u64 len, u64 seed);
+#ifdef USE_AVX2
+#include <immintrin.h>
+#endif /* USE_AVX2 */
 
-#endif /* _AIGHTHASH_H */
+i32 pqcrystals_kyber512_ref_keypair(u8 *pk, u8 *sk, Rng *rng);
+i32 pqcrystals_kyber512_ref_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng);
+i32 pqcrystals_kyber512_ref_dec(u8 *ss, const u8 *ct, const u8 *sk);
+i32 pqcrystals_kyber512_avx2_keypair(u8 *pk, u8 *sk, Rng *rng);
+i32 pqcrystals_kyber512_avx2_enc(u8 *ct, u8 *ss, const u8 *pk, Rng *rng);
+i32 pqcrystals_kyber512_avx2_dec(u8 *ss, const u8 *ct, const u8 *sk);
+
+void keypair(KemPubKey *pk, KemSecKey *sk, Rng *rng) {
+#ifdef USE_AVX2
+	pqcrystals_kyber512_avx2_keypair(pk->data, sk->data, rng);
+#else
+	pqcrystals_kyber512_ref_keypair(pk->data, sk->data, rng);
+#endif
+}
+void enc(KemCipherText *ct, KemSharedSecret *ss, const KemPubKey *pk,
+	 Rng *rng) {
+#ifdef USE_AVX2
+	pqcrystals_kyber512_avx2_enc(ct->data, ss->data, pk->data, rng);
+#else
+	pqcrystals_kyber512_ref_enc(ct->data, ss->data, pk->data, rng);
+#endif
+}
+void dec(KemSharedSecret *ss, const KemCipherText *ct, const KemSecKey *sk) {
+#ifdef USE_AVX2
+	pqcrystals_kyber512_avx2_dec(ss->data, ct->data, sk->data);
+#else
+	pqcrystals_kyber512_ref_dec(ss->data, ct->data, sk->data);
+#endif
+}
