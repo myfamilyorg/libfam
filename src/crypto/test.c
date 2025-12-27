@@ -25,6 +25,9 @@
 
 #include <libfam/aesenc.h>
 #include <libfam/aighthash.h>
+#include <libfam/bible.h>
+#include <libfam/env.h>
+#include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/sysext.h>
@@ -539,5 +542,69 @@ Bench(wotsp) {
 	pwrite(2, ",verify=", 8, 0);
 	write_num(2, verify_sum / WOTS_COUNT);
 	pwrite(2, "\n", 1, 0);
+}
+
+#include <libfam/format.h>
+#define BIBLE_PATH "resources/test_bible.dat"
+
+Test(bible) {
+	const Bible* b;
+	u64 sbox[256];
+	__attribute__((aligned(32))) static const u8 input[128] = {
+	    1,	2,  3,	4,  5,	6,  7,	8,  9,	10, 11, 12, 13, 14, 15, 16,
+	    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+	__attribute__((aligned(32))) u8 output[32];
+
+	if (!exists(BIBLE_PATH)) {
+		if (IS_VALGRIND()) return;
+		b = bible_gen(false);
+		bible_store(b, BIBLE_PATH);
+	} else
+		b = bible_load(BIBLE_PATH);
+
+	bible_sbox8_64(sbox);
+	bible_hash(b, input, output, sbox);
+
+	u8 expected[32] = {222, 244, 143, 174, 216, 100, 54, 26,  244, 218, 190,
+			   252, 148, 64,  106, 67,  107, 40, 178, 224, 103, 235,
+			   92,	138, 72,  8,   20,  178, 69, 165, 100, 231};
+
+	ASSERT(!memcmp(output, expected, 32), "hash");
+	bible_destroy(b);
+	b = bible_load(BIBLE_PATH);
+	bible_destroy(b);
+}
+
+Test(bible_mine) {
+	const Bible* b;
+	u32 nonce = 0;
+	u64 sbox[256];
+	__attribute__((aligned(32))) u8 output[32] = {0};
+	u8 target[32];
+	__attribute((aligned(32))) u8 header[HASH_INPUT_LEN];
+
+	for (u32 i = 0; i < HASH_INPUT_LEN; i++) header[i] = i;
+
+	if (!exists(BIBLE_PATH)) {
+		if (IS_VALGRIND()) return;
+		b = bible_gen(false);
+		bible_store(b, BIBLE_PATH);
+	} else
+		b = bible_load(BIBLE_PATH);
+
+	memset(target, 0xFF, 32);
+	target[0] = 0;
+	target[1] = 0;
+	bible_sbox8_64(sbox);
+	mine_block(b, header, target, output, &nonce, U32_MAX, sbox);
+
+	ASSERT_EQ(nonce, 68994, "nonce");
+	ASSERT(!memcmp(output, (u8[]){0,   0,	245, 95,  148, 134, 208, 252,
+				      26,  201, 67,  172, 120, 76,  64,	 169,
+				      199, 139, 61,  202, 241, 114, 3,	 35,
+				      238, 133, 153, 157, 124, 93,  210, 215},
+		       32),
+	       "hash");
+	bible_destroy(b);
 }
 
