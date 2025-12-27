@@ -1543,22 +1543,15 @@ Test(dilithium_loop) {
 	Signature sig;
 	__attribute__((aligned(32))) u8 m[32];
 	__attribute__((aligned(32))) u8 seed[32];
-	u64 keyfrom_sum = 0, sign_sum = 0, verify_sum = 0;
 
 	rng_init(&rng);
 	for (u32 i = 0; i < DILITHIUM_TESTS; i++) {
 		rng_gen(&rng, seed, 32);
 		rng_gen(&rng, m, 32);
 
-		u64 timer = cycle_counter();
 		keyfrom(seed, &sk, &pk);
-		keyfrom_sum += cycle_counter() - timer;
-		timer = cycle_counter();
 		sign(m, &sk, &sig, &rng);
-		sign_sum += cycle_counter() - timer;
-		timer = cycle_counter();
 		i32 res = verify(m, &pk, &sig);
-		verify_sum += cycle_counter() - timer;
 		ASSERT(!res, "verify");
 	}
 }
