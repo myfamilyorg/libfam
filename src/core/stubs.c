@@ -170,6 +170,3 @@ PUBLIC u128 __udivti3(u128 a, u128 b) {
 	return __udivmodti4(a, b, &rem);
 }
 
-void *malloc(u64 size) { return alloc(size); }
-void free(void *ptr) { release(ptr); }
-
