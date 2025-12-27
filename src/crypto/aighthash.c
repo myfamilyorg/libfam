@@ -80,8 +80,13 @@ PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 			uint8x16_t lo = vld1q_u8(p + i * 32);
 			uint8x16_t hi = vld1q_u8(p + i * 32 + 16);
 
-			lo = vaesencq_u8(lo, key_lo);
-			hi = vaesencq_u8(hi, key_hi);
+			lo = veorq_u8(lo, key_lo);
+			lo = vaeseq_u8(lo, vdupq_n_u8(0));
+			lo = vaesmcq_u8(lo);
+
+			hi = veorq_u8(hi, key_hi);
+			hi = vaeseq_u8(hi, vdupq_n_u8(0));
+			hi = vaesmcq_u8(hi);
 
 			__attribute__((aligned(16))) u64 parts[4];
 			vst1q_u64(parts + 0, vreinterpretq_u64_u8(lo));
@@ -112,8 +117,13 @@ PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 		uint8x16_t lo = vld1q_u8(p);
 		uint8x16_t hi = vld1q_u8(p + 16);
 
-		lo = vaesencq_u8(lo, key_lo);
-		hi = vaesencq_u8(hi, key_hi);
+		lo = veorq_u8(lo, key_lo);
+		lo = vaeseq_u8(lo, vdupq_n_u8(0));
+		lo = vaesmcq_u8(lo);
+
+		hi = veorq_u8(hi, key_hi);
+		hi = vaeseq_u8(hi, vdupq_n_u8(0));
+		hi = vaesmcq_u8(hi);
 
 		__attribute__((aligned(16))) u64 parts[4];
 		vst1q_u64(parts + 0, vreinterpretq_u64_u8(lo));
