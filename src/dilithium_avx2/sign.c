@@ -14,6 +14,8 @@
 #include <dilithium_avx2/sign.h>
 #include <dilithium_avx2/symmetric.h>
 #include <libfam/rng.h>
+#include <libfam/sign_impl.h>
+#include <libfam/storm.h>
 #include <libfam/string.h>
 #include <stdint.h>
 #include <string.h>
@@ -74,6 +76,7 @@ static inline void polyvec_matrix_expand_row(polyvecl **row, polyvecl buf[2],
  * Returns 0 (success)
  **************************************************/
 int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, const u8 seed[32]) {
+	StormContext ctx;
 	unsigned int i;
 	__attribute__((
 	    aligned(32))) uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
@@ -87,7 +90,15 @@ int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, const u8 seed[32]) {
 	fastmemcpy(seedbuf, seed, 32);
 	seedbuf[SEEDBYTES + 0] = K;
 	seedbuf[SEEDBYTES + 1] = L;
-	shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
+
+	// shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
+	storm_init(&ctx, HASH_DOMAIN);
+	for (u32 i = 0; i < 2 * SEEDBYTES + CRHBYTES; i += 32)
+		storm_next_block(&ctx, seedbuf + i);
+	fastmemset(seedbuf, 0, 2 * SEEDBYTES);
+	storm_next_block(&ctx, seedbuf);
+	storm_next_block(&ctx, seedbuf + 32);
+
 	rho = seedbuf;
 	rhoprime = rho + SEEDBYTES;
 	key = rhoprime + CRHBYTES;
