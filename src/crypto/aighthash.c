@@ -56,8 +56,12 @@ static const u8* AIGHT_DOMAIN = (void*)PRIMES;
 PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 	const u8* p = (const u8*)data;
 	u64 h = seed ^ AIGHT64_INIT, tail = 0;
+
 #ifdef USE_AVX2
 	__m256i key = _mm256_load_si256((const __m256i*)AIGHT_DOMAIN);
+#elif defined(USE_NEON)
+	uint8x16_t key_lo = vld1q_u8(AIGHT_DOMAIN);
+	uint8x16_t key_hi = vld1q_u8(AIGHT_DOMAIN + 16);
 #else
 	const u8* key = AIGHT_DOMAIN;
 #endif
@@ -68,18 +72,30 @@ PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 			__m256i x =
 			    _mm256_loadu_si256((const __m256i*)(p + i * 32));
 			x = _mm256_aesenc_epi128(x, key);
+
 			__attribute__((aligned(32))) u64 parts[4];
 			_mm256_store_si256((__m256i*)parts, x);
+			h ^= parts[0] ^ parts[1] ^ parts[2] ^ parts[3];
+#elif defined(USE_NEON)
+			uint8x16_t lo = vld1q_u8(p + i * 32);
+			uint8x16_t hi = vld1q_u8(p + i * 32 + 16);
+
+			lo = vaesencq_u8(lo, key_lo);
+			hi = vaesencq_u8(hi, key_hi);
+
+			__attribute__((aligned(16))) u64 parts[4];
+			vst1q_u64(parts + 0, vreinterpretq_u64_u8(lo));
+			vst1q_u64(parts + 2, vreinterpretq_u64_u8(hi));
+
 			h ^= parts[0] ^ parts[1] ^ parts[2] ^ parts[3];
 #else
 			u8 x[32];
 			fastmemcpy(x, p + i * 32, 32);
 			aesenc256(x, key);
-			h ^= *(u64*)x ^ *(u64*)((u8*)x + 8) ^
-			     *(u64*)((u8*)x + 16) ^ *(u64*)((u8*)x + 24);
+			h ^= *(u64*)x ^ *(u64*)(x + 8) ^ *(u64*)(x + 16) ^
+			     *(u64*)(x + 24);
 #endif
 		}
-
 		p += 256;
 		len -= 256;
 	}
@@ -88,15 +104,28 @@ PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 #ifdef USE_AVX2
 		__m256i x = _mm256_loadu_si256((const __m256i*)p);
 		x = _mm256_aesenc_epi128(x, key);
+
 		__attribute__((aligned(32))) u64 parts[4];
 		_mm256_store_si256((__m256i*)parts, x);
+		h ^= parts[0] ^ parts[1] ^ parts[2] ^ parts[3];
+#elif defined(USE_NEON)
+		uint8x16_t lo = vld1q_u8(p);
+		uint8x16_t hi = vld1q_u8(p + 16);
+
+		lo = vaesencq_u8(lo, key_lo);
+		hi = vaesencq_u8(hi, key_hi);
+
+		__attribute__((aligned(16))) u64 parts[4];
+		vst1q_u64(parts + 0, vreinterpretq_u64_u8(lo));
+		vst1q_u64(parts + 2, vreinterpretq_u64_u8(hi));
+
 		h ^= parts[0] ^ parts[1] ^ parts[2] ^ parts[3];
 #else
 		u8 x[32];
 		fastmemcpy(x, p, 32);
 		aesenc256(x, key);
-		h ^= *(u64*)x ^ *(u64*)((u8*)x + 8) ^ *(u64*)((u8*)x + 16) ^
-		     *(u64*)((u8*)x + 24);
+		h ^= *(u64*)x ^ *(u64*)(x + 8) ^ *(u64*)(x + 16) ^
+		     *(u64*)(x + 24);
 #endif
 		p += 32;
 		len -= 32;
@@ -112,4 +141,3 @@ PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 
 	return h;
 }
-
