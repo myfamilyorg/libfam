@@ -1539,8 +1539,8 @@ Test(dilithium_loop) {
 	PublicKey pk;
 	SecretKey sk;
 	Signature sig;
-	__attribute__((aligned(32))) u8 m[32];
-	__attribute__((aligned(32))) u8 seed[32];
+	__attribute__((aligned(32))) u8 m[32] = {0};
+	__attribute__((aligned(32))) u8 seed[32] = {0};
 
 	rng_init(&rng);
 	for (u32 i = 0; i < DILITHIUM_TESTS; i++) {
