@@ -391,7 +391,7 @@ Bench(aighthash) {
 	pwrite(2, "\n", 1, 0);
 }
 
-Test(aighthash) {
+Test(aighthash_vector) {
 	u8 vector[1024] = {0};
 	u64 r;
 	for (u32 i = 0; i < 1024; i++) vector[i] = i % 256;
@@ -400,3 +400,87 @@ Test(aighthash) {
 	r = aighthash64(vector, 1024, 1);
 	ASSERT_EQ(r, 10881699377260999209ULL, "vector2");
 }
+
+Test(aighthash) {
+	u64 h1, h2, h3;
+
+	h1 = aighthash64("XXXXXXXXXXXXXXXXxyz", 19, 0);
+	h2 = aighthash64("XXXXXXXXXXXXXXXXxyz\0", 20, 0);
+	h3 = aighthash64("XXXXXXXXXXXXXXXXxyz", 19, 0);
+	ASSERT(h1 != h2, "h1 != h2");
+	ASSERT(h1 == h3, "h1 == h3");
+
+	h1 = aighthash64("012345678901234567890123456789012", 32, 0);
+	h2 = aighthash64("012345678901234567890123456789012\0", 33, 0);
+	h3 = aighthash64("012345678901234567890123456789012", 32, 0);
+	ASSERT(h1 != h2, "h1 != h2");
+	ASSERT(h1 == h3, "h1 == h3");
+}
+
+Test(rng) {
+	u64 x = 0, y = 0;
+	__attribute__((aligned(32))) u8 z[64] = {0};
+	Rng rng;
+	__attribute__((aligned(32))) u8 key[32] = {5, 5, 5, 5};
+	rng_init(&rng);
+	rng_gen(&rng, &x, sizeof(x));
+	rng_init(&rng);
+	rng_gen(&rng, &y, sizeof(y));
+	ASSERT(x != y, "x!=y");
+
+	rng_test_seed(&rng, key);
+	rng_gen(&rng, z, sizeof(z));
+
+	u8 expected[64] = {
+	    241, 172, 79,  71,	20,  35,  84,  2,   39,	 165, 18,  232, 21,
+	    84,	 178, 57,  205, 39,  187, 146, 20,  199, 114, 41,  245, 137,
+	    175, 6,   181, 187, 130, 62,  132, 84,  126, 222, 37,  132, 105,
+	    219, 163, 233, 140, 146, 144, 123, 56,  27,	 226, 203, 36,	30,
+	    42,	 31,  252, 121, 105, 163, 164, 166, 16,	 128, 80,  195};
+	ASSERT_EQ(memcmp(z, expected, 64), 0, "z");
+}
+
+#define RNG_BYTES (32 * 1000000ULL)
+
+Bench(rng) {
+	u8 fbuf[1024] = {0};
+	__attribute__((aligned(32))) u8 buffer1[32] = {0};
+	__attribute__((aligned(32))) u8 buffer2[32] = {0};
+	__attribute__((aligned(32))) u8 buffer3[32] = {0};
+	__attribute__((aligned(32))) u8 buffer4[32] = {0};
+	__attribute__((aligned(32))) u8 buffer5[32] = {0};
+	__attribute__((aligned(32))) u8 buffer6[32] = {0};
+
+	i64 needed = RNG_BYTES;
+	Rng rng1, rng2, rng3, rng4, rng5, rng6;
+	u64 total_cycles = 0;
+
+	rng_init(&rng1);
+	rng_init(&rng2);
+	rng_init(&rng3);
+	rng_init(&rng4);
+	rng_init(&rng5);
+	rng_init(&rng6);
+
+	while (needed > 0) {
+		u64 start;
+		start = cycle_counter();
+		rng_gen(&rng1, buffer1, 32);
+		rng_gen(&rng2, buffer2, 32);
+		rng_gen(&rng3, buffer3, 32);
+		rng_gen(&rng4, buffer4, 32);
+		rng_gen(&rng5, buffer5, 32);
+		rng_gen(&rng6, buffer6, 32);
+		total_cycles += cycle_counter() - start;
+
+		needed -= 32;
+	}
+	const u8 msg[] = "cycles_per_byte=";
+	pwrite(2, msg, strlen(msg), 0);
+	f64_to_string(fbuf,
+		      (f64)(total_cycles * 100 / (6 * RNG_BYTES)) / (f64)100, 2,
+		      false);
+	pwrite(2, fbuf, strlen(fbuf), 0);
+	pwrite(2, "\n", 1, 0);
+}
+
