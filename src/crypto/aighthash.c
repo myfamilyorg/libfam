@@ -55,15 +55,12 @@ static const u8* AIGHT_DOMAIN = (void*)PRIMES;
 
 PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 	const u8* p = (const u8*)data;
-	u64 h = seed ^ AIGHT64_INIT;
+	u64 h = seed ^ AIGHT64_INIT, tail = 0;
 #ifdef USE_AVX2
 	__m256i key = _mm256_load_si256((const __m256i*)AIGHT_DOMAIN);
 #else
 	const u8* key = AIGHT_DOMAIN;
 #endif
-	u64 tail = 0;
-
-	// while ((u64)p & 31) tail ^= (u64)*p++ << (8 * (len & 7)), len--;
 
 	while (len >= 256) {
 		for (int i = 0; i < 8; i++) {
