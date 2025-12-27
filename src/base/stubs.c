@@ -41,3 +41,9 @@ PUBLIC void __stack_chk_guard(void) {
 	_v = pwrite(STDERR_FD, msg, faststrlen(msg), 0);
 	_exit(-1);
 }
+
+PUBLIC void *__memcpy_chk(void *dest, const void *src, u64 len, u64 dest_len) {
+	(void)dest_len;
+	return fastmemcpy(dest, src, len);
+}
+

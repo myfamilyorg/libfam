@@ -68,8 +68,9 @@ PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 			__m256i x =
 			    _mm256_loadu_si256((const __m256i*)(p + i * 32));
 			x = _mm256_aesenc_epi128(x, key);
-			h ^= *(u64*)&x ^ *(u64*)((u8*)(&x) + 8) ^
-			     *(u64*)((u8*)(&x) + 16) ^ *(u64*)((u8*)(&x) + 24);
+			__attribute__((aligned(32))) u64 parts[4];
+			_mm256_store_si256((__m256i*)parts, x);
+			h ^= parts[0] ^ parts[1] ^ parts[2] ^ parts[3];
 #else
 			u8 x[32];
 			fastmemcpy(x, p + i * 32, 32);
@@ -87,8 +88,9 @@ PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 #ifdef USE_AVX2
 		__m256i x = _mm256_loadu_si256((const __m256i*)p);
 		x = _mm256_aesenc_epi128(x, key);
-		h ^= *(u64*)&x ^ *(u64*)((u8*)(&x) + 8) ^
-		     *(u64*)((u8*)(&x) + 16) ^ *(u64*)((u8*)(&x) + 24);
+		__attribute__((aligned(32))) u64 parts[4];
+		_mm256_store_si256((__m256i*)parts, x);
+		h ^= parts[0] ^ parts[1] ^ parts[2] ^ parts[3];
 #else
 		u8 x[32];
 		fastmemcpy(x, p, 32);
