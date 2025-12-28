@@ -1,7 +1,6 @@
 #include <dilithium_scalar/params.h>
 #include <dilithium_scalar/poly.h>
 #include <dilithium_scalar/polyvec.h>
-#include <stdint.h>
 
 /*************************************************
  * Name:        expand_mat
@@ -11,9 +10,9 @@
  *              sampling on the output stream of SHAKE128(rho|j|i)
  *
  * Arguments:   - polyvecl mat[K]: output matrix
- *              - const uint8_t rho[]: byte array containing seed rho
+ *              - const u8 rho[]: byte array containing seed rho
  **************************************************/
-void polyvec_matrix_expand(polyvecl mat[K], const uint8_t rho[SEEDBYTES]) {
+void polyvec_matrix_expand(polyvecl mat[K], const u8 rho[SEEDBYTES]) {
 	unsigned int i, j;
 
 	for (i = 0; i < K; ++i)
@@ -33,15 +32,13 @@ void polyvec_matrix_pointwise_montgomery(polyveck *t, const polyvecl mat[K],
 /************ Vectors of polynomials of length L **************/
 /**************************************************************/
 
-void polyvecl_uniform_eta(polyvecl *v, const uint8_t seed[CRHBYTES],
-			  uint16_t nonce) {
+void polyvecl_uniform_eta(polyvecl *v, const u8 seed[CRHBYTES], u16 nonce) {
 	unsigned int i;
 
 	for (i = 0; i < L; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
 }
 
-void polyvecl_uniform_gamma1(polyvecl *v, const uint8_t seed[CRHBYTES],
-			     uint16_t nonce) {
+void polyvecl_uniform_gamma1(polyvecl *v, const u8 seed[CRHBYTES], u16 nonce) {
 	unsigned int i;
 
 	for (i = 0; i < L; ++i)
@@ -128,12 +125,12 @@ void polyvecl_pointwise_acc_montgomery(poly *w, const polyvecl *u,
  *              Assumes input polyvecl to be reduced by polyvecl_reduce().
  *
  * Arguments:   - const polyvecl *v: pointer to vector
- *              - int32_t B: norm bound
+ *              - i32 B: norm bound
  *
  * Returns 0 if norm of all polynomials is strictly smaller than B <= (Q-1)/8
  * and 1 otherwise.
  **************************************************/
-int polyvecl_chknorm(const polyvecl *v, int32_t bound) {
+int polyvecl_chknorm(const polyvecl *v, i32 bound) {
 	unsigned int i;
 
 	for (i = 0; i < L; ++i)
@@ -146,8 +143,7 @@ int polyvecl_chknorm(const polyvecl *v, int32_t bound) {
 /************ Vectors of polynomials of length K **************/
 /**************************************************************/
 
-void polyveck_uniform_eta(polyveck *v, const uint8_t seed[CRHBYTES],
-			  uint16_t nonce) {
+void polyveck_uniform_eta(polyveck *v, const u8 seed[CRHBYTES], u16 nonce) {
 	unsigned int i;
 
 	for (i = 0; i < K; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
@@ -272,12 +268,12 @@ void polyveck_pointwise_poly_montgomery(polyveck *r, const poly *a,
  *              Assumes input polyveck to be reduced by polyveck_reduce().
  *
  * Arguments:   - const polyveck *v: pointer to vector
- *              - int32_t B: norm bound
+ *              - i32 B: norm bound
  *
  * Returns 0 if norm of all polynomials are strictly smaller than B <= (Q-1)/8
  * and 1 otherwise.
  **************************************************/
-int polyveck_chknorm(const polyveck *v, int32_t bound) {
+int polyveck_chknorm(const polyveck *v, i32 bound) {
 	unsigned int i;
 
 	for (i = 0; i < K; ++i)
@@ -367,7 +363,7 @@ void polyveck_use_hint(polyveck *w, const polyveck *u, const polyveck *h) {
 		poly_use_hint(&w->vec[i], &u->vec[i], &h->vec[i]);
 }
 
-void polyveck_pack_w1(uint8_t r[K * POLYW1_PACKEDBYTES], const polyveck *w1) {
+void polyveck_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyveck *w1) {
 	unsigned int i;
 
 	for (i = 0; i < K; ++i)

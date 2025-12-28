@@ -1,6 +1,10 @@
 #ifndef PARAMS_H
 #define PARAMS_H
 
+#ifndef __ASSEMBLER__
+#include <libfam/types.h>
+#endif /* __ASSEMBLER__ */
+
 #include "config.h"
 
 #define SEEDBYTES 32

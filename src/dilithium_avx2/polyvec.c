@@ -11,7 +11,6 @@
 #include <dilithium_avx2/params.h>
 #include <dilithium_avx2/poly.h>
 #include <dilithium_avx2/polyvec.h>
-#include <stdint.h>
 
 /*************************************************
  * Name:        expand_mat
@@ -21,11 +20,11 @@
  *              sampling on the output stream of SHAKE128(rho|j|i)
  *
  * Arguments:   - polyvecl mat[K]: output matrix
- *              - const uint8_t rho[]: byte array containing seed rho
+ *              - const u8 rho[]: byte array containing seed rho
  **************************************************/
 
 #if K == 4 && L == 4
-void polyvec_matrix_expand(polyvecl mat[K], const uint8_t rho[SEEDBYTES]) {
+void polyvec_matrix_expand(polyvecl mat[K], const u8 rho[SEEDBYTES]) {
 	polyvec_matrix_expand_row0(&mat[0], NULL, rho);
 	polyvec_matrix_expand_row1(&mat[1], NULL, rho);
 	polyvec_matrix_expand_row2(&mat[2], NULL, rho);
@@ -34,7 +33,7 @@ void polyvec_matrix_expand(polyvecl mat[K], const uint8_t rho[SEEDBYTES]) {
 
 void polyvec_matrix_expand_row0(polyvecl *rowa,
 				__attribute__((unused)) polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[0], &rowa->vec[1], &rowa->vec[2],
 			&rowa->vec[3], rho, 0, 1, 2, 3);
 	poly_nttunpack(&rowa->vec[0]);
@@ -45,7 +44,7 @@ void polyvec_matrix_expand_row0(polyvecl *rowa,
 
 void polyvec_matrix_expand_row1(polyvecl *rowa,
 				__attribute__((unused)) polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[0], &rowa->vec[1], &rowa->vec[2],
 			&rowa->vec[3], rho, 256, 257, 258, 259);
 	poly_nttunpack(&rowa->vec[0]);
@@ -56,7 +55,7 @@ void polyvec_matrix_expand_row1(polyvecl *rowa,
 
 void polyvec_matrix_expand_row2(polyvecl *rowa,
 				__attribute__((unused)) polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[0], &rowa->vec[1], &rowa->vec[2],
 			&rowa->vec[3], rho, 512, 513, 514, 515);
 	poly_nttunpack(&rowa->vec[0]);
@@ -67,7 +66,7 @@ void polyvec_matrix_expand_row2(polyvecl *rowa,
 
 void polyvec_matrix_expand_row3(polyvecl *rowa,
 				__attribute__((unused)) polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[0], &rowa->vec[1], &rowa->vec[2],
 			&rowa->vec[3], rho, 768, 769, 770, 771);
 	poly_nttunpack(&rowa->vec[0]);
@@ -77,7 +76,7 @@ void polyvec_matrix_expand_row3(polyvecl *rowa,
 }
 
 #elif K == 6 && L == 5
-void polyvec_matrix_expand(polyvecl mat[K], const uint8_t rho[SEEDBYTES]) {
+void polyvec_matrix_expand(polyvecl mat[K], const u8 rho[SEEDBYTES]) {
 	polyvecl tmp;
 	polyvec_matrix_expand_row0(&mat[0], &mat[1], rho);
 	polyvec_matrix_expand_row1(&mat[1], &mat[2], rho);
@@ -88,7 +87,7 @@ void polyvec_matrix_expand(polyvecl mat[K], const uint8_t rho[SEEDBYTES]) {
 }
 
 void polyvec_matrix_expand_row0(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[0], &rowa->vec[1], &rowa->vec[2],
 			&rowa->vec[3], rho, 0, 1, 2, 3);
 	poly_uniform_4x(&rowa->vec[4], &rowb->vec[0], &rowb->vec[1],
@@ -104,7 +103,7 @@ void polyvec_matrix_expand_row0(polyvecl *rowa, polyvecl *rowb,
 }
 
 void polyvec_matrix_expand_row1(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[3], &rowa->vec[4], &rowb->vec[0],
 			&rowb->vec[1], rho, 259, 260, 512, 513);
 	poly_nttunpack(&rowa->vec[3]);
@@ -114,7 +113,7 @@ void polyvec_matrix_expand_row1(polyvecl *rowa, polyvecl *rowb,
 }
 
 void polyvec_matrix_expand_row2(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[2], &rowa->vec[3], &rowa->vec[4],
 			&rowb->vec[0], rho, 514, 515, 516, 768);
 	poly_nttunpack(&rowa->vec[2]);
@@ -125,7 +124,7 @@ void polyvec_matrix_expand_row2(polyvecl *rowa, polyvecl *rowb,
 
 void polyvec_matrix_expand_row3(polyvecl *rowa,
 				__attribute__((unused)) polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[1], &rowa->vec[2], &rowa->vec[3],
 			&rowa->vec[4], rho, 769, 770, 771, 772);
 	poly_nttunpack(&rowa->vec[1]);
@@ -135,7 +134,7 @@ void polyvec_matrix_expand_row3(polyvecl *rowa,
 }
 
 void polyvec_matrix_expand_row4(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[0], &rowa->vec[1], &rowa->vec[2],
 			&rowa->vec[3], rho, 1024, 1025, 1026, 1027);
 	poly_uniform_4x(&rowa->vec[4], &rowb->vec[0], &rowb->vec[1],
@@ -151,7 +150,7 @@ void polyvec_matrix_expand_row4(polyvecl *rowa, polyvecl *rowb,
 }
 
 void polyvec_matrix_expand_row5(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[3], &rowa->vec[4], &rowb->vec[0],
 			&rowb->vec[1], rho, 1283, 1284, 1536, 1537);
 	poly_nttunpack(&rowa->vec[3]);
@@ -159,7 +158,7 @@ void polyvec_matrix_expand_row5(polyvecl *rowa, polyvecl *rowb,
 }
 
 #elif K == 8 && L == 7
-void polyvec_matrix_expand(polyvecl mat[K], const uint8_t rho[SEEDBYTES]) {
+void polyvec_matrix_expand(polyvecl mat[K], const u8 rho[SEEDBYTES]) {
 	polyvec_matrix_expand_row0(&mat[0], &mat[1], rho);
 	polyvec_matrix_expand_row1(&mat[1], &mat[2], rho);
 	polyvec_matrix_expand_row2(&mat[2], &mat[3], rho);
@@ -171,7 +170,7 @@ void polyvec_matrix_expand(polyvecl mat[K], const uint8_t rho[SEEDBYTES]) {
 }
 
 void polyvec_matrix_expand_row0(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[0], &rowa->vec[1], &rowa->vec[2],
 			&rowa->vec[3], rho, 0, 1, 2, 3);
 	poly_uniform_4x(&rowa->vec[4], &rowa->vec[5], &rowa->vec[6],
@@ -187,7 +186,7 @@ void polyvec_matrix_expand_row0(polyvecl *rowa, polyvecl *rowb,
 }
 
 void polyvec_matrix_expand_row1(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[1], &rowa->vec[2], &rowa->vec[3],
 			&rowa->vec[4], rho, 257, 258, 259, 260);
 	poly_uniform_4x(&rowa->vec[5], &rowa->vec[6], &rowb->vec[0],
@@ -203,7 +202,7 @@ void polyvec_matrix_expand_row1(polyvecl *rowa, polyvecl *rowb,
 }
 
 void polyvec_matrix_expand_row2(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[2], &rowa->vec[3], &rowa->vec[4],
 			&rowa->vec[5], rho, 514, 515, 516, 517);
 	poly_uniform_4x(&rowa->vec[6], &rowb->vec[0], &rowb->vec[1],
@@ -220,7 +219,7 @@ void polyvec_matrix_expand_row2(polyvecl *rowa, polyvecl *rowb,
 
 void polyvec_matrix_expand_row3(polyvecl *rowa,
 				__attribute__((unused)) polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[3], &rowa->vec[4], &rowa->vec[5],
 			&rowa->vec[6], rho, 771, 772, 773, 774);
 	poly_nttunpack(&rowa->vec[3]);
@@ -230,7 +229,7 @@ void polyvec_matrix_expand_row3(polyvecl *rowa,
 }
 
 void polyvec_matrix_expand_row4(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[0], &rowa->vec[1], &rowa->vec[2],
 			&rowa->vec[3], rho, 1024, 1025, 1026, 1027);
 	poly_uniform_4x(&rowa->vec[4], &rowa->vec[5], &rowa->vec[6],
@@ -246,7 +245,7 @@ void polyvec_matrix_expand_row4(polyvecl *rowa, polyvecl *rowb,
 }
 
 void polyvec_matrix_expand_row5(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[1], &rowa->vec[2], &rowa->vec[3],
 			&rowa->vec[4], rho, 1281, 1282, 1283, 1284);
 	poly_uniform_4x(&rowa->vec[5], &rowa->vec[6], &rowb->vec[0],
@@ -262,7 +261,7 @@ void polyvec_matrix_expand_row5(polyvecl *rowa, polyvecl *rowb,
 }
 
 void polyvec_matrix_expand_row6(polyvecl *rowa, polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[2], &rowa->vec[3], &rowa->vec[4],
 			&rowa->vec[5], rho, 1538, 1539, 1540, 1541);
 	poly_uniform_4x(&rowa->vec[6], &rowb->vec[0], &rowb->vec[1],
@@ -279,7 +278,7 @@ void polyvec_matrix_expand_row6(polyvecl *rowa, polyvecl *rowb,
 
 void polyvec_matrix_expand_row7(polyvecl *rowa,
 				__attribute__((unused)) polyvecl *rowb,
-				const uint8_t rho[SEEDBYTES]) {
+				const u8 rho[SEEDBYTES]) {
 	poly_uniform_4x(&rowa->vec[3], &rowa->vec[4], &rowa->vec[5],
 			&rowa->vec[6], rho, 1795, 1796, 1797, 1798);
 	poly_nttunpack(&rowa->vec[3]);
@@ -304,8 +303,7 @@ void polyvec_matrix_pointwise_montgomery(polyveck *t, const polyvecl mat[K],
 /************ Vectors of polynomials of length L **************/
 /**************************************************************/
 
-void polyvecl_uniform_eta(polyvecl *v, const uint8_t seed[CRHBYTES],
-			  uint16_t nonce) {
+void polyvecl_uniform_eta(polyvecl *v, const u8 seed[CRHBYTES], u16 nonce) {
 	unsigned int i;
 
 	for (i = 0; i < L; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
@@ -313,8 +311,8 @@ void polyvecl_uniform_eta(polyvecl *v, const uint8_t seed[CRHBYTES],
 
 #include <libfam/format.h>
 /*
-void polyvecl_uniform_gamma1(polyvecl *v, const uint8_t seed[CRHBYTES],
-			     uint16_t nonce) {
+void polyvecl_uniform_gamma1(polyvecl *v, const u8 seed[CRHBYTES],
+			     u16 nonce) {
 	unsigned int i;
 	println("gamma1");
 
@@ -396,12 +394,12 @@ void polyvecl_pointwise_acc_montgomery(poly *w, const polyvecl *u,
  *              Assumes input polyvecl to be reduced by polyvecl_reduce().
  *
  * Arguments:   - const polyvecl *v: pointer to vector
- *              - int32_t B: norm bound
+ *              - i32 B: norm bound
  *
  * Returns 0 if norm of all polynomials is strictly smaller than B <= (Q-1)/8
  * and 1 otherwise.
  **************************************************/
-int polyvecl_chknorm(const polyvecl *v, int32_t bound) {
+int polyvecl_chknorm(const polyvecl *v, i32 bound) {
 	unsigned int i;
 
 	for (i = 0; i < L; ++i)
@@ -414,8 +412,7 @@ int polyvecl_chknorm(const polyvecl *v, int32_t bound) {
 /************ Vectors of polynomials of length K **************/
 /**************************************************************/
 
-void polyveck_uniform_eta(polyveck *v, const uint8_t seed[CRHBYTES],
-			  uint16_t nonce) {
+void polyveck_uniform_eta(polyveck *v, const u8 seed[CRHBYTES], u16 nonce) {
 	unsigned int i;
 
 	for (i = 0; i < K; ++i) poly_uniform_eta(&v->vec[i], seed, nonce++);
@@ -540,12 +537,12 @@ void polyveck_pointwise_poly_montgomery(polyveck *r, const poly *a,
  *              Assumes input polyveck to be reduced by polyveck_reduce().
  *
  * Arguments:   - const polyveck *v: pointer to vector
- *              - int32_t B: norm bound
+ *              - i32 B: norm bound
  *
  * Returns 0 if norm of all polynomials are strictly smaller than B <= (Q-1)/8
  * and 1 otherwise.
  **************************************************/
-int polyveck_chknorm(const polyveck *v, int32_t bound) {
+int polyveck_chknorm(const polyveck *v, i32 bound) {
 	unsigned int i;
 
 	for (i = 0; i < K; ++i)
@@ -602,13 +599,13 @@ void polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v) {
  *
  * Description: Compute hint vector.
  *
- * Arguments:   - uint8_t *hint: pointer to output hint array
+ * Arguments:   - u8 *hint: pointer to output hint array
  *              - const polyveck *v0: pointer to low part of input vector
  *              - const polyveck *v1: pointer to high part of input vector
  *
  * Returns number of 1 bits.
  **************************************************/
-unsigned int polyveck_make_hint(uint8_t *hint, const polyveck *v0,
+unsigned int polyveck_make_hint(u8 *hint, const polyveck *v0,
 				const polyveck *v1) {
 	unsigned int i, n = 0;
 
@@ -635,7 +632,7 @@ void polyveck_use_hint(polyveck *w, const polyveck *u, const polyveck *h) {
 		poly_use_hint(&w->vec[i], &u->vec[i], &h->vec[i]);
 }
 
-void polyveck_pack_w1(uint8_t r[K * POLYW1_PACKEDBYTES], const polyveck *w1) {
+void polyveck_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyveck *w1) {
 	unsigned int i;
 
 	for (i = 0; i < K; ++i)

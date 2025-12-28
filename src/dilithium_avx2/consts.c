@@ -8,7 +8,6 @@
 
 #include <dilithium_avx2/consts.h>
 #include <dilithium_avx2/params.h>
-#include <stdint.h>
 
 #define QINV 58728449  // q^(-1) mod 2^32
 #define MONT -4186625  // 2^32 mod q

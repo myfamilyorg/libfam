@@ -11,8 +11,7 @@
 #include <dilithium_avx2/rejsample.h>
 #include <dilithium_avx2/rounding.h>
 #include <immintrin.h>
-#include <stdint.h>
-#include <string.h>
+#include <libfam/string.h>
 
 #define _mm256_blendv_epi32(a, b, mask)                              \
 	_mm256_castps_si256(_mm256_blendv_ps(_mm256_castsi256_ps(a), \
@@ -128,18 +127,18 @@ void decompose_avx(__m256i *a1, __m256i *a0, const __m256i *a) {
  * Description: Compute indices of polynomial coefficients whose low bits
  *              overflow into the high bits.
  *
- * Arguments:   - uint8_t *hint: hint array
+ * Arguments:   - u8 *hint: hint array
  *              - const __m256i *a0: low bits of input elements
  *              - const __m256i *a1: high bits of input elements
  *
  * Returns number of overflowing low bits
  **************************************************/
-unsigned int make_hint_avx(uint8_t hint[N], const __m256i *restrict a0,
+unsigned int make_hint_avx(u8 hint[N], const __m256i *restrict a0,
 			   const __m256i *restrict a1) {
 	unsigned int i, n = 0;
 	__m256i f0, f1, g0, g1;
-	uint32_t bad;
-	uint64_t idx;
+	u32 bad;
+	u64 idx;
 	const __m256i low = _mm256_set1_epi32(-GAMMA2);
 	const __m256i high = _mm256_set1_epi32(GAMMA2);
 
@@ -153,9 +152,9 @@ unsigned int make_hint_avx(uint8_t hint[N], const __m256i *restrict a0,
 		g0 = _mm256_or_si256(g0, g1);
 
 		bad = _mm256_movemask_ps((__m256)g0);
-		memcpy(&idx, idxlut[bad], 8);
-		idx += (uint64_t)0x0808080808080808 * i;
-		memcpy(&hint[n], &idx, 8);
+		fastmemcpy(&idx, idxlut[bad], 8);
+		idx += (u64)0x0808080808080808 * i;
+		fastmemcpy(&hint[n], &idx, 8);
 		n += _mm_popcnt_u32(bad);
 	}
 

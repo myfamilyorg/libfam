@@ -1,8 +1,6 @@
 #ifndef REJSAMPLE_H
 #define REJSAMPLE_H
 
-#include <stdint.h>
-
 #include "params.h"
 
 #ifndef STREAM256_BLOCKBYTES
@@ -27,13 +25,13 @@
 #define REJ_UNIFORM_ETA_BUFLEN (REJ_UNIFORM_ETA_NBLOCKS * STREAM256_BLOCKBYTES)
 
 #define idxlut DILITHIUM_NAMESPACE(idxlut)
-extern const uint8_t idxlut[256][8];
+extern const u8 idxlut[256][8];
 
 #define rej_uniform_avx DILITHIUM_NAMESPACE(rej_uniform_avx)
-unsigned int rej_uniform_avx(int32_t *r, const uint8_t buf[864]);
+unsigned int rej_uniform_avx(i32 *r, const u8 buf[864]);
 
 #define rej_eta_avx DILITHIUM_NAMESPACE(rej_eta_avx)
-unsigned int rej_eta_avx(int32_t *r, const uint8_t buf[160]);
+unsigned int rej_eta_avx(i32 *r, const u8 buf[160]);
 
 #endif
 
