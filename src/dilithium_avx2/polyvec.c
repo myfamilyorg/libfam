@@ -312,6 +312,7 @@ void polyvecl_uniform_eta(polyvecl *v, const uint8_t seed[CRHBYTES],
 }
 
 #include <libfam/format.h>
+/*
 void polyvecl_uniform_gamma1(polyvecl *v, const uint8_t seed[CRHBYTES],
 			     uint16_t nonce) {
 	unsigned int i;
@@ -320,6 +321,7 @@ void polyvecl_uniform_gamma1(polyvecl *v, const uint8_t seed[CRHBYTES],
 	for (i = 0; i < L; ++i)
 		poly_uniform_gamma1(&v->vec[i], seed, L * nonce + i);
 }
+*/
 
 void polyvecl_reduce(polyvecl *v) {
 	unsigned int i;

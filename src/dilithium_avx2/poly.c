@@ -36,6 +36,13 @@ extern uint64_t *tred, *tadd, *tmul, *tround, *tsample, *tpack;
 					     _mm256_castsi256_ps(b), \
 					     _mm256_castsi256_ps(mask)))
 
+static void storm_init_nonce(StormContext *ctx, u16 nonce) {
+	__attribute__((aligned(32))) u8 key[32];
+	fastmemcpy(key, HASH_DOMAIN, 32);
+	for (u32 i = 0; i < 16; i++) ((u16 *)key)[i] ^= nonce;
+	storm_init(ctx, key);
+}
+
 /*************************************************
  * Name:        poly_reduce
  *
@@ -673,9 +680,10 @@ void poly_uniform_gamma1_preinit(poly *a, stream256_state *state) {
 	polyz_unpack(a, buf.coeffs);
 }
 */
-#include <libfam/format.h>
+/*
 void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES],
 			 uint16_t nonce) {
+	panic("gamma1");
 	StormContext ctx;
 	__attribute__((aligned(32))) uint8_t buf[704] = {0};
 
@@ -687,12 +695,11 @@ void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES],
 	for (u32 i = 0; i < sizeof(buf); i += 32)
 		storm_next_block(&ctx, buf + i);
 
-	/*
-	stream256_init(&state, seed, nonce);
-	stream256_squeezeblocks(buf, POLY_UNIFORM_GAMMA1_NBLOCKS, &state);
-	*/
+	//stream256_init(&state, seed, nonce);
+	//stream256_squeezeblocks(buf, POLY_UNIFORM_GAMMA1_NBLOCKS, &state);
 	polyz_unpack(a, buf);
 }
+*/
 
 #include <libfam/format.h>
 void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
@@ -724,22 +731,31 @@ void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	buf[3].coeffs[64] = nonce3;
 	buf[3].coeffs[65] = nonce3 >> 8;
 
+	storm_init_nonce(&ctx0, nonce0);
+	storm_init_nonce(&ctx1, nonce1);
+	storm_init_nonce(&ctx2, nonce2);
+	storm_init_nonce(&ctx3, nonce3);
+	/*
 	storm_init(&ctx0, HASH_DOMAIN);
 	storm_init(&ctx1, HASH_DOMAIN);
 	storm_init(&ctx2, HASH_DOMAIN);
 	storm_init(&ctx3, HASH_DOMAIN);
+	*/
 	for (u32 i = 0; i < 704; i += 32) {
 		storm_next_block(&ctx0, buf[0].coeffs + i);
 		storm_next_block(&ctx1, buf[1].coeffs + i);
 		storm_next_block(&ctx2, buf[2].coeffs + i);
 		storm_next_block(&ctx3, buf[3].coeffs + i);
 	}
+
+	/*
 	for (u32 i = 0; i < 704; i += 32) {
 		storm_next_block(&ctx0, buf[0].coeffs + i);
 		storm_next_block(&ctx1, buf[1].coeffs + i);
 		storm_next_block(&ctx2, buf[2].coeffs + i);
 		storm_next_block(&ctx3, buf[3].coeffs + i);
 	}
+	*/
 
 	/*
 		shake256x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
@@ -770,15 +786,7 @@ void poly_challenge(poly *restrict c, const uint8_t seed[CTILDEBYTES]) {
 	unsigned int i, b, pos;
 	uint64_t signs;
 	__attribute__((aligned(32))) uint8_t buf[STORM_RATE] = {0};
-	// keccak_state state;
 	StormContext ctx;
-
-	/*
-	shake256_init(&state);
-	shake256_absorb(&state, seed, CTILDEBYTES);
-	shake256_finalize(&state);
-	shake256_squeezeblocks(buf, 1, &state);
-	*/
 
 	storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(buf, seed, 32);
@@ -793,7 +801,6 @@ void poly_challenge(poly *restrict c, const uint8_t seed[CTILDEBYTES]) {
 	for (i = N - TAU; i < N; ++i) {
 		do {
 			if (pos >= STORM_RATE) {
-				// shake256_squeezeblocks(buf, 1, &state);
 				for (u32 i = 0; i < STORM_RATE; i += 32)
 					storm_next_block(&ctx, buf + i);
 

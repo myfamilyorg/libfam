@@ -5,6 +5,7 @@
 #include <dilithium_scalar/rounding.h>
 #include <libfam/sign_impl.h>
 #include <libfam/storm.h>
+#include <libfam/string.h>
 #include <stdint.h>
 
 #ifdef DBENCH
@@ -17,6 +18,13 @@ extern uint64_t *tred, *tadd, *tmul, *tround, *tsample, *tpack;
 #define DBENCH_START()
 #define DBENCH_STOP(t)
 #endif
+
+static void storm_init_nonce(StormContext *ctx, u16 nonce) {
+	__attribute__((aligned(32))) u8 key[32];
+	fastmemcpy(key, HASH_DOMAIN, 32);
+	for (u32 i = 0; i < 16; i++) ((u16 *)key)[i] ^= nonce;
+	storm_init(ctx, key);
+}
 
 /*************************************************
  * Name:        poly_reduce
@@ -468,13 +476,16 @@ void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES],
 	StormContext ctx;
 	__attribute__((aligned(32))) uint8_t buf[704] = {0};
 
-	storm_init(&ctx, HASH_DOMAIN);
+	storm_init_nonce(&ctx, nonce);
+	// storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(buf, seed, CRHBYTES);
 	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
 	for (u32 i = 0; i < sizeof(buf); i += 32)
 		storm_next_block(&ctx, buf + i);
+	/*
 	for (u32 i = 0; i < sizeof(buf); i += 32)
 		storm_next_block(&ctx, buf + i);
+		*/
 
 	/*
 	stream256_init(&state, seed, nonce);
