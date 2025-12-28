@@ -148,12 +148,27 @@ int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
 	storm_next_block(&ctx, mu + 32);
 
 	/* Compute rhoprime = CRH(key, rnd, mu) */
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((aligned(32))) u8 rho_prime_buffer[128];
+	fastmemcpy(rho_prime_buffer, key, 32);
+	fastmemcpy(rho_prime_buffer + 32, rnd, 32);
+	fastmemcpy(rho_prime_buffer + 64, mu, 64);
+	storm_next_block(&ctx, rho_prime_buffer);
+	storm_next_block(&ctx, rho_prime_buffer + 32);
+	storm_next_block(&ctx, rho_prime_buffer + 64);
+	storm_next_block(&ctx, rho_prime_buffer + 96);
+	fastmemset(rhoprime, 0, 64);
+	storm_next_block(&ctx, rhoprime);
+	storm_next_block(&ctx, rhoprime + 32);
+
+	/*
 	shake256_init(&state);
 	shake256_absorb(&state, key, SEEDBYTES);
 	shake256_absorb(&state, rnd, RNDBYTES);
 	shake256_absorb(&state, mu, CRHBYTES);
 	shake256_finalize(&state);
 	shake256_squeeze(rhoprime, CRHBYTES, &state);
+	*/
 
 	/* Expand matrix and transform vectors */
 	polyvec_matrix_expand(mat, rho);
