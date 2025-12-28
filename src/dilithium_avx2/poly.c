@@ -622,10 +622,16 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 		storm_next_block(&ctx3, (u8 *)buf[3].coeffs + i);
 	}
 
+	/*
 	ctr0 = rej_eta(a0->coeffs, N, buf[0].coeffs, 160);
 	ctr1 = rej_eta(a1->coeffs, N, buf[1].coeffs, 160);
 	ctr2 = rej_eta(a2->coeffs, N, buf[2].coeffs, 160);
 	ctr3 = rej_eta(a3->coeffs, N, buf[3].coeffs, 160);
+	*/
+	ctr0 = rej_eta_avx(a0->coeffs, buf[0].coeffs);
+	ctr1 = rej_eta_avx(a1->coeffs, buf[1].coeffs);
+	ctr2 = rej_eta_avx(a2->coeffs, buf[2].coeffs);
+	ctr3 = rej_eta_avx(a3->coeffs, buf[3].coeffs);
 
 	while (ctr0 < N || ctr1 < N || ctr2 < N || ctr3 < N) {
 		/*

@@ -185,8 +185,7 @@ unsigned int rej_uniform_avx(int32_t *restrict r, const uint8_t buf[864]) {
 }
 
 #if ETA == 2
-unsigned int rej_eta_avx(int32_t *restrict r,
-			 const uint8_t buf[REJ_UNIFORM_ETA_BUFLEN]) {
+unsigned int rej_eta_avx(int32_t *restrict r, const uint8_t buf[160]) {
 	unsigned int ctr, pos;
 	uint32_t good;
 	__m256i f0, f1, f2;
@@ -198,7 +197,7 @@ unsigned int rej_eta_avx(int32_t *restrict r,
 	const __m256i p = _mm256_set1_epi32(5);
 
 	ctr = pos = 0;
-	while (ctr <= N - 8 && pos <= REJ_UNIFORM_ETA_BUFLEN - 16) {
+	while (ctr <= N - 8 && pos <= 160 - 16) {
 		f0 =
 		    _mm256_cvtepu8_epi16(_mm_loadu_si128((__m128i *)&buf[pos]));
 		f1 = _mm256_slli_epi16(f0, 4);
@@ -261,7 +260,7 @@ unsigned int rej_eta_avx(int32_t *restrict r,
 	}
 
 	uint32_t t0, t1;
-	while (ctr < N && pos < REJ_UNIFORM_ETA_BUFLEN) {
+	while (ctr < N && pos < 160) {
 		t0 = buf[pos] & 0x0F;
 		t1 = buf[pos++] >> 4;
 
