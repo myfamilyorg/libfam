@@ -451,13 +451,24 @@ void poly_uniform_eta(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce) {
  **************************************************/
 #define POLY_UNIFORM_GAMMA1_NBLOCKS \
 	((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
+#include <libfam/format.h>
 void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES],
 			 uint16_t nonce) {
-	uint8_t buf[POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES];
-	stream256_state state;
+	StormContext ctx;
+	__attribute__((aligned(32))) uint8_t buf[704] = {0};
 
+	storm_init(&ctx, HASH_DOMAIN);
+	fastmemcpy(buf, seed, CRHBYTES);
+	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
+
+	/*
 	stream256_init(&state, seed, nonce);
 	stream256_squeezeblocks(buf, POLY_UNIFORM_GAMMA1_NBLOCKS, &state);
+	*/
 	polyz_unpack(a, buf);
 }
 
@@ -472,8 +483,6 @@ void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES],
  *              - const uint8_t mu[]: byte array containing seed of length
  *CTILDEBYTES
  **************************************************/
-#include <libfam/format.h>
-
 #define STORM_RATE 160
 void poly_challenge(poly *c, const uint8_t seed[CTILDEBYTES]) {
 	unsigned int i, b, pos;

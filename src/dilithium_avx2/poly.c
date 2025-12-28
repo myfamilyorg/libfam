@@ -599,27 +599,46 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
  **************************************************/
 #define POLY_UNIFORM_GAMMA1_NBLOCKS \
 	((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
+#include <libfam/format.h>
 void poly_uniform_gamma1_preinit(poly *a, stream256_state *state) {
 	/* polyz_unpack reads 14 additional bytes */
 	ALIGNED_UINT8(POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14)
 	buf;
 	stream256_squeezeblocks(buf.coeffs, POLY_UNIFORM_GAMMA1_NBLOCKS, state);
+	println("POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14={}",
+		POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14);
+
 	polyz_unpack(a, buf.coeffs);
 }
-
+#include <libfam/format.h>
 void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES],
 			 uint16_t nonce) {
-	stream256_state state;
+	StormContext ctx;
+	__attribute__((aligned(32))) uint8_t buf[704] = {0};
+	println("POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14={}",
+		POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14);
+
+	storm_init(&ctx, HASH_DOMAIN);
+	fastmemcpy(buf, seed, CRHBYTES);
+	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
+
+	/*
 	stream256_init(&state, seed, nonce);
-	poly_uniform_gamma1_preinit(a, &state);
+	stream256_squeezeblocks(buf, POLY_UNIFORM_GAMMA1_NBLOCKS, &state);
+	*/
+	polyz_unpack(a, buf);
 }
 
+#include <libfam/format.h>
 void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 			    const uint8_t seed[64], uint16_t nonce0,
 			    uint16_t nonce1, uint16_t nonce2, uint16_t nonce3) {
-	ALIGNED_UINT8(POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14)
-	buf[4];
-	keccakx4_state state;
+	StormContext ctx0, ctx1, ctx2, ctx3;
+	ALIGNED_UINT8(704)
+	buf[4] = {0};
+	// keccakx4_state state;
 	__m256i f;
 
 	f = _mm256_loadu_si256((__m256i *)&seed[0]);
@@ -642,11 +661,29 @@ void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	buf[3].coeffs[64] = nonce3;
 	buf[3].coeffs[65] = nonce3 >> 8;
 
-	shake256x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
-			       buf[2].coeffs, buf[3].coeffs, 66);
-	shake256x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs, buf[2].coeffs,
-				 buf[3].coeffs, POLY_UNIFORM_GAMMA1_NBLOCKS,
-				 &state);
+	storm_init(&ctx0, HASH_DOMAIN);
+	storm_init(&ctx1, HASH_DOMAIN);
+	storm_init(&ctx2, HASH_DOMAIN);
+	storm_init(&ctx3, HASH_DOMAIN);
+	for (u32 i = 0; i < 704; i += 32) {
+		storm_next_block(&ctx0, buf[0].coeffs + i);
+		storm_next_block(&ctx1, buf[1].coeffs + i);
+		storm_next_block(&ctx2, buf[2].coeffs + i);
+		storm_next_block(&ctx3, buf[3].coeffs + i);
+	}
+	for (u32 i = 0; i < 704; i += 32) {
+		storm_next_block(&ctx0, buf[0].coeffs + i);
+		storm_next_block(&ctx1, buf[1].coeffs + i);
+		storm_next_block(&ctx2, buf[2].coeffs + i);
+		storm_next_block(&ctx3, buf[3].coeffs + i);
+	}
+
+	/*
+		shake256x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
+				       buf[2].coeffs, buf[3].coeffs, 66);
+		shake256x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs,
+	   buf[2].coeffs, buf[3].coeffs, POLY_UNIFORM_GAMMA1_NBLOCKS, &state);
+					 */
 
 	polyz_unpack(a0, buf[0].coeffs);
 	polyz_unpack(a1, buf[1].coeffs);
