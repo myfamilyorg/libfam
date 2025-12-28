@@ -46,7 +46,7 @@ Test(compress1) {
 }
 
 Test(compress2) {
-	const u8 *path = "./resources/test_min.txt";
+	const u8 *path = "./resources/test_wikipedia.txt";
 	i32 fd = file(path);
 	u64 file_size = min(fsize(fd), 128 * 1024);
 	u8 *in = fmap(fd, file_size, 0);
