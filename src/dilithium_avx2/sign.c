@@ -303,19 +303,6 @@ int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	return 0;
 }
 
-int crypto_sign(u8 *sm, u64 *smlen, const u8 *m, u64 mlen, const u8 *ctx,
-		u64 ctxlen, const u8 *sk, Rng *rng) {
-	u64 i;
-	int ret;
-
-	for (i = 0; i < mlen; ++i)
-		sm[CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
-	ret = crypto_sign_signature(sm, smlen, sm + CRYPTO_BYTES, mlen, ctx,
-				    ctxlen, sk, rng);
-	*smlen += mlen;
-	return ret;
-}
-
 int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 				u64 mlen, const u8 *pre, u64 prelen,
 				const u8 *pk) {
@@ -429,30 +416,6 @@ int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
 	memcpy(&pre[2], ctx, ctxlen);
 	return crypto_sign_verify_internal(sig, siglen, m, mlen, pre,
 					   2 + ctxlen, pk);
-}
-
-int crypto_sign_open(u8 *m, u64 *mlen, const u8 *sm, u64 smlen, const u8 *ctx,
-		     u64 ctxlen, const u8 *pk) {
-	u64 i;
-
-	if (smlen < CRYPTO_BYTES) goto badsig;
-
-	*mlen = smlen - CRYPTO_BYTES;
-	if (crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, *mlen, ctx,
-			       ctxlen, pk))
-		goto badsig;
-	else {
-		/* All good, copy msg, return 0 */
-		for (i = 0; i < *mlen; ++i) m[i] = sm[CRYPTO_BYTES + i];
-		return 0;
-	}
-
-badsig:
-	/* Signature verification failed */
-	*mlen = 0;
-	for (i = 0; i < smlen; ++i) m[i] = 0;
-
-	return -1;
 }
 
 #endif /* USE_AVX2 */
