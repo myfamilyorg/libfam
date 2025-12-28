@@ -23,6 +23,14 @@
  *
  *******************************************************************************/
 
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifndef USE_AVX2
+
 #include <dilithium_scalar/ntt.h>
 #include <dilithium_scalar/params.h>
 #include <dilithium_scalar/poly.h>
@@ -820,3 +828,5 @@ void polyw1_pack(u8 *r, const poly *a) {
 		r[3 * i + 2] |= a->coeffs[4 * i + 3] << 2;
 	}
 }
+
+#endif /* !USE_AVX2 */

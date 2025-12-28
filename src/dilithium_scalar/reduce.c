@@ -23,6 +23,14 @@
  *
  *******************************************************************************/
 
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifndef USE_AVX2
+
 #include <dilithium_scalar/params.h>
 #include <dilithium_scalar/reduce.h>
 
@@ -91,3 +99,5 @@ i32 freeze(i32 a) {
 	a = caddq(a);
 	return a;
 }
+
+#endif /* !USE_AVX2 */

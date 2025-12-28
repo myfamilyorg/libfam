@@ -23,6 +23,14 @@
  *
  *******************************************************************************/
 
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifndef USE_AVX2
+
 #include <dilithium_scalar/ntt.h>
 #include <dilithium_scalar/params.h>
 #include <dilithium_scalar/reduce.h>
@@ -126,3 +134,5 @@ void invntt_tomont(i32 a[N]) {
 		a[j] = montgomery_reduce((i64)f * a[j]);
 	}
 }
+
+#endif /* !USE_AVX2 */

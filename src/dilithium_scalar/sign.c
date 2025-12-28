@@ -23,6 +23,14 @@
  *
  *******************************************************************************/
 
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifndef USE_AVX2
+
 #include <dilithium_scalar/packing.h>
 #include <dilithium_scalar/params.h>
 #include <dilithium_scalar/poly.h>
@@ -511,3 +519,5 @@ badsig:
 
 	return -1;
 }
+
+#endif /* !USE_AVX2 */

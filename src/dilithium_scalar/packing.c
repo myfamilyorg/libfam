@@ -23,6 +23,14 @@
  *
  *******************************************************************************/
 
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifndef USE_AVX2
+
 #include <dilithium_scalar/packing.h>
 #include <dilithium_scalar/params.h>
 #include <dilithium_scalar/poly.h>
@@ -82,8 +90,8 @@ void unpack_pk(u8 rho[SEEDBYTES], polyveck *t1,
  *              - const polyveck *s2: pointer to vector s2
  **************************************************/
 void pack_sk(u8 sk[CRYPTO_SECRETKEYBYTES], const u8 rho[SEEDBYTES],
-	     const u8 tr[TRBYTES], const u8 key[SEEDBYTES],
-	     const polyveck *t0, const polyvecl *s1, const polyveck *s2) {
+	     const u8 tr[TRBYTES], const u8 key[SEEDBYTES], const polyveck *t0,
+	     const polyvecl *s1, const polyveck *s2) {
 	unsigned int i;
 
 	for (i = 0; i < SEEDBYTES; ++i) sk[i] = rho[i];
@@ -120,8 +128,8 @@ void pack_sk(u8 sk[CRYPTO_SECRETKEYBYTES], const u8 rho[SEEDBYTES],
  *              - const polyveck *s2: pointer to output vector s2
  *              - u8 sk[]: byte array containing bit-packed sk
  **************************************************/
-void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES],
-	       u8 key[SEEDBYTES], polyveck *t0, polyvecl *s1, polyveck *s2,
+void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES], u8 key[SEEDBYTES],
+	       polyveck *t0, polyvecl *s1, polyveck *s2,
 	       const u8 sk[CRYPTO_SECRETKEYBYTES]) {
 	unsigned int i;
 
@@ -156,8 +164,8 @@ void unpack_sk(u8 rho[SEEDBYTES], u8 tr[TRBYTES],
  *              - const polyvecl *z: pointer to vector z
  *              - const polyveck *h: pointer to hint vector h
  **************************************************/
-void pack_sig(u8 sig[CRYPTO_BYTES], const u8 c[CTILDEBYTES],
-	      const polyvecl *z, const polyveck *h) {
+void pack_sig(u8 sig[CRYPTO_BYTES], const u8 c[CTILDEBYTES], const polyvecl *z,
+	      const polyveck *h) {
 	unsigned int i, j, k;
 
 	for (i = 0; i < CTILDEBYTES; ++i) sig[i] = c[i];
@@ -225,3 +233,5 @@ int unpack_sig(u8 c[CTILDEBYTES], polyvecl *z, polyveck *h,
 
 	return 0;
 }
+
+#endif /* !USE_AVX2 */

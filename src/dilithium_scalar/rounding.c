@@ -23,6 +23,14 @@
  *
  *******************************************************************************/
 
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifndef USE_AVX2
+
 #include <dilithium_scalar/params.h>
 #include <dilithium_scalar/rounding.h>
 
@@ -109,3 +117,5 @@ i32 use_hint(i32 a, unsigned int hint) {
 	else
 		return (a1 == 0) ? 43 : a1 - 1;
 }
+
+#endif /* !USE_AVX2 */

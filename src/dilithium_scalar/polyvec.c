@@ -23,6 +23,14 @@
  *
  *******************************************************************************/
 
+#ifndef NO_VECTOR
+#ifdef __AVX2__
+#define USE_AVX2
+#endif /* __AVX2__ */
+#endif /* NO_VECTOR */
+
+#ifndef USE_AVX2
+
 #include <dilithium_scalar/params.h>
 #include <dilithium_scalar/poly.h>
 #include <dilithium_scalar/polyvec.h>
@@ -394,3 +402,5 @@ void polyveck_pack_w1(u8 r[K * POLYW1_PACKEDBYTES], const polyveck *w1) {
 	for (i = 0; i < K; ++i)
 		polyw1_pack(&r[i * POLYW1_PACKEDBYTES], &w1->vec[i]);
 }
+
+#endif /* !USE_AVX2 */
