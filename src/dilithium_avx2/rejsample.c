@@ -164,7 +164,7 @@ const u8 idxlut[256][8] = {{0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},
 			   {2, 3, 4, 5, 6, 7, 0, 0}, {0, 2, 3, 4, 5, 6, 7, 0},
 			   {1, 2, 3, 4, 5, 6, 7, 0}, {0, 1, 2, 3, 4, 5, 6, 7}};
 
-unsigned int rej_uniform_avx(i32 *restrict r, const u8 buf[864]) {
+unsigned int rej_uniform_avx(i32 *restrict r, const u8 buf[512]) {
 	unsigned int ctr, pos;
 	u32 good;
 	__m256i d, tmp;
@@ -175,7 +175,7 @@ unsigned int rej_uniform_avx(i32 *restrict r, const u8 buf[864]) {
 	    10, 9, -1, 8, 7, 6, -1, 5, 4, 3, -1, 2, 1, 0);
 
 	ctr = pos = 0;
-	while (pos <= 864 - 24) {
+	while (pos <= 512 - 24) {
 		d = _mm256_loadu_si256((__m256i *)&buf[pos]);
 		d = _mm256_permute4x64_epi64(d, 0x94);
 		d = _mm256_shuffle_epi8(d, idx8);
@@ -195,7 +195,7 @@ unsigned int rej_uniform_avx(i32 *restrict r, const u8 buf[864]) {
 	}
 
 	u32 t;
-	while (ctr < N && pos <= 864 - 3) {
+	while (ctr < N && pos <= 512 - 3) {
 		t = buf[pos++];
 		t |= (u32)buf[pos++] << 8;
 		t |= (u32)buf[pos++] << 16;
@@ -207,7 +207,7 @@ unsigned int rej_uniform_avx(i32 *restrict r, const u8 buf[864]) {
 	return ctr;
 }
 
-unsigned int rej_eta_avx(i32 *restrict r, const u8 buf[160]) {
+unsigned int rej_eta_avx(i32 *restrict r, const u8 buf[128]) {
 	unsigned int ctr, pos;
 	u32 good;
 	__m256i f0, f1, f2;
@@ -219,7 +219,7 @@ unsigned int rej_eta_avx(i32 *restrict r, const u8 buf[160]) {
 	const __m256i p = _mm256_set1_epi32(5);
 
 	ctr = pos = 0;
-	while (ctr <= N - 8 && pos <= 160 - 16) {
+	while (ctr <= N - 8 && pos <= 128 - 16) {
 		f0 =
 		    _mm256_cvtepu8_epi16(_mm_loadu_si128((__m128i *)&buf[pos]));
 		f1 = _mm256_slli_epi16(f0, 4);
@@ -279,21 +279,6 @@ unsigned int rej_eta_avx(i32 *restrict r, const u8 buf[160]) {
 		_mm256_storeu_si256((__m256i *)&r[ctr], f1);
 		ctr += _mm_popcnt_u32(good);
 		pos += 4;
-	}
-
-	u32 t0, t1;
-	while (ctr < N && pos < 160) {
-		t0 = buf[pos] & 0x0F;
-		t1 = buf[pos++] >> 4;
-
-		if (t0 < 15) {
-			t0 = t0 - (205 * t0 >> 10) * 5;
-			r[ctr++] = 2 - t0;
-		}
-		if (t1 < 15 && ctr < N) {
-			t1 = t1 - (205 * t1 >> 10) * 5;
-			r[ctr++] = 2 - t1;
-		}
 	}
 
 	return ctr;

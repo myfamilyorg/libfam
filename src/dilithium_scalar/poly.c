@@ -323,7 +323,7 @@ static unsigned int rej_uniform(i32 *a, unsigned int len, const u8 *buf,
 void poly_uniform(poly *a, const u8 seed[SEEDBYTES], u16 nonce) {
 	StormContext ctx;
 	unsigned int i, ctr;
-	__attribute__((aligned(32))) u8 buf[864] = {0};
+	__attribute__((aligned(32))) u8 buf[512] = {0};
 
 	/*
 	stream128_state state;
@@ -337,7 +337,7 @@ void poly_uniform(poly *a, const u8 seed[SEEDBYTES], u16 nonce) {
 	fastmemcpy(buf + SEEDBYTES, &nonce, sizeof(nonce));
 	for (i = 0; i < sizeof(buf); i += 32) storm_next_block(&ctx, buf + i);
 
-	ctr = rej_uniform(a->coeffs, N, buf, 864);
+	ctr = rej_uniform(a->coeffs, N, buf, 512);
 
 	while (ctr < N) {
 		/*
@@ -405,7 +405,7 @@ static unsigned int rej_eta(i32 *a, unsigned int len, const u8 *buf,
 void poly_uniform_eta(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
 	StormContext ctx;
 	unsigned int ctr;
-	__attribute__((aligned(32))) u8 buf[160] = {0};
+	__attribute__((aligned(32))) u8 buf[128] = {0};
 
 	storm_init_nonce(&ctx, nonce);
 	// storm_init(&ctx, HASH_DOMAIN);
@@ -414,7 +414,7 @@ void poly_uniform_eta(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
 	for (u32 i = 0; i < sizeof(buf); i += 32)
 		storm_next_block(&ctx, buf + i);
 
-	ctr = rej_eta(a->coeffs, N, buf, 160);
+	ctr = rej_eta(a->coeffs, N, buf, 128);
 
 	while (ctr < N) {
 		storm_next_block(&ctx, buf);
@@ -469,7 +469,7 @@ void poly_uniform_gamma1(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
  *              - const u8 mu[]: byte array containing seed of length
  *CTILDEBYTES
  **************************************************/
-#define STORM_RATE 160
+#define STORM_RATE 32
 void poly_challenge(poly *c, const u8 seed[CTILDEBYTES]) {
 	unsigned int i, b, pos;
 	u64 signs;

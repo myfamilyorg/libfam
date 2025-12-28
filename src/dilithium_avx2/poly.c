@@ -192,7 +192,7 @@ void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3, const u8 seed[32],
 		     u16 nonce0, u16 nonce1, u16 nonce2, u16 nonce3) {
 	StormContext ctx0, ctx1, ctx2, ctx3;
 	unsigned int ctr0, ctr1, ctr2, ctr3;
-	ALIGNED_UINT8(864) buf[4] = {0};
+	ALIGNED_UINT8(512) buf[4] = {0};
 	__m256i f;
 
 	f = _mm256_loadu_si256((__m256i *)seed);
@@ -215,7 +215,7 @@ void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3, const u8 seed[32],
 	storm_init_nonce(&ctx2, nonce2);
 	storm_init_nonce(&ctx3, nonce3);
 
-	for (u32 i = 0; i < 864; i += 32) {
+	for (u32 i = 0; i < 512; i += 32) {
 		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
 		storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i);
 		storm_next_block(&ctx2, (u8 *)buf[2].coeffs + i);
@@ -267,31 +267,12 @@ static unsigned int rej_eta(i32 *a, unsigned int len, const u8 *buf,
 	return ctr;
 }
 
-void poly_uniform_eta(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
-	StormContext ctx;
-	unsigned int ctr;
-	__attribute__((aligned(32))) u8 buf[160] = {0};
-
-	storm_init_nonce(&ctx, nonce);
-	fastmemcpy(buf, seed, CRHBYTES);
-	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
-	for (u32 i = 0; i < sizeof(buf); i += 32)
-		storm_next_block(&ctx, buf + i);
-
-	ctr = rej_eta(a->coeffs, N, buf, 160);
-
-	while (ctr < N) {
-		storm_next_block(&ctx, buf);
-		ctr += rej_eta(a->coeffs + ctr, N - ctr, buf, 32);
-	}
-}
-
 void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 			 const u8 seed[64], u16 nonce0, u16 nonce1, u16 nonce2,
 			 u16 nonce3) {
 	StormContext ctx0, ctx1, ctx2, ctx3;
 	unsigned int ctr0, ctr1, ctr2, ctr3;
-	ALIGNED_UINT8(160) buf[4] = {0};
+	ALIGNED_UINT8(128) buf[4] = {0};
 
 	__m256i f;
 
@@ -320,7 +301,7 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	storm_init_nonce(&ctx2, nonce2);
 	storm_init_nonce(&ctx3, nonce3);
 
-	for (u32 i = 0; i < 160; i += 32) {
+	for (u32 i = 0; i < 128; i += 32) {
 		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
 		storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i);
 		storm_next_block(&ctx2, (u8 *)buf[2].coeffs + i);
@@ -390,7 +371,7 @@ void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	polyz_unpack(a3, buf[3].coeffs);
 }
 
-#define STORM_RATE 160
+#define STORM_RATE 32
 void poly_challenge(poly *restrict c, const u8 seed[CTILDEBYTES]) {
 	unsigned int i, b, pos;
 	u64 signs;
