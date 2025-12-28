@@ -182,7 +182,6 @@ unsigned int rej_uniform_avx(i32 *restrict r, const u8 buf[864]) {
 	return ctr;
 }
 
-#if ETA == 2
 unsigned int rej_eta_avx(i32 *restrict r, const u8 buf[160]) {
 	unsigned int ctr, pos;
 	u32 good;
@@ -274,80 +273,5 @@ unsigned int rej_eta_avx(i32 *restrict r, const u8 buf[160]) {
 
 	return ctr;
 }
-
-#elif ETA == 4
-unsigned int rej_eta_avx(i32 *restrict r,
-			 const u8 buf[REJ_UNIFORM_ETA_BUFLEN]) {
-	unsigned int ctr, pos;
-	u32 good;
-	__m256i f0, f1;
-	__m128i g0, g1;
-	const __m256i mask = _mm256_set1_epi8(15);
-	const __m256i eta = _mm256_set1_epi8(4);
-	const __m256i bound = _mm256_set1_epi8(9);
-
-	ctr = pos = 0;
-	while (ctr <= N - 8 && pos <= REJ_UNIFORM_ETA_BUFLEN - 16) {
-		f0 =
-		    _mm256_cvtepu8_epi16(_mm_loadu_si128((__m128i *)&buf[pos]));
-		f1 = _mm256_slli_epi16(f0, 4);
-		f0 = _mm256_or_si256(f0, f1);
-		f0 = _mm256_and_si256(f0, mask);
-
-		f1 = _mm256_sub_epi8(f0, bound);
-		f0 = _mm256_sub_epi8(eta, f0);
-		good = _mm256_movemask_epi8(f1);
-
-		g0 = _mm256_castsi256_si128(f0);
-		g1 = _mm_loadl_epi64((__m128i *)&idxlut[good & 0xFF]);
-		g1 = _mm_shuffle_epi8(g0, g1);
-		f1 = _mm256_cvtepi8_epi32(g1);
-		_mm256_storeu_si256((__m256i *)&r[ctr], f1);
-		ctr += _mm_popcnt_u32(good & 0xFF);
-		good >>= 8;
-		pos += 4;
-
-		if (ctr > N - 8) break;
-		g0 = _mm_bsrli_si128(g0, 8);
-		g1 = _mm_loadl_epi64((__m128i *)&idxlut[good & 0xFF]);
-		g1 = _mm_shuffle_epi8(g0, g1);
-		f1 = _mm256_cvtepi8_epi32(g1);
-		_mm256_storeu_si256((__m256i *)&r[ctr], f1);
-		ctr += _mm_popcnt_u32(good & 0xFF);
-		good >>= 8;
-		pos += 4;
-
-		if (ctr > N - 8) break;
-		g0 = _mm256_extracti128_si256(f0, 1);
-		g1 = _mm_loadl_epi64((__m128i *)&idxlut[good & 0xFF]);
-		g1 = _mm_shuffle_epi8(g0, g1);
-		f1 = _mm256_cvtepi8_epi32(g1);
-		_mm256_storeu_si256((__m256i *)&r[ctr], f1);
-		ctr += _mm_popcnt_u32(good & 0xFF);
-		good >>= 8;
-		pos += 4;
-
-		if (ctr > N - 8) break;
-		g0 = _mm_bsrli_si128(g0, 8);
-		g1 = _mm_loadl_epi64((__m128i *)&idxlut[good]);
-		g1 = _mm_shuffle_epi8(g0, g1);
-		f1 = _mm256_cvtepi8_epi32(g1);
-		_mm256_storeu_si256((__m256i *)&r[ctr], f1);
-		ctr += _mm_popcnt_u32(good);
-		pos += 4;
-	}
-
-	u32 t0, t1;
-	while (ctr < N && pos < REJ_UNIFORM_ETA_BUFLEN) {
-		t0 = buf[pos] & 0x0F;
-		t1 = buf[pos++] >> 4;
-
-		if (t0 < 9) r[ctr++] = 4 - t0;
-		if (t1 < 9 && ctr < N) r[ctr++] = 4 - t1;
-	}
-
-	return ctr;
-}
-#endif
 
 #endif /* USE_AVX2 */

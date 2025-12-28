@@ -443,7 +443,6 @@ static unsigned int rej_eta(i32 *a, unsigned int len, const u8 *buf,
 		t0 = buf[pos] & 0x0F;
 		t1 = buf[pos++] >> 4;
 
-#if ETA == 2
 		if (t0 < 15) {
 			t0 = t0 - (205 * t0 >> 10) * 5;
 			a[ctr++] = 2 - t0;
@@ -452,10 +451,6 @@ static unsigned int rej_eta(i32 *a, unsigned int len, const u8 *buf,
 			t1 = t1 - (205 * t1 >> 10) * 5;
 			a[ctr++] = 2 - t1;
 		}
-#elif ETA == 4
-		if (t0 < 9) a[ctr++] = 4 - t0;
-		if (t1 < 9 && ctr < len) a[ctr++] = 4 - t1;
-#endif
 	}
 
 	return ctr;
@@ -773,7 +768,6 @@ void polyeta_pack(u8 r[POLYETA_PACKEDBYTES], const poly *restrict a) {
 	unsigned int i;
 	u8 t[8];
 
-#if ETA == 2
 	for (i = 0; i < N / 8; ++i) {
 		t[0] = ETA - a->coeffs[8 * i + 0];
 		t[1] = ETA - a->coeffs[8 * i + 1];
@@ -789,13 +783,6 @@ void polyeta_pack(u8 r[POLYETA_PACKEDBYTES], const poly *restrict a) {
 		    (t[2] >> 2) | (t[3] << 1) | (t[4] << 4) | (t[5] << 7);
 		r[3 * i + 2] = (t[5] >> 1) | (t[6] << 2) | (t[7] << 5);
 	}
-#elif ETA == 4
-	for (i = 0; i < N / 2; ++i) {
-		t[0] = ETA - a->coeffs[2 * i + 0];
-		t[1] = ETA - a->coeffs[2 * i + 1];
-		r[i] = t[0] | (t[1] << 4);
-	}
-#endif
 }
 
 /*************************************************
@@ -809,7 +796,6 @@ void polyeta_pack(u8 r[POLYETA_PACKEDBYTES], const poly *restrict a) {
 void polyeta_unpack(poly *restrict r, const u8 a[POLYETA_PACKEDBYTES]) {
 	unsigned int i;
 
-#if ETA == 2
 	for (i = 0; i < N / 8; ++i) {
 		r->coeffs[8 * i + 0] = (a[3 * i + 0] >> 0) & 7;
 		r->coeffs[8 * i + 1] = (a[3 * i + 0] >> 3) & 7;
@@ -831,14 +817,6 @@ void polyeta_unpack(poly *restrict r, const u8 a[POLYETA_PACKEDBYTES]) {
 		r->coeffs[8 * i + 6] = ETA - r->coeffs[8 * i + 6];
 		r->coeffs[8 * i + 7] = ETA - r->coeffs[8 * i + 7];
 	}
-#elif ETA == 4
-	for (i = 0; i < N / 2; ++i) {
-		r->coeffs[2 * i + 0] = a[i] & 0x0F;
-		r->coeffs[2 * i + 1] = a[i] >> 4;
-		r->coeffs[2 * i + 0] = ETA - r->coeffs[2 * i + 0];
-		r->coeffs[2 * i + 1] = ETA - r->coeffs[2 * i + 1];
-	}
-#endif
 }
 
 /*************************************************
@@ -1010,7 +988,6 @@ void polyz_pack(u8 r[POLYZ_PACKEDBYTES], const poly *restrict a) {
 	unsigned int i;
 	u32 t[4];
 
-#if GAMMA1 == (1 << 17)
 	for (i = 0; i < N / 4; ++i) {
 		t[0] = GAMMA1 - a->coeffs[4 * i + 0];
 		t[1] = GAMMA1 - a->coeffs[4 * i + 1];
@@ -1030,19 +1007,6 @@ void polyz_pack(u8 r[POLYZ_PACKEDBYTES], const poly *restrict a) {
 		r[9 * i + 7] = t[3] >> 2;
 		r[9 * i + 8] = t[3] >> 10;
 	}
-#elif GAMMA1 == (1 << 19)
-	for (i = 0; i < N / 2; ++i) {
-		t[0] = GAMMA1 - a->coeffs[2 * i + 0];
-		t[1] = GAMMA1 - a->coeffs[2 * i + 1];
-
-		r[5 * i + 0] = t[0];
-		r[5 * i + 1] = t[0] >> 8;
-		r[5 * i + 2] = t[0] >> 16;
-		r[5 * i + 2] |= t[1] << 4;
-		r[5 * i + 3] = t[1] >> 4;
-		r[5 * i + 4] = t[1] >> 12;
-	}
-#endif
 }
 
 /*************************************************
@@ -1054,7 +1018,6 @@ void polyz_pack(u8 r[POLYZ_PACKEDBYTES], const poly *restrict a) {
  * Arguments:   - poly *r: pointer to output polynomial
  *              - const u8 *a: byte array with bit-packed polynomial
  **************************************************/
-#if GAMMA1 == (1 << 17)
 void polyz_unpack(poly *restrict r, const u8 *a) {
 	unsigned int i;
 	__m256i f;
@@ -1076,29 +1039,6 @@ void polyz_unpack(poly *restrict r, const u8 *a) {
 	}
 }
 
-#elif GAMMA1 == (1 << 19)
-void polyz_unpack(poly *restrict r, const u8 *a) {
-	unsigned int i;
-	__m256i f;
-	const __m256i shufbidx = _mm256_set_epi8(
-	    -1, 11, 10, 9, -1, 9, 8, 7, -1, 6, 5, 4, -1, 4, 3, 2, -1, 9, 8, 7,
-	    -1, 7, 6, 5, -1, 4, 3, 2, -1, 2, 1, 0);
-	const __m256i srlvdidx = _mm256_set1_epi64x((u64)4 << 32);
-	const __m256i mask = _mm256_set1_epi32(0xFFFFF);
-	const __m256i gamma1 = _mm256_set1_epi32(GAMMA1);
-
-	for (i = 0; i < N / 8; i++) {
-		f = _mm256_loadu_si256((__m256i *)&a[20 * i]);
-		f = _mm256_permute4x64_epi64(f, 0x94);
-		f = _mm256_shuffle_epi8(f, shufbidx);
-		f = _mm256_srlv_epi32(f, srlvdidx);
-		f = _mm256_and_si256(f, mask);
-		f = _mm256_sub_epi32(gamma1, f);
-		_mm256_store_si256(&r->vec[i], f);
-	}
-}
-#endif
-
 /*************************************************
  * Name:        polyw1_pack
  *
@@ -1110,7 +1050,6 @@ void polyz_unpack(poly *restrict r, const u8 *a) {
  *                            POLYW1_PACKEDBYTES bytes
  *              - const poly *a: pointer to input polynomial
  **************************************************/
-#if GAMMA2 == (Q - 1) / 88
 void polyw1_pack(u8 *r, const poly *restrict a) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;
@@ -1138,39 +1077,5 @@ void polyw1_pack(u8 *r, const poly *restrict a) {
 		_mm256_storeu_si256((__m256i *)&r[24 * i], f0);
 	}
 }
-
-#elif GAMMA2 == (Q - 1) / 32
-void polyw1_pack(u8 *r, const poly *restrict a) {
-	unsigned int i;
-	__m256i f0, f1, f2, f3, f4, f5, f6, f7;
-	const __m256i shift = _mm256_set1_epi16((16 << 8) + 1);
-	const __m256i shufbidx = _mm256_set_epi8(
-	    15, 14, 7, 6, 13, 12, 5, 4, 11, 10, 3, 2, 9, 8, 1, 0, 15, 14, 7, 6,
-	    13, 12, 5, 4, 11, 10, 3, 2, 9, 8, 1, 0);
-
-	for (i = 0; i < N / 64; ++i) {
-		f0 = _mm256_load_si256(&a->vec[8 * i + 0]);
-		f1 = _mm256_load_si256(&a->vec[8 * i + 1]);
-		f2 = _mm256_load_si256(&a->vec[8 * i + 2]);
-		f3 = _mm256_load_si256(&a->vec[8 * i + 3]);
-		f4 = _mm256_load_si256(&a->vec[8 * i + 4]);
-		f5 = _mm256_load_si256(&a->vec[8 * i + 5]);
-		f6 = _mm256_load_si256(&a->vec[8 * i + 6]);
-		f7 = _mm256_load_si256(&a->vec[8 * i + 7]);
-		f0 = _mm256_packus_epi32(f0, f1);
-		f1 = _mm256_packus_epi32(f2, f3);
-		f2 = _mm256_packus_epi32(f4, f5);
-		f3 = _mm256_packus_epi32(f6, f7);
-		f0 = _mm256_packus_epi16(f0, f1);
-		f1 = _mm256_packus_epi16(f2, f3);
-		f0 = _mm256_maddubs_epi16(f0, shift);
-		f1 = _mm256_maddubs_epi16(f1, shift);
-		f0 = _mm256_packus_epi16(f0, f1);
-		f0 = _mm256_permute4x64_epi64(f0, 0xD8);
-		f0 = _mm256_shuffle_epi8(f0, shufbidx);
-		_mm256_storeu_si256((__m256i *)&r[32 * i], f0);
-	}
-}
-#endif
 
 #endif /* USE_AVX2 */

@@ -37,26 +37,6 @@ static inline void polyvec_matrix_expand_row(polyvecl **row, polyvecl buf[2],
 			polyvec_matrix_expand_row3(buf + 1, buf, rho);
 			*row = buf + 1;
 			break;
-#if K > 4
-		case 4:
-			polyvec_matrix_expand_row4(buf, buf + 1, rho);
-			*row = buf;
-			break;
-		case 5:
-			polyvec_matrix_expand_row5(buf + 1, buf, rho);
-			*row = buf + 1;
-			break;
-#endif
-#if K > 6
-		case 6:
-			polyvec_matrix_expand_row6(buf, buf + 1, rho);
-			*row = buf;
-			break;
-		case 7:
-			polyvec_matrix_expand_row7(buf + 1, buf, rho);
-			*row = buf + 1;
-			break;
-#endif
 	}
 }
 
@@ -105,30 +85,10 @@ int crypto_sign_keypair(u8 *pk, u8 *sk, const u8 seed[32]) {
 	memcpy(sk + SEEDBYTES, key, SEEDBYTES);
 
 	/* Sample short vectors s1 and s2 */
-#if K == 4 && L == 4
 	poly_uniform_eta_4x(&s1.vec[0], &s1.vec[1], &s1.vec[2], &s1.vec[3],
 			    rhoprime, 0, 1, 2, 3);
 	poly_uniform_eta_4x(&s2.vec[0], &s2.vec[1], &s2.vec[2], &s2.vec[3],
 			    rhoprime, 4, 5, 6, 7);
-#elif K == 6 && L == 5
-	poly_uniform_eta_4x(&s1.vec[0], &s1.vec[1], &s1.vec[2], &s1.vec[3],
-			    rhoprime, 0, 1, 2, 3);
-	poly_uniform_eta_4x(&s1.vec[4], &s2.vec[0], &s2.vec[1], &s2.vec[2],
-			    rhoprime, 4, 5, 6, 7);
-	poly_uniform_eta_4x(&s2.vec[3], &s2.vec[4], &s2.vec[5], &t0, rhoprime,
-			    8, 9, 10, 11);
-#elif K == 8 && L == 7
-	poly_uniform_eta_4x(&s1.vec[0], &s1.vec[1], &s1.vec[2], &s1.vec[3],
-			    rhoprime, 0, 1, 2, 3);
-	poly_uniform_eta_4x(&s1.vec[4], &s1.vec[5], &s1.vec[6], &s2.vec[0],
-			    rhoprime, 4, 5, 6, 7);
-	poly_uniform_eta_4x(&s2.vec[1], &s2.vec[2], &s2.vec[3], &s2.vec[4],
-			    rhoprime, 8, 9, 10, 11);
-	poly_uniform_eta_4x(&s2.vec[5], &s2.vec[6], &s2.vec[7], &t0, rhoprime,
-			    12, 13, 14, 15);
-#else
-#error
-#endif
 
 	/* Pack secret vectors */
 	for (i = 0; i < L; i++)
@@ -277,27 +237,10 @@ int crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 
 rej:
 	/* Sample intermediate vector y */
-#if L == 4
 	poly_uniform_gamma1_4x(&z.vec[0], &z.vec[1], &z.vec[2], &z.vec[3],
 			       rhoprime, nonce, nonce + 1, nonce + 2,
 			       nonce + 3);
 	nonce += 4;
-#elif L == 5
-	poly_uniform_gamma1_4x(&z.vec[0], &z.vec[1], &z.vec[2], &z.vec[3],
-			       rhoprime, nonce, nonce + 1, nonce + 2,
-			       nonce + 3);
-	poly_uniform_gamma1(&z.vec[4], rhoprime, nonce + 4);
-	nonce += 5;
-#elif L == 7
-	poly_uniform_gamma1_4x(&z.vec[0], &z.vec[1], &z.vec[2], &z.vec[3],
-			       rhoprime, nonce, nonce + 1, nonce + 2,
-			       nonce + 3);
-	poly_uniform_gamma1_4x(&z.vec[4], &z.vec[5], &z.vec[6], &tmp, rhoprime,
-			       nonce + 4, nonce + 5, nonce + 6, 0);
-	nonce += 7;
-#else
-#error
-#endif
 
 	/* Matrix-vector product */
 	tmpv.y = z;

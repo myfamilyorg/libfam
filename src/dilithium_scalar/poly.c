@@ -343,7 +343,6 @@ static unsigned int rej_eta(i32 *a, unsigned int len, const u8 *buf,
 		t0 = buf[pos] & 0x0F;
 		t1 = buf[pos++] >> 4;
 
-#if ETA == 2
 		if (t0 < 15) {
 			t0 = t0 - (205 * t0 >> 10) * 5;
 			a[ctr++] = 2 - t0;
@@ -352,10 +351,6 @@ static unsigned int rej_eta(i32 *a, unsigned int len, const u8 *buf,
 			t1 = t1 - (205 * t1 >> 10) * 5;
 			a[ctr++] = 2 - t1;
 		}
-#elif ETA == 4
-		if (t0 < 9) a[ctr++] = 4 - t0;
-		if (t1 < 9 && ctr < len) a[ctr++] = 4 - t1;
-#endif
 	}
 
 	return ctr;
@@ -372,13 +367,8 @@ static unsigned int rej_eta(i32 *a, unsigned int len, const u8 *buf,
  *              - const u8 seed[]: byte array with seed of length CRHBYTES
  *              - u16 nonce: 2-byte nonce
  **************************************************/
-#if ETA == 2
 #define POLY_UNIFORM_ETA_NBLOCKS \
 	((136 + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
-#elif ETA == 4
-#define POLY_UNIFORM_ETA_NBLOCKS \
-	((227 + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
-#endif
 void poly_uniform_eta(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
 	StormContext ctx;
 	unsigned int ctr;
@@ -503,7 +493,6 @@ void polyeta_pack(u8 *r, const poly *a) {
 	unsigned int i;
 	u8 t[8];
 
-#if ETA == 2
 	for (i = 0; i < N / 8; ++i) {
 		t[0] = ETA - a->coeffs[8 * i + 0];
 		t[1] = ETA - a->coeffs[8 * i + 1];
@@ -519,13 +508,6 @@ void polyeta_pack(u8 *r, const poly *a) {
 		    (t[2] >> 2) | (t[3] << 1) | (t[4] << 4) | (t[5] << 7);
 		r[3 * i + 2] = (t[5] >> 1) | (t[6] << 2) | (t[7] << 5);
 	}
-#elif ETA == 4
-	for (i = 0; i < N / 2; ++i) {
-		t[0] = ETA - a->coeffs[2 * i + 0];
-		t[1] = ETA - a->coeffs[2 * i + 1];
-		r[i] = t[0] | (t[1] << 4);
-	}
-#endif
 }
 
 /*************************************************
@@ -539,7 +521,6 @@ void polyeta_pack(u8 *r, const poly *a) {
 void polyeta_unpack(poly *r, const u8 *a) {
 	unsigned int i;
 
-#if ETA == 2
 	for (i = 0; i < N / 8; ++i) {
 		r->coeffs[8 * i + 0] = (a[3 * i + 0] >> 0) & 7;
 		r->coeffs[8 * i + 1] = (a[3 * i + 0] >> 3) & 7;
@@ -561,14 +542,6 @@ void polyeta_unpack(poly *r, const u8 *a) {
 		r->coeffs[8 * i + 6] = ETA - r->coeffs[8 * i + 6];
 		r->coeffs[8 * i + 7] = ETA - r->coeffs[8 * i + 7];
 	}
-#elif ETA == 4
-	for (i = 0; i < N / 2; ++i) {
-		r->coeffs[2 * i + 0] = a[i] & 0x0F;
-		r->coeffs[2 * i + 1] = a[i] >> 4;
-		r->coeffs[2 * i + 0] = ETA - r->coeffs[2 * i + 0];
-		r->coeffs[2 * i + 1] = ETA - r->coeffs[2 * i + 1];
-	}
-#endif
 }
 
 /*************************************************
@@ -739,7 +712,6 @@ void polyz_pack(u8 *r, const poly *a) {
 	unsigned int i;
 	u32 t[4];
 
-#if GAMMA1 == (1 << 17)
 	for (i = 0; i < N / 4; ++i) {
 		t[0] = GAMMA1 - a->coeffs[4 * i + 0];
 		t[1] = GAMMA1 - a->coeffs[4 * i + 1];
@@ -759,19 +731,6 @@ void polyz_pack(u8 *r, const poly *a) {
 		r[9 * i + 7] = t[3] >> 2;
 		r[9 * i + 8] = t[3] >> 10;
 	}
-#elif GAMMA1 == (1 << 19)
-	for (i = 0; i < N / 2; ++i) {
-		t[0] = GAMMA1 - a->coeffs[2 * i + 0];
-		t[1] = GAMMA1 - a->coeffs[2 * i + 1];
-
-		r[5 * i + 0] = t[0];
-		r[5 * i + 1] = t[0] >> 8;
-		r[5 * i + 2] = t[0] >> 16;
-		r[5 * i + 2] |= t[1] << 4;
-		r[5 * i + 3] = t[1] >> 4;
-		r[5 * i + 4] = t[1] >> 12;
-	}
-#endif
 }
 
 /*************************************************
@@ -786,7 +745,6 @@ void polyz_pack(u8 *r, const poly *a) {
 void polyz_unpack(poly *r, const u8 *a) {
 	unsigned int i;
 
-#if GAMMA1 == (1 << 17)
 	for (i = 0; i < N / 4; ++i) {
 		r->coeffs[4 * i + 0] = a[9 * i + 0];
 		r->coeffs[4 * i + 0] |= (u32)a[9 * i + 1] << 8;
@@ -813,23 +771,6 @@ void polyz_unpack(poly *r, const u8 *a) {
 		r->coeffs[4 * i + 2] = GAMMA1 - r->coeffs[4 * i + 2];
 		r->coeffs[4 * i + 3] = GAMMA1 - r->coeffs[4 * i + 3];
 	}
-#elif GAMMA1 == (1 << 19)
-	for (i = 0; i < N / 2; ++i) {
-		r->coeffs[2 * i + 0] = a[5 * i + 0];
-		r->coeffs[2 * i + 0] |= (u32)a[5 * i + 1] << 8;
-		r->coeffs[2 * i + 0] |= (u32)a[5 * i + 2] << 16;
-		r->coeffs[2 * i + 0] &= 0xFFFFF;
-
-		r->coeffs[2 * i + 1] = a[5 * i + 2] >> 4;
-		r->coeffs[2 * i + 1] |= (u32)a[5 * i + 3] << 4;
-		r->coeffs[2 * i + 1] |= (u32)a[5 * i + 4] << 12;
-		/* r->coeffs[2*i+1] &= 0xFFFFF; */ /* No effect, since we're
-						      anyway at 20 bits */
-
-		r->coeffs[2 * i + 0] = GAMMA1 - r->coeffs[2 * i + 0];
-		r->coeffs[2 * i + 1] = GAMMA1 - r->coeffs[2 * i + 1];
-	}
-#endif
 }
 
 /*************************************************
@@ -845,7 +786,6 @@ void polyz_unpack(poly *r, const u8 *a) {
 void polyw1_pack(u8 *r, const poly *a) {
 	unsigned int i;
 
-#if GAMMA2 == (Q - 1) / 88
 	for (i = 0; i < N / 4; ++i) {
 		r[3 * i + 0] = a->coeffs[4 * i + 0];
 		r[3 * i + 0] |= a->coeffs[4 * i + 1] << 6;
@@ -854,8 +794,4 @@ void polyw1_pack(u8 *r, const poly *a) {
 		r[3 * i + 2] = a->coeffs[4 * i + 2] >> 4;
 		r[3 * i + 2] |= a->coeffs[4 * i + 3] << 2;
 	}
-#elif GAMMA2 == (Q - 1) / 32
-	for (i = 0; i < N / 2; ++i)
-		r[i] = a->coeffs[2 * i + 0] | (a->coeffs[2 * i + 1] << 4);
-#endif
 }
