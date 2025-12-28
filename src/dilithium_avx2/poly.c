@@ -14,7 +14,6 @@
 #include <dilithium_avx2/poly.h>
 #include <dilithium_avx2/rejsample.h>
 #include <dilithium_avx2/rounding.h>
-#include <dilithium_avx2/symmetric.h>
 #include <immintrin.h>
 #include <libfam/sign_impl.h>
 #include <libfam/storm.h>
@@ -383,28 +382,29 @@ static unsigned int rej_uniform(int32_t *a, unsigned int len,
  *              - const uint8_t seed[]: byte array with seed of length SEEDBYTES
  *              - uint16_t nonce: 2-byte nonce
  **************************************************/
+/*
 void poly_uniform_preinit(poly *a, stream128_state *state) {
 	unsigned int ctr;
-	/* rej_uniform_avx reads up to 8 additional bytes */
 	ALIGNED_UINT8(REJ_UNIFORM_BUFLEN + 8) buf;
 
 	stream128_squeezeblocks(buf.coeffs, REJ_UNIFORM_NBLOCKS, state);
 	ctr = rej_uniform_avx(a->coeffs, buf.coeffs);
 
 	while (ctr < N) {
-		/* length of buf is always divisible by 3; hence, no bytes left
-		 */
 		stream128_squeezeblocks(buf.coeffs, 1, state);
 		ctr += rej_uniform(a->coeffs + ctr, N - ctr, buf.coeffs,
 				   STREAM128_BLOCKBYTES);
 	}
 }
+*/
 
+/*
 void poly_uniform(poly *a, const uint8_t seed[SEEDBYTES], uint16_t nonce) {
 	stream128_state state;
 	stream128_init(&state, seed, nonce);
 	poly_uniform_preinit(a, &state);
 }
+*/
 
 void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 		     const uint8_t seed[32], uint16_t nonce0, uint16_t nonce1,
@@ -530,6 +530,7 @@ static unsigned int rej_eta(int32_t *a, unsigned int len, const uint8_t *buf,
  *              - const uint8_t seed[]: byte array with seed of length CRHBYTES
  *              - uint16_t nonce: 2-byte nonce
  **************************************************/
+/*
 void poly_uniform_eta_preinit(poly *a, stream256_state *state) {
 	unsigned int ctr;
 	ALIGNED_UINT8(REJ_UNIFORM_ETA_BUFLEN) buf;
@@ -543,6 +544,7 @@ void poly_uniform_eta_preinit(poly *a, stream256_state *state) {
 			       STREAM256_BLOCKBYTES);
 	}
 }
+*/
 
 /*
 void poly_uniform_eta(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce) {
@@ -655,24 +657,20 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
  **************************************************/
 #define POLY_UNIFORM_GAMMA1_NBLOCKS \
 	((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
-#include <libfam/format.h>
+/*
 void poly_uniform_gamma1_preinit(poly *a, stream256_state *state) {
-	/* polyz_unpack reads 14 additional bytes */
 	ALIGNED_UINT8(POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14)
 	buf;
 	stream256_squeezeblocks(buf.coeffs, POLY_UNIFORM_GAMMA1_NBLOCKS, state);
-	println("POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14={}",
-		POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14);
 
 	polyz_unpack(a, buf.coeffs);
 }
+*/
 #include <libfam/format.h>
 void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES],
 			 uint16_t nonce) {
 	StormContext ctx;
 	__attribute__((aligned(32))) uint8_t buf[704] = {0};
-	println("POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14={}",
-		POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14);
 
 	storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(buf, seed, CRHBYTES);

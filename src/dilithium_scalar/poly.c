@@ -3,7 +3,6 @@
 #include <dilithium_scalar/poly.h>
 #include <dilithium_scalar/reduce.h>
 #include <dilithium_scalar/rounding.h>
-#include <dilithium_scalar/symmetric.h>
 #include <libfam/sign_impl.h>
 #include <libfam/storm.h>
 #include <stdint.h>

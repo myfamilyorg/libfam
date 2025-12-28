@@ -2,9 +2,9 @@
 #define POLY_H
 
 #include <stdint.h>
+
 #include "align.h"
 #include "params.h"
-#include "symmetric.h"
 
 typedef ALIGNED_INT32(N) poly;
 
@@ -40,51 +40,40 @@ void poly_use_hint(poly *b, const poly *a, const poly *h);
 
 #define poly_chknorm DILITHIUM_NAMESPACE(poly_chknorm)
 int poly_chknorm(const poly *a, int32_t B);
+/*
 #define poly_uniform_preinit DILITHIUM_NAMESPACE(poly_uniform_preinit)
 void poly_uniform_preinit(poly *a, stream128_state *state);
+*/
 #define poly_uniform DILITHIUM_NAMESPACE(poly_uniform)
 void poly_uniform(poly *a, const uint8_t seed[SEEDBYTES], uint16_t nonce);
+/*
 #define poly_uniform_eta_preinit DILITHIUM_NAMESPACE(poly_uniform_eta_preinit)
 void poly_uniform_eta_preinit(poly *a, stream256_state *state);
+*/
 #define poly_uniform_eta DILITHIUM_NAMESPACE(poly_uniform_eta)
 void poly_uniform_eta(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce);
-#define poly_uniform_gamma1_preinit DILITHIUM_NAMESPACE(poly_uniform_gamma1_preinit)
+/*
+#define poly_uniform_gamma1_preinit \
+	DILITHIUM_NAMESPACE(poly_uniform_gamma1_preinit)
 void poly_uniform_gamma1_preinit(poly *a, stream256_state *state);
+*/
 #define poly_uniform_gamma1 DILITHIUM_NAMESPACE(poly_uniform_gamma1)
 void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce);
 #define poly_challenge DILITHIUM_NAMESPACE(poly_challenge)
 void poly_challenge(poly *c, const uint8_t seed[CTILDEBYTES]);
 
 #define poly_uniform_4x DILITHIUM_NAMESPACE(poly_uniform_4x)
-void poly_uniform_4x(poly *a0,
-                     poly *a1,
-                     poly *a2,
-                     poly *a3,
-                     const uint8_t seed[SEEDBYTES],
-                     uint16_t nonce0,
-                     uint16_t nonce1,
-                     uint16_t nonce2,
-                     uint16_t nonce3);
+void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3,
+		     const uint8_t seed[SEEDBYTES], uint16_t nonce0,
+		     uint16_t nonce1, uint16_t nonce2, uint16_t nonce3);
 #define poly_uniform_eta_4x DILITHIUM_NAMESPACE(poly_uniform_eta_4x)
-void poly_uniform_eta_4x(poly *a0,
-                         poly *a1,
-                         poly *a2,
-                         poly *a3,
-                         const uint8_t seed[CRHBYTES],
-                         uint16_t nonce0,
-                         uint16_t nonce1,
-                         uint16_t nonce2,
-                         uint16_t nonce3);
+void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
+			 const uint8_t seed[CRHBYTES], uint16_t nonce0,
+			 uint16_t nonce1, uint16_t nonce2, uint16_t nonce3);
 #define poly_uniform_gamma1_4x DILITHIUM_NAMESPACE(poly_uniform_gamma1_4x)
-void poly_uniform_gamma1_4x(poly *a0,
-                            poly *a1,
-                            poly *a2,
-                            poly *a3,
-                            const uint8_t seed[CRHBYTES],
-                            uint16_t nonce0,
-                            uint16_t nonce1,
-                            uint16_t nonce2,
-                            uint16_t nonce3);
+void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
+			    const uint8_t seed[CRHBYTES], uint16_t nonce0,
+			    uint16_t nonce1, uint16_t nonce2, uint16_t nonce3);
 
 #define polyeta_pack DILITHIUM_NAMESPACE(polyeta_pack)
 void polyeta_pack(uint8_t r[POLYETA_PACKEDBYTES], const poly *a);
