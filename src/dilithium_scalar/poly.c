@@ -337,24 +337,35 @@ static unsigned int rej_uniform(int32_t *a, unsigned int len,
  **************************************************/
 #define POLY_UNIFORM_NBLOCKS \
 	((768 + STREAM128_BLOCKBYTES - 1) / STREAM128_BLOCKBYTES)
+#include <libfam/format.h>
 void poly_uniform(poly *a, const uint8_t seed[SEEDBYTES], uint16_t nonce) {
-	unsigned int i, ctr, off;
-	unsigned int buflen = POLY_UNIFORM_NBLOCKS * STREAM128_BLOCKBYTES;
-	uint8_t buf[POLY_UNIFORM_NBLOCKS * STREAM128_BLOCKBYTES + 2];
+	StormContext ctx;
+	unsigned int i, ctr;
+	__attribute__((aligned(32))) uint8_t buf[864] = {0};
+
+	/*
 	stream128_state state;
 
 	stream128_init(&state, seed, nonce);
 	stream128_squeezeblocks(buf, POLY_UNIFORM_NBLOCKS, &state);
+	*/
+	storm_init(&ctx, HASH_DOMAIN);
+	fastmemcpy(buf, seed, SEEDBYTES);
+	fastmemcpy(buf + SEEDBYTES, &nonce, sizeof(nonce));
+	for (i = 0; i < sizeof(buf); i += 32) storm_next_block(&ctx, buf + i);
 
-	ctr = rej_uniform(a->coeffs, N, buf, buflen);
+	ctr = rej_uniform(a->coeffs, N, buf, 864);
 
 	while (ctr < N) {
+		/*
 		off = buflen % 3;
 		for (i = 0; i < off; ++i) buf[i] = buf[buflen - off + i];
 
 		stream128_squeezeblocks(buf + off, 1, &state);
 		buflen = STREAM128_BLOCKBYTES + off;
-		ctr += rej_uniform(a->coeffs + ctr, N - ctr, buf, buflen);
+		*/
+		storm_next_block(&ctx, buf);
+		ctr += rej_uniform(a->coeffs + ctr, N - ctr, buf, 32);
 	}
 }
 

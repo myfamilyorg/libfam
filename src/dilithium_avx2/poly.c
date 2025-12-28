@@ -409,9 +409,10 @@ void poly_uniform(poly *a, const uint8_t seed[SEEDBYTES], uint16_t nonce) {
 void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 		     const uint8_t seed[32], uint16_t nonce0, uint16_t nonce1,
 		     uint16_t nonce2, uint16_t nonce3) {
+	StormContext ctx0, ctx1, ctx2, ctx3;
 	unsigned int ctr0, ctr1, ctr2, ctr3;
-	ALIGNED_UINT8(REJ_UNIFORM_BUFLEN + 8) buf[4];
-	keccakx4_state state;
+	ALIGNED_UINT8(864) buf[4] = {0};
+	// keccakx4_state state;
 	__m256i f;
 
 	f = _mm256_loadu_si256((__m256i *)seed);
@@ -429,10 +430,23 @@ void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	buf[3].coeffs[SEEDBYTES + 0] = nonce3;
 	buf[3].coeffs[SEEDBYTES + 1] = nonce3 >> 8;
 
+	/*
 	shake128x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
 			       buf[2].coeffs, buf[3].coeffs, SEEDBYTES + 2);
 	shake128x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs, buf[2].coeffs,
 				 buf[3].coeffs, REJ_UNIFORM_NBLOCKS, &state);
+				 */
+
+	storm_init(&ctx0, HASH_DOMAIN);
+	storm_init(&ctx1, HASH_DOMAIN);
+	storm_init(&ctx2, HASH_DOMAIN);
+	storm_init(&ctx3, HASH_DOMAIN);
+	for (u32 i = 0; i < 864; i += 32) {
+		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
+		storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i);
+		storm_next_block(&ctx2, (u8 *)buf[2].coeffs + i);
+		storm_next_block(&ctx3, (u8 *)buf[3].coeffs + i);
+	}
 
 	ctr0 = rej_uniform_avx(a0->coeffs, buf[0].coeffs);
 	ctr1 = rej_uniform_avx(a1->coeffs, buf[1].coeffs);
@@ -440,18 +454,24 @@ void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	ctr3 = rej_uniform_avx(a3->coeffs, buf[3].coeffs);
 
 	while (ctr0 < N || ctr1 < N || ctr2 < N || ctr3 < N) {
+		/*
 		shake128x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs,
 					 buf[2].coeffs, buf[3].coeffs, 1,
-					 &state);
+					 &state);*/
 
-		ctr0 += rej_uniform(a0->coeffs + ctr0, N - ctr0, buf[0].coeffs,
-				    SHAKE128_RATE);
-		ctr1 += rej_uniform(a1->coeffs + ctr1, N - ctr1, buf[1].coeffs,
-				    SHAKE128_RATE);
-		ctr2 += rej_uniform(a2->coeffs + ctr2, N - ctr2, buf[2].coeffs,
-				    SHAKE128_RATE);
-		ctr3 += rej_uniform(a3->coeffs + ctr3, N - ctr3, buf[3].coeffs,
-				    SHAKE128_RATE);
+		storm_next_block(&ctx0, (u8 *)buf[0].coeffs);
+		storm_next_block(&ctx1, (u8 *)buf[1].coeffs);
+		storm_next_block(&ctx2, (u8 *)buf[2].coeffs);
+		storm_next_block(&ctx3, (u8 *)buf[3].coeffs);
+
+		ctr0 +=
+		    rej_uniform(a0->coeffs + ctr0, N - ctr0, buf[0].coeffs, 32);
+		ctr1 +=
+		    rej_uniform(a1->coeffs + ctr1, N - ctr1, buf[1].coeffs, 32);
+		ctr2 +=
+		    rej_uniform(a2->coeffs + ctr2, N - ctr2, buf[2].coeffs, 32);
+		ctr3 +=
+		    rej_uniform(a3->coeffs + ctr3, N - ctr3, buf[3].coeffs, 32);
 	}
 }
 
