@@ -201,13 +201,16 @@ int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, const u8 seed[32]) {
  *
  * Returns 0 (success)
  **************************************************/
+#include <libfam/format.h>
 int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
 				   const uint8_t *m, size_t mlen,
 				   const uint8_t *pre, size_t prelen,
 				   const uint8_t rnd[RNDBYTES],
 				   const uint8_t *sk) {
+	// StormContext ctx;
 	unsigned int i, n, pos;
-	uint8_t seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
+	__attribute__((aligned(
+	    32))) uint8_t seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
 	uint8_t *rho, *tr, *key, *mu, *rhoprime;
 	uint8_t hintbuf[N];
 	uint8_t *hint = sig + CTILDEBYTES + L * POLYZ_PACKEDBYTES;
@@ -231,7 +234,7 @@ int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
 	/* Compute mu = CRH(tr, pre, msg) */
 	shake256_init(&state);
 	shake256_absorb(&state, tr, TRBYTES);
-	shake256_absorb(&state, pre, prelen);
+	// shake256_absorb(&state, pre, prelen);
 	shake256_absorb(&state, m, mlen);
 	shake256_finalize(&state);
 	shake256_squeeze(mu, CRHBYTES, &state);
@@ -451,7 +454,7 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 
 	shake256_init(&state);
 	shake256_absorb(&state, mu, CRHBYTES);
-	shake256_absorb(&state, pre, prelen);
+	// shake256_absorb(&state, pre, prelen);
 	shake256_absorb(&state, m, mlen);
 	shake256_finalize(&state);
 	shake256_squeeze(mu, CRHBYTES, &state);
