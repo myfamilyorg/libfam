@@ -43,7 +43,7 @@
 #include <immintrin.h>
 #endif /* USE_AVX2 */
 
-static const __attribute__((aligned(32))) u128 PRIMES[] = {
+static const __attribute__((aligned(32))) u128 NUMS[] = {
     ((u128)0xa70413383f55618fULL << 64) | 0x376d0932e21de58fULL,
     ((u128)0xf95524bf9f2fdfa8ULL << 64) | 0xf3fb6d8bd7643b1dULL,
     ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
@@ -56,15 +56,8 @@ static const __attribute__((aligned(32))) u128 PRIMES[] = {
 
     ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
     ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL,
-    ((u128)0xa70413383f55618fULL << 64) | 0x376d0932e21de58fULL,
-    ((u128)0xf95524bf9f2fdfa8ULL << 64) | 0xf3fb6d8bd7643b1dULL,
-
-    ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL,
-    ((u128)0xa70413383f55618fULL << 64) | 0x376d0932e21de58fULL,
-    ((u128)0xf95524bf9f2fdfa8ULL << 64) | 0xf3fb6d8bd7643b1dULL,
-    ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
 };
-static const u8 *STORM_KEY_MIX = (void *)PRIMES;
+static const u8 *STORM_KEY_MIX = (void *)NUMS;
 
 typedef struct {
 	__attribute__((aligned)) u8 state[32];
