@@ -49,6 +49,20 @@
 
 #define SHAKE256_RATE 136
 
+static void storm_init_nonce2(StormContext *ctx, u16 nonce) {
+	__attribute__((aligned(32))) u8 key[32];
+	fastmemcpy(key, NOISE_ETA2_DOMAIN, 32);
+	for (u32 i = 0; i < 16; i++) ((u16 *)key)[i] ^= nonce;
+	storm_init(ctx, key);
+}
+
+static void storm_init_nonce1(StormContext *ctx, u16 nonce) {
+	__attribute__((aligned(32))) u8 key[32];
+	fastmemcpy(key, NOISE_ETA1_DOMAIN, 32);
+	for (u32 i = 0; i < 16; i++) ((u16 *)key)[i] ^= nonce;
+	storm_init(ctx, key);
+}
+
 void poly_compress(u8 r[128], const poly *restrict a) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;
@@ -187,7 +201,7 @@ void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
 	ALIGNED_UINT8(KYBER_ETA2 * KYBER_N / 4) buf = {0};
 	StormContext ctx;
 
-	storm_init(&ctx, NOISE_ETA2_DOMAIN);
+	storm_init_nonce2(&ctx, nonce);
 	fastmemcpy(buf.vec, seed, KYBER_SYMBYTES);
 	((u8 *)&buf)[KYBER_SYMBYTES] = nonce;
 	storm_next_block(&ctx, (u8 *)&buf);
@@ -219,10 +233,17 @@ void poly_getnoise_eta1_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 	buf[2].coeffs[32] = nonce2;
 	buf[3].coeffs[32] = nonce3;
 
+	storm_init_nonce1(&ctx0, nonce0);
+	storm_init_nonce1(&ctx1, nonce1);
+	storm_init_nonce1(&ctx2, nonce2);
+	storm_init_nonce1(&ctx3, nonce3);
+
+	/*
 	storm_init(&ctx0, NOISE_ETA1_DOMAIN);
 	storm_init(&ctx1, NOISE_ETA1_DOMAIN);
 	storm_init(&ctx2, NOISE_ETA1_DOMAIN);
 	storm_init(&ctx3, NOISE_ETA1_DOMAIN);
+	*/
 
 	storm_next_block(&ctx0, (u8 *)buf[0].coeffs);
 	storm_next_block(&ctx1, (u8 *)buf[1].coeffs);
@@ -264,10 +285,16 @@ void poly_getnoise_eta1122_4x(poly *r0, poly *r1, poly *r2, poly *r3,
 	buf[2].coeffs[32] = nonce2;
 	buf[3].coeffs[32] = nonce3;
 
+	/*
 	storm_init(&ctx0, NOISE_ETA1_DOMAIN);
 	storm_init(&ctx1, NOISE_ETA1_DOMAIN);
 	storm_init(&ctx2, NOISE_ETA2_DOMAIN);
 	storm_init(&ctx3, NOISE_ETA2_DOMAIN);
+	*/
+	storm_init_nonce1(&ctx0, nonce0);
+	storm_init_nonce1(&ctx1, nonce1);
+	storm_init_nonce2(&ctx2, nonce2);
+	storm_init_nonce2(&ctx3, nonce3);
 
 	storm_next_block(&ctx0, (u8 *)buf[0].coeffs);
 	storm_next_block(&ctx1, (u8 *)buf[1].coeffs);

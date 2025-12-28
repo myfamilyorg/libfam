@@ -45,6 +45,20 @@
 #include <libfam/kem_impl.h>
 #include <libfam/storm.h>
 
+static void storm_init_nonce2(StormContext *ctx, u16 nonce) {
+	__attribute__((aligned(32))) u8 key[32];
+	fastmemcpy(key, NOISE_ETA2_DOMAIN, 32);
+	for (u32 i = 0; i < 16; i++) ((u16 *)key)[i] ^= nonce;
+	storm_init(ctx, key);
+}
+
+static void storm_init_nonce1(StormContext *ctx, u16 nonce) {
+	__attribute__((aligned(32))) u8 key[32];
+	fastmemcpy(key, NOISE_ETA1_DOMAIN, 32);
+	for (u32 i = 0; i < 16; i++) ((u16 *)key)[i] ^= nonce;
+	storm_init(ctx, key);
+}
+
 void poly_compress(u8 r[KYBER_POLYCOMPRESSEDBYTES], const poly *a) {
 	unsigned int i, j;
 	i16 u;
@@ -139,7 +153,8 @@ void poly_getnoise_eta1(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
 	__attribute__((aligned(32))) u8 buf[KYBER_ETA1 * KYBER_N / 4] = {0};
 	StormContext ctx;
 
-	storm_init(&ctx, NOISE_ETA1_DOMAIN);
+	storm_init_nonce1(&ctx, nonce);
+	// storm_init(&ctx, NOISE_ETA1_DOMAIN);
 	fastmemcpy(buf, seed, KYBER_SYMBYTES);
 	buf[KYBER_SYMBYTES] = nonce;
 	storm_next_block(&ctx, buf);
@@ -155,7 +170,8 @@ void poly_getnoise_eta2(poly *r, const u8 seed[KYBER_SYMBYTES], u8 nonce) {
 	__attribute__((aligned(32))) u8 buf[KYBER_ETA2 * KYBER_N / 4] = {0};
 	StormContext ctx;
 
-	storm_init(&ctx, NOISE_ETA2_DOMAIN);
+	// storm_init(&ctx, NOISE_ETA2_DOMAIN);
+	storm_init_nonce2(&ctx, nonce);
 	fastmemcpy(buf, seed, KYBER_SYMBYTES);
 	buf[KYBER_SYMBYTES] = nonce;
 	storm_next_block(&ctx, buf);
