@@ -356,7 +356,8 @@ void poly_uniform(poly *a, const uint8_t seed[SEEDBYTES], uint16_t nonce) {
 	stream128_init(&state, seed, nonce);
 	stream128_squeezeblocks(buf, POLY_UNIFORM_NBLOCKS, &state);
 	*/
-	storm_init(&ctx, HASH_DOMAIN);
+	storm_init_nonce(&ctx, nonce);
+	// storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(buf, seed, SEEDBYTES);
 	fastmemcpy(buf + SEEDBYTES, &nonce, sizeof(nonce));
 	for (i = 0; i < sizeof(buf); i += 32) storm_next_block(&ctx, buf + i);
@@ -443,7 +444,8 @@ void poly_uniform_eta(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce) {
 	unsigned int ctr;
 	__attribute__((aligned(32))) uint8_t buf[160] = {0};
 
-	storm_init(&ctx, HASH_DOMAIN);
+	storm_init_nonce(&ctx, nonce);
+	// storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(buf, seed, CRHBYTES);
 	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
 	for (u32 i = 0; i < sizeof(buf); i += 32)

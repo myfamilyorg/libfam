@@ -443,10 +443,17 @@ void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 				 buf[3].coeffs, REJ_UNIFORM_NBLOCKS, &state);
 				 */
 
+	storm_init_nonce(&ctx0, nonce0);
+	storm_init_nonce(&ctx1, nonce1);
+	storm_init_nonce(&ctx2, nonce2);
+	storm_init_nonce(&ctx3, nonce3);
+
+	/*
 	storm_init(&ctx0, HASH_DOMAIN);
 	storm_init(&ctx1, HASH_DOMAIN);
 	storm_init(&ctx2, HASH_DOMAIN);
 	storm_init(&ctx3, HASH_DOMAIN);
+	*/
 	for (u32 i = 0; i < 864; i += 32) {
 		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
 		storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i);
@@ -565,7 +572,8 @@ void poly_uniform_eta(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce) {
 	unsigned int ctr;
 	__attribute__((aligned(32))) uint8_t buf[160] = {0};
 
-	storm_init(&ctx, HASH_DOMAIN);
+	storm_init_nonce(&ctx, nonce);
+	// storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(buf, seed, CRHBYTES);
 	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
 	for (u32 i = 0; i < sizeof(buf); i += 32)
@@ -617,10 +625,17 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 				 &state);
 				 */
 
+	storm_init_nonce(&ctx0, nonce0);
+	storm_init_nonce(&ctx1, nonce1);
+	storm_init_nonce(&ctx2, nonce2);
+	storm_init_nonce(&ctx3, nonce3);
+
+	/*
 	storm_init(&ctx0, HASH_DOMAIN);
 	storm_init(&ctx1, HASH_DOMAIN);
 	storm_init(&ctx2, HASH_DOMAIN);
 	storm_init(&ctx3, HASH_DOMAIN);
+	*/
 
 	for (u32 i = 0; i < 160; i += 32) {
 		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
