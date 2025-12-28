@@ -108,8 +108,10 @@ int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
 				   const uint8_t *pre, size_t prelen,
 				   const uint8_t rnd[RNDBYTES],
 				   const uint8_t *sk) {
+	StormContext ctx;
 	unsigned int n;
-	uint8_t seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
+	__attribute__((aligned(
+	    32))) uint8_t seedbuf[2 * SEEDBYTES + TRBYTES + 2 * CRHBYTES];
 	uint8_t *rho, *tr, *key, *mu, *rhoprime;
 	uint16_t nonce = 0;
 	polyvecl mat[K], s1, y, z;
@@ -125,12 +127,25 @@ int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
 	unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
 
 	/* Compute mu = CRH(tr, pre, msg) */
+	/*
 	shake256_init(&state);
 	shake256_absorb(&state, tr, TRBYTES);
 	// shake256_absorb(&state, pre, prelen);
 	shake256_absorb(&state, m, mlen);
 	shake256_finalize(&state);
 	shake256_squeeze(mu, CRHBYTES, &state);
+	*/
+
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((aligned(32))) u8 buffer[TRBYTES + 32];
+	fastmemcpy(buffer, tr, TRBYTES);
+	fastmemcpy(buffer + TRBYTES, m, 32);
+	storm_next_block(&ctx, buffer);
+	storm_next_block(&ctx, buffer + 32);
+	storm_next_block(&ctx, buffer + 64);
+	fastmemset(mu, 0, 64);
+	storm_next_block(&ctx, mu);
+	storm_next_block(&ctx, mu + 32);
 
 	/* Compute rhoprime = CRH(key, rnd, mu) */
 	shake256_init(&state);
@@ -317,12 +332,25 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 	storm_next_block(&ctx, mu);
 	storm_next_block(&ctx, mu + 32);
 
+	/*
 	shake256_init(&state);
 	shake256_absorb(&state, mu, TRBYTES);
 	// shake256_absorb(&state, pre, prelen);
 	shake256_absorb(&state, m, mlen);
 	shake256_finalize(&state);
 	shake256_squeeze(mu, CRHBYTES, &state);
+	*/
+
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((aligned(32))) u8 buffer[TRBYTES + 32];
+	fastmemcpy(buffer, mu, TRBYTES);
+	fastmemcpy(buffer + TRBYTES, m, 32);
+	storm_next_block(&ctx, buffer);
+	storm_next_block(&ctx, buffer + 32);
+	storm_next_block(&ctx, buffer + 64);
+	fastmemset(mu, 0, 64);
+	storm_next_block(&ctx, mu);
+	storm_next_block(&ctx, mu + 32);
 
 	/* Matrix-vector multiplication; compute Az - c2^dt1 */
 	poly_challenge(&cp, c);
