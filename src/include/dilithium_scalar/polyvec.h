@@ -1,8 +1,8 @@
 #ifndef POLYVEC_H
 #define POLYVEC_H
 
-#include "params.h"
-#include "poly.h"
+#include <dilithium_scalar/params.h>
+#include <dilithium_scalar/poly.h>
 
 /* Vectors of polynomials of length L */
 typedef struct {

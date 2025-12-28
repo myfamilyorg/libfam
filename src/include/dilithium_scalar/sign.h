@@ -1,11 +1,10 @@
 #ifndef SIGN_H
 #define SIGN_H
 
+#include <dilithium_scalar/params.h>
+#include <dilithium_scalar/poly.h>
+#include <dilithium_scalar/polyvec.h>
 #include <libfam/rng.h>
-
-#include "params.h"
-#include "poly.h"
-#include "polyvec.h"
 
 #define crypto_sign_keypair DILITHIUM_NAMESPACE(keypair)
 int crypto_sign_keypair(u8 *pk, u8 *sk, const u8 seed[32]);

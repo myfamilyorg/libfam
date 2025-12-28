@@ -1,7 +1,7 @@
 #ifndef REJSAMPLE_H
 #define REJSAMPLE_H
 
-#include "params.h"
+#include <dilithium_avx2/params.h>
 
 #ifndef STREAM256_BLOCKBYTES
 #define STREAM256_BLOCKBYTES 136

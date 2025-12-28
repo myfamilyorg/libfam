@@ -1,8 +1,8 @@
 #ifndef PACKING_H
 #define PACKING_H
 
-#include "params.h"
-#include "polyvec.h"
+#include <dilithium_scalar/params.h>
+#include <dilithium_scalar/polyvec.h>
 
 #define pack_pk DILITHIUM_NAMESPACE(pack_pk)
 void pack_pk(u8 pk[CRYPTO_PUBLICKEYBYTES], const u8 rho[SEEDBYTES],

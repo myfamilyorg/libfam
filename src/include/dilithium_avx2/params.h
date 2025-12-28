@@ -5,7 +5,7 @@
 #include <libfam/types.h>
 #endif /* __ASSEMBLER__ */
 
-#include "config.h"
+#include <dilithium_avx2/config.h>
 
 #define SEEDBYTES 32
 #define CRHBYTES 64

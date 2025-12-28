@@ -1,7 +1,7 @@
 #ifndef POLY_H
 #define POLY_H
 
-#include "params.h"
+#include <dilithium_scalar/params.h>
 
 typedef struct {
 	i32 coeffs[N];

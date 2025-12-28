@@ -1,9 +1,8 @@
 #ifndef ROUNDING_H
 #define ROUNDING_H
 
+#include <dilithium_avx2/params.h>
 #include <immintrin.h>
-
-#include "params.h"
 
 #define power2round_avx DILITHIUM_NAMESPACE(power2round_avx)
 void power2round_avx(__m256i *a1, __m256i *a0, const __m256i *a);

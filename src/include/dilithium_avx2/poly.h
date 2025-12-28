@@ -1,8 +1,8 @@
 #ifndef POLY_H
 #define POLY_H
 
-#include "align.h"
-#include "params.h"
+#include <dilithium_avx2/align.h>
+#include <dilithium_avx2/params.h>
 
 typedef ALIGNED_INT32(N) poly;
 

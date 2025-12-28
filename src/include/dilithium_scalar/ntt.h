@@ -1,7 +1,7 @@
 #ifndef NTT_H
 #define NTT_H
 
-#include "params.h"
+#include <dilithium_scalar/params.h>
 
 #define ntt DILITHIUM_NAMESPACE(ntt)
 void ntt(i32 a[N]);
