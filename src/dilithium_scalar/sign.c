@@ -25,7 +25,7 @@ int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, const u8 seed[32]) {
 	StormContext ctx;
 	__attribute__((
 	    aligned(32))) uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES] = {0};
-	uint8_t tr[TRBYTES];
+	__attribute__((aligned(32))) uint8_t tr[TRBYTES] = {0};
 	const uint8_t *rho, *rhoprime, *key;
 	polyvecl mat[K];
 	polyvecl s1, s1hat;
@@ -71,7 +71,16 @@ int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, const u8 seed[32]) {
 	pack_pk(pk, rho, &t1);
 
 	/* Compute H(rho, t1) and write secret key */
-	shake256(tr, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES];
+	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
+	for (u32 i = 0; i < CRYPTO_PUBLICKEYBYTES; i += 32)
+		storm_next_block(&ctx, pk_copy + i);
+	fastmemset(tr, 0, 64);
+	storm_next_block(&ctx, tr);
+	storm_next_block(&ctx, tr + 32);
+
+	// shake256(tr, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
 	pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
 
 	return 0;
@@ -280,10 +289,11 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 				const uint8_t *m, size_t mlen,
 				const uint8_t *pre, size_t prelen,
 				const uint8_t *pk) {
+	StormContext ctx;
 	unsigned int i;
 	uint8_t buf[K * POLYW1_PACKEDBYTES];
 	uint8_t rho[SEEDBYTES];
-	uint8_t mu[CRHBYTES];
+	__attribute__((aligned(32))) uint8_t mu[CRHBYTES] = {0};
 	uint8_t c[CTILDEBYTES];
 	uint8_t c2[CTILDEBYTES];
 	poly cp;
@@ -298,7 +308,15 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 	if (polyvecl_chknorm(&z, GAMMA1 - BETA)) return -1;
 
 	/* Compute CRH(H(rho, t1), pre, msg) */
-	shake256(mu, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
+	// shake256(mu, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES];
+	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
+	for (u32 i = 0; i < CRYPTO_PUBLICKEYBYTES; i += 32)
+		storm_next_block(&ctx, pk_copy + i);
+	storm_next_block(&ctx, mu);
+	storm_next_block(&ctx, mu + 32);
+
 	shake256_init(&state);
 	shake256_absorb(&state, mu, TRBYTES);
 	shake256_absorb(&state, pre, prelen);

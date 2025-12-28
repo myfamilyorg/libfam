@@ -169,7 +169,17 @@ int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, const u8 seed[32]) {
 	}
 
 	/* Compute H(rho, t1) and store in secret key */
-	shake256(sk + 2 * SEEDBYTES, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
+
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES];
+	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
+	for (u32 i = 0; i < CRYPTO_PUBLICKEYBYTES; i += 32)
+		storm_next_block(&ctx, pk_copy + i);
+	fastmemset(sk + 2 * SEEDBYTES, 0, 64);
+	storm_next_block(&ctx, sk + 2 * SEEDBYTES);
+	storm_next_block(&ctx, sk + 2 * SEEDBYTES + 32);
+
+	// shake256(sk + 2 * SEEDBYTES, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
 
 	return 0;
 }
@@ -415,10 +425,11 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 				const uint8_t *m, size_t mlen,
 				const uint8_t *pre, size_t prelen,
 				const uint8_t *pk) {
+	StormContext ctx;
 	unsigned int i, j, pos = 0;
 	/* polyw1_pack writes additional 14 bytes */
 	ALIGNED_UINT8(K * POLYW1_PACKEDBYTES + 14) buf;
-	uint8_t mu[CRHBYTES];
+	__attribute__((aligned(32))) uint8_t mu[CRHBYTES] = {0};
 	const uint8_t *hint = sig + CTILDEBYTES + L * POLYZ_PACKEDBYTES;
 	polyvecl rowbuf[2];
 	polyvecl *row = rowbuf;
@@ -429,7 +440,15 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 	if (siglen != CRYPTO_BYTES) return -1;
 
 	/* Compute CRH(H(rho, t1), pre, msg) */
-	shake256(mu, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
+	// shake256(mu, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES];
+	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
+	for (u32 i = 0; i < CRYPTO_PUBLICKEYBYTES; i += 32)
+		storm_next_block(&ctx, pk_copy + i);
+	storm_next_block(&ctx, mu);
+	storm_next_block(&ctx, mu + 32);
+
 	shake256_init(&state);
 	shake256_absorb(&state, mu, CRHBYTES);
 	shake256_absorb(&state, pre, prelen);
