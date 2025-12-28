@@ -113,13 +113,13 @@ static void gen_matrix(polyvec *a, const u8 seed[KYBER_SYMBYTES],
 		for (j = 0; j < KYBER_K; j++) {
 			storm_init(&ctx0, GEN_MAT_DOMAIN);
 			fastmemset(buf, 0, sizeof(buf));
-			fastmemcpy(buf, seed, 32);
+			fastmemcpy(buf + 32, seed, 32);
 			if (transposed) {
-				buf[32] = i;
-				buf[33] = j;
+				buf[0] = i;
+				buf[1] = j;
 			} else {
-				buf[32] = j;
-				buf[33] = i;
+				buf[0] = j;
+				buf[1] = i;
 			}
 
 			for (u32 i = 0; i < sizeof(buf); i += 32)

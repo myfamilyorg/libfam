@@ -108,29 +108,29 @@ void gen_matrix(polyvec *a, const u8 seed[32], int transposed) {
 	__m256i f;
 
 	f = _mm256_loadu_si256((__m256i *)seed);
-	_mm256_store_si256(buf[0].vec, f);
-	_mm256_store_si256(buf[1].vec, f);
-	_mm256_store_si256(buf[2].vec, f);
-	_mm256_store_si256(buf[3].vec, f);
+	_mm256_store_si256(buf[0].vec + 1, f);
+	_mm256_store_si256(buf[1].vec + 1, f);
+	_mm256_store_si256(buf[2].vec + 1, f);
+	_mm256_store_si256(buf[3].vec + 1, f);
 
 	if (transposed) {
-		buf[0].coeffs[32] = 0;
-		buf[0].coeffs[33] = 0;
-		buf[1].coeffs[32] = 0;
-		buf[1].coeffs[33] = 1;
-		buf[2].coeffs[32] = 1;
-		buf[2].coeffs[33] = 0;
-		buf[3].coeffs[32] = 1;
-		buf[3].coeffs[33] = 1;
+		buf[0].coeffs[0] = 0;
+		buf[0].coeffs[1] = 0;
+		buf[1].coeffs[0] = 0;
+		buf[1].coeffs[1] = 1;
+		buf[2].coeffs[0] = 1;
+		buf[2].coeffs[1] = 0;
+		buf[3].coeffs[0] = 1;
+		buf[3].coeffs[1] = 1;
 	} else {
-		buf[0].coeffs[32] = 0;
-		buf[0].coeffs[33] = 0;
-		buf[1].coeffs[32] = 1;
-		buf[1].coeffs[33] = 0;
-		buf[2].coeffs[32] = 0;
-		buf[2].coeffs[33] = 1;
-		buf[3].coeffs[32] = 1;
-		buf[3].coeffs[33] = 1;
+		buf[0].coeffs[0] = 0;
+		buf[0].coeffs[1] = 0;
+		buf[1].coeffs[0] = 1;
+		buf[1].coeffs[1] = 0;
+		buf[2].coeffs[0] = 0;
+		buf[2].coeffs[1] = 1;
+		buf[3].coeffs[0] = 1;
+		buf[3].coeffs[1] = 1;
 	}
 
 	storm_init(&ctx0, GEN_MAT_DOMAIN);
