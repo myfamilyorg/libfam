@@ -559,6 +559,8 @@ void poly_uniform_eta(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce) {
 	__attribute__((aligned(32))) uint8_t buf[160] = {0};
 
 	storm_init(&ctx, HASH_DOMAIN);
+	fastmemcpy(buf, seed, CRHBYTES);
+	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
 	for (u32 i = 0; i < sizeof(buf); i += 32)
 		storm_next_block(&ctx, buf + i);
 
@@ -674,6 +676,8 @@ void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES],
 	storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(buf, seed, CRHBYTES);
 	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
 	for (u32 i = 0; i < sizeof(buf); i += 32)
 		storm_next_block(&ctx, buf + i);
 

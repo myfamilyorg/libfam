@@ -141,8 +141,7 @@ const uint8_t idxlut[256][8] = {
     {2, 3, 4, 5, 6, 7, 0, 0}, {0, 2, 3, 4, 5, 6, 7, 0},
     {1, 2, 3, 4, 5, 6, 7, 0}, {0, 1, 2, 3, 4, 5, 6, 7}};
 
-unsigned int rej_uniform_avx(int32_t *restrict r,
-			     const uint8_t buf[REJ_UNIFORM_BUFLEN + 8]) {
+unsigned int rej_uniform_avx(int32_t *restrict r, const uint8_t buf[864]) {
 	unsigned int ctr, pos;
 	uint32_t good;
 	__m256i d, tmp;
@@ -153,7 +152,7 @@ unsigned int rej_uniform_avx(int32_t *restrict r,
 	    10, 9, -1, 8, 7, 6, -1, 5, 4, 3, -1, 2, 1, 0);
 
 	ctr = pos = 0;
-	while (pos <= REJ_UNIFORM_BUFLEN - 24) {
+	while (pos <= 864 - 24) {
 		d = _mm256_loadu_si256((__m256i *)&buf[pos]);
 		d = _mm256_permute4x64_epi64(d, 0x94);
 		d = _mm256_shuffle_epi8(d, idx8);
@@ -173,7 +172,7 @@ unsigned int rej_uniform_avx(int32_t *restrict r,
 	}
 
 	uint32_t t;
-	while (ctr < N && pos <= REJ_UNIFORM_BUFLEN - 3) {
+	while (ctr < N && pos <= 864 - 3) {
 		t = buf[pos++];
 		t |= (uint32_t)buf[pos++] << 8;
 		t |= (uint32_t)buf[pos++] << 16;
