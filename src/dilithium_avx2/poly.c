@@ -30,15 +30,6 @@ static void storm_init_nonce(StormContext *ctx, u16 nonce) {
 	storm_init(ctx, key);
 }
 
-/*************************************************
- * Name:        poly_reduce
- *
- * Description: Inplace reduction of all coefficients of polynomial to
- *              representative in [-6283009,6283008]. Assumes input
- *              coefficients to be at most 2^31 - 2^22 - 1 in absolute value.
- *
- * Arguments:   - poly *a: pointer to input/output polynomial
- **************************************************/
 void poly_reduce(poly *a) {
 	unsigned int i;
 	__m256i f, g;
@@ -55,14 +46,6 @@ void poly_reduce(poly *a) {
 	}
 }
 
-/*************************************************
- * Name:        poly_addq
- *
- * Description: For all coefficients of in/out polynomial add Q if
- *              coefficient is negative.
- *
- * Arguments:   - poly *a: pointer to input/output polynomial
- **************************************************/
 void poly_caddq(poly *a) {
 	unsigned int i;
 	__m256i f, g;
@@ -77,15 +60,6 @@ void poly_caddq(poly *a) {
 	}
 }
 
-/*************************************************
- * Name:        poly_add
- *
- * Description: Add polynomials. No modular reduction is performed.
- *
- * Arguments:   - poly *c: pointer to output polynomial
- *              - const poly *a: pointer to first summand
- *              - const poly *b: pointer to second summand
- **************************************************/
 void poly_add(poly *c, const poly *a, const poly *b) {
 	unsigned int i;
 	__m256i f, g;
@@ -98,17 +72,6 @@ void poly_add(poly *c, const poly *a, const poly *b) {
 	}
 }
 
-/*************************************************
- * Name:        poly_sub
- *
- * Description: Subtract polynomials. No modular reduction is
- *              performed.
- *
- * Arguments:   - poly *c: pointer to output polynomial
- *              - const poly *a: pointer to first input polynomial
- *              - const poly *b: pointer to second input polynomial to be
- *                               subtraced from first input polynomial
- **************************************************/
 void poly_sub(poly *c, const poly *a, const poly *b) {
 	unsigned int i;
 	__m256i f, g;
@@ -121,14 +84,6 @@ void poly_sub(poly *c, const poly *a, const poly *b) {
 	}
 }
 
-/*************************************************
- * Name:        poly_shiftl
- *
- * Description: Multiply polynomial by 2^D without modular reduction. Assumes
- *              input coefficients to be less than 2^{31-D} in absolute value.
- *
- * Arguments:   - poly *a: pointer to input/output polynomial
- **************************************************/
 void poly_shiftl(poly *a) {
 	unsigned int i;
 	__m256i f;
@@ -140,91 +95,24 @@ void poly_shiftl(poly *a) {
 	}
 }
 
-/*************************************************
- * Name:        poly_ntt
- *
- * Description: Inplace forward NTT. Coefficients can grow by up to
- *              8*Q in absolute value.
- *
- * Arguments:   - poly *a: pointer to input/output polynomial
- **************************************************/
 void poly_ntt(poly *a) { ntt_avx(a->vec, qdata.vec); }
 
-/*************************************************
- * Name:        poly_invntt_tomont
- *
- * Description: Inplace inverse NTT and multiplication by 2^{32}.
- *              Input coefficients need to be less than Q in absolute
- *              value and output coefficients are again bounded by Q.
- *
- * Arguments:   - poly *a: pointer to input/output polynomial
- **************************************************/
 void poly_invntt_tomont(poly *a) { invntt_avx(a->vec, qdata.vec); }
 
 void poly_nttunpack(poly *a) { nttunpack_avx(a->vec); }
 
-/*************************************************
- * Name:        poly_pointwise_montgomery
- *
- * Description: Pointwise multiplication of polynomials in NTT domain
- *              representation and multiplication of resulting polynomial
- *              by 2^{-32}.
- *
- * Arguments:   - poly *c: pointer to output polynomial
- *              - const poly *a: pointer to first input polynomial
- *              - const poly *b: pointer to second input polynomial
- **************************************************/
 void poly_pointwise_montgomery(poly *c, const poly *a, const poly *b) {
 	pointwise_avx(c->vec, a->vec, b->vec, qdata.vec);
 }
 
-/*************************************************
- * Name:        poly_power2round
- *
- * Description: For all coefficients c of the input polynomial,
- *              compute c0, c1 such that c mod^+ Q = c1*2^D + c0
- *              with -2^{D-1} < c0 <= 2^{D-1}. Assumes coefficients to be
- *              positive standard representatives.
- *
- * Arguments:   - poly *a1: pointer to output polynomial with coefficients c1
- *              - poly *a0: pointer to output polynomial with coefficients c0
- *              - const poly *a: pointer to input polynomial
- **************************************************/
 void poly_power2round(poly *a1, poly *a0, const poly *a) {
 	power2round_avx(a1->vec, a0->vec, a->vec);
 }
 
-/*************************************************
- * Name:        poly_decompose
- *
- * Description: For all coefficients c of the input polynomial,
- *              compute high and low bits c0, c1 such c mod^+ Q = c1*ALPHA + c0
- *              with -ALPHA/2 < c0 <= ALPHA/2 except if c1 = (Q-1)/ALPHA where
- *we set c1 = 0 and -ALPHA/2 <= c0 = c mod Q - Q < 0. Assumes coefficients to be
- *positive standard representatives.
- *
- * Arguments:   - poly *a1: pointer to output polynomial with coefficients c1
- *              - poly *a0: pointer to output polynomial with coefficients c0
- *              - const poly *a: pointer to input polynomial
- **************************************************/
 void poly_decompose(poly *a1, poly *a0, const poly *a) {
 	decompose_avx(a1->vec, a0->vec, a->vec);
 }
 
-/*************************************************
- * Name:        poly_make_hint
- *
- * Description: Compute hint array. The coefficients of which are the
- *              indices of the coefficients of the input polynomial
- *              whose low bits overflow into the high bits.
- *
- * Arguments:   - u8 *h: pointer to output hint array (preallocated of
- *length N)
- *              - const poly *a0: pointer to low part of input polynomial
- *              - const poly *a1: pointer to high part of input polynomial
- *
- * Returns number of hints, i.e. length of hint array.
- **************************************************/
 unsigned int poly_make_hint(u8 hint[N], const poly *a0, const poly *a1) {
 	unsigned int r;
 
@@ -233,30 +121,10 @@ unsigned int poly_make_hint(u8 hint[N], const poly *a0, const poly *a1) {
 	return r;
 }
 
-/*************************************************
- * Name:        poly_use_hint
- *
- * Description: Use hint polynomial to correct the high bits of a polynomial.
- *
- * Arguments:   - poly *b: pointer to output polynomial with corrected high bits
- *              - const poly *a: pointer to input polynomial
- *              - const poly *h: pointer to input hint polynomial
- **************************************************/
 void poly_use_hint(poly *b, const poly *a, const poly *h) {
 	use_hint_avx(b->vec, a->vec, h->vec);
 }
 
-/*************************************************
- * Name:        poly_chknorm
- *
- * Description: Check infinity norm of polynomial against given bound.
- *              Assumes input polynomial to be reduced by poly_reduce().
- *
- * Arguments:   - const poly *a: pointer to polynomial
- *              - i32 B: norm bound
- *
- * Returns 0 if norm is strictly smaller than B <= (Q-1)/8 and 1 otherwise.
- **************************************************/
 int poly_chknorm(const poly *a, i32 B) {
 	unsigned int i;
 	int r;
@@ -277,20 +145,6 @@ int poly_chknorm(const poly *a, i32 B) {
 	return r;
 }
 
-/*************************************************
- * Name:        rej_uniform
- *
- * Description: Sample uniformly random coefficients in [0, Q-1] by
- *              performing rejection sampling on array of random bytes.
- *
- * Arguments:   - i32 *a: pointer to output array (allocated)
- *              - unsigned int len: number of coefficients to be sampled
- *              - const u8 *buf: array of random bytes
- *              - unsigned int buflen: length of array of random bytes
- *
- * Returns number of sampled coefficients. Can be smaller than len if not enough
- * random bytes were given.
- **************************************************/
 static unsigned int rej_uniform(i32 *a, unsigned int len, const u8 *buf,
 				unsigned int buflen) {
 	unsigned int ctr, pos;
@@ -309,47 +163,11 @@ static unsigned int rej_uniform(i32 *a, unsigned int len, const u8 *buf,
 	return ctr;
 }
 
-/*************************************************
- * Name:        poly_uniform
- *
- * Description: Sample polynomial with uniformly random coefficients
- *              in [0,Q-1] by performing rejection sampling on the
- *              output stream of SHAKE256(seed|nonce)
- *
- * Arguments:   - poly *a: pointer to output polynomial
- *              - const u8 seed[]: byte array with seed of length SEEDBYTES
- *              - u16 nonce: 2-byte nonce
- **************************************************/
-/*
-void poly_uniform_preinit(poly *a, stream128_state *state) {
-	unsigned int ctr;
-	ALIGNED_UINT8(REJ_UNIFORM_BUFLEN + 8) buf;
-
-	stream128_squeezeblocks(buf.coeffs, REJ_UNIFORM_NBLOCKS, state);
-	ctr = rej_uniform_avx(a->coeffs, buf.coeffs);
-
-	while (ctr < N) {
-		stream128_squeezeblocks(buf.coeffs, 1, state);
-		ctr += rej_uniform(a->coeffs + ctr, N - ctr, buf.coeffs,
-				   STREAM128_BLOCKBYTES);
-	}
-}
-*/
-
-/*
-void poly_uniform(poly *a, const u8 seed[SEEDBYTES], u16 nonce) {
-	stream128_state state;
-	stream128_init(&state, seed, nonce);
-	poly_uniform_preinit(a, &state);
-}
-*/
-
 void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3, const u8 seed[32],
 		     u16 nonce0, u16 nonce1, u16 nonce2, u16 nonce3) {
 	StormContext ctx0, ctx1, ctx2, ctx3;
 	unsigned int ctr0, ctr1, ctr2, ctr3;
 	ALIGNED_UINT8(864) buf[4] = {0};
-	// keccakx4_state state;
 	__m256i f;
 
 	f = _mm256_loadu_si256((__m256i *)seed);
@@ -367,24 +185,11 @@ void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3, const u8 seed[32],
 	buf[3].coeffs[SEEDBYTES + 0] = nonce3;
 	buf[3].coeffs[SEEDBYTES + 1] = nonce3 >> 8;
 
-	/*
-	shake128x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
-			       buf[2].coeffs, buf[3].coeffs, SEEDBYTES + 2);
-	shake128x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs, buf[2].coeffs,
-				 buf[3].coeffs, REJ_UNIFORM_NBLOCKS, &state);
-				 */
-
 	storm_init_nonce(&ctx0, nonce0);
 	storm_init_nonce(&ctx1, nonce1);
 	storm_init_nonce(&ctx2, nonce2);
 	storm_init_nonce(&ctx3, nonce3);
 
-	/*
-	storm_init(&ctx0, HASH_DOMAIN);
-	storm_init(&ctx1, HASH_DOMAIN);
-	storm_init(&ctx2, HASH_DOMAIN);
-	storm_init(&ctx3, HASH_DOMAIN);
-	*/
 	for (u32 i = 0; i < 864; i += 32) {
 		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
 		storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i);
@@ -398,11 +203,6 @@ void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3, const u8 seed[32],
 	ctr3 = rej_uniform_avx(a3->coeffs, buf[3].coeffs);
 
 	while (ctr0 < N || ctr1 < N || ctr2 < N || ctr3 < N) {
-		/*
-		shake128x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs,
-					 buf[2].coeffs, buf[3].coeffs, 1,
-					 &state);*/
-
 		storm_next_block(&ctx0, (u8 *)buf[0].coeffs);
 		storm_next_block(&ctx1, (u8 *)buf[1].coeffs);
 		storm_next_block(&ctx2, (u8 *)buf[2].coeffs);
@@ -419,20 +219,6 @@ void poly_uniform_4x(poly *a0, poly *a1, poly *a2, poly *a3, const u8 seed[32],
 	}
 }
 
-/*************************************************
- * Name:        rej_eta
- *
- * Description: Sample uniformly random coefficients in [-ETA, ETA] by
- *              performing rejection sampling on array of random bytes.
- *
- * Arguments:   - i32 *a: pointer to output array (allocated)
- *              - unsigned int len: number of coefficients to be sampled
- *              - const u8 *buf: array of random bytes
- *              - unsigned int buflen: length of array of random bytes
- *
- * Returns number of sampled coefficients. Can be smaller than len if not enough
- * random bytes were given.
- **************************************************/
 static unsigned int rej_eta(i32 *a, unsigned int len, const u8 *buf,
 			    unsigned int buflen) {
 	unsigned int ctr, pos;
@@ -456,48 +242,12 @@ static unsigned int rej_eta(i32 *a, unsigned int len, const u8 *buf,
 	return ctr;
 }
 
-/*************************************************
- * Name:        poly_uniform_eta
- *
- * Description: Sample polynomial with uniformly random coefficients
- *              in [-ETA,ETA] by performing rejection sampling using the
- *              output stream of SHAKE256(seed|nonce)
- *
- * Arguments:   - poly *a: pointer to output polynomial
- *              - const u8 seed[]: byte array with seed of length CRHBYTES
- *              - u16 nonce: 2-byte nonce
- **************************************************/
-/*
-void poly_uniform_eta_preinit(poly *a, stream256_state *state) {
-	unsigned int ctr;
-	ALIGNED_UINT8(REJ_UNIFORM_ETA_BUFLEN) buf;
-
-	stream256_squeezeblocks(buf.coeffs, REJ_UNIFORM_ETA_NBLOCKS, state);
-	ctr = rej_eta_avx(a->coeffs, buf.coeffs);
-
-	while (ctr < N) {
-		stream256_squeezeblocks(buf.coeffs, 1, state);
-		ctr += rej_eta(a->coeffs + ctr, N - ctr, buf.coeffs,
-			       STREAM256_BLOCKBYTES);
-	}
-}
-*/
-
-/*
-void poly_uniform_eta(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
-	stream256_state state;
-	stream256_init(&state, seed, nonce);
-	poly_uniform_eta_preinit(a, &state);
-}
-*/
-
 void poly_uniform_eta(poly *a, const u8 seed[CRHBYTES], u16 nonce) {
 	StormContext ctx;
 	unsigned int ctr;
 	__attribute__((aligned(32))) u8 buf[160] = {0};
 
 	storm_init_nonce(&ctx, nonce);
-	// storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(buf, seed, CRHBYTES);
 	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
 	for (u32 i = 0; i < sizeof(buf); i += 32)
@@ -519,7 +269,6 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	ALIGNED_UINT8(160) buf[4] = {0};
 
 	__m256i f;
-	// keccakx4_state state;
 
 	f = _mm256_loadu_si256((__m256i *)&seed[0]);
 	_mm256_store_si256(&buf[0].vec[0], f);
@@ -541,25 +290,10 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	buf[3].coeffs[64] = nonce3;
 	buf[3].coeffs[65] = nonce3 >> 8;
 
-	/*
-	shake256x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
-			       buf[2].coeffs, buf[3].coeffs, 66);
-	shake256x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs, buf[2].coeffs,
-				 buf[3].coeffs, REJ_UNIFORM_ETA_NBLOCKS,
-				 &state);
-				 */
-
 	storm_init_nonce(&ctx0, nonce0);
 	storm_init_nonce(&ctx1, nonce1);
 	storm_init_nonce(&ctx2, nonce2);
 	storm_init_nonce(&ctx3, nonce3);
-
-	/*
-	storm_init(&ctx0, HASH_DOMAIN);
-	storm_init(&ctx1, HASH_DOMAIN);
-	storm_init(&ctx2, HASH_DOMAIN);
-	storm_init(&ctx3, HASH_DOMAIN);
-	*/
 
 	for (u32 i = 0; i < 160; i += 32) {
 		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
@@ -568,23 +302,12 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 		storm_next_block(&ctx3, (u8 *)buf[3].coeffs + i);
 	}
 
-	/*
-	ctr0 = rej_eta(a0->coeffs, N, buf[0].coeffs, 160);
-	ctr1 = rej_eta(a1->coeffs, N, buf[1].coeffs, 160);
-	ctr2 = rej_eta(a2->coeffs, N, buf[2].coeffs, 160);
-	ctr3 = rej_eta(a3->coeffs, N, buf[3].coeffs, 160);
-	*/
 	ctr0 = rej_eta_avx(a0->coeffs, buf[0].coeffs);
 	ctr1 = rej_eta_avx(a1->coeffs, buf[1].coeffs);
 	ctr2 = rej_eta_avx(a2->coeffs, buf[2].coeffs);
 	ctr3 = rej_eta_avx(a3->coeffs, buf[3].coeffs);
 
 	while (ctr0 < N || ctr1 < N || ctr2 < N || ctr3 < N) {
-		/*
-		shake256x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs,
-					 buf[2].coeffs, buf[3].coeffs, 1,
-					 &state);
-					 */
 		storm_next_block(&ctx0, (u8 *)buf[0].coeffs);
 		storm_next_block(&ctx1, (u8 *)buf[1].coeffs);
 		storm_next_block(&ctx2, (u8 *)buf[2].coeffs);
@@ -597,57 +320,12 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	}
 }
 
-/*************************************************
- * Name:        poly_uniform_gamma1
- *
- * Description: Sample polynomial with uniformly random coefficients
- *              in [-(GAMMA1 - 1), GAMMA1] by unpacking output stream
- *              of SHAKE256(seed|nonce)
- *
- * Arguments:   - poly *a: pointer to output polynomial
- *              - const u8 seed[]: byte array with seed of length CRHBYTES
- *              - u16 nonce: 16-bit nonce
- **************************************************/
-#define POLY_UNIFORM_GAMMA1_NBLOCKS \
-	((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
-/*
-void poly_uniform_gamma1_preinit(poly *a, stream256_state *state) {
-	ALIGNED_UINT8(POLY_UNIFORM_GAMMA1_NBLOCKS * STREAM256_BLOCKBYTES + 14)
-	buf;
-	stream256_squeezeblocks(buf.coeffs, POLY_UNIFORM_GAMMA1_NBLOCKS, state);
-
-	polyz_unpack(a, buf.coeffs);
-}
-*/
-/*
-void poly_uniform_gamma1(poly *a, const u8 seed[CRHBYTES],
-			 u16 nonce) {
-	panic("gamma1");
-	StormContext ctx;
-	__attribute__((aligned(32))) u8 buf[704] = {0};
-
-	storm_init(&ctx, HASH_DOMAIN);
-	fastmemcpy(buf, seed, CRHBYTES);
-	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
-	for (u32 i = 0; i < sizeof(buf); i += 32)
-		storm_next_block(&ctx, buf + i);
-	for (u32 i = 0; i < sizeof(buf); i += 32)
-		storm_next_block(&ctx, buf + i);
-
-	//stream256_init(&state, seed, nonce);
-	//stream256_squeezeblocks(buf, POLY_UNIFORM_GAMMA1_NBLOCKS, &state);
-	polyz_unpack(a, buf);
-}
-*/
-
-#include <libfam/format.h>
 void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 			    const u8 seed[64], u16 nonce0, u16 nonce1,
 			    u16 nonce2, u16 nonce3) {
 	StormContext ctx0, ctx1, ctx2, ctx3;
 	ALIGNED_UINT8(704)
 	buf[4] = {0};
-	// keccakx4_state state;
 	__m256i f;
 
 	f = _mm256_loadu_si256((__m256i *)&seed[0]);
@@ -674,34 +352,12 @@ void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	storm_init_nonce(&ctx1, nonce1);
 	storm_init_nonce(&ctx2, nonce2);
 	storm_init_nonce(&ctx3, nonce3);
-	/*
-	storm_init(&ctx0, HASH_DOMAIN);
-	storm_init(&ctx1, HASH_DOMAIN);
-	storm_init(&ctx2, HASH_DOMAIN);
-	storm_init(&ctx3, HASH_DOMAIN);
-	*/
 	for (u32 i = 0; i < 704; i += 32) {
 		storm_next_block(&ctx0, buf[0].coeffs + i);
 		storm_next_block(&ctx1, buf[1].coeffs + i);
 		storm_next_block(&ctx2, buf[2].coeffs + i);
 		storm_next_block(&ctx3, buf[3].coeffs + i);
 	}
-
-	/*
-	for (u32 i = 0; i < 704; i += 32) {
-		storm_next_block(&ctx0, buf[0].coeffs + i);
-		storm_next_block(&ctx1, buf[1].coeffs + i);
-		storm_next_block(&ctx2, buf[2].coeffs + i);
-		storm_next_block(&ctx3, buf[3].coeffs + i);
-	}
-	*/
-
-	/*
-		shake256x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
-				       buf[2].coeffs, buf[3].coeffs, 66);
-		shake256x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs,
-	   buf[2].coeffs, buf[3].coeffs, POLY_UNIFORM_GAMMA1_NBLOCKS, &state);
-					 */
 
 	polyz_unpack(a0, buf[0].coeffs);
 	polyz_unpack(a1, buf[1].coeffs);
@@ -709,17 +365,6 @@ void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	polyz_unpack(a3, buf[3].coeffs);
 }
 
-/*************************************************
- * Name:        challenge
- *
- * Description: Implementation of H. Samples polynomial with TAU nonzero
- *              coefficients in {-1,1} using the output stream of
- *              SHAKE256(seed).
- *
- * Arguments:   - poly *c: pointer to output polynomial
- *              - const u8 mu[]: byte array containing seed of length
- *CTILDEBYTES
- **************************************************/
 #define STORM_RATE 160
 void poly_challenge(poly *restrict c, const u8 seed[CTILDEBYTES]) {
 	unsigned int i, b, pos;
@@ -755,15 +400,6 @@ void poly_challenge(poly *restrict c, const u8 seed[CTILDEBYTES]) {
 	}
 }
 
-/*************************************************
- * Name:        polyeta_pack
- *
- * Description: Bit-pack polynomial with coefficients in [-ETA,ETA].
- *
- * Arguments:   - u8 *r: pointer to output byte array with at least
- *                            POLYETA_PACKEDBYTES bytes
- *              - const poly *a: pointer to input polynomial
- **************************************************/
 void polyeta_pack(u8 r[POLYETA_PACKEDBYTES], const poly *restrict a) {
 	unsigned int i;
 	u8 t[8];
@@ -785,14 +421,6 @@ void polyeta_pack(u8 r[POLYETA_PACKEDBYTES], const poly *restrict a) {
 	}
 }
 
-/*************************************************
- * Name:        polyeta_unpack
- *
- * Description: Unpack polynomial with coefficients in [-ETA,ETA].
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const u8 *a: byte array with bit-packed polynomial
- **************************************************/
 void polyeta_unpack(poly *restrict r, const u8 a[POLYETA_PACKEDBYTES]) {
 	unsigned int i;
 
@@ -819,17 +447,6 @@ void polyeta_unpack(poly *restrict r, const u8 a[POLYETA_PACKEDBYTES]) {
 	}
 }
 
-/*************************************************
- * Name:        polyt1_pack
- *
- * Description: Bit-pack polynomial t1 with coefficients fitting in 10 bits.
- *              Input coefficients are assumed to be positive standard
- *representatives.
- *
- * Arguments:   - u8 *r: pointer to output byte array with at least
- *                            POLYT1_PACKEDBYTES bytes
- *              - const poly *a: pointer to input polynomial
- **************************************************/
 void polyt1_pack(u8 r[POLYT1_PACKEDBYTES], const poly *restrict a) {
 	unsigned int i;
 
@@ -845,15 +462,6 @@ void polyt1_pack(u8 r[POLYT1_PACKEDBYTES], const poly *restrict a) {
 	}
 }
 
-/*************************************************
- * Name:        polyt1_unpack
- *
- * Description: Unpack polynomial t1 with 10-bit coefficients.
- *              Output coefficients are positive standard representatives.
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const u8 *a: byte array with bit-packed polynomial
- **************************************************/
 void polyt1_unpack(poly *restrict r, const u8 a[POLYT1_PACKEDBYTES]) {
 	unsigned int i;
 
@@ -869,15 +477,6 @@ void polyt1_unpack(poly *restrict r, const u8 a[POLYT1_PACKEDBYTES]) {
 	}
 }
 
-/*************************************************
- * Name:        polyt0_pack
- *
- * Description: Bit-pack polynomial t0 with coefficients in ]-2^{D-1}, 2^{D-1}].
- *
- * Arguments:   - u8 *r: pointer to output byte array with at least
- *                            POLYT0_PACKEDBYTES bytes
- *              - const poly *a: pointer to input polynomial
- **************************************************/
 void polyt0_pack(u8 r[POLYT0_PACKEDBYTES], const poly *restrict a) {
 	unsigned int i;
 	u32 t[8];
@@ -915,14 +514,6 @@ void polyt0_pack(u8 r[POLYT0_PACKEDBYTES], const poly *restrict a) {
 	}
 }
 
-/*************************************************
- * Name:        polyt0_unpack
- *
- * Description: Unpack polynomial t0 with coefficients in ]-2^{D-1}, 2^{D-1}].
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const u8 *a: byte array with bit-packed polynomial
- **************************************************/
 void polyt0_unpack(poly *restrict r, const u8 a[POLYT0_PACKEDBYTES]) {
 	unsigned int i;
 
@@ -974,16 +565,6 @@ void polyt0_unpack(poly *restrict r, const u8 a[POLYT0_PACKEDBYTES]) {
 	}
 }
 
-/*************************************************
- * Name:        polyz_pack
- *
- * Description: Bit-pack polynomial with coefficients
- *              in [-(GAMMA1 - 1), GAMMA1].
- *
- * Arguments:   - u8 *r: pointer to output byte array with at least
- *                            POLYZ_PACKEDBYTES bytes
- *              - const poly *a: pointer to input polynomial
- **************************************************/
 void polyz_pack(u8 r[POLYZ_PACKEDBYTES], const poly *restrict a) {
 	unsigned int i;
 	u32 t[4];
@@ -1009,15 +590,6 @@ void polyz_pack(u8 r[POLYZ_PACKEDBYTES], const poly *restrict a) {
 	}
 }
 
-/*************************************************
- * Name:        polyz_unpack
- *
- * Description: Unpack polynomial z with coefficients
- *              in [-(GAMMA1 - 1), GAMMA1].
- *
- * Arguments:   - poly *r: pointer to output polynomial
- *              - const u8 *a: byte array with bit-packed polynomial
- **************************************************/
 void polyz_unpack(poly *restrict r, const u8 *a) {
 	unsigned int i;
 	__m256i f;
@@ -1039,17 +611,6 @@ void polyz_unpack(poly *restrict r, const u8 *a) {
 	}
 }
 
-/*************************************************
- * Name:        polyw1_pack
- *
- * Description: Bit-pack polynomial w1 with coefficients in [0,15] or [0,43].
- *              Input coefficients are assumed to be positive standard
- *representatives.
- *
- * Arguments:   - u8 *r: pointer to output byte array with at least
- *                            POLYW1_PACKEDBYTES bytes
- *              - const poly *a: pointer to input polynomial
- **************************************************/
 void polyw1_pack(u8 *r, const poly *restrict a) {
 	unsigned int i;
 	__m256i f0, f1, f2, f3;

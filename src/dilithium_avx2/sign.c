@@ -40,18 +40,6 @@ static inline void polyvec_matrix_expand_row(polyvecl **row, polyvecl buf[2],
 	}
 }
 
-/*************************************************
- * Name:        crypto_sign_keypair
- *
- * Description: Generates public and private key.
- *
- * Arguments:   - u8 *pk: pointer to output public key (allocated
- *                             array of CRYPTO_PUBLICKEYBYTES bytes)
- *              - u8 *sk: pointer to output private key (allocated
- *                             array of CRYPTO_SECRETKEYBYTES bytes)
- *
- * Returns 0 (success)
- **************************************************/
 int crypto_sign_keypair(u8 *pk, u8 *sk, const u8 seed[32]) {
 	StormContext ctx;
 	unsigned int i;
@@ -67,7 +55,6 @@ int crypto_sign_keypair(u8 *pk, u8 *sk, const u8 seed[32]) {
 	seedbuf[SEEDBYTES + 0] = K;
 	seedbuf[SEEDBYTES + 1] = L;
 
-	// shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
 	storm_init(&ctx, HASH_DOMAIN);
 	for (u32 i = 0; i < 2 * SEEDBYTES + CRHBYTES; i += 32)
 		storm_next_block(&ctx, seedbuf + i);
@@ -135,29 +122,9 @@ int crypto_sign_keypair(u8 *pk, u8 *sk, const u8 seed[32]) {
 	storm_next_block(&ctx, sk + 2 * SEEDBYTES);
 	storm_next_block(&ctx, sk + 2 * SEEDBYTES + 32);
 
-	// shake256(sk + 2 * SEEDBYTES, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
-
 	return 0;
 }
 
-/*************************************************
- * Name:        crypto_sign_signature_internal
- *
- * Description: Computes signature. Internal API.
- *
- * Arguments:   - u8 *sig: pointer to output signature (of length
- *CRYPTO_BYTES)
- *              - u64 *siglen: pointer to output length of signature
- *              - u8 *m: pointer to message to be signed
- *              - u64 mlen: length of message
- *              - u8 *pre: pointer to prefix string
- *              - u64 prelen: length of prefix string
- *              - u8 *rnd: pointer to random seed
- *              - u8 *sk: pointer to bit-packed secret key
- *
- * Returns 0 (success)
- **************************************************/
-#include <libfam/format.h>
 int crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 				   const u8 *pre, u64 prelen,
 				   const u8 rnd[RNDBYTES], const u8 *sk) {
@@ -176,7 +143,6 @@ int crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 		polyvecl y;
 		polyveck w0;
 	} tmpv;
-	// keccak_state state;
 
 	rho = seedbuf;
 	tr = rho + SEEDBYTES;
@@ -198,24 +164,6 @@ int crypto_sign_signature_internal(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	storm_next_block(&ctx, mu);
 	storm_next_block(&ctx, mu + 32);
 
-	/*
-	shake256_init(&state);
-	shake256_absorb(&state, tr, TRBYTES);
-	// shake256_absorb(&state, pre, prelen);
-	shake256_absorb(&state, m, mlen);
-	shake256_finalize(&state);
-	shake256_squeeze(mu, CRHBYTES, &state);
-	*/
-
-	/* Compute rhoprime = CRH(key, rnd, mu) */
-	/*
-	shake256_init(&state);
-	shake256_absorb(&state, key, SEEDBYTES);
-	shake256_absorb(&state, rnd, RNDBYTES);
-	shake256_absorb(&state, mu, CRHBYTES);
-	shake256_finalize(&state);
-	shake256_squeeze(rhoprime, CRHBYTES, &state);
-	*/
 	storm_init(&ctx, HASH_DOMAIN);
 	__attribute__((aligned(32))) u8 rho_prime_buffer[128];
 	fastmemcpy(rho_prime_buffer, key, 32);
@@ -263,13 +211,6 @@ rej:
 	fastmemset(sig, 0, 32);
 	storm_next_block(&ctx, sig);
 
-	/*
-       shake256_init(&state);
-       shake256_absorb(&state, mu, CRHBYTES);
-       shake256_absorb(&state, sig, K * POLYW1_PACKEDBYTES);
-       shake256_finalize(&state);
-       shake256_squeeze(sig, CTILDEBYTES, &state);
-       */
 	poly_challenge(&c, sig);
 	poly_ntt(&c);
 
@@ -319,22 +260,6 @@ rej:
 	return 0;
 }
 
-/*************************************************
- * Name:        crypto_sign_signature
- *
- * Description: Computes signature.
- *
- * Arguments:   - u8 *sig: pointer to output signature (of length
- *CRYPTO_BYTES)
- *              - u64 *siglen: pointer to output length of signature
- *              - u8 *m: pointer to message to be signed
- *              - u64 mlen: length of message
- *              - u8 *ctx: pointer to context string
- *              - u64 ctxlen: length of context string
- *              - u8 *sk: pointer to bit-packed secret key
- *
- * Returns 0 (success) or -1 (context string too long)
- **************************************************/
 int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 			  const u8 *ctx, u64 ctxlen, const u8 *sk, Rng *rng) {
 	u8 pre[257];
@@ -353,24 +278,6 @@ int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	return 0;
 }
 
-/*************************************************
- * Name:        crypto_sign
- *
- * Description: Compute signed message.
- *
- * Arguments:   - u8 *sm: pointer to output signed message (allocated
- *                             array with CRYPTO_BYTES + mlen bytes),
- *                             can be equal to m
- *              - u64 *smlen: pointer to output length of signed
- *                               message
- *              - const u8 *m: pointer to message to be signed
- *              - u64 mlen: length of message
- *              - const u8 *ctx: pointer to context string
- *              - u64 ctxlen: length of context string
- *              - const u8 *sk: pointer to bit-packed secret key
- *
- * Returns 0 (success)
- **************************************************/
 int crypto_sign(u8 *sm, u64 *smlen, const u8 *m, u64 mlen, const u8 *ctx,
 		u64 ctxlen, const u8 *sk, Rng *rng) {
 	u64 i;
@@ -384,21 +291,6 @@ int crypto_sign(u8 *sm, u64 *smlen, const u8 *m, u64 mlen, const u8 *ctx,
 	return ret;
 }
 
-/*************************************************
- * Name:        crypto_sign_verify_internal
- *
- * Description: Verifies signature. Internal API.
- *
- * Arguments:   - u8 *m: pointer to input signature
- *              - u64 siglen: length of signature
- *              - const u8 *m: pointer to message
- *              - u64 mlen: length of message
- *              - const u8 *pre: pointer to prefix string
- *              - u64 prelen: length of prefix string
- *              - const u8 *pk: pointer to bit-packed public key
- *
- * Returns 0 if signature could be verified correctly and -1 otherwise
- **************************************************/
 int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 				u64 mlen, const u8 *pre, u64 prelen,
 				const u8 *pk) {
@@ -412,12 +304,10 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	polyvecl *row = rowbuf;
 	polyvecl z;
 	poly c, w1, h;
-	// keccak_state state;
 
 	if (siglen != CRYPTO_BYTES) return -1;
 
 	/* Compute CRH(H(rho, t1), pre, msg) */
-	// shake256(mu, TRBYTES, pk, CRYPTO_PUBLICKEYBYTES);
 	storm_init(&ctx, HASH_DOMAIN);
 	__attribute__((aligned(32))) u8 pk_copy[CRYPTO_PUBLICKEYBYTES];
 	fastmemcpy(pk_copy, pk, CRYPTO_PUBLICKEYBYTES);
@@ -436,15 +326,6 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	fastmemset(mu, 0, 64);
 	storm_next_block(&ctx, mu);
 	storm_next_block(&ctx, mu + 32);
-
-	/*
-	shake256_init(&state);
-	shake256_absorb(&state, mu, CRHBYTES);
-	// shake256_absorb(&state, pre, prelen);
-	shake256_absorb(&state, m, mlen);
-	shake256_finalize(&state);
-	shake256_squeeze(mu, CRHBYTES, &state);
-	*/
 
 	/* Expand challenge */
 	poly_challenge(&c, sig);
@@ -494,14 +375,6 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 		if (hint[j]) return -1;
 
 	/* Call random oracle and verify challenge */
-	/*
-	shake256_init(&state);
-	shake256_absorb(&state, mu, CRHBYTES);
-	shake256_absorb(&state, buf.coeffs, K * POLYW1_PACKEDBYTES);
-	shake256_finalize(&state);
-	shake256_squeeze(buf.coeffs, CTILDEBYTES, &state);
-	*/
-
 	storm_init(&ctx, HASH_DOMAIN);
 	__attribute__((
 	    aligned(32))) u8 sig_buffer[K * POLYW1_PACKEDBYTES + CRHBYTES];
@@ -520,21 +393,6 @@ int crypto_sign_verify_internal(const u8 *sig, u64 siglen, const u8 *m,
 	return 0;
 }
 
-/*************************************************
- * Name:        crypto_sign_verify
- *
- * Description: Verifies signature.
- *
- * Arguments:   - u8 *m: pointer to input signature
- *              - u64 siglen: length of signature
- *              - const u8 *m: pointer to message
- *              - u64 mlen: length of message
- *              - const u8 *ctx: pointer to context string
- *              - u64 ctxlen: length of context string
- *              - const u8 *pk: pointer to bit-packed public key
- *
- * Returns 0 if signature could be verified correctly and -1 otherwise
- **************************************************/
 int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
 		       const u8 *ctx, u64 ctxlen, const u8 *pk) {
 	u8 pre[257];
@@ -548,22 +406,6 @@ int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
 					   2 + ctxlen, pk);
 }
 
-/*************************************************
- * Name:        crypto_sign_open
- *
- * Description: Verify signed message.
- *
- * Arguments:   - u8 *m: pointer to output message (allocated
- *                            array with smlen bytes), can be equal to sm
- *              - u64 *mlen: pointer to output length of message
- *              - const u8 *sm: pointer to signed message
- *              - u64 smlen: length of signed message
- *              - const u8 *ctx: pointer to context string
- *              - u64 ctxlen: length of context string
- *              - const u8 *pk: pointer to bit-packed public key
- *
- * Returns 0 if signed message could be verified correctly and -1 otherwise
- **************************************************/
 int crypto_sign_open(u8 *m, u64 *mlen, const u8 *sm, u64 smlen, const u8 *ctx,
 		     u64 ctxlen, const u8 *pk) {
 	u64 i;

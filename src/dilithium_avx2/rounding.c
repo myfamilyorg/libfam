@@ -18,18 +18,6 @@
 					     _mm256_castsi256_ps(b), \
 					     _mm256_castsi256_ps(mask)))
 
-/*************************************************
- * Name:        power2round
- *
- * Description: For finite field elements a, compute a0, a1 such that
- *              a mod^+ Q = a1*2^D + a0 with -2^{D-1} < a0 <= 2^{D-1}.
- *              Assumes a to be positive standard representative.
- *
- * Arguments:   - __m256i *a1: output array of length N/8 with high bits
- *              - __m256i *a0: output array of length N/8 with low bits a0
- *              - const __m256i *a: input array of length N/8
- *
- **************************************************/
 void power2round_avx(__m256i *a1, __m256i *a0, const __m256i *a) {
 	unsigned int i;
 	__m256i f, f0, f1;
@@ -47,19 +35,6 @@ void power2round_avx(__m256i *a1, __m256i *a0, const __m256i *a) {
 	}
 }
 
-/*************************************************
- * Name:        decompose
- *
- * Description: For finite field element a, compute high and low parts a0, a1
- *such that a mod^+ Q = a1*ALPHA + a0 with -ALPHA/2 < a0 <= ALPHA/2 except if a1
- *= (Q-1)/ALPHA where we set a1 = 0 and -ALPHA/2 <= a0 = a mod Q - Q < 0.
- *Assumes a to be positive standard representative.
- *
- * Arguments:   - __m256i *a1: output array of length N/8 with high parts
- *              - __m256i *a0: output array of length N/8 with low parts a0
- *              - const __m256i *a: input array of length N/8
- *
- **************************************************/
 void decompose_avx(__m256i *a1, __m256i *a0, const __m256i *a) {
 	unsigned int i;
 	__m256i f, f0, f1, t;
@@ -90,18 +65,6 @@ void decompose_avx(__m256i *a1, __m256i *a0, const __m256i *a) {
 	}
 }
 
-/*************************************************
- * Name:        make_hint
- *
- * Description: Compute indices of polynomial coefficients whose low bits
- *              overflow into the high bits.
- *
- * Arguments:   - u8 *hint: hint array
- *              - const __m256i *a0: low bits of input elements
- *              - const __m256i *a1: high bits of input elements
- *
- * Returns number of overflowing low bits
- **************************************************/
 unsigned int make_hint_avx(u8 hint[N], const __m256i *restrict a0,
 			   const __m256i *restrict a1) {
 	unsigned int i, n = 0;
@@ -130,17 +93,6 @@ unsigned int make_hint_avx(u8 hint[N], const __m256i *restrict a0,
 	return n;
 }
 
-/*************************************************
- * Name:        use_hint
- *
- * Description: Correct high parts according to hint.
- *
- * Arguments:   - __m256i *b: output array of length N/8 with corrected high
- *parts
- *              - const __m256i *a: input array of length N/8
- *              - const __m256i *a: input array of length N/8 with hint bits
- *
- **************************************************/
 void use_hint_avx(__m256i *b, const __m256i *a, const __m256i *restrict hint) {
 	unsigned int i;
 	__m256i a0[N / 8];
