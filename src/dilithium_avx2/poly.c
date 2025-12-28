@@ -8,7 +8,6 @@
 
 #include <dilithium_avx2/align.h>
 #include <dilithium_avx2/consts.h>
-#include <dilithium_avx2/fips202x4.h>
 #include <dilithium_avx2/ntt.h>
 #include <dilithium_avx2/params.h>
 #include <dilithium_avx2/poly.h>
