@@ -4,6 +4,8 @@
 #include <dilithium_scalar/reduce.h>
 #include <dilithium_scalar/rounding.h>
 #include <dilithium_scalar/symmetric.h>
+#include <libfam/sign_impl.h>
+#include <libfam/storm.h>
 #include <stdint.h>
 
 #ifdef DBENCH
@@ -470,16 +472,27 @@ void poly_uniform_gamma1(poly *a, const uint8_t seed[CRHBYTES],
  *              - const uint8_t mu[]: byte array containing seed of length
  *CTILDEBYTES
  **************************************************/
+#include <libfam/format.h>
+
+#define STORM_RATE 160
 void poly_challenge(poly *c, const uint8_t seed[CTILDEBYTES]) {
 	unsigned int i, b, pos;
 	uint64_t signs;
-	uint8_t buf[SHAKE256_RATE];
-	keccak_state state;
+	__attribute__((aligned(32))) uint8_t buf[STORM_RATE] = {0};
+	// keccak_state state;
+	StormContext ctx;
 
+	/*
 	shake256_init(&state);
 	shake256_absorb(&state, seed, CTILDEBYTES);
 	shake256_finalize(&state);
 	shake256_squeezeblocks(buf, 1, &state);
+	*/
+
+	storm_init(&ctx, HASH_DOMAIN);
+	fastmemcpy(buf, seed, 32);
+	for (u32 i = 0; i < STORM_RATE; i += 32)
+		storm_next_block(&ctx, buf + i);
 
 	signs = 0;
 	for (i = 0; i < 8; ++i) signs |= (uint64_t)buf[i] << 8 * i;
@@ -488,8 +501,11 @@ void poly_challenge(poly *c, const uint8_t seed[CTILDEBYTES]) {
 	for (i = 0; i < N; ++i) c->coeffs[i] = 0;
 	for (i = N - TAU; i < N; ++i) {
 		do {
-			if (pos >= SHAKE256_RATE) {
-				shake256_squeezeblocks(buf, 1, &state);
+			if (pos >= STORM_RATE) {
+				// shake256_squeezeblocks(buf, 1, &state);
+				for (u32 i = 0; i < STORM_RATE; i += 32)
+					storm_next_block(&ctx, buf + i);
+
 				pos = 0;
 			}
 

@@ -12,7 +12,6 @@
 #include <dilithium_avx2/poly.h>
 #include <dilithium_avx2/polyvec.h>
 #include <dilithium_avx2/sign.h>
-#include <dilithium_avx2/symmetric.h>
 #include <libfam/rng.h>
 #include <libfam/sign_impl.h>
 #include <libfam/storm.h>

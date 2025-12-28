@@ -26,6 +26,8 @@
 #ifndef _SIGN_IMPL
 #define _SIGN_IMPL
 
+#include <libfam/types.h>
+
 __attribute__((aligned(32))) static const u8 HASH_DOMAIN[32] = {1, 2, 3, 4, 30};
 
 #endif /* _SIGN_IMPL */
