@@ -371,17 +371,15 @@ void poly_uniform_gamma1_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	polyz_unpack(a3, buf[3].coeffs);
 }
 
-#define STORM_RATE 32
 void poly_challenge(poly *restrict c, const u8 seed[CTILDEBYTES]) {
 	unsigned int i, b, pos;
 	u64 signs;
-	__attribute__((aligned(32))) u8 buf[STORM_RATE] = {0};
+	__attribute__((aligned(32))) u8 buf[32] = {0};
 	StormContext ctx;
 
 	storm_init(&ctx, HASH_DOMAIN);
 	fastmemcpy(buf, seed, 32);
-	for (u32 i = 0; i < STORM_RATE; i += 32)
-		storm_next_block(&ctx, buf + i);
+	storm_next_block(&ctx, buf);
 
 	signs = 0;
 	for (i = 0; i < 8; ++i) signs |= (u64)buf[i] << 8 * i;
@@ -390,13 +388,10 @@ void poly_challenge(poly *restrict c, const u8 seed[CTILDEBYTES]) {
 	for (i = 0; i < N; ++i) c->coeffs[i] = 0;
 	for (i = N - TAU; i < N; ++i) {
 		do {
-			if (pos >= STORM_RATE) {
-				for (u32 i = 0; i < STORM_RATE; i += 32)
-					storm_next_block(&ctx, buf + i);
-
+			if (pos >= 32) {
+				storm_next_block(&ctx, buf);
 				pos = 0;
 			}
-
 			b = buf[pos++];
 		} while (b > i);
 
