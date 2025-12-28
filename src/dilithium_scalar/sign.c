@@ -3,7 +3,6 @@
 #include <dilithium_scalar/poly.h>
 #include <dilithium_scalar/polyvec.h>
 #include <dilithium_scalar/sign.h>
-#include <dilithium_scalar/symmetric.h>
 #include <libfam/sign_impl.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
@@ -117,7 +116,7 @@ int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
 	polyvecl mat[K], s1, y, z;
 	polyveck t0, s2, w1, w0, h;
 	poly cp;
-	keccak_state state;
+	// keccak_state state;
 
 	rho = seedbuf;
 	tr = rho + SEEDBYTES;
@@ -192,11 +191,24 @@ rej:
 	polyveck_decompose(&w1, &w0, &w1);
 	polyveck_pack_w1(sig, &w1);
 
+	/*
 	shake256_init(&state);
 	shake256_absorb(&state, mu, CRHBYTES);
 	shake256_absorb(&state, sig, K * POLYW1_PACKEDBYTES);
 	shake256_finalize(&state);
 	shake256_squeeze(sig, CTILDEBYTES, &state);
+	*/
+
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((
+	    aligned(32))) u8 sig_buffer[K * POLYW1_PACKEDBYTES + CRHBYTES];
+	fastmemcpy(sig_buffer, mu, CRHBYTES);
+	fastmemcpy(sig_buffer + CRHBYTES, sig, K * POLYW1_PACKEDBYTES);
+	for (u32 i = 0; i < sizeof(sig_buffer); i += 32)
+		storm_next_block(&ctx, sig_buffer + i);
+	fastmemset(sig, 0, 32);
+	storm_next_block(&ctx, sig);
+
 	poly_challenge(&cp, sig);
 	poly_ntt(&cp);
 
@@ -321,7 +333,7 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 				const uint8_t *pk) {
 	StormContext ctx;
 	unsigned int i;
-	uint8_t buf[K * POLYW1_PACKEDBYTES];
+	__attribute__((aligned(32))) uint8_t buf[K * POLYW1_PACKEDBYTES];
 	uint8_t rho[SEEDBYTES];
 	__attribute__((aligned(32))) uint8_t mu[CRHBYTES] = {0};
 	uint8_t c[CTILDEBYTES];
@@ -329,7 +341,7 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 	poly cp;
 	polyvecl mat[K], z;
 	polyveck t1, w1, h;
-	keccak_state state;
+	// keccak_state state;
 
 	if (siglen != CRYPTO_BYTES) return -1;
 
@@ -389,11 +401,23 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 	polyveck_pack_w1(buf, &w1);
 
 	/* Call random oracle and verify challenge */
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((
+	    aligned(32))) u8 sig_buffer[K * POLYW1_PACKEDBYTES + CRHBYTES];
+	fastmemcpy(sig_buffer, mu, CRHBYTES);
+	fastmemcpy(sig_buffer + CRHBYTES, buf, K * POLYW1_PACKEDBYTES);
+	for (u32 i = 0; i < sizeof(sig_buffer); i += 32)
+		storm_next_block(&ctx, sig_buffer + i);
+	fastmemset(c2, 0, 32);
+	storm_next_block(&ctx, c2);
+
+	/*
 	shake256_init(&state);
 	shake256_absorb(&state, mu, CRHBYTES);
 	shake256_absorb(&state, buf, K * POLYW1_PACKEDBYTES);
 	shake256_finalize(&state);
 	shake256_squeeze(c2, CTILDEBYTES, &state);
+	*/
 	for (i = 0; i < CTILDEBYTES; ++i)
 		if (c[i] != c2[i]) return -1;
 

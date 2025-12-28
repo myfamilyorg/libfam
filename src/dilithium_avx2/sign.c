@@ -222,7 +222,7 @@ int crypto_sign_signature_internal(uint8_t *sig, size_t *siglen,
 		polyvecl y;
 		polyveck w0;
 	} tmpv;
-	keccak_state state;
+	// keccak_state state;
 
 	rho = seedbuf;
 	tr = rho + SEEDBYTES;
@@ -316,11 +316,23 @@ rej:
 	polyveck_decompose(&w1, &tmpv.w0, &w1);
 	polyveck_pack_w1(sig, &w1);
 
-	shake256_init(&state);
-	shake256_absorb(&state, mu, CRHBYTES);
-	shake256_absorb(&state, sig, K * POLYW1_PACKEDBYTES);
-	shake256_finalize(&state);
-	shake256_squeeze(sig, CTILDEBYTES, &state);
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((
+	    aligned(32))) u8 sig_buffer[K * POLYW1_PACKEDBYTES + CRHBYTES];
+	fastmemcpy(sig_buffer, mu, CRHBYTES);
+	fastmemcpy(sig_buffer + CRHBYTES, sig, K * POLYW1_PACKEDBYTES);
+	for (u32 i = 0; i < sizeof(sig_buffer); i += 32)
+		storm_next_block(&ctx, sig_buffer + i);
+	fastmemset(sig, 0, 32);
+	storm_next_block(&ctx, sig);
+
+	/*
+       shake256_init(&state);
+       shake256_absorb(&state, mu, CRHBYTES);
+       shake256_absorb(&state, sig, K * POLYW1_PACKEDBYTES);
+       shake256_finalize(&state);
+       shake256_squeeze(sig, CTILDEBYTES, &state);
+       */
 	poly_challenge(&c, sig);
 	poly_ntt(&c);
 
@@ -466,7 +478,7 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 	polyvecl *row = rowbuf;
 	polyvecl z;
 	poly c, w1, h;
-	keccak_state state;
+	// keccak_state state;
 
 	if (siglen != CRYPTO_BYTES) return -1;
 
@@ -548,13 +560,28 @@ int crypto_sign_verify_internal(const uint8_t *sig, size_t siglen,
 		if (hint[j]) return -1;
 
 	/* Call random oracle and verify challenge */
+	/*
 	shake256_init(&state);
 	shake256_absorb(&state, mu, CRHBYTES);
 	shake256_absorb(&state, buf.coeffs, K * POLYW1_PACKEDBYTES);
 	shake256_finalize(&state);
 	shake256_squeeze(buf.coeffs, CTILDEBYTES, &state);
+	*/
+
+	storm_init(&ctx, HASH_DOMAIN);
+	__attribute__((
+	    aligned(32))) u8 sig_buffer[K * POLYW1_PACKEDBYTES + CRHBYTES];
+	fastmemcpy(sig_buffer, mu, CRHBYTES);
+	fastmemcpy(sig_buffer + CRHBYTES, buf.coeffs, K * POLYW1_PACKEDBYTES);
+	for (u32 i = 0; i < sizeof(sig_buffer); i += 32)
+		storm_next_block(&ctx, sig_buffer + i);
+	fastmemset(buf.coeffs, 0, 32);
+	storm_next_block(&ctx, buf.coeffs);
+
 	for (i = 0; i < CTILDEBYTES; ++i)
-		if (buf.coeffs[i] != sig[i]) return -1;
+		if (buf.coeffs[i] != sig[i]) {
+			return -1;
+		}
 
 	return 0;
 }
