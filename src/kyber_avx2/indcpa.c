@@ -103,7 +103,7 @@ static unsigned int rej_uniform(i16 *r, unsigned int len, const u8 *buf,
 #include <libfam/format.h>
 void gen_matrix(polyvec *a, const u8 seed[32], int transposed) {
 	StormContext ctx0, ctx1, ctx2, ctx3;
-	unsigned int ctr0, ctr1, ctr2, ctr3;
+	unsigned int i, ctr0, ctr1, ctr2, ctr3;
 	ALIGNED_UINT8(REJ_UNIFORM_AVX_NBLOCKS * SHAKE128_RATE + 8) buf[4] = {0};
 	__m256i f;
 
@@ -114,23 +114,28 @@ void gen_matrix(polyvec *a, const u8 seed[32], int transposed) {
 	_mm256_store_si256(buf[3].vec + 1, f);
 
 	if (transposed) {
-		buf[0].coeffs[0] = 0;
-		buf[0].coeffs[1] = 0;
-		buf[1].coeffs[0] = 0;
-		buf[1].coeffs[1] = 1;
-		buf[2].coeffs[0] = 1;
-		buf[2].coeffs[1] = 0;
-		buf[3].coeffs[0] = 1;
-		buf[3].coeffs[1] = 1;
+		for (i = 0; i < 16; i++) {
+			buf[0].coeffs[2 * i + 0] = 0;
+			buf[0].coeffs[2 * i + 1] = 0;
+			buf[1].coeffs[2 * i + 0] = 0;
+			buf[1].coeffs[2 * i + 1] = 1;
+			buf[2].coeffs[2 * i + 0] = 1;
+			buf[2].coeffs[2 * i + 1] = 0;
+			buf[3].coeffs[2 * i + 0] = 1;
+			buf[3].coeffs[2 * i + 1] = 1;
+		}
+
 	} else {
-		buf[0].coeffs[0] = 0;
-		buf[0].coeffs[1] = 0;
-		buf[1].coeffs[0] = 1;
-		buf[1].coeffs[1] = 0;
-		buf[2].coeffs[0] = 0;
-		buf[2].coeffs[1] = 1;
-		buf[3].coeffs[0] = 1;
-		buf[3].coeffs[1] = 1;
+		for (i = 0; i < 16; i++) {
+			buf[0].coeffs[2 * i + 0] = 0;
+			buf[0].coeffs[2 * i + 1] = 0;
+			buf[1].coeffs[2 * i + 0] = 1;
+			buf[1].coeffs[2 * i + 1] = 0;
+			buf[2].coeffs[2 * i + 0] = 0;
+			buf[2].coeffs[2 * i + 1] = 1;
+			buf[3].coeffs[2 * i + 0] = 1;
+			buf[3].coeffs[2 * i + 1] = 1;
+		}
 	}
 
 	storm_init(&ctx0, GEN_MAT_DOMAIN);

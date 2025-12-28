@@ -115,11 +115,15 @@ static void gen_matrix(polyvec *a, const u8 seed[KYBER_SYMBYTES],
 			fastmemset(buf, 0, sizeof(buf));
 			fastmemcpy(buf + 32, seed, 32);
 			if (transposed) {
-				buf[0] = i;
-				buf[1] = j;
+				for (u32 k = 0; k < 16; k++) {
+					buf[k * 2 + 0] = i;
+					buf[k * 2 + 1] = j;
+				}
 			} else {
-				buf[0] = j;
-				buf[1] = i;
+				for (u32 k = 0; k < 16; k++) {
+					buf[k * 2 + 0] = j;
+					buf[k * 2 + 1] = i;
+				}
 			}
 
 			for (u32 i = 0; i < sizeof(buf); i += 32)
