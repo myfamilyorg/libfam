@@ -432,20 +432,21 @@ static unsigned int rej_eta(int32_t *a, unsigned int len, const uint8_t *buf,
 	((227 + STREAM256_BLOCKBYTES - 1) / STREAM256_BLOCKBYTES)
 #endif
 void poly_uniform_eta(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce) {
+	StormContext ctx;
 	unsigned int ctr;
-	unsigned int buflen = POLY_UNIFORM_ETA_NBLOCKS * STREAM256_BLOCKBYTES;
-	uint8_t buf[POLY_UNIFORM_ETA_NBLOCKS * STREAM256_BLOCKBYTES];
-	stream256_state state;
+	__attribute__((aligned(32))) uint8_t buf[160] = {0};
 
-	stream256_init(&state, seed, nonce);
-	stream256_squeezeblocks(buf, POLY_UNIFORM_ETA_NBLOCKS, &state);
+	storm_init(&ctx, HASH_DOMAIN);
+	fastmemcpy(buf, seed, CRHBYTES);
+	fastmemcpy(buf + CRHBYTES, &nonce, sizeof(nonce));
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
 
-	ctr = rej_eta(a->coeffs, N, buf, buflen);
+	ctr = rej_eta(a->coeffs, N, buf, 160);
 
 	while (ctr < N) {
-		stream256_squeezeblocks(buf, 1, &state);
-		ctr += rej_eta(a->coeffs + ctr, N - ctr, buf,
-			       STREAM256_BLOCKBYTES);
+		storm_next_block(&ctx, buf);
+		ctr += rej_eta(a->coeffs + ctr, N - ctr, buf, 32);
 	}
 }
 

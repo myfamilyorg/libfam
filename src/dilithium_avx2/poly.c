@@ -544,20 +544,40 @@ void poly_uniform_eta_preinit(poly *a, stream256_state *state) {
 	}
 }
 
+/*
 void poly_uniform_eta(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce) {
 	stream256_state state;
 	stream256_init(&state, seed, nonce);
 	poly_uniform_eta_preinit(a, &state);
 }
+*/
+
+void poly_uniform_eta(poly *a, const uint8_t seed[CRHBYTES], uint16_t nonce) {
+	StormContext ctx;
+	unsigned int ctr;
+	__attribute__((aligned(32))) uint8_t buf[160] = {0};
+
+	storm_init(&ctx, HASH_DOMAIN);
+	for (u32 i = 0; i < sizeof(buf); i += 32)
+		storm_next_block(&ctx, buf + i);
+
+	ctr = rej_eta(a->coeffs, N, buf, 160);
+
+	while (ctr < N) {
+		storm_next_block(&ctx, buf);
+		ctr += rej_eta(a->coeffs + ctr, N - ctr, buf, 32);
+	}
+}
 
 void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 			 const uint8_t seed[64], uint16_t nonce0,
 			 uint16_t nonce1, uint16_t nonce2, uint16_t nonce3) {
+	StormContext ctx0, ctx1, ctx2, ctx3;
 	unsigned int ctr0, ctr1, ctr2, ctr3;
-	ALIGNED_UINT8(REJ_UNIFORM_ETA_BUFLEN) buf[4];
+	ALIGNED_UINT8(160) buf[4] = {0};
 
 	__m256i f;
-	keccakx4_state state;
+	// keccakx4_state state;
 
 	f = _mm256_loadu_si256((__m256i *)&seed[0]);
 	_mm256_store_si256(&buf[0].vec[0], f);
@@ -579,30 +599,46 @@ void poly_uniform_eta_4x(poly *a0, poly *a1, poly *a2, poly *a3,
 	buf[3].coeffs[64] = nonce3;
 	buf[3].coeffs[65] = nonce3 >> 8;
 
+	/*
 	shake256x4_absorb_once(&state, buf[0].coeffs, buf[1].coeffs,
 			       buf[2].coeffs, buf[3].coeffs, 66);
 	shake256x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs, buf[2].coeffs,
 				 buf[3].coeffs, REJ_UNIFORM_ETA_NBLOCKS,
 				 &state);
+				 */
 
-	ctr0 = rej_eta_avx(a0->coeffs, buf[0].coeffs);
-	ctr1 = rej_eta_avx(a1->coeffs, buf[1].coeffs);
-	ctr2 = rej_eta_avx(a2->coeffs, buf[2].coeffs);
-	ctr3 = rej_eta_avx(a3->coeffs, buf[3].coeffs);
+	storm_init(&ctx0, HASH_DOMAIN);
+	storm_init(&ctx1, HASH_DOMAIN);
+	storm_init(&ctx2, HASH_DOMAIN);
+	storm_init(&ctx3, HASH_DOMAIN);
+
+	for (u32 i = 0; i < 160; i += 32) {
+		storm_next_block(&ctx0, (u8 *)buf[0].coeffs + i);
+		storm_next_block(&ctx1, (u8 *)buf[1].coeffs + i);
+		storm_next_block(&ctx2, (u8 *)buf[2].coeffs + i);
+		storm_next_block(&ctx3, (u8 *)buf[3].coeffs + i);
+	}
+
+	ctr0 = rej_eta(a0->coeffs, N, buf[0].coeffs, 160);
+	ctr1 = rej_eta(a1->coeffs, N, buf[1].coeffs, 160);
+	ctr2 = rej_eta(a2->coeffs, N, buf[2].coeffs, 160);
+	ctr3 = rej_eta(a3->coeffs, N, buf[3].coeffs, 160);
 
 	while (ctr0 < N || ctr1 < N || ctr2 < N || ctr3 < N) {
+		/*
 		shake256x4_squeezeblocks(buf[0].coeffs, buf[1].coeffs,
 					 buf[2].coeffs, buf[3].coeffs, 1,
 					 &state);
+					 */
+		storm_next_block(&ctx0, (u8 *)buf[0].coeffs);
+		storm_next_block(&ctx1, (u8 *)buf[1].coeffs);
+		storm_next_block(&ctx2, (u8 *)buf[2].coeffs);
+		storm_next_block(&ctx3, (u8 *)buf[3].coeffs);
 
-		ctr0 += rej_eta(a0->coeffs + ctr0, N - ctr0, buf[0].coeffs,
-				SHAKE256_RATE);
-		ctr1 += rej_eta(a1->coeffs + ctr1, N - ctr1, buf[1].coeffs,
-				SHAKE256_RATE);
-		ctr2 += rej_eta(a2->coeffs + ctr2, N - ctr2, buf[2].coeffs,
-				SHAKE256_RATE);
-		ctr3 += rej_eta(a3->coeffs + ctr3, N - ctr3, buf[3].coeffs,
-				SHAKE256_RATE);
+		ctr0 += rej_eta(a0->coeffs + ctr0, N - ctr0, buf[0].coeffs, 32);
+		ctr1 += rej_eta(a1->coeffs + ctr1, N - ctr1, buf[1].coeffs, 32);
+		ctr2 += rej_eta(a2->coeffs + ctr2, N - ctr2, buf[2].coeffs, 32);
+		ctr3 += rej_eta(a3->coeffs + ctr3, N - ctr3, buf[3].coeffs, 32);
 	}
 }
 
