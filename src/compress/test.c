@@ -90,3 +90,54 @@ Test(compress2) {
 	close(fd);
 }
 
+Bench(compress) {
+	const u8 *path = "./resources/test_wikipedia.txt";
+	i32 fd = file(path);
+	u64 file_size = min(fsize(fd), 128 * 1024);
+	u8 *in = fmap(fd, file_size, 0);
+	u64 bound = compress_bound(file_size);
+	u8 *out = alloc(bound);
+	u8 *verify = alloc(file_size);
+	ASSERT(out, "out");
+	ASSERT(verify, "verify");
+	i64 comp_sum = 0, decomp_sum = 0;
+	u64 iter = 1000;
+
+	for (u32 i = 0; i < iter; i++) {
+		i64 timer = cycle_counter();
+		i32 result = compress_block(in, file_size, out, bound);
+		timer = cycle_counter() - timer;
+		comp_sum += timer;
+
+		ASSERT(result > 0, "compress_block");
+		timer = cycle_counter();
+		result = decompress_block(out, result, verify, file_size);
+		timer = cycle_counter() - timer;
+		decomp_sum += timer;
+
+		ASSERT_EQ(result, file_size, "file_size");
+
+		if (memcmp(verify, in, file_size)) {
+			for (u32 i = 0; i < file_size; i++) {
+				if (verify[i] != in[i]) {
+					println("in[{}]={c}, verify[{}]={c}", i,
+						in[i], i, verify[i]);
+				}
+			}
+		}
+		ASSERT(!memcmp(verify, in, file_size), "verify");
+	}
+
+	(void)comp_sum;
+	(void)decomp_sum;
+
+	munmap(in, file_size);
+	release(verify);
+	release(out);
+	close(fd);
+
+	println("comp_sum={},decomp_sum={} (cycles per byte)",
+		(f64)comp_sum / iter / file_size,
+		(f64)decomp_sum / iter / file_size);
+}
+
