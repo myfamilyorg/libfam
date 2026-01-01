@@ -36,6 +36,10 @@
 #include <libfam/sysext.h>
 #include <libfam/test_base.h>
 
+#ifndef PAGE_SIZE
+#define PAGE_SIZE 4096
+#endif /* PAGE_SIZE */
+
 typedef struct {
 	RbTreeNode _reserved;
 	u64 value;
@@ -705,13 +709,25 @@ Test(syscall) {
 	ASSERT(!ret, "our pid");
 	ASSERT(ret2, "invalid pid");
 
+	u64 v = get_heap_bytes();
+	ASSERT_EQ(v, 0, "heap_bytes");
+
 	ASSERT_EQ(mmap(NULL, 1024, 100, 100, 100, 100), MAP_FAILED,
 		  "mmap fail");
 
-	void *ptr = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+	v = get_heap_bytes();
+	ASSERT_EQ(v, 0, "heap bytes = 0");
+
+	void *ptr = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
 			 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	ASSERT(ptr, "mmap");
-	ASSERT(!munmap(ptr, 4096), "munmap");
+
+	v = get_heap_bytes();
+	ASSERT_EQ(v, PAGE_SIZE, "heap bytes = PAGE_SIZE");
+	ASSERT(!munmap(ptr, PAGE_SIZE), "munmap");
+
+	v = get_heap_bytes();
+	ASSERT_EQ(v, 0, "heap bytes = 0 (munmap)");
 }
 
 Test(clone) {
@@ -861,7 +877,7 @@ Test(iouring_slowspin) {
 	iouring_destroy(iou);
 	close(fd);
 	unlink("/tmp/slowspin.dat");
-	munmap(buf, 4096);
+	munmap(buf, 16384);
 }
 
 Test(iouring_wait_err) {
@@ -966,3 +982,4 @@ Test(write_num) {
 	close(fd);
 	unlink("/tmp/write_num0");
 }
+

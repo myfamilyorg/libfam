@@ -23,15 +23,19 @@
  *
  *******************************************************************************/
 
-#include <libfam/debug.h>
+#ifndef _STORM_H
+#define _STORM_H
 
-bool _debug_no_exit = false;
-bool _debug_no_write = false;
-bool _debug_fail_clone = false;
+#include <libfam/types.h>
 
-#if TEST == 1
-extern u64 heap_bytes;
-u64 get_heap_bytes(void) { return heap_bytes; }
-void heap_bytes_reset(void) { heap_bytes = 0; }
-#endif /* TEST */
+#define STORM_CONTEXT_SIZE 192
 
+typedef struct {
+	__attribute__((aligned(32))) u8 _data[STORM_CONTEXT_SIZE];
+} StormContext;
+
+void storm_init(StormContext *ctx, const u8 key[32]);
+void storm_next_block(StormContext *ctx, u8 buf[32]);
+void storm_xcrypt_buffer(StormContext *s, u8 buf[32]);
+
+#endif /* _STORM_H */

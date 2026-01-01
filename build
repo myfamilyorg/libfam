@@ -1,5 +1,6 @@
 #!/bin/sh
 
+
 # Resolve real project directory (symlink-safe)
 SCRIPT_PATH="$0"
 while [ -h "$SCRIPT_PATH" ]; do
@@ -9,9 +10,12 @@ while [ -h "$SCRIPT_PATH" ]; do
 done
 PROJECT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
+PAGE_SIZE=$(getconf PAGE_SIZE 2>/dev/null)
+
+
 # Defaults
 : "${CC:=clang}"
-: "${BASE_CFLAGS:=}"
+: "${BASE_CFLAGS:=-DPAGE_SIZE=${PAGE_SIZE}}"
 : "${VALGRIND:=0}"
 : "${FILTER:=*}"
 : "${SILENT:=0}"

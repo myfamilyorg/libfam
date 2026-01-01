@@ -43,6 +43,8 @@ extern u64 _debug_alloc_cas_loop;
 extern bool _debug_bible_invalid_hash;
 extern bool _debug_alloc_failure;
 extern bool _debug_no_aesni;
+u64 get_heap_bytes(void);
+void heap_bytes_reset(void);
 #endif /* TEST */
 
 #endif /* _DEBUG_H */

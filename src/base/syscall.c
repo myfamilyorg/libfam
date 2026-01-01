@@ -23,10 +23,16 @@
  *
  *******************************************************************************/
 
+#include <libfam/atomic.h>
 #include <libfam/debug.h>
 #include <libfam/linux.h>
 #include <libfam/types.h>
 #include <libfam/utils.h>
+
+#ifndef PAGE_SIZE
+#define PAGE_SIZE 4096
+#endif /* PAGE_SIZE */
+#define PAGE_MASK (~(PAGE_SIZE - 1))
 
 #ifdef __aarch64__
 #define SYS_unlinkat 35
@@ -59,6 +65,10 @@
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
 #endif /* __x86_64__ */
+
+#if TEST == 1
+u64 heap_bytes = 0;
+#endif /* TEST */
 
 i64 raw_syscall(i64 sysno, i64 a0, i64 a1, i64 a2, i64 a3, i64 a4, i64 a5) {
 	i64 result = 0;
@@ -159,8 +169,12 @@ void *mmap(void *addr, u64 length, i32 prot, i32 flags, i32 fd, i64 offset) {
 	if ((i64)ret < 0) {
 		errno = -(i64)ret;
 		return (void *)-1;
-	} else
+	} else {
+#if TEST == 1
+		__aadd64(&heap_bytes, (length + PAGE_SIZE - 1) & PAGE_MASK);
+#endif /* TEST */
 		return ret;
+	}
 }
 
 i32 munmap(void *addr, u64 len) {
@@ -168,6 +182,10 @@ i32 munmap(void *addr, u64 len) {
 INIT:
 	v = (i32)raw_syscall(SYS_munmap, (i64)addr, (i64)len, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
+#if TEST == 1
+	__asub64(&heap_bytes, (len + PAGE_SIZE - 1) & PAGE_MASK);
+#endif /* TEST */
+
 	OK(v);
 CLEANUP:
 	RETURN;

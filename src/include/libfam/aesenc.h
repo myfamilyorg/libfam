@@ -23,15 +23,9 @@
  *
  *******************************************************************************/
 
-#include <libfam/debug.h>
+#ifndef _AESENC_H
+#define _AESENC_H
 
-bool _debug_no_exit = false;
-bool _debug_no_write = false;
-bool _debug_fail_clone = false;
+void aesenc256(void *data, const void *key);
 
-#if TEST == 1
-extern u64 heap_bytes;
-u64 get_heap_bytes(void) { return heap_bytes; }
-void heap_bytes_reset(void) { heap_bytes = 0; }
-#endif /* TEST */
-
+#endif /* _AESENC_H */

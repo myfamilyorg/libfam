@@ -23,15 +23,21 @@
  *
  *******************************************************************************/
 
-#include <libfam/debug.h>
+#ifndef _RNG_H
+#define _RNG_H
 
-bool _debug_no_exit = false;
-bool _debug_no_write = false;
-bool _debug_fail_clone = false;
+#include <libfam/storm.h>
+#include <libfam/types.h>
+
+typedef struct {
+	StormContext ctx;
+} Rng;
+
+void rng_init(Rng *rng);
+void rng_gen(Rng *rng, void *v, u64 size);
 
 #if TEST == 1
-extern u64 heap_bytes;
-u64 get_heap_bytes(void) { return heap_bytes; }
-void heap_bytes_reset(void) { heap_bytes = 0; }
+void rng_test_seed(Rng *rng, u8 key[32]);
 #endif /* TEST */
 
+#endif /* _RNG_H */

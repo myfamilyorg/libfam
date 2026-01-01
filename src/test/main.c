@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <libfam/debug.h>
 #include <libfam/env.h>
 #include <libfam/errno.h>
 #include <libfam/linux.h>
@@ -157,6 +158,7 @@ i32 run_tests(u8 **envp) {
 	pwrite(STDERR_FD, (void *)SPACER, faststrlen((void *)SPACER), 0);
 
 	total = micros();
+	heap_bytes_reset();
 
 	for (exe_test = 0; exe_test < cur_tests; exe_test++) {
 		if (!pattern || !strcmp((void *)pattern, (void *)"*") ||
