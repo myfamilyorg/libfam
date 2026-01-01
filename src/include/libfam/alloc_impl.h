@@ -40,7 +40,7 @@
 		(new_ptr) = balloc((a), (new_size));                  \
 		if (!(new_ptr)) break;                                \
 		if ((new_size) < (old_size)) (old_size) = (new_size); \
-		memcpy((new_ptr), (ptr), (old_size));                 \
+		fastmemcpy((new_ptr), (ptr), (old_size));             \
 	} while (0)
 
 static const u64 BITS_PER_SLAB_INDEX[] = {

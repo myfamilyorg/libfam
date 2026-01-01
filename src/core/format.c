@@ -191,7 +191,7 @@ INIT:
 	if (spec->align == FormatAlignRight)
 		for (i = raw_bytes; i < aligned_bytes; i++)
 			f->buf[f->pos++] = ' ';
-	memcpy(f->buf + f->pos, value, raw_bytes);
+	fastmemcpy(f->buf + f->pos, value, raw_bytes);
 	f->pos += raw_bytes;
 	if (spec->align == FormatAlignLeft)
 		for (i = raw_bytes; i < aligned_bytes; i++)
@@ -261,7 +261,7 @@ INIT:
 		if (np && *pp1) {
 			len = np - p;
 			if (format_try_resize(f, len) < 0) ERROR();
-			memcpy(f->buf + f->pos, p, len);
+			fastmemcpy(f->buf + f->pos, p, len);
 			f->pos += len;
 			if (spec.t == FormatSpecTypeEscapeBracketRight) {
 				if (format_proc_string(f, &spec, "}") < 0)
@@ -296,7 +296,7 @@ INIT:
 		} else {
 			len = strlen(p);
 			if (format_try_resize(f, len) < 0) ERROR();
-			memcpy(f->buf + f->pos, p, len);
+			fastmemcpy(f->buf + f->pos, p, len);
 			f->pos += len;
 			break;
 		}

@@ -156,7 +156,7 @@ STATIC void compress_find_matches(BitStreamWriter *strm, const u8 *in, u32 len,
 	bitstream_writer_flush(strm);
 
 	u32 offset = strm->bit_offset;
-	memcpy(strm->data, &offset, sizeof(u32));
+	fastmemcpy(strm->data, &offset, sizeof(u32));
 
 	match_array[out_itt++] = SYMBOL_TERM;
 	frequencies[SYMBOL_TERM]++;
@@ -756,7 +756,7 @@ PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 		errno = EINVAL;
 		return -1;
 	}
-	memcpy(&bit_offset, in, sizeof(u32));
+	fastmemcpy(&bit_offset, in, sizeof(u32));
 	// println("bit_offset={}", bit_offset);
 	/*
 	if (in[0]) {

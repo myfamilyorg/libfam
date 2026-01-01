@@ -92,9 +92,9 @@ int crypto_sign_keypair(u8 *pk, u8 *sk, const u8 seed[32]) {
 	key = rhoprime + CRHBYTES;
 
 	/* Store rho, key */
-	memcpy(pk, rho, SEEDBYTES);
-	memcpy(sk, rho, SEEDBYTES);
-	memcpy(sk + SEEDBYTES, key, SEEDBYTES);
+	fastmemcpy(pk, rho, SEEDBYTES);
+	fastmemcpy(sk, rho, SEEDBYTES);
+	fastmemcpy(sk + SEEDBYTES, key, SEEDBYTES);
 
 	/* Sample short vectors s1 and s2 */
 	poly_uniform_eta_4x(&s1.vec[0], &s1.vec[1], &s1.vec[2], &s1.vec[3],
@@ -272,7 +272,7 @@ rej:
 		if (pos + n > OMEGA) goto rej;
 
 		/* Store hints in signature */
-		memcpy(&hint[pos], hintbuf, n);
+		fastmemcpy(&hint[pos], hintbuf, n);
 		hint[OMEGA + i] = pos = pos + n;
 	}
 
@@ -295,7 +295,7 @@ int crypto_sign_signature(u8 *sig, u64 *siglen, const u8 *m, u64 mlen,
 	/* Prepare pre = (0, ctxlen, ctx) */
 	pre[0] = 0;
 	pre[1] = ctxlen;
-	memcpy(&pre[2], ctx, ctxlen);
+	fastmemcpy(&pre[2], ctx, ctxlen);
 	rng_gen(rng, rnd, RNDBYTES);
 
 	crypto_sign_signature_internal(sig, siglen, m, mlen, pre, 2 + ctxlen,
@@ -413,7 +413,7 @@ int crypto_sign_verify(const u8 *sig, u64 siglen, const u8 *m, u64 mlen,
 
 	pre[0] = 0;
 	pre[1] = ctxlen;
-	memcpy(&pre[2], ctx, ctxlen);
+	fastmemcpy(&pre[2], ctx, ctxlen);
 	return crypto_sign_verify_internal(sig, siglen, m, mlen, pre,
 					   2 + ctxlen, pk);
 }
