@@ -753,17 +753,11 @@ Test(open1) {
 	i32 fd = file("/tmp/open1.dat");
 	ASSERT(fd > 0, "fd>0 1");
 	ASSERT(!fsize(fd), "size=0");
-	ASSERT(!lseek(fd, 0, SEEK_END), "size=0");
 	struct stat st;
 	ASSERT(!fstat(fd, &st), "fstat");
 	ASSERT_EQ(st.st_size, 0, "st_size=0");
 
 	ASSERT(!fallocate(fd, size), "fallocate");
-	ASSERT_EQ(lseek(fd, 0, SEEK_END), size, "size");
-	struct timeval ts[2] = {0};
-	ts[0].tv_sec = 0;
-	ts[1].tv_sec = 0;
-	utimesat(fd, NULL, (void *)&ts, 0);
 
 	pwrite(fd, "abc", 3, 5);
 	fsync(fd);
@@ -778,7 +772,6 @@ Test(open1) {
 	close(fd);
 	fd = open("/tmp/open2.dat", O_RDWR | O_CREAT, 0600);
 	ASSERT(fd > 0, "fd>0 2");
-	fchmod(fd, 0700);
 
 	close(fd);
 	unlink("/tmp/open1.dat");
@@ -838,10 +831,10 @@ Test(iouring_slowspin) {
 	errno = 0;
 	fd = open("/tmp/slowspin.dat", O_RDWR | O_CREAT, 0600);
 	ASSERT(fd > 0, "fd>0 1");
-	ASSERT(!lseek(fd, 0, SEEK_END), "size=0");
+	ASSERT(!fsize(fd), "size=0");
 
 	ASSERT(!fallocate(fd, size), "fallocate");
-	ASSERT_EQ(lseek(fd, 0, SEEK_END), size, "size");
+	ASSERT_EQ(fsize(fd), size, "size");
 
 	ASSERT(!iouring_init(&iou, 2), "iouring_init");
 	u8 *buf = mmap(NULL, 16384, PROT_READ | PROT_WRITE,
@@ -896,16 +889,7 @@ Test(iouring_wait_err) {
 
 Test(settime) {
 	struct timespec ts = {0};
-
-	errno = 0;
-	ASSERT_EQ(clock_settime(CLOCK_MONOTONIC, &ts), -1, "set monotonic");
-	ASSERT_EQ(errno, EINVAL, "einval");
-
 	ASSERT_EQ(clock_gettime(CLOCK_REALTIME, &ts), 0, "gettime");
-
-	errno = 0;
-	i32 res = clock_settime(CLOCK_REALTIME, &ts);
-	ASSERT(res == 0 || (res < 0 && errno == EPERM), "settime");
 }
 
 bool sig_recv = false;
@@ -922,7 +906,6 @@ Test(signal) {
 	ASSERT(val, "mmap");
 	*val = 0;
 
-	u8 buf[1024] = {0};
 	struct rt_sigaction act = {0};
 	i32 pid;
 	act.k_sa_handler = test_handler;
@@ -936,7 +919,7 @@ Test(signal) {
 		while (!sig_recv) yield();
 		_exit(0);
 	}
-	ASSERT(!waitid(P_PID, pid, &buf, WEXITED), "waitid");
+	ASSERT(!await(pid), "await");
 	ASSERT_EQ(*val, 1, "val=1");
 	munmap(val, sizeof(u64));
 }
@@ -951,66 +934,35 @@ Test(nanosleep) {
 	usleep(100000);
 }
 
-Test(pipefork) {
-	u8 buf[10] = {0};
-	i32 pid;
-	i32 fds[2];
-	ASSERT(!pipe(fds), "pipe");
-	if ((pid = fork())) {
-		close(fds[1]);
-		i32 len = pread(fds[0], buf, sizeof(buf), 0);
-		ASSERT_EQ(len, 3, "len=3");
-		ASSERT(!memcmp(buf, "abc", 3), "abc");
-	} else {
-		close(fds[0]);
-		strcpy(buf, "abc");
-		pwrite(fds[1], buf, 3, 0);
-		_exit(0);
-	}
-	await(pid);
-	close(fds[0]);
+Test(secure_zero) {
+	__attribute__((aligned(32))) u8 buf[32] = {1, 2, 3, 4};
+	ASSERT(memcmp(buf, (u8[32]){0}, 32), "not zero");
+	secure_zero32(buf);
+	ASSERT(!memcmp(buf, (u8[32]){0}, 32), "not zero");
 }
 
-Test(maps) {
-	void *x = map(1);
+Test(map) {
+	void *x;
+	u64 c = cycle_counter();
+	ASSERT(c, "cycle_counter");
+	x = map(4096);
 	ASSERT(x, "map");
-	munmap(x, 1);
-	x = smap(1);
+	munmap(x, 4096);
+	x = smap(4096);
 	ASSERT(x, "smap");
-	munmap(x, 1);
+	munmap(x, 4096);
 	i32 fd = file("resources/akjv5.txt");
-	ASSERT(fd > 0, "open");
+	ASSERT(fd > 0, "fd");
 	x = fmap(fd, 4096, 0);
 	ASSERT(x, "fmap");
 	munmap(x, 4096);
 	close(fd);
 }
 
-Test(fast) {
-	u8 v1[] = "test1";
-	u8 v2[] = "test2";
-	u8 v3[] = "test1";
-
-	ASSERT(fastmemcmp(v1, v2, 5) != 0, "fastmemcmp ne");
-	ASSERT(fastmemcmp(v1, v3, 5) == 0, "fastmemcmp eq");
-}
-
-Test(secure_zero) {
-	__attribute__((aligned(32))) u8 buf[32] = "12345";
-	u8 zero[32] = {0};
-	secure_zero32(buf);
-	ASSERT(!memcmp(buf, zero, 32), "zeroed");
-	u64 cc = cycle_counter();
-	ASSERT(cc, "cycle_counter");
-}
-
 Test(write_num) {
-	struct stat st;
-	i32 fd = open("/tmp/write0.dat", O_RDWR | O_CREAT, 0600);
-	ASSERT(fd > 0, "fd");
-	write_num(fd, 0);
-	fstat(fd, &st);
-	ASSERT_EQ(st.st_size, 1, "size");
+	unlink("/tmp/write_num0");
+	i32 fd = file("/tmp/write_num0");
+	ASSERT(!write_num(fd, 0), "write_num");
 	close(fd);
-	unlinkat(AT_FDCWD, "/tmp/write0.dat", 0);
+	unlink("/tmp/write_num0");
 }

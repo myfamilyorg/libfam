@@ -30,11 +30,7 @@
 
 #ifdef __aarch64__
 #define SYS_unlinkat 35
-#define SYS_fchmod 52
-#define SYS_pipe2 59
-#define SYS_lseek 62
 #define SYS_fstat 80
-#define SYS_utimesat 88
 #define SYS_waitid 95
 #define SYS_nanosleep 101
 #define SYS_kill 129
@@ -43,14 +39,12 @@
 #define SYS_munmap 215
 #define SYS_clone 220
 #define SYS_mmap 222
-#define SYS_clock_settime 112
 #define SYS_clock_gettime 113
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
 #elif defined(__x86_64__)
 #define SYS_fstat 5
-#define SYS_lseek 8
 #define SYS_mmap 9
 #define SYS_munmap 11
 #define SYS_rt_sigaction 13
@@ -58,13 +52,9 @@
 #define SYS_getpid 39
 #define SYS_clone 56
 #define SYS_kill 62
-#define SYS_fchmod 91
-#define SYS_clock_settime 227
 #define SYS_clock_gettime 228
 #define SYS_waitid 247
-#define SYS_utimesat 261
 #define SYS_unlinkat 263
-#define SYS_pipe2 293
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
 #define SYS_io_uring_register 427
@@ -265,27 +255,6 @@ CLEANUP:
 	RETURN;
 }
 
-i32 clock_settime(i32 clockid, const struct timespec *tp) {
-	i32 v;
-INIT:
-	v = (i32)raw_syscall(SYS_clock_settime, (i64)clockid, (i64)tp, 0, 0, 0,
-			     0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
-i64 lseek(i32 fd, i64 offset, i32 whence) {
-	i64 v;
-INIT:
-	v = raw_syscall(SYS_lseek, (i64)fd, (i64)offset, (i64)whence, 0, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
 i32 nanosleep(const struct timespec *duration, struct timespec *rem) {
 	i32 v;
 INIT:
@@ -296,45 +265,10 @@ CLEANUP:
 	RETURN;
 }
 
-PUBLIC i32 fchmod(i32 fd, u32 mode) {
-	i32 v;
-INIT:
-	v = (i32)raw_syscall(SYS_fchmod, (i64)fd, (i64)mode, 0, 0, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
-i32 utimesat(i32 dirfd, const u8 *pathname, const struct timeval *times,
-	     i32 flags) {
-	i32 v;
-INIT:
-	v = (i32)raw_syscall(SYS_utimesat, (i64)dirfd, (i64)pathname,
-			     (i64)times, (i64)flags, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
 PUBLIC i32 fstat(i32 fd, struct stat *buf) {
 	i32 v;
 INIT:
 	v = (i32)raw_syscall(SYS_fstat, (i64)fd, (i64)buf, 0, 0, 0, 0);
-	if (v < 0) ERROR(-v);
-	OK(v);
-CLEANUP:
-	RETURN;
-}
-
-i32 pipe(i32 fds[2]) {
-	i32 v;
-INIT:
-#if TEST == 1
-	if (_debug_fail_pipe2) ERROR();
-#endif /* TEST */
-	v = (i32)raw_syscall(SYS_pipe2, (i64)fds, 0, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:

@@ -160,7 +160,11 @@ i32 await(i32 pid) {
 	return waitid(P_PID, pid, buf, WEXITED);
 }
 
-PUBLIC i64 fsize(i32 fd) { return lseek(fd, 0, SEEK_END); }
+PUBLIC i64 fsize(i32 fd) {
+	struct stat st;
+	i32 res = fstat(fd, &st);
+	return res < 0 ? -1 : st.st_size;
+}
 
 PUBLIC i32 unlink(const u8 *path) { return unlinkat(AT_FDCWD, path, 0); }
 
