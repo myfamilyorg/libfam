@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <libfam/debug.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/string.h>
