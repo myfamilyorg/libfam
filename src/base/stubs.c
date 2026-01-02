@@ -28,14 +28,14 @@
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
 
-void __stack_chk_fail(void) {
+PUBLIC void __stack_chk_fail(void) {
 	i32 __attribute__((unused)) _v;
 	const u8 *msg = "STACK_CHK_FAIL\n";
 	_v = pwrite(STDERR_FD, msg, faststrlen(msg), 0);
 	_exit(-1);
 }
 
-void __stack_chk_guard(void) {
+PUBLIC void __stack_chk_guard(void) {
 	i32 __attribute__((unused)) _v;
 	const u8 *msg = "STACK_CHK_GUARD\n";
 	_v = pwrite(STDERR_FD, msg, faststrlen(msg), 0);

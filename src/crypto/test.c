@@ -206,12 +206,12 @@ Bench(storm) {
 	static __attribute__((aligned(32))) u8 FIVE_SEED[32] = {5};
 
 	i64 timer;
-	__attribute__((aligned(32))) u8 buf1[64] = {0};
-	__attribute__((aligned(32))) u8 buf2[64] = {0};
-	__attribute__((aligned(32))) u8 buf3[64] = {0};
-	__attribute__((aligned(32))) u8 buf4[64] = {0};
-	__attribute__((aligned(32))) u8 buf5[64] = {0};
-	__attribute__((aligned(32))) u8 buf6[64] = {0};
+	__attribute__((aligned(32))) u8 buf1[64] = {11};
+	__attribute__((aligned(32))) u8 buf2[64] = {23};
+	__attribute__((aligned(32))) u8 buf3[64] = {56};
+	__attribute__((aligned(32))) u8 buf4[64] = {67};
+	__attribute__((aligned(32))) u8 buf5[64] = {78};
+	__attribute__((aligned(32))) u8 buf6[64] = {99};
 
 	StormContext ctx1;
 	StormContext ctx2;

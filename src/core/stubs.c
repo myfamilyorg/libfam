@@ -133,11 +133,11 @@ u128 __udivmodti4(u128 a, u128 b, u128 *rem) {
 	return quotient.all;
 }
 
-u128 __umodti3(u128 a, u128 b) {
+PUBLIC u128 __umodti3(u128 a, u128 b) {
 	u128 r;
 	__udivmodti4(a, b, &r);
 	return r;
 }
 
-u128 __udivti3(u128 a, u128 b) { return __udivmodti4(a, b, 0); }
+PUBLIC u128 __udivti3(u128 a, u128 b) { return __udivmodti4(a, b, 0); }
 
