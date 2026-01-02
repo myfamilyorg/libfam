@@ -1,51 +1,35 @@
-/********************************************************************************
- * MIT License
- *
- * Copyright (c) 2025 Christopher Gilliard
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
- *******************************************************************************/
-
 #ifndef _STORM_VECTORS_H
 #define _STORM_VECTORS_H
 
-typedef struct {
-	__attribute__((aligned(32))) u8 key[32];
-	__attribute__((aligned(32))) u8 input[2][32];
-	__attribute__((aligned(32))) u8 expected[2][32];
+typedef struct { 
+        __attribute__((aligned(32))) u8 key[32]; 
+        __attribute__((aligned(32))) u8 input[2][32]; 
+        __attribute__((aligned(32))) u8 expected[2][32]; 
 } StormVector;
 
 static const StormVector storm_vectors[] = {
-    {.key = {1,	 2,  3,	 4,  5,	 6,  7,	 8,  9,	 10, 11, 12, 13, 14, 15, 16,
-	     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
-     .input = {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-	       {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-		2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}},
-     .expected = {{215, 88,  7,	  23, 111, 246, 46,  245, 240, 254, 144,
-		   97,	68,  37,  31, 75,  78,	252, 181, 91,  164, 39,
-		   168, 163, 255, 24, 209, 137, 12,  170, 82,  107},
-		  {70, 68, 210, 116, 252, 96,  205, 209, 189, 255, 46,
-		   64, 93, 146, 93,  206, 153, 228, 19,	 253, 164, 3,
-		   40, 16, 42,	246, 132, 127, 44,  147, 71,  250}}}
 
+  {
+    .key = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32},
+    .input = {
+      {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,35},
+      {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,36}
+    }
+,    .expected = {
+      {9,189,56,56,159,93,5,130,240,143,219,55,174,87,124,220,0,124,128,32,112,106,145,174,24,254,8,49,238,204,62,63},
+      {14,10,30,14,187,236,246,23,96,240,203,145,96,173,215,198,164,192,210,6,11,178,156,218,127,48,104,95,35,205,189,88}
+    }
+  },
+  {
+    .key = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,33},
+    .input = {
+      {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,37},
+      {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,38}
+    }
+,    .expected = {
+      {206,86,112,203,178,115,91,148,47,233,127,67,87,153,101,123,149,123,77,201,45,86,34,217,167,152,174,222,206,148,131,214},
+      {124,220,177,254,154,136,77,202,25,2,144,151,20,14,80,89,254,130,52,140,129,78,210,148,13,115,5,205,182,55,181,203}
+    }
+  }
 };
-
 #endif /* _STORM_VECTORS_H */
