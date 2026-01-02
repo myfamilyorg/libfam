@@ -39,7 +39,7 @@
 #endif /* USE_AVX2 */
 #include <libfam/types.h>
 
-u64 strlen(const char *x) {
+PUBLIC u64 strlen(const char *x) {
 	const char *y = x;
 	while (*x) x++;
 	return x - y;

@@ -240,7 +240,7 @@ CLEANUP:
 
 STATIC i32 format_proc_string(Formatter *f, const FormatSpec *spec,
 			      const u8 *value) {
-	return format_proc_padding(f, spec, value, strlen(value));
+	return format_proc_padding(f, spec, value, faststrlen(value));
 }
 
 STATIC i32 format_proc_float(Formatter *f, const FormatSpec *spec, f64 value) {
@@ -301,7 +301,7 @@ INIT:
 			}
 			p = np + spec.total_bytes;
 		} else {
-			len = strlen(p);
+			len = faststrlen(p);
 			if (format_try_resize(f, len) < 0) ERROR();
 			fastmemcpy(f->buf + f->pos, p, len);
 			f->pos += len;

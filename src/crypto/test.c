@@ -27,6 +27,7 @@
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
+#include <libfam/storm_vectors.h>
 #include <libfam/test_base.h>
 #include <libfam/wots.h>
 
@@ -101,6 +102,23 @@ Test(storm_vectors) {
 		       104, 203, 205, 140, 31,	244, 198, 106, 142, 3};
 
 	ASSERT(!memcmp(buf2, exp4, sizeof(buf2)), "buf2 round2");
+}
+
+Test(storm_vectors2) {
+	StormContext ctx;
+	for (u32 i = 0; i < sizeof(storm_vectors) / sizeof(storm_vectors[0]);
+	     i++) {
+		storm_init(&ctx, storm_vectors[i].key);
+		for (u32 j = 0; j < sizeof(storm_vectors[i].input) /
+					sizeof(storm_vectors[i].input[0]);
+		     j++) {
+			__attribute__((aligned(32))) u8 tmp[32];
+			fastmemcpy(tmp, storm_vectors[i].input[j], 32);
+			storm_next_block(&ctx, tmp);
+			ASSERT(!memcmp(tmp, storm_vectors[i].expected[j], 32),
+			       "vector");
+		}
+	}
 }
 
 Test(storm_cipher_vector) {
