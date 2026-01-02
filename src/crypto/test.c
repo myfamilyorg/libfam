@@ -64,48 +64,6 @@ Test(verify_nums) {
 
 Test(storm_vectors) {
 	StormContext ctx;
-	__attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
-	__attribute((aligned(32))) u8 buf1[32] = {
-	    9,	 93,  216, 137, 224, 212, 105, 200, 163, 28,  146,
-	    246, 75,  164, 149, 109, 209, 70,  183, 116, 224, 157,
-	    245, 221, 5,   53,	245, 155, 165, 135, 142, 218};
-	storm_init(&ctx, SEED);
-	storm_next_block(&ctx, buf1);
-
-	u8 exp1[32] = {151, 72, 39,  3,	  66,  170, 34,	 9,   41,  123, 144,
-		       136, 18, 175, 128, 101, 250, 191, 198, 169, 245, 73,
-		       53,  23, 39,  9,	  40,  61,  145, 229, 62,  156};
-	ASSERT(!memcmp(buf1, exp1, sizeof(buf1)), "buf1");
-	storm_next_block(&ctx, buf1);
-
-	u8 exp2[32] = {98,  170, 209, 216, 78,	69,  96, 190, 144, 126, 87,
-		       157, 66,	 45,  145, 64,	101, 16, 29,  168, 253, 175,
-		       143, 188, 40,  94,  249, 73,  18, 10,  200, 122};
-
-	ASSERT(!memcmp(buf1, exp2, sizeof(buf1)), "buf1 round2");
-
-	__attribute((aligned(32))) u8 buf2[32] = {
-	    32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17,
-	    16, 15, 14, 13, 12, 11, 10, 9,  8,	7,  6,	5,  4,	3,  2,	1};
-	storm_init(&ctx, SEED);
-	storm_next_block(&ctx, buf2);
-
-	u8 exp3[32] = {62,  244, 177, 147, 184, 246, 63,  99,  97,  130, 22,
-		       39,  136, 208, 162, 89,	72,  16,  12,  170, 72,	 254,
-		       243, 151, 64,  253, 34,	33,  246, 190, 66,  206};
-	ASSERT(!memcmp(buf2, exp3, sizeof(buf2)), "buf2");
-
-	storm_next_block(&ctx, buf2);
-
-	u8 exp4[32] = {142, 84,	 68,  220, 180, 118, 163, 74,  143, 48,	 157,
-		       35,  64,	 112, 104, 41,	143, 166, 143, 63,  112, 155,
-		       104, 203, 205, 140, 31,	244, 198, 106, 142, 3};
-
-	ASSERT(!memcmp(buf2, exp4, sizeof(buf2)), "buf2 round2");
-}
-
-Test(storm_vectors2) {
-	StormContext ctx;
 	for (u32 i = 0; i < sizeof(storm_vectors) / sizeof(storm_vectors[0]);
 	     i++) {
 		storm_init(&ctx, storm_vectors[i].key);
