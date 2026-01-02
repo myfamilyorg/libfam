@@ -24,7 +24,6 @@
  *******************************************************************************/
 
 #include <libfam/aesenc.h>
-#include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
@@ -292,5 +291,9 @@ Bench(storm_preimage) {
 
 	ASSERT(max_dist > 40, "max_dist > 40");
 	ASSERT(max_dist < 60, "max_dist < 60");
-	println("trials={},max_distance={}", trials, max_dist);
+	pwrite(2, "trials=", 7, 0);
+	write_num(2, trials);
+	pwrite(2, ",max_distance=", 14, 0);
+	write_num(2, max_dist);
+	pwrite(2, "\n", 1, 0);
 }
