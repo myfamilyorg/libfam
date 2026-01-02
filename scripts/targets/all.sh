@@ -22,5 +22,20 @@ if needs_rebuild "$LIB_NAME" $OBJECTS; then
         fi
 fi
 
-#. "$PROJECT_DIR/scripts/gen_bible.sh"
-#. "$PROJECT_DIR/scripts/czip.sh"
+STORMGEN_SRC="etc/stormvec.c";
+COMMAND="${CC} \
+-o ${BIN_DIR}/stormgen \
+-Wno-pointer-sign \
+${STORMGEN_SRC} \
+-I${INCDIR} \
+-nostdlib \
+-ffreestanding \
+-L${LIB_DIR} \
+-lfam"
+
+if [ ! -e "${BIN_DIR}/stormgen" ] || [ "${STORMGEN_SRC}" -nt "${BIN_DIR}/stormgen" ]; then
+	if [ "$SILENT" != "1" ]; then
+		echo ${COMMAND};
+	fi
+	${COMMAND} || exit 1;
+fi
