@@ -25,6 +25,7 @@
 
 #include <libfam/aesenc.h>
 #include <libfam/format.h>
+#include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
@@ -256,3 +257,39 @@ Bench(storm) {
 	pwrite(2, "ps\n", 3, 0);
 }
 
+/*
+Test(storm_preimage) {
+	Rng rng;
+	__attribute__((aligned(32))) u8 input[32] = {0}, flipped[32] = {0};
+	u128 target = 0;
+	u128 min_diff = U128_MAX;
+	u8 min_hamm = 128;
+	u32 trials = 1 << 10;
+	u32 matches = 0;
+
+	rng_init(&rng);
+	for (u32 i = 0; i < trials; i++) {
+		rng_gen(&rng, input, 32);
+		 target = verihash128(input, 32);
+		fastmemcpy(flipped, input, 32);
+		u64 byte_pos = i % 32;
+		u8 bit_pos = (i / 32) % 8;
+		flipped[byte_pos] ^= (1 << bit_pos);
+		u128 result = verihash128(flipped, 32);
+		if (result == target) matches++;
+		u128 diff = result > target ? result - target : target - result;
+		min_diff = diff < min_diff ? diff : min_diff;
+
+		u128 hamm_diff = target ^ result;
+		u32 hamm = __builtin_popcountll((u64)hamm_diff) +
+			   __builtin_popcountll((u64)(hamm_diff >> 64));
+		min_hamm = hamm < min_hamm ? hamm : min_hamm;
+
+		if (i % 10000 == 0)
+			println(
+			    "i={},matches={},min_diff={},diff={},min_hamm={}",
+			    i, matches, min_diff, diff, min_hamm);
+	}
+	ASSERT(!matches, "matches");
+}
+*/
