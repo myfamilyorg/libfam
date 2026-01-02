@@ -15,7 +15,7 @@ PAGE_SIZE=$(getconf PAGE_SIZE 2>/dev/null)
 
 # Defaults
 : "${CC:=clang}"
-: "${BASE_CFLAGS:=-DPAGE_SIZE=${PAGE_SIZE}}"
+: "${BASE_CFLAGS:=}"
 : "${VALGRIND:=0}"
 : "${FILTER:=*}"
 : "${SILENT:=0}"

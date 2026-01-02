@@ -42,10 +42,12 @@ export BINDIR="$OUTDIR/bin"
 CC="${CC:-clang}"
 
 if [ "${BASE_CFLAGS}" = "" ]; then
+	PAGE_SIZE=$(getconf PAGE_SIZE 2>/dev/null)
+
 	if [ "${BUILD_MODE}" = "cov" ]; then
-		BASE_CFLAGS="-Werror -Wall -funroll-loops -fstack-protector-strong -std=c11"
+		BASE_CFLAGS="-DPAGE_SIZE=${PAGE_SIZE} -Werror -Wall -funroll-loops -fstack-protector-strong -std=c11"
 	else
-		BASE_CFLAGS="-Werror -Wall -funroll-loops -fstack-protector-strong -std=c11 -O3"
+		BASE_CFLAGS="-DPAGE_SIZE=${PAGE_SIZE} -Werror -Wall -funroll-loops -fstack-protector-strong -std=c11 -O3"
 	fi
 fi
 BASE_LDFLAGS="-shared -fstack-protector-strong -ffreestanding -nostdlib"

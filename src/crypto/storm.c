@@ -55,12 +55,12 @@ const __attribute__((aligned(32))) u64 STORM_NUMS[] = {
 static const u8 *STORM_KEY_MIX = (void *)STORM_NUMS;
 
 typedef struct {
-	__attribute__((aligned(32))) u8 state[32];
-	__attribute__((aligned(32))) u8 key0[32];
-	__attribute__((aligned(32))) u8 key1[32];
-	__attribute__((aligned(32))) u8 key2[32];
-	__attribute__((aligned(32))) u8 key3[32];
-	__attribute__((aligned(32))) u8 counter[32];
+	__attribute__((aligned)) u8 state[32];
+	__attribute__((aligned)) u8 key0[32];
+	__attribute__((aligned)) u8 key1[32];
+	__attribute__((aligned)) u8 key2[32];
+	__attribute__((aligned)) u8 key3[32];
+	__attribute__((aligned)) u8 counter[32];
 } StormContextImpl;
 
 #ifdef USE_AVX2
