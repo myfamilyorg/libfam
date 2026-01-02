@@ -183,6 +183,50 @@ Test(rng) {
 	ASSERT_EQ(memcmp(z, expected, 64), 0, "z");
 }
 
+#define RNG_BYTES (32 * 1000000ULL)
+
+Bench(rng) {
+	u8 fbuf[1024] = {0};
+	__attribute__((aligned(32))) u8 buffer1[32] = {0};
+	__attribute__((aligned(32))) u8 buffer2[32] = {0};
+	__attribute__((aligned(32))) u8 buffer3[32] = {0};
+	__attribute__((aligned(32))) u8 buffer4[32] = {0};
+	__attribute__((aligned(32))) u8 buffer5[32] = {0};
+	__attribute__((aligned(32))) u8 buffer6[32] = {0};
+
+	i64 needed = RNG_BYTES;
+	Rng rng1, rng2, rng3, rng4, rng5, rng6;
+	u64 total_cycles = 0;
+
+	rng_init(&rng1);
+	rng_init(&rng2);
+	rng_init(&rng3);
+	rng_init(&rng4);
+	rng_init(&rng5);
+	rng_init(&rng6);
+
+	while (needed > 0) {
+		u64 start;
+		start = cycle_counter();
+		rng_gen(&rng1, buffer1, 32);
+		rng_gen(&rng2, buffer2, 32);
+		rng_gen(&rng3, buffer3, 32);
+		rng_gen(&rng4, buffer4, 32);
+		rng_gen(&rng5, buffer5, 32);
+		rng_gen(&rng6, buffer6, 32);
+		total_cycles += cycle_counter() - start;
+
+		needed -= 32;
+	}
+	const u8 msg[] = "cycles_per_byte=";
+	pwrite(2, msg, strlen(msg), 0);
+	f64_to_string(fbuf,
+		      (f64)(total_cycles * 100 / (6 * RNG_BYTES)) / (f64)100, 2,
+		      false);
+	pwrite(2, fbuf, strlen(fbuf), 0);
+	pwrite(2, "\n", 1, 0);
+}
+
 Bench(storm_perf) {
 #define STORM_COUNT (10000000000 / 32)
 	static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
