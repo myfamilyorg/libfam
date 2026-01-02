@@ -27,6 +27,7 @@
 #include <libfam/aighthash.h>
 #include <libfam/bible.h>
 #include <libfam/env.h>
+#include <libfam/kem.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/storm.h>
@@ -563,5 +564,24 @@ Test(bible_mine) {
 		       32),
 	       "hash");
 	bible_destroy(b);
+}
+
+Test(kem_iter) {
+	KemSecKey sk;
+	KemPubKey pk;
+	KemCipherText ct;
+	KemSharedSecret ss_bob = {0}, ss_alice = {0};
+	Rng rng1, rng2;
+
+	for (u32 i = 0; i < 1000; i++) {
+		rng_init(&rng1);
+		rng_init(&rng2);
+
+		keypair(&pk, &sk, &rng1);
+		enc(&ct, &ss_bob, &pk, &rng2);
+		dec(&ss_alice, &ct, &sk);
+		ASSERT(!fastmemcmp(&ss_bob, &ss_alice, KEM_SS_SIZE),
+		       "shared secret");
+	}
 }
 
