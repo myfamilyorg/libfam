@@ -1,5 +1,6 @@
 #include <libfam/format.h>
 #include <libfam/main.h>
+#include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/types.h>
 
@@ -7,6 +8,8 @@
 
 int main(i32 argc, u8 **argv, u8 **envp) {
 	StormContext ctx;
+	Rng rng;
+	rng_init(&rng);
 	__attribute__((aligned(32))) u8 keys[2][32] = {
 	    {1,	 2,  3,	 4,  5,	 6,  7,	 8,  9,	 10, 11, 12, 13, 14, 15, 16,
 	     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
@@ -20,21 +23,23 @@ int main(i32 argc, u8 **argv, u8 **envp) {
 	    {{1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
 	      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 37},
 	     {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
-	      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 38}}
+	      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 38}}};
 
-	};
+	rng_gen(&rng, keys, sizeof(keys));
+	rng_gen(&rng, inputs, sizeof(inputs));
 	println("Building storm vectors!");
 	unlink(VECTOR_FILE_PATH);
 	i32 fd = file(VECTOR_FILE_PATH);
 	Formatter fmt = FORMATTER_INIT;
 	FORMAT(&fmt, "#ifndef _STORM_VECTORS_H\n");
 	FORMAT(&fmt, "#define _STORM_VECTORS_H\n");
-	FORMAT(&fmt,
-	       "\ntypedef struct { \n\
-        __attribute__((aligned(32))) u8 key[32]; \n\
-        __attribute__((aligned(32))) u8 input[2][32]; \n\
-        __attribute__((aligned(32))) u8 expected[2][32]; \n\
-} StormVector;\n\n");
+	FORMAT(&fmt, "\ntypedef struct { \n");
+	FORMAT(&fmt, "__attribute__((aligned(32))) u8 key[32]; \n");
+	FORMAT(&fmt, "__attribute__((aligned(32))) u8 input[{}][32]; \n",
+	       sizeof(inputs) / sizeof(inputs[0]));
+	FORMAT(&fmt, "__attribute__((aligned(32))) u8 expected[{}][32]; \n",
+	       sizeof(inputs) / sizeof(inputs[0]));
+	FORMAT(&fmt, "} StormVector;\n\n");
 
 	FORMAT(&fmt, "static const StormVector storm_vectors[] = {\n");
 
