@@ -197,7 +197,7 @@ Test(rng) {
 	ASSERT_EQ(memcmp(z, expected, 64), 0, "z");
 }
 
-Bench(storm) {
+Bench(storm_perf) {
 #define STORM_COUNT (10000000000 / 32)
 	static __attribute__((aligned(32))) u8 ZERO_SEED[32] = {0};
 	static __attribute__((aligned(32))) u8 ONE_SEED[32] = {1};
@@ -257,39 +257,40 @@ Bench(storm) {
 	pwrite(2, "ps\n", 3, 0);
 }
 
-/*
-Test(storm_preimage) {
+Bench(storm_preimage) {
+	StormContext ctx1;
+	StormContext ctx2;
 	Rng rng;
-	__attribute__((aligned(32))) u8 input[32] = {0}, flipped[32] = {0};
-	u128 target = 0;
-	u128 min_diff = U128_MAX;
-	u8 min_hamm = 128;
-	u32 trials = 1 << 10;
-	u32 matches = 0;
+	__attribute__((aligned(32))) u8 input[32] = {0};
+	__attribute__((aligned(32))) u8 flipped[32] = {0};
+	static const __attribute__((aligned(32))) u8 ZERO[32] = {0};
+	u32 max_dist = 0;
+	u32 hamm_sum, hamm_dist;
+	u32 trials = 1 << 28;
 
 	rng_init(&rng);
 	for (u32 i = 0; i < trials; i++) {
 		rng_gen(&rng, input, 32);
-		 target = verihash128(input, 32);
-		fastmemcpy(flipped, input, 32);
 		u64 byte_pos = i % 32;
-		u8 bit_pos = (i / 32) % 8;
+		u8 bit_pos = input[0] % 8;
+		fastmemcpy(flipped, input, 32);
 		flipped[byte_pos] ^= (1 << bit_pos);
-		u128 result = verihash128(flipped, 32);
-		if (result == target) matches++;
-		u128 diff = result > target ? result - target : target - result;
-		min_diff = diff < min_diff ? diff : min_diff;
 
-		u128 hamm_diff = target ^ result;
-		u32 hamm = __builtin_popcountll((u64)hamm_diff) +
-			   __builtin_popcountll((u64)(hamm_diff >> 64));
-		min_hamm = hamm < min_hamm ? hamm : min_hamm;
+		storm_init(&ctx1, ZERO);
+		storm_init(&ctx2, ZERO);
+		storm_next_block(&ctx1, input);
+		storm_next_block(&ctx2, flipped);
+		hamm_sum = 0;
 
-		if (i % 10000 == 0)
-			println(
-			    "i={},matches={},min_diff={},diff={},min_hamm={}",
-			    i, matches, min_diff, diff, min_hamm);
+		for (u32 i = 0; i < 32; i++) {
+			u32 hamm = input[i] ^ flipped[i];
+			hamm_sum += __builtin_popcountll(hamm);
+		}
+		hamm_dist = hamm_sum > 128 ? hamm_sum - 128 : 128 - hamm_sum;
+		if (hamm_dist > max_dist) max_dist = hamm_dist;
 	}
-	ASSERT(!matches, "matches");
+
+	ASSERT(max_dist > 40, "max_dist > 40");
+	ASSERT(max_dist < 60, "max_dist < 60");
+	println("trials={},max_distance={}", trials, max_dist);
 }
-*/
