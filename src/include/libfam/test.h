@@ -29,29 +29,29 @@
 #include <libfam/test_base.h>
 
 #undef ASSERT_EQ
-#define ASSERT_EQ(x, y, ...)                                                  \
-	({                                                                    \
-		if ((x) != (y)) {                                             \
-			Formatter fmt = FORMATTER_INIT;                       \
-			__VA_OPT__(FORMAT(&fmt, __VA_ARGS__);)                \
-			println("{}{}{}: [{}]. '{}'", BRIGHT_RED,             \
-				__assertion_msg, RESET, tests[exe_test].name, \
-				format_to_string(&fmt));                      \
-			_exit(-1);                                            \
-		}                                                             \
+#define ASSERT_EQ(x, y, ...)                                                   \
+	({                                                                     \
+		if ((x) != (y)) {                                              \
+			Formatter fmt = FORMATTER_INIT;                        \
+			__VA_OPT__(FORMAT(&fmt, __VA_ARGS__);)                 \
+			println("{}{}{}: [{}]. '{}'", BRIGHT_RED,              \
+				__assertion_msg, RESET, active[exe_test].name, \
+				format_to_string(&fmt));                       \
+			_exit(-1);                                             \
+		}                                                              \
 	})
 
 #undef ASSERT
-#define ASSERT(x, ...)                                                        \
-	({                                                                    \
-		if (!(x)) {                                                   \
-			Formatter fmt = FORMATTER_INIT;                       \
-			__VA_OPT__(FORMAT(&fmt, __VA_ARGS__);)                \
-			println("{}{}{}: [{}]. '{}'", BRIGHT_RED,             \
-				__assertion_msg, RESET, tests[exe_test].name, \
-				format_to_string(&fmt));                      \
-			_exit(-1);                                            \
-		}                                                             \
+#define ASSERT(x, ...)                                                         \
+	({                                                                     \
+		if (!(x)) {                                                    \
+			Formatter fmt = FORMATTER_INIT;                        \
+			__VA_OPT__(FORMAT(&fmt, __VA_ARGS__);)                 \
+			println("{}{}{}: [{}]. '{}'", BRIGHT_RED,              \
+				__assertion_msg, RESET, active[exe_test].name, \
+				format_to_string(&fmt));                       \
+			_exit(-1);                                             \
+		}                                                              \
 	})
 
 #endif /* _TEST_H */

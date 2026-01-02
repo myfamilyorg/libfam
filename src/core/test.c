@@ -30,7 +30,7 @@
 #include <libfam/string.h>
 #include <libfam/test.h>
 
-Test(string_u128_fns) {
+Test(string_u128) {
 	u128 i;
 	u128 v1 = 1234;
 	i128 v2 = -5678;

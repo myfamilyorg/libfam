@@ -28,6 +28,7 @@
 #include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
+#include <libfam/wots.h>
 
 Test(aesenc) {
 	__attribute__((aligned(32))) u8 data[32] = {
@@ -297,3 +298,60 @@ Bench(storm_preimage) {
 	write_num(2, max_dist);
 	pwrite(2, "\n", 1, 0);
 }
+
+Test(wots) {
+	__attribute__((aligned(32))) u8 key[32] = {1, 2, 3, 4, 5};
+	WotsPubKey pk;
+	WotsSecKey sk;
+	WotsSig sig;
+	u8 msg[32] = {9, 9, 9, 9, 9, 4};
+
+	wots_keyfrom(key, &pk, &sk);
+	wots_sign(&sk, msg, &sig);
+	ASSERT(!wots_verify(&pk, &sig, msg), "verify");
+	msg[0]++;
+	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+}
+
+#define WOTS_COUNT 1000
+
+Bench(wotsp) {
+	__attribute__((aligned(32))) u8 key[32] = {0};
+	__attribute__((aligned(32))) u8 msg[32] = {0};
+	WotsPubKey pk;
+	WotsSecKey sk;
+	WotsSig sig;
+
+	Rng rng;
+	u64 keygen_sum = 0;
+	u64 sign_sum = 0;
+	u64 verify_sum = 0;
+
+	rng_init(&rng);
+
+	for (u32 i = 0; i < WOTS_COUNT; i++) {
+		rng_gen(&rng, key, 32);
+		rng_gen(&rng, msg, 32);
+
+		u64 start = cycle_counter();
+		wots_keyfrom(key, &pk, &sk);
+		keygen_sum += cycle_counter() - start;
+		start = cycle_counter();
+		wots_sign(&sk, msg, &sig);
+		sign_sum += cycle_counter() - start;
+		start = cycle_counter();
+		i32 res = wots_verify(&pk, &sig, msg);
+		verify_sum += cycle_counter() - start;
+		ASSERT(!res, "verify");
+		msg[0]++;
+		ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+	}
+	pwrite(2, "keygen=", 7, 0);
+	write_num(2, keygen_sum / WOTS_COUNT);
+	pwrite(2, ",sign=", 6, 0);
+	write_num(2, sign_sum / WOTS_COUNT);
+	pwrite(2, ",verify=", 8, 0);
+	write_num(2, verify_sum / WOTS_COUNT);
+	pwrite(2, "\n", 1, 0);
+}
+

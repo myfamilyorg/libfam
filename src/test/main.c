@@ -44,10 +44,10 @@ const u8 *SPACER =(void*)
 i32 cur_tests = 0;
 i32 exe_test = 0;
 i32 cur_benches = 0;
-i32 exe_bench = 0;
 
 TestEntry tests[MAX_TESTS];
 TestEntry benches[MAX_TESTS];
+TestEntry *active;
 
 void add_test_fn(void (*test_fn)(void), const u8 *name) {
 	if (faststrlen((void *)name) > MAX_TEST_NAME) {
@@ -259,9 +259,9 @@ i32 run_benches(u8 **envp) {
 
 	total = micros();
 
-	for (exe_bench = 0; exe_bench < cur_benches; exe_bench++) {
+	for (exe_test = 0; exe_test < cur_benches; exe_test++) {
 		if (!pattern || !strcmp((void *)pattern, (void *)"*") ||
-		    !strcmp((void *)pattern, (void *)benches[exe_bench].name)) {
+		    !strcmp((void *)pattern, (void *)benches[exe_test].name)) {
 			pwrite(STDERR_FD, (void *)YELLOW,
 			       faststrlen((void *)YELLOW), 0);
 			pwrite(STDERR_FD, (void *)"Running bench",
@@ -273,14 +273,14 @@ i32 run_benches(u8 **envp) {
 			pwrite(STDERR_FD, " [", 2, 0);
 			pwrite(STDERR_FD, (void *)DIMMED,
 			       faststrlen((void *)DIMMED), 0);
-			pwrite(STDERR_FD, benches[exe_bench].name,
-			       faststrlen((void *)benches[exe_bench].name), 0);
+			pwrite(STDERR_FD, benches[exe_test].name,
+			       faststrlen((void *)benches[exe_test].name), 0);
 			pwrite(STDERR_FD, (void *)RESET,
 			       faststrlen((void *)RESET), 0);
 
 			pwrite(STDERR_FD, (void *)"] ", 2, 0);
 
-			benches[exe_bench].test_fn();
+			benches[exe_test].test_fn();
 		}
 	}
 
@@ -311,8 +311,10 @@ i32 run_benches(u8 **envp) {
 
 i32 main(i32 argc, u8 **argv, u8 **envp) {
 	if (argc >= 2 && !strcmp(argv[1], "bench")) {
+		active = benches;
 		return run_benches(envp);
 	} else {
+		active = tests;
 		return run_tests(envp);
 	}
 }

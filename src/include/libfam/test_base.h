@@ -46,7 +46,7 @@ typedef struct {
 	void (*test_fn)(void);
 	u8 name[MAX_TEST_NAME + 1];
 } TestEntry;
-extern TestEntry tests[];
+extern TestEntry *active;
 
 #define Test(name)                                                         \
 	void __test_##name(void);                                          \
@@ -72,8 +72,8 @@ extern TestEntry tests[];
 				    faststrlen(__assertion_msg), 0);         \
 			_v = pwrite(STDERR_FD, RESET, faststrlen(RESET), 0); \
 			_v = pwrite(STDERR_FD, ": [", 3, 0);                 \
-			_v = pwrite(STDERR_FD, tests[exe_test].name,         \
-				    faststrlen(tests[exe_test].name), 0);    \
+			_v = pwrite(STDERR_FD, active[exe_test].name,        \
+				    faststrlen(active[exe_test].name), 0);   \
 			_v = pwrite(STDERR_FD, "]. '", 4, 0);                \
 			_v = pwrite(STDERR_FD, msg, faststrlen(msg), 0);     \
 			_v = pwrite(STDERR_FD, "'\n", 2, 0);                 \
@@ -91,8 +91,8 @@ extern TestEntry tests[];
 				    faststrlen(__assertion_msg), 0);         \
 			_v = pwrite(STDERR_FD, RESET, faststrlen(RESET), 0); \
 			_v = pwrite(STDERR_FD, ": [", 3, 0);                 \
-			_v = pwrite(STDERR_FD, tests[exe_test].name,         \
-				    faststrlen(tests[exe_test].name), 0);    \
+			_v = pwrite(STDERR_FD, active[exe_test].name,        \
+				    faststrlen(active[exe_test].name), 0);   \
 			_v = pwrite(STDERR_FD, "]. '", 4, 0);                \
 			_v = pwrite(STDERR_FD, msg, faststrlen(msg), 0);     \
 			_v = pwrite(STDERR_FD, "'\n", 2, 0);                 \
