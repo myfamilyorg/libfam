@@ -152,6 +152,7 @@ Test(rbtree1) {
 	ASSERT_EQ(rbtree_put(&tree, (RbTreeNode *)&vy, test_rbsearch), -1,
 		  "duplicate2");
 	validate_rbtree(&tree);
+	ASSERT_BYTES(0);
 }
 
 #define SIZE 100

@@ -43,29 +43,24 @@
 #include <immintrin.h>
 #endif /* USE_AVX2 */
 
-static const __attribute__((aligned(32))) u128 NUMS[] = {
-    ((u128)0xa70413383f55618fULL << 64) | 0x376d0932e21de58fULL,
-    ((u128)0xf95524bf9f2fdfa8ULL << 64) | 0xf3fb6d8bd7643b1dULL,
-    ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
-    ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL,
+const __attribute__((aligned(32))) u64 STORM_NUMS[] = {
+    0x2d358dccaa6c78a5, 0x8bb84b93962eacc9, 0x4b33a62ed433d4a3,
+    0x4d5a2da51de1aa47, 0xa0e44dd4f590aa88, 0x8e13094e6a479dbd,
+    0xdd15030f1fa20605, 0x4d24ccf1bfb9486d, 0x8885ab75ca0bcadc,
+    0x4fd858ead44132fd, 0x9f6a611cc14e0d51, 0x7a9ef3ef6c6c7e3d,
+    0xf621a0e1d2218530, 0x2475b7c896728f7d, 0x4d009aa897b8d30d,
+    0xe14eddb3549b0b7d, 0x66936782b8765b24, 0x93a27794ab59c77d,
+    0x1f220bea8dd8cbe9, 0xe589cee443ffb77d};
 
-    ((u128)0xf95524bf9f2fdfa8ULL << 64) | 0xf3fb6d8bd7643b1dULL,
-    ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
-    ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL,
-    ((u128)0xa70413383f55618fULL << 64) | 0x376d0932e21de58fULL,
-
-    ((u128)0xdcdca803f6e7c96cULL << 64) | 0x39851fc1badcb0dbULL,
-    ((u128)0x868825605fa0d9dfULL << 64) | 0xacb47fb23b6206dbULL,
-};
-static const u8 *STORM_KEY_MIX = (void *)NUMS;
+static const u8 *STORM_KEY_MIX = (void *)STORM_NUMS;
 
 typedef struct {
-	__attribute__((aligned)) u8 state[32];
-	__attribute__((aligned)) u8 key0[32];
-	__attribute__((aligned)) u8 key1[32];
-	__attribute__((aligned)) u8 key2[32];
-	__attribute__((aligned)) u8 key3[32];
-	__attribute__((aligned)) u8 counter[32];
+	__attribute__((aligned(32))) u8 state[32];
+	__attribute__((aligned(32))) u8 key0[32];
+	__attribute__((aligned(32))) u8 key1[32];
+	__attribute__((aligned(32))) u8 key2[32];
+	__attribute__((aligned(32))) u8 key3[32];
+	__attribute__((aligned(32))) u8 counter[32];
 } StormContextImpl;
 
 #ifdef USE_AVX2
