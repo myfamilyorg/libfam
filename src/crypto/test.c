@@ -25,6 +25,7 @@
 
 #include <libfam/aesenc.h>
 #include <libfam/format.h>
+#include <libfam/rng.h>
 #include <libfam/storm.h>
 #include <libfam/test_base.h>
 
@@ -99,5 +100,99 @@ Test(storm_vectors) {
 		       104, 203, 205, 140, 31,	244, 198, 106, 142, 3};
 
 	ASSERT(!memcmp(buf2, exp4, sizeof(buf2)), "buf2 round2");
+}
+
+Test(storm_cipher_vector) {
+	StormContext ctx;
+	__attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
+	__attribute__((aligned(32))) u8 buffer1[32] = {0};
+	__attribute__((aligned(32))) u8 buffer2[32] = {0};
+
+	storm_init(&ctx, SEED);
+	faststrcpy(buffer1, "test1");
+	storm_xcrypt_buffer(&ctx, buffer1);
+	faststrcpy(buffer2, "test2");
+	storm_xcrypt_buffer(&ctx, buffer2);
+
+	u8 expected1[32] = {71,	 133, 192, 11,	194, 23,  27,  203,
+			    173, 163, 182, 59,	31,  226, 177, 116,
+			    41,	 37,  219, 150, 175, 113, 190, 203,
+			    53,	 124, 138, 254, 177, 111, 150, 212};
+
+	ASSERT(!memcmp(buffer1, expected1, 32), "expected1");
+	u8 expected2[32] = {122, 32,  132, 154, 196, 43,  248, 248,
+			    88,	 71,  69,  196, 204, 27,  199, 135,
+			    145, 59,  148, 51,	239, 220, 75,  82,
+			    111, 186, 138, 31,	242, 105, 162, 235};
+
+	ASSERT(!memcmp(buffer2, expected2, 32), "expected2");
+}
+
+Test(storm_cipher) {
+	StormContext ctx;
+	__attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
+	__attribute__((aligned(32))) u8 buffer1[32] = {0};
+	__attribute__((aligned(32))) u8 buffer2[32] = {0};
+	__attribute__((aligned(32))) u8 buffer3[32] = {0};
+	__attribute__((aligned(32))) u8 buffer4[32] = {0};
+	__attribute__((aligned(32))) u8 buffer5[32] = {0};
+
+	storm_init(&ctx, SEED);
+	faststrcpy(buffer1, "test1");
+	storm_xcrypt_buffer(&ctx, buffer1);
+	faststrcpy(buffer2, "test2");
+	storm_xcrypt_buffer(&ctx, buffer2);
+	faststrcpy(buffer3, "blahblah");
+	storm_xcrypt_buffer(&ctx, buffer3);
+	faststrcpy(buffer4, "ok");
+	storm_xcrypt_buffer(&ctx, buffer4);
+	faststrcpy(buffer5, "x");
+	storm_xcrypt_buffer(&ctx, buffer5);
+
+	ASSERT(memcmp(buffer1, "test1", 5), "ne1");
+	ASSERT(memcmp(buffer2, "test2", 5), "ne2");
+	ASSERT(memcmp(buffer3, "blahblah", 8), "ne3");
+	ASSERT(memcmp(buffer4, "ok", 2), "ne4");
+	ASSERT(memcmp(buffer5, "x", 1), "ne5");
+
+	StormContext ctx2;
+	storm_init(&ctx2, SEED);
+
+	storm_xcrypt_buffer(&ctx2, buffer1);
+	ASSERT(!memcmp(buffer1, "test1", 5), "eq1");
+	storm_xcrypt_buffer(&ctx2, buffer2);
+	ASSERT(!memcmp(buffer2, "test2", 5), "eq2");
+
+	storm_xcrypt_buffer(&ctx2, buffer3);
+	ASSERT(!memcmp(buffer3, "blahblah", 8), "eq3");
+
+	storm_xcrypt_buffer(&ctx2, buffer4);
+	ASSERT(!memcmp(buffer4, "ok", 2), "eq4");
+
+	storm_xcrypt_buffer(&ctx2, buffer5);
+	ASSERT(!memcmp(buffer5, "x", 1), "eq5");
+}
+
+Test(rng) {
+	u64 x = 0, y = 0;
+	__attribute__((aligned(32))) u8 z[64] = {0};
+	Rng rng;
+	__attribute__((aligned(32))) u8 key[32] = {5, 5, 5, 5};
+	rng_init(&rng);
+	rng_gen(&rng, &x, sizeof(x));
+	rng_init(&rng);
+	rng_gen(&rng, &y, sizeof(y));
+	ASSERT(x != y, "x!=y");
+
+	rng_test_seed(&rng, key);
+	rng_gen(&rng, z, sizeof(z));
+
+	u8 expected[64] = {
+	    129, 70,  31,  219, 220, 182, 37,  117, 150, 255, 230, 81,	51,
+	    150, 154, 197, 59,	81,  226, 159, 151, 74,	 159, 253, 239, 120,
+	    28,	 108, 132, 195, 190, 175, 36,  235, 239, 201, 63,  55,	175,
+	    172, 47,  28,  89,	241, 175, 127, 4,   86,	 30,  251, 182, 32,
+	    211, 60,  62,  192, 232, 15,  165, 39,  153, 225, 119, 227};
+	ASSERT_EQ(memcmp(z, expected, 64), 0, "z");
 }
 
