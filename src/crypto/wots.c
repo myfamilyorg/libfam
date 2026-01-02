@@ -36,13 +36,13 @@
 __attribute__((aligned(32))) static const u8 DOMAIN_CHAIN[32] = {
     0x01, 'W', 'O', 'T', 'S', '+', 'c', 'h', 'a', 'i', 'n'};
 
-static void wots_chain(u8 out[32], const u8 in[32], u32 steps) {
+static void wots_chain(StormContext *ctx, u8 out[32], const u8 in[32],
+		       u32 steps) {
 	fastmemcpy(out, in, 32);
 
 	for (u32 i = 0; i < steps; ++i) {
-		StormContext ctx;
-		storm_init(&ctx, DOMAIN_CHAIN);
-		storm_next_block(&ctx, out);
+		storm_init(ctx, DOMAIN_CHAIN);
+		storm_next_block(ctx, out);
 	}
 }
 
@@ -56,18 +56,20 @@ void wots_keyfrom(const u8 seed[32], WotsPubKey *pk, WotsSecKey *sk) {
 
 	for (u32 i = 0; i < WOTS_LEN; ++i) {
 		const u8 *base = sk->data + i * WOTS_N;
-		wots_chain(pk->data + i * WOTS_N, base, WOTS_W - 1);
+		wots_chain(&ctx, pk->data + i * WOTS_N, base, WOTS_W - 1);
 	}
+	secure_zero(&ctx, sizeof(ctx));
 }
 
 void wots_sign(const WotsSecKey *sk, const u8 message[32], WotsSig *sig) {
+	StormContext ctx;
 	u16 checksum = 0;
 
 	for (u32 i = 0; i < WOTS_LEN1; ++i) {
 		u8 digit = message[i];
 		checksum += (WOTS_W - 1) - digit;
 		u32 steps = digit;
-		wots_chain(sig->data + i * WOTS_N, sk->data + i * WOTS_N,
+		wots_chain(&ctx, sig->data + i * WOTS_N, sk->data + i * WOTS_N,
 			   steps);
 	}
 
@@ -75,13 +77,16 @@ void wots_sign(const WotsSecKey *sk, const u8 message[32], WotsSig *sig) {
 		u8 digit = (checksum >> (8 * i)) & 0xFF;
 		u32 steps = digit;
 		u32 chain_idx = WOTS_LEN1 + i;
-		wots_chain(sig->data + chain_idx * WOTS_N,
+		wots_chain(&ctx, sig->data + chain_idx * WOTS_N,
 			   sk->data + chain_idx * WOTS_N, steps);
 	}
+
+	secure_zero(&ctx, sizeof(ctx));
 }
 
 i32 wots_verify(const WotsPubKey *pk, const WotsSig *sig,
 		const u8 message[32]) {
+	StormContext ctx;
 	u16 checksum = 0;
 	__attribute__((aligned(32))) u8 tmp[32];
 	i32 ret = 0;
@@ -91,7 +96,7 @@ i32 wots_verify(const WotsPubKey *pk, const WotsSig *sig,
 		checksum += (WOTS_W - 1) - digit;
 		u32 steps = (WOTS_W - 1) - digit;
 		const u8 *revealed = sig->data + i * WOTS_N;
-		wots_chain(tmp, revealed, steps);
+		wots_chain(&ctx, tmp, revealed, steps);
 		if (fastmemcmp(tmp, pk->data + i * WOTS_N, WOTS_N) != 0)
 			ret = -1;
 	}
@@ -101,7 +106,7 @@ i32 wots_verify(const WotsPubKey *pk, const WotsSig *sig,
 		u32 steps = (WOTS_W - 1) - expected_digit;
 		u32 chain_idx = WOTS_LEN1 + i;
 		const u8 *revealed = sig->data + chain_idx * WOTS_N;
-		wots_chain(tmp, revealed, steps);
+		wots_chain(&ctx, tmp, revealed, steps);
 		if (fastmemcmp(tmp, pk->data + chain_idx * WOTS_N, WOTS_N) != 0)
 			ret = -1;
 	}
