@@ -5,26 +5,15 @@
 #include <libfam/types.h>
 
 #define VECTOR_FILE_PATH "/tmp/storm_vectors.h"
+#define DEPTH 16
+#define KEY_COUNT 32
 
 int main(i32 argc, u8 **argv, u8 **envp) {
 	StormContext ctx;
 	Rng rng;
 	rng_init(&rng);
-	__attribute__((aligned(32))) u8 keys[2][32] = {
-	    {1,	 2,  3,	 4,  5,	 6,  7,	 8,  9,	 10, 11, 12, 13, 14, 15, 16,
-	     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
-	    {1,	 2,  3,	 4,  5,	 6,  7,	 8,  9,	 10, 11, 12, 13, 14, 15, 16,
-	     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 33}};
-	__attribute__((aligned(32))) u8 inputs[2][2][32] = {
-	    {{1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
-	      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 35},
-	     {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
-	      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 36}},
-	    {{1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
-	      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 37},
-	     {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
-	      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 38}}};
-
+	__attribute__((aligned(32))) u8 keys[KEY_COUNT][32] = {0};
+	__attribute__((aligned(32))) u8 inputs[KEY_COUNT][DEPTH][32] = {0};
 	rng_gen(&rng, keys, sizeof(keys));
 	rng_gen(&rng, inputs, sizeof(inputs));
 	println("Building storm vectors!");
@@ -36,7 +25,7 @@ int main(i32 argc, u8 **argv, u8 **envp) {
 	FORMAT(&fmt, "\ntypedef struct { \n");
 	FORMAT(&fmt, "__attribute__((aligned(32))) u8 key[32]; \n");
 	FORMAT(&fmt, "__attribute__((aligned(32))) u8 input[{}][32]; \n",
-	       sizeof(inputs) / sizeof(inputs[0]));
+	       DEPTH);
 	FORMAT(&fmt, "__attribute__((aligned(32))) u8 expected[{}][32]; \n",
 	       sizeof(inputs) / sizeof(inputs[0]));
 	FORMAT(&fmt, "} StormVector;\n\n");
@@ -66,8 +55,7 @@ int main(i32 argc, u8 **argv, u8 **envp) {
 		}
 		FORMAT(&fmt, "    }}\n,    .expected = {{\n");
 		storm_init(&ctx, keys[i]);
-		for (u32 j = 0; j < sizeof(inputs[i]) / sizeof(inputs[i][0]);
-		     j++) {
+		for (u32 j = 0; j < DEPTH; j++) {
 			__attribute__((aligned(32))) u8 tmp[32];
 			fastmemcpy(tmp, inputs[i][j], 32);
 			storm_next_block(&ctx, tmp);
@@ -91,7 +79,8 @@ int main(i32 argc, u8 **argv, u8 **envp) {
 	FORMAT(&fmt, "#endif /* _STORM_VECTORS_H */\n");
 	const u8 *out = format_to_string(&fmt);
 
-	pwrite(fd, out, faststrlen(out), 0);
+	i64 res = pwrite(fd, out, faststrlen(out), 0);
+	println("res={},len={}", res, faststrlen(out));
 
 	close(fd);
 	return 0;
