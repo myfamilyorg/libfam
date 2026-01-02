@@ -22,18 +22,17 @@ if needs_rebuild "$LIB_NAME" $OBJECTS; then
         fi
 fi
 
-STORMGEN_SRC="etc/stormvec.c";
 COMMAND="${CC} \
--o ${BIN_DIR}/stormgen \
+-o ${BIN_DIR}/stormvec \
 -Wno-pointer-sign \
-${STORMGEN_SRC} \
+${STORMVEC_SRC} \
 -I${INCDIR} \
 -nostdlib \
 -ffreestanding \
 -L${LIB_DIR} \
 -lfam"
 
-if [ ! -e "${BIN_DIR}/stormgen" ] || [ "${STORMGEN_SRC}" -nt "${BIN_DIR}/stormgen" ]; then
+if [ ! -e "${BIN_DIR}/stormvec" ] || [ "${STORMVEC_SRC}" -nt "${BIN_DIR}/stormvec" ]; then
 	if [ "$SILENT" != "1" ]; then
 		echo ${COMMAND};
 	fi
