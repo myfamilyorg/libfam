@@ -252,7 +252,7 @@ Bench(storm) {
 	pwrite(2, "gbps=", 5, 0);
 	pwrite(2, gbps_str, strlen(gbps_str), 0);
 	pwrite(2, ",avg=", 5, 0);
-	write_num(2, (timer * 1000) / STORM_COUNT);
-	pwrite(2, "ns\n", 3, 0);
+	write_num(2, (timer * 1000 * 1000) / (STORM_COUNT * 6));
+	pwrite(2, "ps\n", 3, 0);
 }
 
