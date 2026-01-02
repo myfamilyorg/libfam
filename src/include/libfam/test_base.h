@@ -100,4 +100,20 @@ extern TestEntry tests[];
 		}                                                            \
 	} while (0);
 
+#ifdef COVERAGE
+#define ASSERT_BYTES(v)
+#else
+#define ASSERT_BYTES(v)                               \
+	({                                            \
+		u64 _b__ = get_heap_bytes();          \
+		if (_b__ != (v)) {                    \
+			pwrite(2, "expected=", 9, 0); \
+			write_num(2, v);              \
+			pwrite(2, ",actual=", 8, 0);  \
+			write_num(2, _b__);           \
+		}                                     \
+		ASSERT_EQ(_b__, (v), "ASSERT_BYTES"); \
+	})
+#endif /* !COVERAGE */
+
 #endif /* _TEST_BASE_H */

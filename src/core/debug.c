@@ -23,27 +23,7 @@
  *
  *******************************************************************************/
 
-#ifndef _DEBUG_H
-#define _DEBUG_H
+#include <libfam/debug.h>
 
-#include <libfam/types.h>
-
-#if TEST == 1
-extern bool _debug_no_write;
-extern bool _debug_no_exit;
-extern bool _debug_fail_getsockbyname;
-extern bool _debug_fail_pipe2;
-extern bool _debug_fail_listen;
-extern bool _debug_fail_setsockopt;
-extern bool _debug_fail_fcntl;
-extern bool _debug_fail_epoll_create1;
-extern bool _debug_fail_clone;
-extern bool _debug_bible_invalid_hash;
-extern bool _debug_alloc_failure;
-extern bool _debug_no_aesni;
-u64 get_heap_bytes(void);
-void heap_bytes_reset(void);
-#endif /* TEST */
-
-#endif /* _DEBUG_H */
+bool _debug_alloc_failure = false;
 

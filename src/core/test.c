@@ -24,10 +24,11 @@
  *******************************************************************************/
 
 #include <libfam/debug.h>
+#include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/rng.h>
 #include <libfam/string.h>
-#include <libfam/test_base.h>
+#include <libfam/test.h>
 
 Test(string_u128_fns) {
 	u128 i;
@@ -174,5 +175,93 @@ Test(strstr) {
 	ASSERT_EQ(strstr(s, "def"), s + 3, "strstr1");
 	ASSERT_EQ(strstr(s, "x"), NULL, "no match");
 	ASSERT_EQ(get_heap_bytes(), 0, "heap bytes");
+}
+
+Test(format1) {
+	Formatter f = FORMATTER_INIT;
+	FORMAT(&f, "{}", 1);
+	ASSERT(!strcmp("1", format_to_string(&f)), "1");
+	format_clear(&f);
+	FORMAT(&f, "{}", -1);
+	ASSERT(!strcmp("-1", format_to_string(&f)), "-1");
+	format_clear(&f);
+	FORMAT(&f, "x={x}", 0xFE);
+	ASSERT(!strcmp("x=0xfe", format_to_string(&f)), "x=0xfe");
+	format_clear(&f);
+	FORMAT(&f, "x={X},...", 255);
+	ASSERT(!strcmp("x=0xFF,...", format_to_string(&f)), "x=0xFF,...");
+	format_clear(&f);
+	FORMAT(&f, "a={},b={},c={},d={x}", "test", 1.23456, 9999, 253);
+	ASSERT(!strcmp("a=test,b=1.23456,c=9999,d=0xfd", format_to_string(&f)),
+	       "multi");
+	format_clear(&f);
+	FORMAT(&f, "a={c},b={b} {nothing", (u8)'a', 3);
+	ASSERT(!strcmp("a=a,b=11 {nothing", format_to_string(&f)),
+	       "char and bin");
+	format_clear(&f);
+	u64 x = 101;
+	FORMAT(&f, "{}", x);
+	ASSERT(!strcmp("101", format_to_string(&f)), "101");
+	format_clear(&f);
+	FORMAT(&f, "{n}", 1001);
+	ASSERT(!strcmp("1,001", format_to_string(&f)), "101 commas");
+	format_clear(&f);
+	FORMAT(&f, "x=${n.2}", 1234567.930432);
+	ASSERT(!strcmp("x=$1,234,567.93", format_to_string(&f)),
+	       "dollar format");
+	format_clear(&f);
+	ASSERT_BYTES(0);
+}
+
+Test(format2) {
+	Formatter f = FORMATTER_INIT;
+	FORMAT(&f, "'{:5x}'", 10);
+	ASSERT(!strcmp("'  0xa'", format_to_string(&f)), "alignment hex");
+	format_clear(&f);
+	FORMAT(&f, "'{{' {}", 10);
+	ASSERT(!strcmp("'{' 10", format_to_string(&f)), "esc bracket left");
+	format_clear(&f);
+	FORMAT(&f, "'}}' {n}", 1000);
+	ASSERT(!strcmp("'}' 1,000", format_to_string(&f)),
+	       "esc bracket right and commas");
+	format_clear(&f);
+	FORMAT(&f, "{nn}", 10);
+	ASSERT(!strcmp("{nn}", format_to_string(&f)), "formatting error");
+	format_clear(&f);
+	FORMAT(&f, "'{:<20}'", 10);
+	ASSERT(!strcmp("'10                  '", format_to_string(&f)),
+	       "formatting error");
+	format_clear(&f);
+	FORMAT(&f, "'{:>20}'", 10);
+	ASSERT(!strcmp("'                  10'", format_to_string(&f)),
+	       "formatting error");
+	format_clear(&f);
+	FORMAT(&f, "{n{}", 10);
+	ASSERT(!strcmp("{n{}", format_to_string(&f)), "formatting error - int");
+	format_clear(&f);
+	i8 x = 'v';
+	FORMAT(&f, "{c}", x);
+	ASSERT(!strcmp("v", format_to_string(&f)), "i8 as char");
+	format_clear(&f);
+	FORMAT(&f, "{z}", "abc");
+	ASSERT(!strcmp("{z}", format_to_string(&f)),
+	       "formatting error - string");
+	format_clear(&f);
+	Printable p = {.t = 100, .data.ivalue = 100};
+	format_append(&f, "{}", p);
+	ASSERT(!strcmp("", format_to_string(&f)),
+	       "formatting error - invalid type");
+	format_clear(&f);
+	_debug_alloc_failure = true;
+	FORMAT(&f, "{}", "abc");
+	ASSERT(!strcmp(format_to_string(&f), ""), "alloc failure1");
+	format_clear(&f);
+	FORMAT(&f, "{{");
+	ASSERT(!strcmp(format_to_string(&f), ""), "alloc failure2");
+	format_clear(&f);
+	FORMAT(&f, "}}");
+	ASSERT(!strcmp(format_to_string(&f), ""), "alloc failure3");
+	format_clear(&f);
+	_debug_alloc_failure = false;
 }
 
