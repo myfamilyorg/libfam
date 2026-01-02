@@ -27,7 +27,7 @@ int main(i32 argc, u8 **argv, u8 **envp) {
 	FORMAT(&fmt, "__attribute__((aligned(32))) u8 input[{}][32]; \n",
 	       DEPTH);
 	FORMAT(&fmt, "__attribute__((aligned(32))) u8 expected[{}][32]; \n",
-	       sizeof(inputs) / sizeof(inputs[0]));
+	       DEPTH);
 	FORMAT(&fmt, "} StormVector;\n\n");
 
 	FORMAT(&fmt, "static const StormVector storm_vectors[] = {\n");

@@ -104,8 +104,6 @@ Test(storm_vectors) {
 	ASSERT(!memcmp(buf2, exp4, sizeof(buf2)), "buf2 round2");
 }
 
-#include <libfam/format.h>
-
 Test(storm_vectors2) {
 	StormContext ctx;
 	for (u32 i = 0; i < sizeof(storm_vectors) / sizeof(storm_vectors[0]);
@@ -118,7 +116,13 @@ Test(storm_vectors2) {
 			fastmemcpy(tmp, storm_vectors[i].input[j], 32);
 			storm_next_block(&ctx, tmp);
 			i32 res = memcmp(tmp, storm_vectors[i].expected[j], 32);
-			if (res) println("i={},j={}", i, j);
+			if (res) {
+				pwrite(2, "i=", 2, 0);
+				write_num(2, i);
+				pwrite(2, ",j=", 3, 0);
+				write_num(2, j);
+				pwrite(2, "\n", 1, 0);
+			}
 			ASSERT(!res, "vector");
 		}
 	}
