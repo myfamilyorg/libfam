@@ -27,9 +27,9 @@
 #include <libfam/test.h>
 
 Test(compress1) {
-	u8 out[10000];
+	u8 out[10000] = {0};
 	u8 in[256 + 32 + 20] = "abcdefgabcd11223344455667788";
-	u8 verify[3000];
+	u8 verify[3000] = {0};
 	i32 res = compress_block(in, sizeof(in), out, sizeof(out));
 	// println("compress_result={}", res);
 	res = decompress_block(out, res, verify, sizeof(verify));
