@@ -45,7 +45,15 @@ Test(compress2) {
 	u8 out[100000], verify[100000];
 	i32 result = compress_block(in, size, out, sizeof(out));
 	// println("compress_result={}", result);
-	result = decompress_block(out, result, verify, sizeof(verify));
+	u64 sum = 0, iter = 1000;
+	for (u32 i = 0; i < iter; i++) {
+		u64 timer = cycle_counter();
+		result = decompress_block(out, result, verify, sizeof(verify));
+		timer = cycle_counter() - timer;
+		sum += timer;
+	}
+	// println("cycles={}", sum / iter);
+	(void)sum;
 	ASSERT_EQ(size, result, "size");
 	ASSERT(!memcmp(in, verify, size), "verify");
 	munmap(in, size);

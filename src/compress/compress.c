@@ -67,11 +67,7 @@ typedef struct {
 
 typedef struct {
 	u16 symbol;
-	u16 length;
-	u8 dist_extra_bits;
-	u8 len_extra_bits;
-	u16 base_dist;
-	u8 base_len;
+	u8 length;
 } HuffmanLookup;
 
 #define SET_HASH(table, in, i) \
@@ -626,27 +622,6 @@ STATIC void compress_build_lookup_table(const CodeLength *code_lengths,
 				lookup_table[index |
 					     (j << code_lengths[i].length)]
 				    .symbol = i;
-				if (i >= MATCH_OFFSET) {
-					u8 mc = i - MATCH_OFFSET;
-					lookup_table[index |
-						     (j << code_lengths[i]
-							       .length)]
-					    .dist_extra_bits =
-					    DIST_EXTRA_BITS(mc);
-					lookup_table[index |
-						     (j << code_lengths[i]
-							       .length)]
-					    .len_extra_bits =
-					    LEN_EXTRA_BITS(mc);
-					lookup_table[index |
-						     (j << code_lengths[i]
-							       .length)]
-					    .base_dist = DIST_BASE(mc);
-					lookup_table[index |
-						     (j << code_lengths[i]
-							       .length)]
-					    .base_len = LEN_BASE(mc) + 4;
-				}
 			}
 		}
 	}
@@ -754,10 +729,11 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 			}
 			out[itt++] = symbol;
 		} else {
-			u8 deb = entry.dist_extra_bits;
-			u8 leb = entry.len_extra_bits;
-			u32 dist = entry.base_dist;
-			u16 mlen = entry.base_len;
+			u8 mc = entry.symbol - MATCH_OFFSET;
+			u8 deb = DIST_EXTRA_BITS(mc);
+			u8 leb = LEN_EXTRA_BITS(mc);
+			u32 dist = DIST_BASE(mc);
+			u16 mlen = LEN_BASE(mc) + 4;
 			if (extra_bits_bits_in_buffer < 7 + 15) {
 				TRY_LOAD(extra_bits_buffer,
 					 extra_bits_bits_in_buffer,
