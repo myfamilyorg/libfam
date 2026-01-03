@@ -35,7 +35,7 @@
 
 #ifndef USE_AVX2
 
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 #include <kyber_scalar/poly.h>
 #include <kyber_scalar/polyvec.h>
 #include <libfam/format.h>

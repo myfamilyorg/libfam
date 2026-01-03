@@ -26,7 +26,7 @@
 #ifndef INDCPA_H
 #define INDCPA_H
 
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 #include <kyber_scalar/polyvec.h>
 
 #define SHAKE128_RATE 168

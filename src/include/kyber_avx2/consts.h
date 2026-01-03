@@ -27,7 +27,7 @@
 #define CONSTS_H
 
 #include <kyber_avx2/ns.h>
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 
 #define _16XQ 0
 #define _16XQINV 16

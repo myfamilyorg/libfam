@@ -41,7 +41,7 @@
 #include <kyber_avx2/ntt.h>
 #include <kyber_avx2/poly.h>
 #include <kyber_avx2/reduce.h>
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 #include <libfam/format.h>
 #include <libfam/kem_impl.h>
 #include <libfam/storm.h>

@@ -36,7 +36,7 @@
 #ifdef USE_AVX2
 
 #include <kyber_avx2/cbd.h>
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 
 static void cbd2(poly *restrict r, const __m256i buf[2 * KYBER_N / 128]) {
 	unsigned int i;

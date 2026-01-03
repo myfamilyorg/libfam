@@ -37,7 +37,7 @@
 
 #include <kyber_avx2/consts.h>
 #include <kyber_avx2/rejsample.h>
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 
 static const u8 idx[256][8] = {
     {-1, -1, -1, -1, -1, -1, -1, -1}, {0, -1, -1, -1, -1, -1, -1, -1},

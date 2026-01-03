@@ -26,7 +26,7 @@
 #ifndef KEM_H
 #define KEM_H
 
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 #include <libfam/rng.h>
 
 #define CRYPTO_SECRETKEYBYTES KYBER_SECRETKEYBYTES

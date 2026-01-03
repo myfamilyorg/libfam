@@ -26,7 +26,7 @@
 #ifndef REJSAMPLE_H
 #define REJSAMPLE_H
 
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 
 #define SHAKE128_RATE 168
 #define SHAKE256_RATE 136

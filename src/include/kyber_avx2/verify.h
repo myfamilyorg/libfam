@@ -27,7 +27,7 @@
 #define VERIFY_H
 
 #include <kyber_avx2/ns.h>
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 
 #define verify KYBER_NAMESPACE(verify)
 int verify(const u8 *a, const u8 *b, u64 len);

@@ -35,7 +35,7 @@
 
 #ifndef USE_AVX2
 
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 #include <kyber_scalar/cbd.h>
 
 static u32 load32_littleendian(const u8 x[4]) {

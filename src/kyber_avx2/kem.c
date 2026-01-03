@@ -38,7 +38,7 @@
 #include <kyber_avx2/indcpa.h>
 #include <kyber_avx2/kem.h>
 #include <kyber_avx2/verify.h>
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 #include <libfam/kem_impl.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>

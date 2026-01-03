@@ -27,7 +27,7 @@
 #define POLY_H
 
 #include <kyber_avx2/align.h>
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 
 typedef ALIGNED_INT16(KYBER_N) poly;
 

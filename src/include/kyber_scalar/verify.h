@@ -26,7 +26,7 @@
 #ifndef VERIFY_H
 #define VERIFY_H
 
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 #include <kyber_scalar/ns.h>
 
 #define verify KYBER_NAMESPACE(verify)

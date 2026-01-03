@@ -28,7 +28,7 @@
 
 #include <kyber_avx2/ns.h>
 #include <kyber_avx2/polyvec.h>
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 
 #define gen_matrix KYBER_NAMESPACE(gen_matrix)
 void gen_matrix(polyvec *a, const u8 seed[KYBER_SYMBYTES], int transposed);

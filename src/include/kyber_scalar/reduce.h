@@ -26,7 +26,7 @@
 #ifndef REDUCE_H
 #define REDUCE_H
 
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 #include <kyber_scalar/ns.h>
 
 #define MONT -1044  // 2^16 mod q

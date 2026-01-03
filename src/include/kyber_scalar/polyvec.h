@@ -26,7 +26,7 @@
 #ifndef POLYVEC_H
 #define POLYVEC_H
 
-#include <kyber_common/params.h>
+#include <libfam/kem_impl.h>
 #include <kyber_scalar/poly.h>
 
 typedef struct {
