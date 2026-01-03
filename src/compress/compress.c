@@ -35,7 +35,7 @@
 
 #define MAX_MATCH_LEN 256
 #define MIN_MATCH_LEN 4
-#define MAX_CODE_LENGTH 9
+#define MAX_CODE_LENGTH 11
 #define MAX_BOOK_CODE_LENGTH 7
 #define MAX_BOOK_CODES (MAX_CODE_LENGTH + 4)
 #define SYMBOL_TERM 256
@@ -746,7 +746,8 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 			dist += PEEK_READER(extra_bits_buffer, deb);
 			ADVANCE_READER(extra_bits_buffer,
 				       extra_bits_bits_in_buffer, deb);
-			if (mlen + 32 + itt > capacity || dist > itt) {
+			if (__builtin_expect(
+				mlen + 32 + itt > capacity || dist > itt, 0)) {
 				errno = EOVERFLOW;
 				return -1;
 			}
@@ -764,7 +765,8 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 					out_src += 32;
 					out_dst += 32;
 				}
-			} else if (out_src + 16 <= out_dst) {
+			} else if (__builtin_expect(out_src + 16 <= out_dst,
+						    1)) {
 				u64 chunks = (mlen + 15) >> 4;
 				while (chunks--) {
 					__m128i vec =
@@ -774,7 +776,8 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 					out_src += 16;
 					out_dst += 16;
 				}
-			} else if (out_src + 8 <= out_dst) {
+			} else if (__builtin_expect(out_src + 8 <= out_dst,
+						    1)) {
 				u64 chunks = (mlen + 7) >> 3;
 				while (chunks--) {
 					*((u64 *)out_dst) = *((u64 *)out_src);
