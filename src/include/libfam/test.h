@@ -26,6 +26,7 @@
 #ifndef _TEST_H
 #define _TEST_H
 
+#include <libfam/format.h>
 #include <libfam/test_base.h>
 
 #undef ASSERT_EQ
