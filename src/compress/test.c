@@ -42,7 +42,7 @@ Test(compress2) {
 	i32 fd = file(path);
 	u32 size = fsize(fd);
 	u8 *in = fmap(fd, size, 0);
-	u8 out[100000], verify[100000];
+	u8 out[100000] = {0}, verify[100000] = {0};
 	i32 result = compress_block(in, size, out, sizeof(out));
 	// println("compress_result={}", result);
 	u64 sum = 0, iter = 1000;
