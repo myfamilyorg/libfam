@@ -713,28 +713,29 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 				    MAX_CODE_LENGTH);
 
 	while (true) {
-		if (bits_in_buffer < MAX_CODE_LENGTH)
+		if (__builtin_expect(bits_in_buffer < MAX_CODE_LENGTH, 0))
 			TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, in,
 				 len);
 		u16 bits = PEEK_READER(buffer, MAX_CODE_LENGTH);
 		HuffmanLookup entry = lookup_table[bits];
 		u16 symbol = entry.symbol;
 		ADVANCE_READER(buffer, bits_in_buffer, entry.length);
-		if (symbol == SYMBOL_TERM)
-			break;
-		else if (symbol < SYMBOL_TERM) {
+		if (__builtin_expect(symbol < SYMBOL_TERM, 0)) {
 			if (itt >= capacity) {
 				errno = EOVERFLOW;
 				return -1;
 			}
 			out[itt++] = symbol;
+		} else if (__builtin_expect(symbol == SYMBOL_TERM, 0)) {
+			break;
 		} else {
 			u8 mc = entry.symbol - MATCH_OFFSET;
 			u8 deb = DIST_EXTRA_BITS(mc);
 			u8 leb = LEN_EXTRA_BITS(mc);
 			u32 dist = DIST_BASE(mc);
 			u16 mlen = LEN_BASE(mc) + 4;
-			if (extra_bits_bits_in_buffer < 7 + 15) {
+			if (__builtin_expect(extra_bits_bits_in_buffer < 22,
+					     0)) {
 				TRY_LOAD(extra_bits_buffer,
 					 extra_bits_bits_in_buffer,
 					 extra_bits_offset, in, len);
@@ -753,7 +754,7 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 			u8 *out_src = out + itt - dist;
 			itt += mlen;
 #ifdef __AVX2__
-			if (out_src + 32 <= out_dst) {
+			if (__builtin_expect(out_src + 32 <= out_dst, 1)) {
 				u64 chunks = (mlen + 31) >> 5;
 				while (chunks--) {
 					__m256i vec = _mm256_loadu_si256(
@@ -763,8 +764,26 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 					out_src += 32;
 					out_dst += 32;
 				}
-			} else
+			} else if (out_src + 16 <= out_dst) {
+				u64 chunks = (mlen + 15) >> 4;
+				while (chunks--) {
+					__m128i vec =
+					    _mm_loadu_si128((__m128i *)out_src);
+					_mm_storeu_si128((__m128i *)out_dst,
+							 vec);
+					out_src += 16;
+					out_dst += 16;
+				}
+			} else if (out_src + 8 <= out_dst) {
+				u64 chunks = (mlen + 7) >> 3;
+				while (chunks--) {
+					*((u64 *)out_dst) = *((u64 *)out_src);
+					out_src += 8;
+					out_dst += 8;
+				}
+			} else {
 				while (mlen--) *out_dst++ = *out_src++;
+			}
 #else
 			while (mlen--) *out_dst++ = *out_src++;
 #endif
