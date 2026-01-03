@@ -121,6 +121,49 @@ typedef struct {
 		(bits_in_buffer) += (len);                                   \
 	} while (0);
 
+#define TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, data, capacity)     \
+	{                                                                   \
+		u64 bit_offset = in_bit_offset;                             \
+		u64 bits_to_load = 64 - bits_in_buffer;                     \
+		u64 end_byte = (bit_offset + bits_to_load + 7) >> 3;        \
+		u64 byte_pos = bit_offset >> 3;                             \
+		__builtin_prefetch(data + byte_pos, 1, 3);                  \
+		u8 bit_remainder = bit_offset & 0x7;                        \
+		u64 bytes_needed = end_byte - byte_pos;                     \
+		if (end_byte > capacity) {                                  \
+			errno = EOVERFLOW;                                  \
+			return -1;                                          \
+		}                                                           \
+		u64 new_bits = *(u64 *)(data + byte_pos);                   \
+		u64 high = bytes_needed == 9 ? (u64)data[byte_pos + 8] : 0; \
+		new_bits = (new_bits >> bit_remainder) |                    \
+			   (high << (64 - bit_remainder));                  \
+		new_bits &= bitstream_masks[bits_to_load];                  \
+		buffer |= (new_bits << bits_in_buffer);                     \
+		in_bit_offset += bits_to_load;                              \
+		bits_in_buffer += bits_to_load;                             \
+	}
+
+#define TRY_READ(buffer, bits_in_buffer, in_bit_offset, data, capacity,       \
+		 num_bits)                                                    \
+	({                                                                    \
+		if ((bits_in_buffer) < (num_bits)) {                          \
+			TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, data, \
+				 capacity);                                   \
+		}                                                             \
+		u64 _res__ = buffer & (bitstream_masks[num_bits]);            \
+		buffer = buffer >> num_bits;                                  \
+		bits_in_buffer -= num_bits;                                   \
+		_res__;                                                       \
+	})
+
+#define PEEK_READER(buffer, num_bits) (buffer & (bitstream_masks[num_bits]))
+#define ADVANCE_READER(buffer, bits_in_buffer, num_bits) \
+	do {                                             \
+		buffer = buffer >> (num_bits);           \
+		bits_in_buffer -= (num_bits);            \
+	} while (0);
+
 static const u8 bitstream_partial_masks[8][9] = {
     {255, 254, 252, 248, 240, 224, 192, 128, 0},
     {255, 253, 249, 241, 225, 193, 129, 1, 1},
@@ -566,79 +609,6 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 	return (out_bit_offset + 7) / 8;
 }
 
-PUBLIC u64 compress_bound(u64 source_len) { return source_len + 3; }
-
-PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
-	u16 match_array[MAX_COMPRESS_LEN + 2] = {0};
-	u32 frequencies[SYMBOL_COUNT] = {0};
-	CodeLength code_lengths[SYMBOL_COUNT] = {0};
-	u32 book_frequencies[MAX_BOOK_CODES] = {0};
-	CodeLength book[MAX_BOOK_CODES] = {0};
-
-	if (in == NULL || out == NULL) {
-		errno = EFAULT;
-		return -1;
-	}
-
-	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	u32 out_bit_offset =
-	    find_matches(in, len, match_array, frequencies, out);
-	compress_calculate_lengths(frequencies, code_lengths, SYMBOL_COUNT,
-				   MAX_CODE_LENGTH);
-	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
-	compress_build_code_book(code_lengths, book, book_frequencies);
-
-	return compress_write(code_lengths, book, match_array, out,
-			      out_bit_offset);
-}
-
-#define TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, data, capacity)     \
-	{                                                                   \
-		u64 bit_offset = in_bit_offset;                             \
-		u64 bits_to_load = 64 - bits_in_buffer;                     \
-		u64 end_byte = (bit_offset + bits_to_load + 7) >> 3;        \
-		u64 byte_pos = bit_offset >> 3;                             \
-		__builtin_prefetch(data + byte_pos, 1, 3);                  \
-		u8 bit_remainder = bit_offset & 0x7;                        \
-		u64 bytes_needed = end_byte - byte_pos;                     \
-		if (end_byte > capacity) {                                  \
-			errno = EOVERFLOW;                                  \
-			return -1;                                          \
-		}                                                           \
-		u64 new_bits = *(u64 *)(data + byte_pos);                   \
-		u64 high = bytes_needed == 9 ? (u64)data[byte_pos + 8] : 0; \
-		new_bits = (new_bits >> bit_remainder) |                    \
-			   (high << (64 - bit_remainder));                  \
-		new_bits &= bitstream_masks[bits_to_load];                  \
-		buffer |= (new_bits << bits_in_buffer);                     \
-		in_bit_offset += bits_to_load;                              \
-		bits_in_buffer += bits_to_load;                             \
-	}
-
-#define TRY_READ(buffer, bits_in_buffer, in_bit_offset, data, capacity,       \
-		 num_bits)                                                    \
-	({                                                                    \
-		if ((bits_in_buffer) < (num_bits)) {                          \
-			TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, data, \
-				 capacity);                                   \
-		}                                                             \
-		u64 _res__ = buffer & (bitstream_masks[num_bits]);            \
-		buffer = buffer >> num_bits;                                  \
-		bits_in_buffer -= num_bits;                                   \
-		_res__;                                                       \
-	})
-
-#define PEEK_READER(buffer, num_bits) (buffer & (bitstream_masks[num_bits]))
-#define ADVANCE_READER(buffer, bits_in_buffer, num_bits) \
-	do {                                             \
-		buffer = buffer >> (num_bits);           \
-		bits_in_buffer -= (num_bits);            \
-	} while (0);
-
 STATIC void compress_build_lookup_table(const CodeLength *code_lengths,
 					u16 count, HuffmanLookup *lookup_table,
 					u8 max_length) {
@@ -768,10 +738,9 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 				    MAX_CODE_LENGTH);
 
 	while (true) {
-		if (bits_in_buffer < MAX_CODE_LENGTH) {
+		if (bits_in_buffer < MAX_CODE_LENGTH)
 			TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, in,
 				 len);
-		}
 		u16 bits = PEEK_READER(buffer, MAX_CODE_LENGTH);
 		HuffmanLookup entry = lookup_table[bits];
 		u16 symbol = entry.symbol;
@@ -827,6 +796,36 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	}
 
 	return itt;
+}
+
+PUBLIC u64 compress_bound(u64 source_len) { return source_len + 3; }
+
+PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
+	u16 match_array[MAX_COMPRESS_LEN + 2] = {0};
+	u32 frequencies[SYMBOL_COUNT] = {0};
+	CodeLength code_lengths[SYMBOL_COUNT] = {0};
+	u32 book_frequencies[MAX_BOOK_CODES] = {0};
+	CodeLength book[MAX_BOOK_CODES] = {0};
+
+	if (in == NULL || out == NULL) {
+		errno = EFAULT;
+		return -1;
+	}
+
+	if (capacity < compress_bound(len) || len > MAX_COMPRESS_LEN) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	u32 out_bit_offset =
+	    find_matches(in, len, match_array, frequencies, out);
+	compress_calculate_lengths(frequencies, code_lengths, SYMBOL_COUNT,
+				   MAX_CODE_LENGTH);
+	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
+	compress_build_code_book(code_lengths, book, book_frequencies);
+
+	return compress_write(code_lengths, book, match_array, out,
+			      out_bit_offset);
 }
 
 PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
