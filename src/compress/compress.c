@@ -123,10 +123,9 @@ typedef struct {
 		u64 bits_to_load = 64 - bits_in_buffer;                     \
 		u64 end_byte = (bit_offset + bits_to_load + 7) >> 3;        \
 		u64 byte_pos = bit_offset >> 3;                             \
-		__builtin_prefetch(data + byte_pos, 1, 3);                  \
 		u8 bit_remainder = bit_offset & 0x7;                        \
 		u64 bytes_needed = end_byte - byte_pos;                     \
-		if (end_byte > capacity) {                                  \
+		if (__builtin_expect(end_byte > capacity, 0)) {             \
 			errno = EOVERFLOW;                                  \
 			return -1;                                          \
 		}                                                           \
