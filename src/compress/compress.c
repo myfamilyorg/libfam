@@ -490,7 +490,6 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 	for (i = 0; i < MAX_BOOK_CODES; i++) {
 		WRITE(buffer, bits_in_buffer, out_bit_offset, data,
 		      book[i].length, 3);
-		println("v[{}]={},{b}", i, book[i].length, book[i].code);
 	}
 	for (i = 0; i < SYMBOL_COUNT; i++) {
 		if (code_lengths[i].length) {
@@ -561,6 +560,7 @@ STATIC i32 compress_write(const CodeLength code_lengths[SYMBOL_COUNT],
 	WRITE(buffer, bits_in_buffer, out_bit_offset, data,
 	      code_lengths[SYMBOL_TERM].code, code_lengths[SYMBOL_TERM].length);
 	WRITE(buffer, bits_in_buffer, out_bit_offset, data, 0, 64);
+	WRITE(buffer, bits_in_buffer, out_bit_offset, data, 0, 64);
 	FLUSH_STREAM(buffer, bits_in_buffer, out_bit_offset, data);
 
 	return (out_bit_offset + 7) / 8;
@@ -592,61 +592,105 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
 	compress_build_code_book(code_lengths, book, book_frequencies);
 
-	for (u32 i = 0; i < SYMBOL_COUNT; i++) {
-		if (code_lengths[i].length > 0) {
-			if (i && i < 256)
-				println("length['{c}']={},{b} ({})", i,
-					code_lengths[i].length,
-					code_lengths[i].code, frequencies[i]);
-			else
-				println("length[{}]={},{b} ({})", i,
-					code_lengths[i].length,
-					code_lengths[i].code, frequencies[i]);
-		}
-	}
-
 	return compress_write(code_lengths, book, match_array, out,
 			      out_bit_offset);
 }
 
-#define TRY_READ(buffer, bits_in_buffer, in_bit_offset, data, capacity,      \
-		 num_bits)                                                   \
-	({                                                                   \
-		if ((bits_in_buffer) < (num_bits)) {                         \
-			u64 bit_offset = in_bit_offset;                      \
-			u64 bits_to_load = 64 - bits_in_buffer;              \
-			u64 end_byte = (bit_offset + bits_to_load + 7) >> 3; \
-			u64 byte_pos = bit_offset >> 3;                      \
-			__builtin_prefetch(data + byte_pos, 1, 3);           \
-			u8 bit_remainder = bit_offset & 0x7;                 \
-			u64 bytes_needed = end_byte - byte_pos;              \
-			if (end_byte > capacity) {                           \
-				errno = EOVERFLOW;                           \
-				return -1;                                   \
-			}                                                    \
-			u64 new_bits = *(u64 *)(data + byte_pos);            \
-			u64 high =                                           \
-			    bytes_needed == 9 ? (u64)data[byte_pos + 8] : 0; \
-			new_bits = (new_bits >> bit_remainder) |             \
-				   (high << (64 - bit_remainder));           \
-			new_bits &= bitstream_masks[bits_to_load];           \
-			buffer |= (new_bits << bits_in_buffer);              \
-			in_bit_offset += bits_to_load;                       \
-			bits_in_buffer += bits_to_load;                      \
-		}                                                            \
-		u64 _res__ = buffer & (bitstream_masks[num_bits]);           \
-		buffer = buffer >> num_bits;                                 \
-		bits_in_buffer -= num_bits;                                  \
-		_res__;                                                      \
+#define TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, data, capacity)     \
+	{                                                                   \
+		u64 bit_offset = in_bit_offset;                             \
+		u64 bits_to_load = 64 - bits_in_buffer;                     \
+		u64 end_byte = (bit_offset + bits_to_load + 7) >> 3;        \
+		u64 byte_pos = bit_offset >> 3;                             \
+		__builtin_prefetch(data + byte_pos, 1, 3);                  \
+		u8 bit_remainder = bit_offset & 0x7;                        \
+		u64 bytes_needed = end_byte - byte_pos;                     \
+		if (end_byte > capacity) {                                  \
+			errno = EOVERFLOW;                                  \
+			return -1;                                          \
+		}                                                           \
+		u64 new_bits = *(u64 *)(data + byte_pos);                   \
+		u64 high = bytes_needed == 9 ? (u64)data[byte_pos + 8] : 0; \
+		new_bits = (new_bits >> bit_remainder) |                    \
+			   (high << (64 - bit_remainder));                  \
+		new_bits &= bitstream_masks[bits_to_load];                  \
+		buffer |= (new_bits << bits_in_buffer);                     \
+		in_bit_offset += bits_to_load;                              \
+		bits_in_buffer += bits_to_load;                             \
+	}
+
+#define TRY_READ(buffer, bits_in_buffer, in_bit_offset, data, capacity,       \
+		 num_bits)                                                    \
+	({                                                                    \
+		if ((bits_in_buffer) < (num_bits)) {                          \
+			TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, data, \
+				 capacity);                                   \
+		}                                                             \
+		u64 _res__ = buffer & (bitstream_masks[num_bits]);            \
+		buffer = buffer >> num_bits;                                  \
+		bits_in_buffer -= num_bits;                                   \
+		_res__;                                                       \
 	})
 
-STATIC i32 compress_read_lengths(const u8 *in, u32 len,
-				 CodeLength code_lengths[SYMBOL_COUNT]) {
+#define PEEK_READER(buffer, num_bits) (buffer & (bitstream_masks[num_bits]))
+#define ADVANCE_READER(buffer, bits_in_buffer, num_bits) \
+	do {                                             \
+		buffer = buffer >> (num_bits);           \
+		bits_in_buffer -= (num_bits);            \
+	} while (0);
+
+STATIC void compress_build_lookup_table(const CodeLength *code_lengths,
+					u16 count, HuffmanLookup *lookup_table,
+					u8 max_length) {
+	i32 i, j;
+	for (i = 0; i < count; i++) {
+		if (code_lengths[i].length) {
+			i32 index = code_lengths[i].code &
+				    ((1U << code_lengths[i].length) - 1);
+			i32 fill_depth =
+			    1U << (max_length - code_lengths[i].length);
+			for (j = 0; j < fill_depth; j++) {
+				lookup_table[index |
+					     (j << code_lengths[i].length)]
+				    .length = code_lengths[i].length;
+				lookup_table[index |
+					     (j << code_lengths[i].length)]
+				    .symbol = i;
+				if (i >= MATCH_OFFSET) {
+					u8 mc = i - MATCH_OFFSET;
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .dist_extra_bits =
+					    DIST_EXTRA_BITS(mc);
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .len_extra_bits =
+					    LEN_EXTRA_BITS(mc);
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .base_dist = DIST_BASE(mc);
+					lookup_table[index |
+						     (j << code_lengths[i]
+							       .length)]
+					    .base_len = LEN_BASE(mc) + 4;
+				}
+			}
+		}
+	}
+}
+
+STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
+	CodeLength code_lengths[SYMBOL_COUNT] = {0};
 	u32 i;
 	u32 in_bit_offset;
 	u64 buffer = 0;
 	u32 bits_in_buffer = 0;
 	CodeLength book_code_lengths[MAX_BOOK_CODES] = {0};
+	u16 last_length = 0;
+	HuffmanLookup book_lookup_table[(1U << MAX_BOOK_CODE_LENGTH)] = {0};
 
 	if (len < sizeof(u32)) {
 		errno = EOVERFLOW;
@@ -660,26 +704,133 @@ STATIC i32 compress_read_lengths(const u8 *in, u32 len,
 		    TRY_READ(buffer, bits_in_buffer, in_bit_offset, in, len, 3);
 
 	compress_calculate_codes(book_code_lengths, MAX_BOOK_CODES);
-
-	for (u32 i = 0; i < MAX_BOOK_CODES; i++) {
-		println("length[{}]={},{b}", i, book_code_lengths[i].length,
-			book_code_lengths[i].code);
-	}
+	compress_build_lookup_table(book_code_lengths, MAX_BOOK_CODES,
+				    book_lookup_table, MAX_BOOK_CODE_LENGTH);
 
 	i = 0;
 	while (i < SYMBOL_COUNT) {
-		i++;
+		if (bits_in_buffer < MAX_BOOK_CODE_LENGTH)
+			TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, in,
+				 len);
+		u8 bits = PEEK_READER(buffer, MAX_BOOK_CODE_LENGTH);
+		HuffmanLookup entry = book_lookup_table[bits];
+		u16 code = entry.symbol;
+		ADVANCE_READER(buffer, bits_in_buffer, entry.length);
+		if (code < REPEAT_VALUE_INDEX) {
+			code_lengths[i++].length = code;
+			last_length = code;
+		} else if (code == REPEAT_VALUE_INDEX) {
+			if (i == 0 || last_length == 0) {
+				errno = EPROTO;
+				return -1;
+			}
+			u8 repeat = TRY_READ(buffer, bits_in_buffer,
+					     in_bit_offset, in, len, 2) +
+				    3;
+			if (i + repeat > SYMBOL_COUNT) {
+				errno = EPROTO;
+				return -1;
+			}
+			for (u32 j = 0; j < repeat; j++) {
+				code_lengths[i++].length = last_length;
+			}
+		} else if (code == REPEAT_ZERO_LONG_INDEX) {
+			u8 zeros = TRY_READ(buffer, bits_in_buffer,
+					    in_bit_offset, in, len, 7) +
+				   11;
+			if (i + zeros > SYMBOL_COUNT) {
+				errno = EPROTO;
+				return -1;
+			}
+			for (u32 j = 0; j < zeros; j++)
+				code_lengths[i++].length = 0;
+		} else if (code == REPEAT_ZERO_SHORT_INDEX) {
+			u8 zeros = TRY_READ(buffer, bits_in_buffer,
+					    in_bit_offset, in, len, 3) +
+				   3;
+			if (i + zeros > SYMBOL_COUNT) {
+				errno = EPROTO;
+				return -1;
+			}
+			for (u32 j = 0; j < zeros; j++)
+				code_lengths[i++].length = 0;
+		}
 	}
 
-	return in_bit_offset;
+	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
+
+	u32 itt = 0;
+	u32 extra_bits_offset = 32, extra_bits_bits_in_buffer = 0;
+	u64 extra_bits_buffer = 0;
+
+	HuffmanLookup lookup_table[(1U << MAX_CODE_LENGTH)] = {0};
+	compress_build_lookup_table(code_lengths, SYMBOL_COUNT, lookup_table,
+				    MAX_CODE_LENGTH);
+
+	while (true) {
+		if (bits_in_buffer < MAX_CODE_LENGTH) {
+			TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, in,
+				 len);
+		}
+		u16 bits = PEEK_READER(buffer, MAX_CODE_LENGTH);
+		HuffmanLookup entry = lookup_table[bits];
+		u16 symbol = entry.symbol;
+		ADVANCE_READER(buffer, bits_in_buffer, entry.length);
+		if (symbol == SYMBOL_TERM)
+			break;
+		else if (symbol < SYMBOL_TERM) {
+			if (itt >= capacity) {
+				errno = EOVERFLOW;
+				return -1;
+			}
+			out[itt++] = symbol;
+		} else {
+			u8 deb = entry.dist_extra_bits;
+			u8 leb = entry.len_extra_bits;
+			u32 dist = entry.base_dist;
+			u16 mlen = entry.base_len;
+			if (extra_bits_bits_in_buffer < 7 + 15) {
+				TRY_LOAD(extra_bits_buffer,
+					 extra_bits_bits_in_buffer,
+					 extra_bits_offset, in, len);
+			}
+			mlen += PEEK_READER(extra_bits_buffer, leb);
+			ADVANCE_READER(extra_bits_buffer,
+				       extra_bits_bits_in_buffer, leb);
+			dist += PEEK_READER(extra_bits_buffer, deb);
+			ADVANCE_READER(extra_bits_buffer,
+				       extra_bits_bits_in_buffer, deb);
+			if (mlen + 32 + itt > capacity || dist > itt) {
+				errno = EOVERFLOW;
+				return -1;
+			}
+			u8 *out_dst = out + itt;
+			u8 *out_src = out + itt - dist;
+			itt += mlen;
+#ifdef __AVX2__
+			if (out_src + 32 <= out_dst) {
+				u64 chunks = (mlen + 31) >> 5;
+				while (chunks--) {
+					__m256i vec = _mm256_loadu_si256(
+					    (__m256i *)out_src);
+					_mm256_storeu_si256((__m256i *)out_dst,
+							    vec);
+					out_src += 32;
+					out_dst += 32;
+				}
+			} else
+				while (mlen--) *out_dst++ = *out_src++;
+#else
+			while (mlen--) *out_dst++ = *out_src++;
+#endif
+		}
+	}
+
+	return itt;
 }
 
 PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
-	i32 res;
-	CodeLength code_lengths[SYMBOL_COUNT] = {0};
-
-	res = compress_read_lengths(in, len, code_lengths);
-	if (res < 0) return res;
-	return 0;
+	i32 res = compress_read_block(in, len, out, capacity);
+	return res;
 }
 

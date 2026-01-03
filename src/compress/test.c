@@ -27,131 +27,27 @@
 #include <libfam/test.h>
 
 Test(compress1) {
-	/*
 	u8 out[10000];
 	u8 in[256 + 32 + 20] = "abcdefgabcd11223344455667788";
-	u8 verify[300];
+	u8 verify[3000];
 	i32 res = compress_block(in, sizeof(in), out, sizeof(out));
-	println("comp_res={}", res);
+	// println("compress_result={}", res);
 	res = decompress_block(out, res, verify, sizeof(verify));
-	println("decomp_res={}", res);
-	*/
-}
-
-/*
-Test(compress1) {
-	u8 out[MAX_COMPRESS_LEN + 3];
-	i32 fd = file("resources/akjv5.txt");
-	u8 *in = fmap(fd, MAX_COMPRESS_LEN, 0);
-	ASSERT(in, "fmap");
-
-	i64 timer = micros();
-	for (u32 i = 0; i < 100; i++)
-		ASSERT(
-		    compress_block(in, MAX_COMPRESS_LEN, out, sizeof(out)) > 0,
-		    "compress_block");
-	timer = micros() - timer;
-	// println("ms={}", timer);
-	(void)timer;
-
-	munmap(in, MAX_COMPRESS_LEN);
-	close(fd);
+	ASSERT_EQ(res, sizeof(in), "size");
+	ASSERT(!memcmp(in, verify, sizeof(in)), "verify");
 }
 
 Test(compress2) {
 	const u8 *path = "./resources/test_wikipedia.txt";
 	i32 fd = file(path);
-	u64 file_size = min(fsize(fd), 128 * 1024);
-	u8 *in = fmap(fd, file_size, 0);
-	u64 bound = compress_bound(file_size);
-	u8 *out = map(bound);
-	u8 *verify = map(file_size);
-	ASSERT(out, "out");
-	ASSERT(verify, "verify");
-	i64 comp_sum = 0, decomp_sum = 0;
-
-	i64 timer = micros();
-	i32 result = compress_block(in, file_size, out, bound);
-	timer = micros() - timer;
-	comp_sum += timer;
-
-	println("res1={}", result);
-	ASSERT(result > 0, "compress_block");
-	timer = micros();
-	result = decompress_block(out, result, verify, file_size);
-	timer = micros() - timer;
-	decomp_sum += timer;
-
-	println("file_size={},result={}", file_size, result);
-	ASSERT_EQ(result, file_size, "file_size");
-
-	if (memcmp(verify, in, file_size)) {
-		for (u32 i = 0; i < file_size; i++) {
-			if (verify[i] != in[i]) {
-				println("in[{}]={c}, verify[{}]={c}", i, in[i],
-					i, verify[i]);
-			}
-		}
-	}
-	ASSERT(!memcmp(verify, in, file_size), "verify");
-
-	(void)comp_sum;
-	(void)decomp_sum;
-
-	munmap(in, file_size);
-	munmap(verify, file_size);
-	munmap(out, bound);
-	close(fd);
+	u32 size = fsize(fd);
+	u8 *in = fmap(fd, size, 0);
+	u8 out[100000], verify[100000];
+	i32 result = compress_block(in, size, out, sizeof(out));
+	// println("compress_result={}", result);
+	result = decompress_block(out, result, verify, sizeof(verify));
+	ASSERT_EQ(size, result, "size");
+	ASSERT(!memcmp(in, verify, size), "verify");
+	munmap(in, size);
 }
 
-Bench(compress) {
-	const u8 *path = "./resources/test_wikipedia.txt";
-	i32 fd = file(path);
-	u64 file_size = min(fsize(fd), 128 * 1024);
-	u8 *in = fmap(fd, file_size, 0);
-	u64 bound = compress_bound(file_size);
-	u8 *out = map(bound);
-	u8 *verify = map(file_size);
-	ASSERT(out, "out");
-	ASSERT(verify, "verify");
-	i64 comp_sum = 0, decomp_sum = 0;
-	u64 iter = 1000;
-
-	for (u32 i = 0; i < iter; i++) {
-		i64 timer = cycle_counter();
-		i32 result = compress_block(in, file_size, out, bound);
-		timer = cycle_counter() - timer;
-		comp_sum += timer;
-
-		ASSERT(result > 0, "compress_block");
-		timer = cycle_counter();
-		result = decompress_block(out, result, verify, file_size);
-		timer = cycle_counter() - timer;
-		decomp_sum += timer;
-
-		ASSERT_EQ(result, file_size, "file_size");
-
-		if (memcmp(verify, in, file_size)) {
-			for (u32 i = 0; i < file_size; i++) {
-				if (verify[i] != in[i]) {
-					println("in[{}]={c}, verify[{}]={c}", i,
-						in[i], i, verify[i]);
-				}
-			}
-		}
-		ASSERT(!memcmp(verify, in, file_size), "verify");
-	}
-
-	(void)comp_sum;
-	(void)decomp_sum;
-
-	munmap(in, file_size);
-	munmap(verify, file_size);
-	munmap(out, bound);
-	close(fd);
-
-	println("comp_sum={},decomp_sum={} (cycles per byte)",
-		(f64)comp_sum / iter / file_size,
-		(f64)decomp_sum / iter / file_size);
-}
-*/
