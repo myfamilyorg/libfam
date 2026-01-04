@@ -795,6 +795,79 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	return itt;
 }
 
+STATIC i32
+compress_calculate_block_type(const u32 frequencies[SYMBOL_COUNT],
+			      const u32 book_frequencies[MAX_BOOK_CODES],
+			      const CodeLength code_lengths[SYMBOL_COUNT],
+			      const CodeLength book[MAX_BOOK_CODES], u32 len) {
+	u32 sum = 0;
+	for (u32 i = 0; i < SYMBOL_COUNT; i++) {
+		sum += frequencies[i] * code_lengths[i].length;
+		if (i >= MATCH_OFFSET)
+			sum += frequencies[i] *
+			       (DIST_EXTRA_BITS(i - MATCH_OFFSET) +
+				LEN_EXTRA_BITS(i - MATCH_OFFSET));
+	}
+	sum += MAX_BOOK_CODES * 3;
+	for (u32 i = 0; i < MAX_BOOK_CODES; i++) {
+		sum += book_frequencies[i] * book[i].length;
+		if (i == REPEAT_VALUE_INDEX) sum += book_frequencies[i] * 2;
+		if (i == REPEAT_ZERO_LONG_INDEX) sum += book_frequencies[i] * 7;
+		if (i == REPEAT_ZERO_SHORT_INDEX)
+			sum += book_frequencies[i] * 3;
+	}
+	sum += 7 + 64 + 64;
+	sum >>= 3;
+	return sum > len;
+}
+
+STATIC i32 compress_write_raw(const u8 *in, u32 len, u8 *out) {
+	u32 value;
+	if (!len) {
+		out[0] = 0x0;
+		out[1] = 0x0;
+		out[2] = 0x80;
+		return 3;
+	}
+	value = len | 0x00800000;
+	fastmemcpy(out, &value, 3);
+	fastmemcpy(out + 3, in, len);
+	return len + 3;
+}
+
+STATIC i32 compress_read_raw(const u8 *in, u32 len, u8 *out, u32 capacity) {
+	u32 block_len;
+	u8 bytes[4];
+
+	if (len < 3) {
+		errno = EOVERFLOW;
+		return -1;
+	}
+	if (len == 3) {
+		if (in[0] != 0x0 || in[1] != 0 || in[2] != 0x80) {
+			errno = EOVERFLOW;
+			return -1;
+		}
+		return 0;
+	}
+	bytes[0] = in[0];
+	bytes[1] = in[1];
+	bytes[2] = in[2] & ~0x80;
+	bytes[3] = 0;
+	block_len = (*(u32 *)bytes);
+	if (block_len > capacity) {
+		errno = EOVERFLOW;
+		return -1;
+	}
+	if (len < block_len + 3) {
+		errno = EOVERFLOW;
+		return -1;
+	}
+
+	fastmemcpy(out, in + 3, block_len);
+	return block_len;
+}
+
 PUBLIC u64 compress_bound(u64 source_len) { return source_len + 3; }
 
 PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
@@ -821,12 +894,23 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
 	compress_build_code_book(code_lengths, book, book_frequencies);
 
-	return compress_write(code_lengths, book, match_array, out,
-			      out_bit_offset);
+	if (compress_calculate_block_type(frequencies, book_frequencies,
+					  code_lengths, book, len)) {
+		return compress_write_raw(in, len, out);
+	} else {
+		return compress_write(code_lengths, book, match_array, out,
+				      out_bit_offset);
+	}
 }
 
 PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
-	i32 res = compress_read_block(in, len, out, capacity);
-	return res;
+	if (len < 3) {
+		errno = EOVERFLOW;
+		return -1;
+	}
+	if ((in[2] & 0x80) != 0) {
+		return compress_read_raw(in, len, out, capacity);
+	} else
+		return compress_read_block(in, len, out, capacity);
 }
 

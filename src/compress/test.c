@@ -70,3 +70,19 @@ Test(compressfile1) {
 	close(infd);
 	close(outfd);
 }
+
+Test(compress_raw) {
+	u8 in[1024] = {'a', 'b', 'c'}, out[1024] = {0}, verify[1024] = {0};
+	ASSERT_EQ(compress_block(in, 3, out, 6), 6, "compress3");
+	i32 x = decompress_block(out, 6, verify, sizeof(verify));
+	ASSERT_EQ(x, 3, "decompress3");
+	ASSERT(!memcmp(verify, (u8[]){'a', 'b', 'c'}, 3), "verify");
+
+	ASSERT_EQ(compress_block(in, 0, out, 3), 3, "compress0");
+	ASSERT_EQ(decompress_block(out, 3, verify, 0), 0, "verify0");
+
+	verify[0] = 'x';
+	ASSERT_EQ(compress_block(in, 1, out, 4), 4, "compress1");
+	ASSERT_EQ(decompress_block(out, 4, verify, 1), 1, "verify1");
+	ASSERT_EQ(verify[0], 'a', "a");
+}
