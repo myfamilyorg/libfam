@@ -59,3 +59,14 @@ Test(compress2) {
 	munmap(in, size);
 }
 
+Test(compressfile1) {
+	const u8 *path = "./resources/akjv5.txt";
+	const u8 *outpath = "/tmp/akjv5.txt.tmp";
+	unlink(outpath);
+	i32 infd = file(path);
+	i32 outfd = file(outpath);
+	ASSERT(!compress_file(infd, 0, outfd, 0), "compress_file");
+
+	close(infd);
+	close(outfd);
+}

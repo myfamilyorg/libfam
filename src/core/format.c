@@ -138,8 +138,6 @@ CLEANUP:
 	RETURN;
 }
 
-#include <libfam/test_base.h>
-
 STATIC const u8 *find_next_placeholder(const u8 *p, FormatSpec *spec) {
 	while (*p) {
 		if (*p == '{') {
