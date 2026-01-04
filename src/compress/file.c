@@ -25,6 +25,7 @@
 
 #include <libfam/atomic.h>
 #include <libfam/compress.h>
+#include <libfam/env.h>
 #include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
@@ -48,6 +49,8 @@ typedef struct {
 STATIC void compress_run_proc(u32 id, CompressState *state) {
 	u8 buffers[2][MAX_COMPRESS_LEN + 3];
 	u64 chunk;
+
+	if (IS_VALGRIND()) fastmemset(buffers, 0, sizeof(buffers));
 	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
 		i64 res = pread(state->infd, buffers[0], MAX_COMPRESS_LEN,
 				state->in_offset + chunk * MAX_COMPRESS_LEN);
@@ -73,6 +76,7 @@ i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	CompressState *state = NULL;
 	struct stat st, outst;
 	state = smap(sizeof(CompressState));
+	fastmemset(state, 0, sizeof(*state));
 	if (!state) return -1;
 
 	if (fstat(infd, &st) < 0) return -1;
