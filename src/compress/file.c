@@ -84,50 +84,18 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 }
 
 STATIC void decompress_run_proc(u32 id, DecompressState *state) {
-	u64 wid, chunk, next_write = U64_MAX;
-	u8 rbuffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
-	u8 wbuffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
-	IoUring *iou = NULL;
+	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
+	u64 chunk;
 
-	iouring_init(&iou, 2);
-
-	if (IS_VALGRIND()) {
-		fastmemset(rbuffers, 0, sizeof(rbuffers));
-		fastmemset(wbuffers, 0, sizeof(wbuffers));
-	}
-
+	if (IS_VALGRIND()) fastmemset(buffers, 0, sizeof(buffers));
 	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
-		u64 widx = (next_write & 1) == 0;
-		u32 needed = state->chunk_offsets[chunk + 1] -
-			     state->chunk_offsets[chunk];
-		i64 res = pread(state->infd, rbuffers[0], needed,
+		i64 res = pread(state->infd, buffers[0], MAX_COMPRESS_LEN,
 				state->chunk_offsets[chunk]);
-		if (res < 0) panic("pread could not read file");
-
-		i32 res2 = decompress_block(rbuffers[0], res, wbuffers[widx],
-					    MAX_COMPRESS_LEN + 3);
-		if (res2 < 0) panic("Could not decompress block!");
-		i32 v = iouring_init_pwrite(
-		    iou, state->outfd, wbuffers[widx], res2,
-		    state->out_offset + MAX_COMPRESS_LEN * chunk, next_write);
-		if (v) panic("could not sched pwrite v={}", v);
-		v = iouring_submit(iou, 1);
-		if (v != 1) panic("v!=1 {}", v);
-
-		if (next_write < U64_MAX) {
-			if (iouring_pending(iou, next_write + 1)) {
-				while (true) {
-					i32 wait_res = iouring_wait(iou, &wid);
-					if (wait_res < 0)
-						panic("wait_res={}", wait_res);
-					if (wid == next_write + 1) break;
-				}
-			}
-		}
-		next_write--;
+		res = decompress_block(buffers[0], res, buffers[1],
+				       MAX_COMPRESS_LEN + 3);
+		pwrite(state->outfd, buffers[1], res,
+		       state->out_offset + MAX_COMPRESS_LEN * chunk);
 	}
-	while (iouring_pending_all(iou)) iouring_wait(iou, &wid);
-	iouring_destroy(iou);
 }
 
 i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
