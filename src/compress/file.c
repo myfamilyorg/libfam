@@ -171,6 +171,7 @@ cleanup:
 }
 
 i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
+	u64 chunk_offset_allocation;
 	i32 ret = 0;
 	DecompressState *state = NULL;
 	struct stat st, outst;
@@ -195,7 +196,10 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		goto cleanup;
 	}
 
-	state->chunk_offsets = smap(sizeof(u64) * 512);
+	chunk_offset_allocation =
+	    ((st.st_size / (48000 * (4096 / 8))) + 1) * 4096;
+
+	state->chunk_offsets = smap(chunk_offset_allocation);
 	if (!state->chunk_offsets) {
 		ret = -1;
 		goto cleanup;
@@ -210,7 +214,6 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 
 	u32 chunk_len = 0;
 	u64 offset = 0, i = 0, file_size = 0;
-	;
 
 	while (offset < state->in_len) {
 		pread(state->infd, &chunk_len, sizeof(u32),
@@ -241,7 +244,7 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 cleanup:
 	if (state) {
 		if (state->chunk_offsets)
-			munmap(state->chunk_offsets, sizeof(u64) * 512);
+			munmap(state->chunk_offsets, chunk_offset_allocation);
 		munmap(state, sizeof(DecompressState));
 	}
 	return ret;
