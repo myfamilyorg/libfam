@@ -65,26 +65,29 @@ Test(compressfile1) {
 	const u8 *outpath2 = "/tmp/akjv5.txt.conf";
 	unlink(outpath);
 	unlink(outpath2);
+
+	i64 timer = micros();
 	i32 infd = file(path);
 	i32 outfd = file(outpath);
-	i64 timer = micros();
 	ASSERT(!compress_file(infd, 0, outfd, 0), "compress_file");
-	timer = micros() - timer;
-	// println("compress={}", timer);
-
+	u64 insize = fsize(outfd);
+	u64 outsize = fsize(infd);
 	close(infd);
 	close(outfd);
-
-	infd = file(outpath);
-	outfd = file(outpath2);
+	timer = micros() - timer;
+	// println("compress={},size={}/{}", timer, insize, outsize);
 
 	timer = micros();
+	infd = file(outpath);
+	outfd = file(outpath2);
 	decompress_file(infd, 0, outfd, 0);
+	close(infd);
+	close(outfd);
 	timer = micros() - timer;
 	// println("decompress={}", timer);
 
-	close(infd);
-	close(outfd);
+	(void)insize;
+	(void)outsize;
 
 	i32 fd1 = file(outpath2);
 	i32 fd2 = file(path);

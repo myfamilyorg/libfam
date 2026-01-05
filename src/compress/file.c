@@ -179,7 +179,6 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		u32 chunk_len;
 		u64 offset = 0, i = 0;
 
-		i64 timer = micros();
 		while (offset < state->in_len) {
 			pread(state->infd, &chunk_len, sizeof(u32),
 			      state->in_offset + offset);
@@ -190,7 +189,6 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		}
 		state->chunks = i;
 		state->chunk_offsets[i] = U64_MAX;
-		timer = micros() - timer;
 	}
 
 	i32 pids[MAX_PROCS] = {0};
