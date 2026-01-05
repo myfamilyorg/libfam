@@ -1,7 +1,7 @@
 /********************************************************************************
  * MIT License
  *
- * Copyright (c) 2025 Christopher Gilliard
+ * Copyright (c) 2025-2026 Christopher Gilliard
  *
  * ... (license unchanged)
  *
