@@ -32,7 +32,7 @@
 #include <libfam/syscall.h>
 #include <libfam/utils.h>
 
-#define MAX_PROCS 6
+#define MAX_PROCS 8
 
 typedef struct {
 	u64 next_chunk;
@@ -82,19 +82,41 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 	}
 }
 
+u64 cycles_pread = 0, cycles_pwrite = 0, cycles_compress = 0;
+
 STATIC void decompress_run_proc(u32 id, DecompressState *state) {
-	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
+	u64 counter = 0;
+	u8 rbuffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
+	u8 wbuffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
 	u64 chunk;
 
-	if (IS_VALGRIND()) fastmemset(buffers, 0, sizeof(buffers));
-	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
-		i64 res = pread(state->infd, buffers[0], MAX_COMPRESS_LEN,
-				state->chunk_offsets[chunk]);
-		res = decompress_block(buffers[0], res, buffers[1],
-				       MAX_COMPRESS_LEN + 3);
-		pwrite(state->outfd, buffers[1], res,
-		       state->out_offset + MAX_COMPRESS_LEN * chunk);
+	if (IS_VALGRIND()) {
+		fastmemset(rbuffers, 0, sizeof(rbuffers));
+		fastmemset(wbuffers, 0, sizeof(wbuffers));
 	}
+	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
+		// u8 widx = (counter & 1) == 0;
+		u8 widx = 0;
+		u32 needed = state->chunk_offsets[chunk + 1] -
+			     state->chunk_offsets[chunk];
+		u64 timer = cycle_counter();
+		i64 res = pread(state->infd, rbuffers[0], needed,
+				state->chunk_offsets[chunk]);
+		cycles_pread += cycle_counter() - timer;
+		timer = cycle_counter();
+
+		i64 res2 = decompress_block(rbuffers[0], res, wbuffers[widx],
+					    MAX_COMPRESS_LEN + 3);
+		cycles_compress += cycle_counter() - timer;
+		timer = cycle_counter();
+		pwrite(state->outfd, wbuffers[widx], res2,
+		       state->out_offset + MAX_COMPRESS_LEN * chunk);
+		cycles_pwrite += cycle_counter() - timer;
+		counter++;
+	}
+	// println("r={},w={},c={}", cycles_pread, cycles_pwrite,
+	// cycles_compress);
+	(void)counter;
 }
 
 i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
@@ -168,7 +190,7 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		goto cleanup;
 	}
 
-	state->procs = min(MAX_PROCS, 6);
+	state->procs = MAX_PROCS - 2;
 	state->infd = infd;
 	state->in_offset = in_offset;
 	state->in_len = st.st_size;
@@ -188,7 +210,7 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 			if (chunk_len == 0) break;
 		}
 		state->chunks = i;
-		state->chunk_offsets[i] = U64_MAX;
+		state->chunk_offsets[i] = state->in_len;
 	}
 
 	i32 pids[MAX_PROCS] = {0};
