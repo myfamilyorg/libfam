@@ -89,7 +89,9 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 
 	if (IS_VALGRIND()) fastmemset(buffers, 0, sizeof(buffers));
 	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
-		i64 res = pread(state->infd, buffers[0], MAX_COMPRESS_LEN,
+		u32 rlen = state->chunk_offsets[chunk + 1] -
+			   state->chunk_offsets[chunk];
+		i64 res = pread(state->infd, buffers[0], rlen,
 				state->chunk_offsets[chunk]);
 		res = decompress_block(buffers[0], res, buffers[1],
 				       MAX_COMPRESS_LEN + 3);
