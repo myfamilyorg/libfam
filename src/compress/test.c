@@ -75,7 +75,7 @@ Test(compressfile1) {
 	close(infd);
 	close(outfd);
 	timer = micros() - timer;
-	// println("compress={},size={}/{}", timer, insize, outsize);
+	println("compress={},size={}/{}", timer, insize, outsize);
 
 	timer = micros();
 	infd = file(outpath);
@@ -84,7 +84,7 @@ Test(compressfile1) {
 	close(infd);
 	close(outfd);
 	timer = micros() - timer;
-	// println("decompress={}", timer);
+	println("decompress={}", timer);
 
 	(void)insize;
 	(void)outsize;

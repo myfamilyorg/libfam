@@ -126,7 +126,7 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 		}
 		next_write--;
 	}
-	while (iouring_pending_all(iou)) iouring_spin(iou, &wid);
+	while (iouring_pending_all(iou)) iouring_wait(iou, &wid);
 	iouring_destroy(iou);
 }
 
@@ -208,24 +208,26 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	state->outfd = outfd;
 	state->out_offset = out_offset;
 
-	{
-		u32 chunk_len = 0;
-		u64 offset = 0, i = 0;
+	u32 chunk_len = 0;
+	u64 offset = 0, i = 0, file_size = 0;
+	;
 
-		while (offset < state->in_len) {
-			pread(state->infd, &chunk_len, sizeof(u32),
-			      state->in_offset + offset);
-			state->chunk_offsets[i++] =
-			    offset + state->in_offset + sizeof(u32);
-			offset += chunk_len + sizeof(u32);
-			if (chunk_len == 0) break;
-		}
-		state->chunks = i;
-		state->chunk_offsets[i] = state->in_len;
+	while (offset < state->in_len) {
+		pread(state->infd, &chunk_len, sizeof(u32),
+		      state->in_offset + offset);
+		state->chunk_offsets[i++] =
+		    offset + state->in_offset + sizeof(u32);
+		offset += chunk_len + sizeof(u32);
+		if (chunk_len == 0) break;
+		if (offset < state->in_len) file_size += MAX_COMPRESS_LEN;
 	}
+	state->chunks = i;
+	state->chunk_offsets[i] = state->in_len;
+	fallocate(outfd, file_size);
+	(void)file_size;
 
 	i32 pids[MAX_PROCS] = {0};
-	u32 i;
+
 	for (i = 0; i < (state->procs - 1); i++) {
 		pids[i] = fork();
 		if (!pids[i]) {
