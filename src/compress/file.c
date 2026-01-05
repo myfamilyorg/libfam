@@ -176,7 +176,7 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	state->out_offset = out_offset;
 
 	{
-		u32 chunk_len;
+		u32 chunk_len = 0;
 		u64 offset = 0, i = 0;
 
 		while (offset < state->in_len) {
