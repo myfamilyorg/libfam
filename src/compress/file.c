@@ -171,7 +171,7 @@ cleanup:
 }
 
 i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
-	u64 chunk_offset_allocation;
+	u64 chunk_offset_allocation = 0;
 	i32 ret = 0;
 	DecompressState *state = NULL;
 	struct stat st, outst;
