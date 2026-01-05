@@ -27,6 +27,7 @@
 #include <libfam/compress.h>
 #include <libfam/env.h>
 #include <libfam/format.h>
+#include <libfam/iouring.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
 #include <libfam/syscall.h>
@@ -82,41 +83,51 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 	}
 }
 
-u64 cycles_pread = 0, cycles_pwrite = 0, cycles_compress = 0;
-
 STATIC void decompress_run_proc(u32 id, DecompressState *state) {
-	u64 counter = 0;
+	u64 wid, chunk, next_write = U64_MAX;
 	u8 rbuffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
 	u8 wbuffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
-	u64 chunk;
+	IoUring *iou = NULL;
+
+	iouring_init(&iou, 2);
 
 	if (IS_VALGRIND()) {
 		fastmemset(rbuffers, 0, sizeof(rbuffers));
 		fastmemset(wbuffers, 0, sizeof(wbuffers));
 	}
+
 	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
-		// u8 widx = (counter & 1) == 0;
-		u8 widx = 0;
+		u64 widx = (next_write & 1) == 0;
 		u32 needed = state->chunk_offsets[chunk + 1] -
 			     state->chunk_offsets[chunk];
-		u64 timer = cycle_counter();
 		i64 res = pread(state->infd, rbuffers[0], needed,
 				state->chunk_offsets[chunk]);
-		cycles_pread += cycle_counter() - timer;
-		timer = cycle_counter();
+		if (res < 0) panic("pread could not read file");
 
-		i64 res2 = decompress_block(rbuffers[0], res, wbuffers[widx],
+		i32 res2 = decompress_block(rbuffers[0], res, wbuffers[widx],
 					    MAX_COMPRESS_LEN + 3);
-		cycles_compress += cycle_counter() - timer;
-		timer = cycle_counter();
-		pwrite(state->outfd, wbuffers[widx], res2,
-		       state->out_offset + MAX_COMPRESS_LEN * chunk);
-		cycles_pwrite += cycle_counter() - timer;
-		counter++;
+		if (res2 < 0) panic("Could not decompress block!");
+		i32 v = iouring_init_pwrite(
+		    iou, state->outfd, wbuffers[widx], res2,
+		    state->out_offset + MAX_COMPRESS_LEN * chunk, next_write);
+		if (v) panic("could not sched pwrite v={}", v);
+		v = iouring_submit(iou, 1);
+		if (v != 1) panic("v!=1 {}", v);
+
+		if (next_write < U64_MAX) {
+			if (iouring_pending(iou, next_write + 1)) {
+				while (true) {
+					i32 wait_res = iouring_wait(iou, &wid);
+					if (wait_res < 0)
+						panic("wait_res={}", wait_res);
+					if (wid == next_write + 1) break;
+				}
+			}
+		}
+		next_write--;
 	}
-	// println("r={},w={},c={}", cycles_pread, cycles_pwrite,
-	// cycles_compress);
-	(void)counter;
+	while (iouring_pending_all(iou)) iouring_spin(iou, &wid);
+	iouring_destroy(iou);
 }
 
 i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
@@ -190,7 +201,7 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		goto cleanup;
 	}
 
-	state->procs = MAX_PROCS - 2;
+	state->procs = 6;
 	state->infd = infd;
 	state->in_offset = in_offset;
 	state->in_len = st.st_size;

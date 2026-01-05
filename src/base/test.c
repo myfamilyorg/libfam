@@ -984,3 +984,51 @@ Test(write_num) {
 	unlink("/tmp/write_num0");
 }
 
+#include <libfam/format.h>
+
+Test(iouring1) {
+	u64 id;
+	bool v;
+	i32 res;
+	IoUring *iou = NULL;
+	unlink("/tmp/iouring1");
+	i32 f1 = file("tmp/iouring1");
+
+	iouring_init(&iou, 3);
+	ASSERT(iou, "iouring_init");
+	iouring_init_pwrite(iou, f1, "abc\n", 4, 0, 7);
+	v = iouring_pending(iou, 7);
+	ASSERT(v, "pending");
+	v = iouring_pending(iou, 8);
+	ASSERT(!v, "!pending");
+	iouring_submit(iou, 1);
+	v = iouring_pending(iou, 7);
+	ASSERT(v, "pending2");
+	iouring_spin(iou, &id);
+	ASSERT_EQ(id, 7, "id=7");
+	v = iouring_pending(iou, 7);
+	ASSERT(!v, "!pending");
+
+	iouring_init_pwrite(iou, f1, "def\n", 4, 0, 10);
+	iouring_init_pwrite(iou, f1, "ghi\n", 4, 0, 11);
+	iouring_init_pwrite(iou, f1, "jkl\n", 4, 0, 12);
+	res = iouring_submit(iou, 3);
+	ASSERT_EQ(res, 3, "res=3");
+	ASSERT(iouring_pending(iou, 10), "10");
+	ASSERT(iouring_pending(iou, 11), "11");
+	ASSERT(iouring_pending(iou, 12), "12");
+	ASSERT(!iouring_pending(iou, 13), "13");
+	bool found10 = false, found11 = false, found12 = false;
+	for (u32 i = 0; i < 3; i++) {
+		u64 wid;
+		iouring_wait(iou, &wid);
+		if (wid == 10) found10 = true;
+		if (wid == 11) found11 = true;
+		if (wid == 12) found12 = true;
+	}
+	ASSERT(found10, "found10");
+	ASSERT(found11, "found11");
+	ASSERT(found12, "found12");
+	iouring_destroy(iou);
+}
+
