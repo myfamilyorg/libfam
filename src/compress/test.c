@@ -64,12 +64,13 @@ Test(compressfile1) {
 	const u8 *outpath = "/tmp/akjv5.txt.tmp";
 	const u8 *outpath2 = "/tmp/akjv5.txt.conf";
 	unlink(outpath);
+	unlink(outpath2);
 	i32 infd = file(path);
 	i32 outfd = file(outpath);
 	i64 timer = micros();
 	ASSERT(!compress_file(infd, 0, outfd, 0), "compress_file");
 	timer = micros() - timer;
-	println("compress={}", timer);
+	// println("compress={}", timer);
 
 	close(infd);
 	close(outfd);
@@ -80,10 +81,27 @@ Test(compressfile1) {
 	timer = micros();
 	decompress_file(infd, 0, outfd, 0);
 	timer = micros() - timer;
-	println("decompress={}", timer);
+	// println("decompress={}", timer);
 
 	close(infd);
 	close(outfd);
+
+	i32 fd1 = file(outpath2);
+	i32 fd2 = file(path);
+
+	ASSERT_EQ(fsize(fd1), fsize(fd2), "fsize");
+
+	void *ptr1 = fmap(fd1, fsize(fd1), 0);
+	void *ptr2 = fmap(fd2, fsize(fd2), 0);
+
+	ASSERT(!memcmp(ptr1, ptr2, fsize(fd1)), "equal");
+
+	munmap(ptr1, fsize(fd1));
+	munmap(ptr2, fsize(fd2));
+	close(fd1);
+	close(fd2);
+
+	ASSERT_BYTES(0);
 }
 
 Test(compress_raw) {
@@ -101,3 +119,4 @@ Test(compress_raw) {
 	ASSERT_EQ(decompress_block(out, 4, verify, 1), 1, "verify1");
 	ASSERT_EQ(verify[0], 'a', "a");
 }
+

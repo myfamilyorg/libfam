@@ -27,6 +27,7 @@
 #define _TEST_BASE_H
 
 #include <libfam/colors.h>
+#include <libfam/debug.h>
 #include <libfam/string.h>
 #include <libfam/syscall.h>
 #include <libfam/sysext.h>
