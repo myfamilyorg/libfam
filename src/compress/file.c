@@ -173,7 +173,8 @@ i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		goto cleanup;
 	}
 
-	state->procs = 6;
+	state->procs = min(MAX_PROCS - 2, (st.st_size + (MAX_COMPRESS_LEN - 1) /
+							    MAX_COMPRESS_LEN));
 	state->infd = infd;
 	state->in_offset = in_offset;
 	state->in_len = st.st_size;
