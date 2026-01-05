@@ -62,10 +62,25 @@ Test(compress2) {
 Test(compressfile1) {
 	const u8 *path = "./resources/akjv5.txt";
 	const u8 *outpath = "/tmp/akjv5.txt.tmp";
+	const u8 *outpath2 = "/tmp/akjv5.txt.conf";
 	unlink(outpath);
 	i32 infd = file(path);
 	i32 outfd = file(outpath);
+	i64 timer = micros();
 	ASSERT(!compress_file(infd, 0, outfd, 0), "compress_file");
+	timer = micros() - timer;
+	println("compress={}", timer);
+
+	close(infd);
+	close(outfd);
+
+	infd = file(outpath);
+	outfd = file(outpath2);
+
+	timer = micros();
+	decompress_file(infd, 0, outfd, 0);
+	timer = micros() - timer;
+	println("decompress={}", timer);
 
 	close(infd);
 	close(outfd);
