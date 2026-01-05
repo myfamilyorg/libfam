@@ -93,8 +93,14 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 				state->chunk_offsets[chunk]);
 		res = decompress_block(buffers[0], res, buffers[1],
 				       MAX_COMPRESS_LEN + 3);
+		u64 expected;
+		do {
+			expected = chunk;
+		} while (!__cas64(&state->next_write, &expected, U64_MAX));
+
 		pwrite(state->outfd, buffers[1], res,
 		       state->out_offset + MAX_COMPRESS_LEN * chunk);
+		__astore64(&state->next_write, chunk + 1);
 	}
 }
 
