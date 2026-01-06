@@ -91,7 +91,7 @@ PUBLIC i32 close(i32 fd) {
 	return res;
 }
 
-i32 fallocate(i32 fd, u64 new_size) {
+PUBLIC i32 fallocate(i32 fd, u64 new_size) {
 	u64 id;
 	i64 res;
 
@@ -103,7 +103,7 @@ i32 fallocate(i32 fd, u64 new_size) {
 	return res;
 }
 
-i32 fsync(i32 fd) {
+PUBLIC i32 fsync(i32 fd) {
 	u64 id;
 	i64 res;
 

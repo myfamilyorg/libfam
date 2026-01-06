@@ -146,18 +146,21 @@ static void decompress(CzipConfig *config) {
 
 	u32 magic;
 	u8 version;
+	/*
 	pread(infd, &magic, sizeof(u32), 0);
 	pread(infd, &version, sizeof(u8), 4);
+
 	if (magic != CZIP_MAGIC || version != CZIP_VERSION) {
 		println("Magic error! {}/{} (expected {}/{}", magic, version,
 			CZIP_MAGIC, CZIP_VERSION);
 		_exit(-1);
 	}
+	*/
 
 	if (config->console)
-		decompress_stream(infd, 5, outfd, 0);
+		decompress_stream(infd, 0, outfd, 0);
 	else
-		decompress_file(infd, 5, outfd, 0);
+		decompress_file(infd, 0, outfd, 0);
 
 	close(infd);
 	if (!config->console) close(outfd);
@@ -197,9 +200,12 @@ static void compress(CzipConfig *config) {
 	}
 
 	u32 wval = CZIP_MAGIC;
+	/*
 	pwrite(outfd, &wval, sizeof(u32), 0);
 	pwrite(outfd, CZIP_VERSION, sizeof(u8), 4);
-	compress_file(infd, 0, outfd, 5);
+	fsync(outfd);
+	*/
+	compress_file(infd, 0, outfd, 0);
 
 	close(infd);
 	close(outfd);
