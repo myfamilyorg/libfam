@@ -238,11 +238,14 @@ static void compress(CzipConfig *config) {
 	strcpy(outpath, config->file);
 	strcat(outpath, ".cz");
 
-	outfd = file(outpath);
-
-	if (outfd < 0) {
-		println("Could not open output file '{}'", outpath);
-		_exit(-1);
+	if (config->console)
+		outfd = 1;
+	else {
+		outfd = file(outpath);
+		if (outfd < 0) {
+			println("Could not open output file '{}'", outpath);
+			_exit(-1);
+		}
 	}
 
 	wval = CZIP_MAGIC;
@@ -293,12 +296,15 @@ static void compress(CzipConfig *config) {
 		_exit(-1);
 	}
 
-	compress_file(infd, 0, outfd, 26 + flen);
+	if (config->console)
+		compress_stream(infd, 0, outfd, 26 + flen);
+	else
+		compress_file(infd, 0, outfd, 26 + flen);
 
 	close(infd);
-	close(outfd);
+	if (!config->console) close(outfd);
 
-	if (!config->keep) unlink(config->file);
+	if (!config->keep && !config->console) unlink(config->file);
 }
 
 i32 main(i32 argc, u8 **argv, u8 **envp) {
