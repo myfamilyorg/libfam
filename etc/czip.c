@@ -243,7 +243,7 @@ static void compress(CzipConfig *config) {
 		_exit(-1);
 	}
 
-	if (config->console)
+	if (config->console || use_stdin)
 		outfd = 1;
 	else {
 		strcpy(outpath, config->file);
