@@ -187,10 +187,12 @@ static void decompress(CzipConfig *config) {
 
 	outfd = config->console ? 1 : file(outpath);
 
+	/*
 	if (fchmod(outfd, mode) < 0) {
 		println("Could not set file permissions.");
 		_exit(-1);
 	}
+	*/
 
 	if (config->console)
 		decompress_stream(infd, 26 + flen, outfd, 0);
@@ -198,17 +200,23 @@ static void decompress(CzipConfig *config) {
 		decompress_file(infd, 26 + flen, outfd, 0);
 
 	close(infd);
-	if (!config->console) close(outfd);
+	if (!config->console) {
+		if (fchmod(outfd, mode) < 0) {
+			println("Could not set file permissions.");
+			_exit(-1);
+		}
+
+		struct timeval ts[2] = {0};
+		ts[0].tv_sec = atime;
+		ts[1].tv_sec = mtime;
+		if (utimesat(outfd, NULL, ts, 0) < 0) {
+			println("Could not set file times.");
+			_exit(-1);
+		}
+		close(outfd);
+	}
 
 	if (!config->keep && !config->console) unlink(config->file);
-
-	struct timeval ts[2] = {0};
-	ts[0].tv_sec = atime;
-	ts[1].tv_sec = mtime;
-	if (utimesat(AT_FDCWD, outpath, ts, 0) < 0) {
-		println("Could not set file times.");
-		_exit(-1);
-	}
 }
 
 static void compress(CzipConfig *config) {
