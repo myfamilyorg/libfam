@@ -25,6 +25,8 @@
 
 #include <libfam/compress.h>
 #include <libfam/format.h>
+#include <libfam/limits.h>
+#include <libfam/linux.h>
 #include <libfam/main.h>
 #include <libfam/version.h>
 
@@ -120,9 +122,10 @@ static CzipConfig parse_argv(i32 argc, u8 **argv) {
 }
 
 static void decompress(CzipConfig *config) {
-	u32 magic;
+	u32 magic, mode;
 	u8 version;
 	i32 infd, outfd;
+	u64 atime, mtime;
 	u8 outpath[MAX_PATH] = {0};
 
 	if (!config->file) {
@@ -141,11 +144,6 @@ static void decompress(CzipConfig *config) {
 		_exit(-1);
 	}
 
-	strcpy(outpath, config->file);
-	outpath[strlen(outpath) - 3] = 0;
-
-	outfd = config->console ? 1 : file(outpath);
-
 	if (pread(infd, &magic, sizeof(u32), 0) != sizeof(u32)) {
 		println("Magic read error.");
 		_exit(-1);
@@ -155,21 +153,62 @@ static void decompress(CzipConfig *config) {
 		_exit(-1);
 	}
 
+	if (pread(infd, &atime, sizeof(atime), 5) != sizeof(atime)) {
+		println("Atime read error.");
+		_exit(-1);
+	}
+
+	if (pread(infd, &mtime, sizeof(mtime), 13) != sizeof(mtime)) {
+		println("Mtime read error.");
+		_exit(-1);
+	}
+
+	if (pread(infd, &mode, sizeof(mode), 21) != sizeof(mode)) {
+		println("Mode read error.");
+		_exit(-1);
+	}
+
+	u8 flen;
+	if (pread(infd, &flen, sizeof(flen), 25) != sizeof(flen)) {
+		println("flen read error.");
+		_exit(-1);
+	}
+
 	if (magic != CZIP_MAGIC || version != CZIP_VERSION) {
 		println("Magic error! {}/{} (expected {}/{}", magic, version,
 			CZIP_MAGIC, CZIP_VERSION);
 		_exit(-1);
 	}
 
+	if (pread(infd, outpath, flen, 26) != flen) {
+		println("file name read error.");
+		_exit(-1);
+	}
+
+	outfd = config->console ? 1 : file(outpath);
+
+	if (fchmod(outfd, mode) < 0) {
+		println("Could not set file permissions.");
+		_exit(-1);
+	}
+
 	if (config->console)
-		decompress_stream(infd, 5, outfd, 0);
+		decompress_stream(infd, 26 + flen, outfd, 0);
 	else
-		decompress_file(infd, 5, outfd, 0);
+		decompress_file(infd, 26 + flen, outfd, 0);
 
 	close(infd);
 	if (!config->console) close(outfd);
 
 	if (!config->keep && !config->console) unlink(config->file);
+
+	struct timeval ts[2] = {0};
+	ts[0].tv_sec = atime;
+	ts[1].tv_sec = mtime;
+	if (utimesat(AT_FDCWD, outpath, ts, 0) < 0) {
+		println("Could not set file times.");
+		_exit(-1);
+	}
 }
 
 static void compress(CzipConfig *config) {
@@ -207,17 +246,53 @@ static void compress(CzipConfig *config) {
 
 	wval = CZIP_MAGIC;
 	vval = CZIP_VERSION;
+	struct stat st;
+	if (fstat(infd, &st) < 0) {
+		println("Could not stat input file.");
+		_exit(-1);
+	}
 
 	if (pwrite(outfd, &wval, sizeof(u32), 0) != sizeof(u32)) {
 		println("Magic write error.");
 		_exit(-1);
 	}
 	if (pwrite(outfd, &vval, sizeof(u8), 4) != sizeof(u8)) {
-		println("Version write error");
+		println("Version write error.");
+		_exit(-1);
+	}
+	if (pwrite(outfd, &st.st_atime, sizeof(u64), 5) != sizeof(u64)) {
+		println("attime write error.");
 		_exit(-1);
 	}
 
-	compress_file(infd, 0, outfd, 5);
+	if (pwrite(outfd, &st.st_mtime, sizeof(u64), 13) != sizeof(u64)) {
+		println("mttime write error.");
+		_exit(-1);
+	}
+
+	if (pwrite(outfd, &st.st_mode, sizeof(u32), 21) != sizeof(u32)) {
+		println("stmode write error.");
+		_exit(-1);
+	}
+
+	u8 flen;
+	u64 flen64 = strlen(config->file);
+	if (flen64 > U8_MAX) {
+		println("file name '{}' is too long. Max 255.", config->file);
+		_exit(-1);
+	}
+	flen = flen64;
+
+	if (pwrite(outfd, &flen, sizeof(u8), 25) != sizeof(u8)) {
+		println("flen write error.");
+		_exit(-1);
+	}
+	if (pwrite(outfd, config->file, flen, 26) != flen) {
+		println("file name write error.");
+		_exit(-1);
+	}
+
+	compress_file(infd, 0, outfd, 26 + flen);
 
 	close(infd);
 	close(outfd);

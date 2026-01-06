@@ -52,5 +52,7 @@ i32 nanosleep(const struct timespec *duration, struct timespec *rem);
 void restorer(void);
 i32 unlinkat(i32 dfd, const char *path, i32 flags);
 i32 fstat(i32 fd, struct stat *buf);
+i32 fchmod(i32 fd, u32 mode);
+i32 utimesat(i32 dirfd, const u8 *path, const struct timeval *times, i32 flags);
 
 #endif /* _SYSCALL_H */

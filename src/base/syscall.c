@@ -36,7 +36,9 @@
 
 #ifdef __aarch64__
 #define SYS_unlinkat 35
+#define SYS_fchmod 52
 #define SYS_fstat 80
+#define SYS_utimesat 88
 #define SYS_waitid 95
 #define SYS_nanosleep 101
 #define SYS_kill 129
@@ -58,8 +60,10 @@
 #define SYS_getpid 39
 #define SYS_clone 56
 #define SYS_kill 62
+#define SYS_fchmod 91
 #define SYS_clock_gettime 228
 #define SYS_waitid 247
+#define SYS_utimesat 261
 #define SYS_unlinkat 263
 #define SYS_io_uring_setup 425
 #define SYS_io_uring_enter 426
@@ -328,6 +332,28 @@ i32 unlinkat(i32 dfd, const char *path, i32 flags) {
 INIT:
 	v = (i32)raw_syscall(SYS_unlinkat, (i64)dfd, (i64)path, (i64)flags, 0,
 			     0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+PUBLIC i32 fchmod(i32 fd, u32 mode) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_fchmod, (i64)fd, (i64)mode, 0, 0, 0, 0);
+	if (v < 0) ERROR(-v);
+	OK(v);
+CLEANUP:
+	RETURN;
+}
+
+PUBLIC i32 utimesat(i32 dirfd, const u8 *pathname, const struct timeval *times,
+		    i32 flags) {
+	i32 v;
+INIT:
+	v = (i32)raw_syscall(SYS_utimesat, (i64)dirfd, (i64)pathname,
+			     (i64)times, (i64)flags, 0, 0);
 	if (v < 0) ERROR(-v);
 	OK(v);
 CLEANUP:
