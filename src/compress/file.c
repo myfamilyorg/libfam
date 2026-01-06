@@ -302,6 +302,7 @@ PUBLIC i32 decompress_stream(i32 infd, u64 in_offset, i32 outfd,
 			if (res == 0) break;
 			rlen += res;
 		}
+		in_offset += chunk_len;
 		if (!rlen) break;
 
 		res = decompress_block(buffers[0], rlen, buffers[1],
