@@ -140,7 +140,7 @@ STATIC i32 compress_setup_offsets(DecompressState *state, u64 st_size) {
 	return 0;
 }
 
-i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
+PUBLIC i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	i32 ret = 0;
 	CompressState *state = NULL;
 	struct stat st, outst;
@@ -180,7 +180,7 @@ cleanup:
 	return ret;
 }
 
-i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
+PUBLIC i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	i32 ret = 0;
 	DecompressState *state = NULL;
 	struct stat st, outst;
@@ -280,7 +280,8 @@ PUBLIC i32 compress_stream(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	return 0;
 }
 
-i32 decompress_stream(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
+PUBLIC i32 decompress_stream(i32 infd, u64 in_offset, i32 outfd,
+			     u64 out_offset) {
 	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
 	u64 rlen = 0;
 	i64 res;

@@ -50,7 +50,7 @@ PUBLIC i32 strcmp(const char *x, const char *y) {
 	return *x > *y ? 1 : *y > *x ? -1 : 0;
 }
 
-char *strcpy(char *dest, const char *src) {
+PUBLIC char *strcpy(char *dest, const char *src) {
 	char *ptr = dest;
 	while ((*ptr++ = *src++));
 	return dest;
@@ -63,7 +63,7 @@ char *strncpy(char *dest, const char *src, u64 n) {
 	return dest;
 }
 
-char *strcat(char *dest, const char *src) {
+PUBLIC char *strcat(char *dest, const char *src) {
 	char *ptr = dest;
 	while (*ptr) ptr++;
 	while ((*ptr++ = *src++));

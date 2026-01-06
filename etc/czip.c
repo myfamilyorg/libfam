@@ -50,7 +50,7 @@ typedef struct {
 	const u8 *file;
 } CzipFileHeader;
 
-CzipConfig parse_argv(i32 argc, u8 **argv) {
+static CzipConfig parse_argv(i32 argc, u8 **argv) {
 	CzipConfig ret = {0};
 	i32 i;
 	for (i = 1; i < argc; i++) {
@@ -73,7 +73,8 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 					ret.keep = true;
 					return ret;
 				} else {
-					println("Illegal option: {}", argv[i]);
+					println("Illegal option: '{}'",
+						argv[i]);
 					ret.help = true;
 					ret.file = "";
 					ret.return_value = -1;
@@ -95,7 +96,7 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 					else if (ch == 'k')
 						ret.keep = true;
 					else {
-						println("Illegal option: {c}",
+						println("Illegal option: '{c}'",
 							ch);
 						ret.help = true;
 						ret.return_value = -1;
@@ -117,15 +118,99 @@ CzipConfig parse_argv(i32 argc, u8 **argv) {
 	return ret;
 }
 
-i32 main(i32 argc, u8 **argv, u8 **envp) {
-	println("czip!");
+static void decompress(CzipConfig *config) {
+	i32 infd, outfd;
+	u8 outpath[MAX_PATH] = {0};
 
+	if (!exists(config->file)) {
+		println("Specified file '{}' does not exist.", config->file);
+		_exit(-1);
+	}
+
+	infd = file(config->file);
+	if (infd < 0) {
+		println("Could not open specified file '{}'", config->file);
+		_exit(-1);
+	}
+
+	strcpy(outpath, config->file);
+	outpath[strlen(outpath) - 3] = 0;
+
+	outfd = file(outpath);
+
+	decompress_file(infd, 0, outfd, 0);
+
+	close(infd);
+	close(outfd);
+
+	unlink(config->file);
+}
+
+static void compress(CzipConfig *config) {
+	i32 infd, outfd;
+	u8 outpath[MAX_PATH] = {0};
+
+	if (strlen(config->file) >= MAX_PATH - 4) {
+		println("File name too long!");
+		_exit(-1);
+	}
+
+	if (!exists(config->file)) {
+		println("Specified file '{}' does not exist.", config->file);
+		_exit(-1);
+	}
+
+	infd = file(config->file);
+
+	if (infd < 0) {
+		println("Could not open specified file '{}'", config->file);
+		_exit(-1);
+	}
+
+	strcpy(outpath, config->file);
+	strcat(outpath, ".cz");
+
+	outfd = file(outpath);
+
+	if (outfd < 0) {
+		println("Could not open output file '{}'", outpath);
+		_exit(-1);
+	}
+
+	compress_file(infd, 0, outfd, 0);
+
+	close(infd);
+	close(outfd);
+
+	if (!config->keep) unlink(config->file);
+}
+
+i32 main(i32 argc, u8 **argv, u8 **envp) {
 	CzipConfig config = parse_argv(argc, argv);
 
 	if (config.version) {
 		println("czip {}", LIBFAM_VERSION);
+	} else if (config.help) {
+		println("Usage: czip [OPTION]... [FILE]...");
+		println(
+		    "-c, --console       write to standard output, "
+		    "keep files "
+		    "unchanged");
+		println("-d, --decompress    decompress");
+		println("-h, --help          print this message");
+		println("-v, --version       print version");
+		println("-k, --keep          keep original file");
+		println(
+		    "\nNote: if no file is specified stdin will be "
+		    "used as "
+		    "the "
+		    "input file.");
+		return config.return_value;
+	} else if (config.decompress) {
+		decompress(&config);
 	} else {
-		println("other");
+		compress(&config);
 	}
+
 	return 0;
 }
