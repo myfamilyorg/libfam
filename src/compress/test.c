@@ -123,3 +123,23 @@ Test(compress_raw) {
 	ASSERT_EQ(verify[0], 'a', "a");
 }
 
+Test(compress_stream) {
+	const u8 *path1 = "./resources/akjv5.txt";
+	const u8 *path_out1 = "/tmp/compress_stream1.out";
+	const u8 *path_out2 = "/tmp/compress_stream2.out";
+	unlink(path_out1);
+	unlink(path_out2);
+	i32 fd1 = file(path1);
+	i32 fd2 = file(path_out1);
+
+	compress_stream(fd1, 0, fd2, 0);
+	close(fd1);
+	close(fd2);
+
+	fd1 = file(path_out1);
+	fd2 = file(path_out2);
+
+	decompress_stream(fd1, 0, fd2, 0);
+	close(fd1);
+	close(fd2);
+}

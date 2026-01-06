@@ -242,3 +242,84 @@ cleanup:
 	return ret;
 }
 
+PUBLIC i32 compress_stream(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
+	i64 res, len, rlen, wlen, to_write;
+	bool is_last = false, wbytes = false;
+	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
+
+	if (IS_VALGRIND()) fastmemset(buffers, 0, sizeof(buffers));
+
+	while (!is_last) {
+		rlen = 0;
+		while (rlen < MAX_COMPRESS_LEN) {
+			res = pread(infd, buffers[0], MAX_COMPRESS_LEN - rlen,
+				    in_offset + rlen);
+			if (res < 0) return res;
+			rlen += res;
+			if (res == 0) {
+				is_last = true;
+				break;
+			}
+		}
+		if (rlen == 0 && wbytes) break;
+		wbytes = true;
+		len = compress_block(buffers[0], rlen, buffers[1] + sizeof(u32),
+				     MAX_COMPRESS_LEN + 3);
+		fastmemcpy(buffers[1], &len, sizeof(u32));
+		to_write = len + sizeof(u32);
+		wlen = 0;
+		while (wlen < to_write) {
+			res = pwrite(outfd, buffers[1], to_write, out_offset);
+			if (res < 0) return res;
+			wlen += res;
+		}
+		out_offset += to_write;
+		in_offset += MAX_COMPRESS_LEN;
+	}
+
+	return 0;
+}
+
+i32 decompress_stream(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
+	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
+	u64 rlen = 0;
+	i64 res;
+	u32 chunk_len = 0;
+
+	if (IS_VALGRIND()) fastmemset(buffers, 0, sizeof(buffers));
+
+	while (true) {
+		res = pread(infd, &chunk_len, sizeof(u32), in_offset);
+		if (res < sizeof(u32)) {
+			errno = EIO;
+			return -1;
+		}
+		in_offset += sizeof(u32);
+		rlen = 0;
+		while (rlen < chunk_len) {
+			res = pread(infd, buffers[0], chunk_len - rlen,
+				    in_offset);
+			if (res < 0) return res;
+			if (rlen == 0) {
+				errno = EIO;
+				return -1;
+			}
+			rlen += res;
+		}
+
+		res = decompress_block(buffers[0], rlen, buffers[1],
+				       MAX_COMPRESS_LEN + 3);
+		if (res < 0) return res;
+		i64 out_offset_update = res;
+		while (res) {
+			i64 wres = pwrite(outfd, buffers[1], res, out_offset);
+			if (wres < 0) return wres;
+			res -= wres;
+		}
+
+		out_offset += out_offset_update;
+	}
+
+	return 0;
+}
+
