@@ -36,6 +36,7 @@ export OUTDIR OBJDIR
 export LIBDIR="$OUTDIR/lib"
 export BINDIR="$OUTDIR/bin"
 export STORMVEC_SRC="etc/stormvec.c";
+export CZIP_SRC="etc/czip.c";
 
 # ------------------------------------------------------------------
 # 2. Base compiler and linker settings (common to all modes)

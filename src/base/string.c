@@ -45,7 +45,7 @@ PUBLIC u64 strlen(const char *x) {
 	return x - y;
 }
 
-i32 strcmp(const char *x, const char *y) {
+PUBLIC i32 strcmp(const char *x, const char *y) {
 	while (*x == *y && *x) x++, y++;
 	return *x > *y ? 1 : *y > *x ? -1 : 0;
 }

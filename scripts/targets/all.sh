@@ -38,3 +38,21 @@ if [ ! -e "${BIN_DIR}/stormvec" ] || [ "${STORMVEC_SRC}" -nt "${BIN_DIR}/stormve
 	fi
 	${COMMAND} || exit 1;
 fi
+
+COMMAND="${CC} \
+-o ${BIN_DIR}/czip \
+-Wno-pointer-sign \
+${CZIP_SRC} \
+-I${INCDIR} \
+-nostdlib \
+-ffreestanding \
+-L${LIB_DIR} \
+-lfam"
+
+if [ ! -e "${BIN_DIR}/czip" ] || [ "${CZIP_SRC}" -nt "${BIN_DIR}/czip" ]; then
+        if [ "$SILENT" != "1" ]; then
+                echo ${COMMAND};
+        fi
+        ${COMMAND} || exit 1;
+fi
+
