@@ -120,6 +120,8 @@ static CzipConfig parse_argv(i32 argc, u8 **argv) {
 }
 
 static void decompress(CzipConfig *config) {
+	u32 magic;
+	u8 version;
 	i32 infd, outfd;
 	u8 outpath[MAX_PATH] = {0};
 
@@ -144,18 +146,20 @@ static void decompress(CzipConfig *config) {
 
 	outfd = config->console ? 1 : file(outpath);
 
-	u32 magic;
-	u8 version;
-	/*
-	pread(infd, &magic, sizeof(u32), 0);
-	pread(infd, &version, sizeof(u8), 4);
+	if (pread(infd, &magic, sizeof(u32), 0) != sizeof(u32)) {
+		println("Magic read error.");
+		_exit(-1);
+	}
+	if (pread(infd, &version, sizeof(u8), 4) != sizeof(u8)) {
+		println("Version read error.");
+		_exit(-1);
+	}
 
 	if (magic != CZIP_MAGIC || version != CZIP_VERSION) {
 		println("Magic error! {}/{} (expected {}/{}", magic, version,
 			CZIP_MAGIC, CZIP_VERSION);
 		_exit(-1);
 	}
-	*/
 
 	if (config->console)
 		decompress_stream(infd, 5, outfd, 0);
@@ -169,6 +173,8 @@ static void decompress(CzipConfig *config) {
 }
 
 static void compress(CzipConfig *config) {
+	u8 vval;
+	u32 wval;
 	i32 infd, outfd;
 	u8 outpath[MAX_PATH] = {0};
 
@@ -199,10 +205,17 @@ static void compress(CzipConfig *config) {
 		_exit(-1);
 	}
 
-	u32 wval = CZIP_MAGIC;
+	wval = CZIP_MAGIC;
+	vval = CZIP_VERSION;
 
-	pwrite(outfd, &wval, sizeof(u32), 0);
-	pwrite(outfd, CZIP_VERSION, sizeof(u8), 4);
+	if (pwrite(outfd, &wval, sizeof(u32), 0) != sizeof(u32)) {
+		println("Magic write error.");
+		_exit(-1);
+	}
+	if (pwrite(outfd, &vval, sizeof(u8), 4) != sizeof(u8)) {
+		println("Version write error");
+		_exit(-1);
+	}
 
 	compress_file(infd, 0, outfd, 5);
 
