@@ -122,6 +122,11 @@ static void decompress(CzipConfig *config) {
 	i32 infd, outfd;
 	u8 outpath[MAX_PATH] = {0};
 
+	if (!config->file) {
+		println("File name must be specified.");
+		_exit(-1);
+	}
+
 	if (!exists(config->file)) {
 		println("Specified file '{}' does not exist.", config->file);
 		_exit(-1);
@@ -136,14 +141,17 @@ static void decompress(CzipConfig *config) {
 	strcpy(outpath, config->file);
 	outpath[strlen(outpath) - 3] = 0;
 
-	outfd = file(outpath);
+	outfd = config->console ? 1 : file(outpath);
 
-	decompress_file(infd, 0, outfd, 0);
+	if (config->console)
+		decompress_stream(infd, 0, outfd, 0);
+	else
+		decompress_file(infd, 0, outfd, 0);
 
 	close(infd);
-	close(outfd);
+	if (!config->console) close(outfd);
 
-	unlink(config->file);
+	if (!config->keep && !config->console) unlink(config->file);
 }
 
 static void compress(CzipConfig *config) {
