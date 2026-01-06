@@ -108,15 +108,14 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 }
 
 STATIC i32 compress_setup_offsets(DecompressState *state, u64 st_size) {
-	u64 offset = 0, i = 0, file_size = 0, chunk_len = 0;
+	u64 offset = state->in_offset, i = 0, file_size = 0, chunk_len = 0;
 
 	state->chunk_offset_allocation = 4096;
 	state->chunk_offsets = smap(state->chunk_offset_allocation);
 	if (!state->chunk_offsets) return -1;
 
 	while (offset < state->in_len) {
-		pread(state->infd, &chunk_len, sizeof(u32),
-		      state->in_offset + offset);
+		pread(state->infd, &chunk_len, sizeof(u32), offset);
 		if ((i + 1) >= (state->chunk_offset_allocation / sizeof(u64))) {
 			u64 *tmp = smap(2 * state->chunk_offset_allocation);
 			if (!tmp) return -1;
@@ -127,8 +126,7 @@ STATIC i32 compress_setup_offsets(DecompressState *state, u64 st_size) {
 			state->chunk_offset_allocation *= 2;
 			state->chunk_offsets = tmp;
 		}
-		state->chunk_offsets[i++] =
-		    offset + state->in_offset + sizeof(u32);
+		state->chunk_offsets[i++] = offset + sizeof(u32);
 		offset += chunk_len + sizeof(u32);
 		if (chunk_len == 0) break;
 		if (offset < state->in_len) file_size += MAX_COMPRESS_LEN;
