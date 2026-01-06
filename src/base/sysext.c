@@ -54,7 +54,7 @@ PUBLIC i64 pwrite(i32 fd, const void *buf, u64 len, u64 offset) {
 	return iouring_wait(__global_iou__, &id);
 }
 
-i64 pread(i32 fd, void *buf, u64 len, u64 offset) {
+PUBLIC i64 pread(i32 fd, void *buf, u64 len, u64 offset) {
 	u64 id;
 	i64 res;
 
