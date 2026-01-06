@@ -194,18 +194,22 @@ static void decompress(CzipConfig *config) {
 
 	close(infd);
 	if (!config->console) {
+		if (!mode) mode = 0600;
 		if (fchmod(outfd, mode) < 0) {
 			println("Could not set file permissions.");
 			_exit(-1);
 		}
 
-		struct timeval ts[2] = {0};
-		ts[0].tv_sec = atime;
-		ts[1].tv_sec = mtime;
-		if (utimesat(outfd, NULL, ts, 0) < 0) {
-			println("Could not set file times.");
-			_exit(-1);
+		if (atime || mtime) {
+			struct timeval ts[2] = {0};
+			ts[0].tv_sec = atime;
+			ts[1].tv_sec = mtime;
+			if (utimesat(outfd, NULL, ts, 0) < 0) {
+				println("Could not set file times.");
+				_exit(-1);
+			}
 		}
+
 		close(outfd);
 	}
 
@@ -254,7 +258,7 @@ static void compress(CzipConfig *config) {
 
 	wval = CZIP_MAGIC;
 	vval = CZIP_VERSION;
-	struct stat st;
+	struct stat st = {0};
 	if (!use_stdin && fstat(infd, &st) < 0) {
 		println("Could not stat input file.");
 		_exit(-1);
@@ -284,7 +288,8 @@ static void compress(CzipConfig *config) {
 	}
 
 	u8 flen;
-	u64 flen64 = config->file ? strlen(config->file) : strlen("default.cz");
+	u64 flen64 =
+	    config->file ? strlen(config->file) : strlen("default.txt");
 	if (flen64 > U8_MAX) {
 		println("file name '{}' is too long. Max 255.", config->file);
 		_exit(-1);
@@ -298,7 +303,7 @@ static void compress(CzipConfig *config) {
 	if (pwrite(outfd,
 		   (const void *)config->file != (const void *)NULL
 		       ? (void *)config->file
-		       : "default.cz",
+		       : "default.txt",
 		   flen, 26) != flen) {
 		println("file name write error.");
 		_exit(-1);
