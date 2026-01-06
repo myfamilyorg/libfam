@@ -250,8 +250,8 @@ PUBLIC i32 compress_stream(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	while (!is_last) {
 		rlen = 0;
 		while (rlen < MAX_COMPRESS_LEN) {
-			res = pread(infd, buffers[0], MAX_COMPRESS_LEN - rlen,
-				    in_offset + rlen);
+			res = pread(infd, buffers[0] + rlen,
+				    MAX_COMPRESS_LEN - rlen, in_offset + rlen);
 			if (res < 0) return res;
 			rlen += res;
 			if (res == 0) {

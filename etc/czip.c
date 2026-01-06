@@ -217,30 +217,34 @@ static void compress(CzipConfig *config) {
 	u32 wval;
 	i32 infd, outfd;
 	u8 outpath[MAX_PATH] = {0};
+	bool use_stdin = !config->file;
 
-	if (strlen(config->file) >= MAX_PATH - 4) {
+	if (!use_stdin && strlen(config->file) >= MAX_PATH - 4) {
 		println("File name too long!");
 		_exit(-1);
 	}
 
-	if (!exists(config->file)) {
+	if (!use_stdin && !exists(config->file)) {
 		println("Specified file '{}' does not exist.", config->file);
 		_exit(-1);
 	}
 
-	infd = file(config->file);
+	if (use_stdin)
+		infd = 0;
+	else
+		infd = file(config->file);
 
 	if (infd < 0) {
 		println("Could not open specified file '{}'", config->file);
 		_exit(-1);
 	}
 
-	strcpy(outpath, config->file);
-	strcat(outpath, ".cz");
-
 	if (config->console)
 		outfd = 1;
 	else {
+		strcpy(outpath, config->file);
+		strcat(outpath, ".cz");
+
 		outfd = file(outpath);
 		if (outfd < 0) {
 			println("Could not open output file '{}'", outpath);
@@ -251,7 +255,7 @@ static void compress(CzipConfig *config) {
 	wval = CZIP_MAGIC;
 	vval = CZIP_VERSION;
 	struct stat st;
-	if (fstat(infd, &st) < 0) {
+	if (!use_stdin && fstat(infd, &st) < 0) {
 		println("Could not stat input file.");
 		_exit(-1);
 	}
@@ -280,7 +284,7 @@ static void compress(CzipConfig *config) {
 	}
 
 	u8 flen;
-	u64 flen64 = strlen(config->file);
+	u64 flen64 = config->file ? strlen(config->file) : strlen("default.cz");
 	if (flen64 > U8_MAX) {
 		println("file name '{}' is too long. Max 255.", config->file);
 		_exit(-1);
@@ -291,17 +295,21 @@ static void compress(CzipConfig *config) {
 		println("flen write error.");
 		_exit(-1);
 	}
-	if (pwrite(outfd, config->file, flen, 26) != flen) {
+	if (pwrite(outfd,
+		   (const void *)config->file != (const void *)NULL
+		       ? (void *)config->file
+		       : "default.cz",
+		   flen, 26) != flen) {
 		println("file name write error.");
 		_exit(-1);
 	}
 
-	if (config->console)
+	if (config->console || use_stdin) {
 		compress_stream(infd, 0, outfd, 26 + flen);
-	else
+	} else
 		compress_file(infd, 0, outfd, 26 + flen);
 
-	close(infd);
+	if (!use_stdin) close(infd);
 	if (!config->console) close(outfd);
 
 	if (!config->keep && !config->console) unlink(config->file);
