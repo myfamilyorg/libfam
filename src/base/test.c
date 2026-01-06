@@ -987,12 +987,19 @@ Test(write_num) {
 #include <libfam/format.h>
 
 Test(iouring1) {
+	struct stat st;
 	u64 id;
 	bool v;
 	i32 res;
 	IoUring *iou = NULL;
 	unlink("/tmp/iouring1");
-	i32 f1 = file("tmp/iouring1");
+	i32 f1 = file("/tmp/iouring1");
+	ASSERT(fchmod(f1, 0777) >= 0, "fchmod");
+	fstat(f1, &st);
+	struct timeval ts[2] = {0};
+	ts[0].tv_sec = st.st_atime - 1;
+	ts[1].tv_sec = st.st_mtime - 1;
+	ASSERT(!utimesat(f1, NULL, ts, 0), "utimesat");
 
 	iouring_init(&iou, 3);
 	ASSERT(iou, "iouring_init");

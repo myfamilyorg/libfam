@@ -187,13 +187,6 @@ static void decompress(CzipConfig *config) {
 
 	outfd = config->console ? 1 : file(outpath);
 
-	/*
-	if (fchmod(outfd, mode) < 0) {
-		println("Could not set file permissions.");
-		_exit(-1);
-	}
-	*/
-
 	if (config->console)
 		decompress_stream(infd, 26 + flen, outfd, 0);
 	else
