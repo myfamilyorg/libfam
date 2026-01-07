@@ -513,7 +513,7 @@ Test(bible) {
 
 	if (!exists(BIBLE_PATH)) {
 		if (IS_VALGRIND()) return;
-		b = bible_gen(false);
+		b = bible_gen(true);
 		bible_store(b, BIBLE_PATH);
 	} else
 		b = bible_load(BIBLE_PATH);
@@ -521,9 +521,10 @@ Test(bible) {
 	bible_sbox8_64(sbox);
 	bible_hash(b, input, output, sbox);
 
-	u8 expected[32] = {33,	40, 83,	 220, 72,  250, 145, 246, 217, 91, 52,
-			   184, 84, 195, 58,  3,   134, 135, 234, 138, 27, 48,
-			   191, 87, 248, 218, 238, 149, 51,  105, 140, 27};
+	u8 expected[32] = {0,	26,  228, 44,  121, 160, 2,   191,
+			   41,	197, 141, 2,   146, 0,	 29,  196,
+			   127, 122, 246, 225, 121, 155, 119, 128,
+			   122, 246, 253, 23,  1,   79,	 239, 145};
 
 	ASSERT(!memcmp(output, expected, 32), "hash");
 	bible_destroy(b);
@@ -554,11 +555,11 @@ Test(bible_mine) {
 	bible_sbox8_64(sbox);
 	mine_block(b, header, target, output, &nonce, U32_MAX, sbox);
 
-	ASSERT_EQ(nonce, 1682, "nonce");
-	ASSERT(!memcmp(output, (u8[]){0,   0,	202, 230, 204, 247, 157, 53,
-				      207, 38,	139, 187, 111, 82,  184, 143,
-				      43,  232, 37,  206, 152, 37,  225, 170,
-				      194, 22,	97,  10,  73,  210, 54,	 243},
+	ASSERT_EQ(nonce, 9237, "nonce");
+	ASSERT(!memcmp(output, (u8[]){0,   0,	181, 37,  199, 5,   24,	 102,
+				      228, 125, 35,  144, 139, 184, 35,	 62,
+				      164, 105, 8,   149, 108, 69,  41,	 195,
+				      149, 173, 49,  200, 164, 91,  100, 117},
 		       32),
 	       "hash");
 	bible_destroy(b);

@@ -89,8 +89,8 @@ PUBLIC const Bible *bible_gen(bool print_status) {
 	}
 
 	if (print_status) pwrite(2, "\n", 1, 0);
-	for (u64 offset = xxdir_file_size_0; offset < EXTENDED_BIBLE_SIZE;
-	     offset += 32) {
+	for (u64 offset = (xxdir_file_size_0 + 31) & ~31;
+	     offset < EXTENDED_BIBLE_SIZE; offset += 32) {
 		for (u32 i = 0; i < STORM_ITER; i++)
 			storm_next_block(&ctx, buffer);
 
