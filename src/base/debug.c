@@ -28,6 +28,7 @@
 bool _debug_no_exit = false;
 bool _debug_no_write = false;
 bool _debug_fail_clone = false;
+bool _debug_fail_fstat = false;
 
 #if TEST == 1
 extern u64 heap_bytes;

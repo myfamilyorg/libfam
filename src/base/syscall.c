@@ -293,6 +293,9 @@ CLEANUP:
 
 PUBLIC i32 fstat(i32 fd, struct stat *buf) {
 	i32 v;
+#if TEST == 1
+	if (_debug_fail_fstat) return -1;
+#endif /* TEST */
 INIT:
 	v = (i32)raw_syscall(SYS_fstat, (i64)fd, (i64)buf, 0, 0, 0, 0);
 	if (v < 0) ERROR(-v);

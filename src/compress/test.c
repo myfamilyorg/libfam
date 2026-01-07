@@ -133,14 +133,14 @@ Test(compress_stream) {
 	i32 fd1 = file(path1);
 	i32 fd2 = file(path_out1);
 
-	compress_stream(fd1, 0, fd2, 0);
+	ASSERT(!compress_stream(fd1, 0, fd2, 0), "compress_stream");
 	close(fd1);
 	close(fd2);
 
 	fd1 = file(path_out1);
 	fd2 = file(path_out2);
 
-	decompress_stream(fd1, 0, fd2, 0);
+	ASSERT(!decompress_stream(fd1, 0, fd2, 0), "decompress_stream");
 	close(fd1);
 	close(fd2);
 }
@@ -172,4 +172,15 @@ Test(compress_errors) {
 
 	munmap(in, size);
 	close(fd);
+
+	ASSERT_EQ(compress_file(0, 0, 0, 0), -1, "err compress_file");
+	ASSERT_EQ(decompress_file(0, 0, 0, 0), -1, "err decompress_file");
+
+	_debug_alloc_failure = true;
+	ASSERT_EQ(decompress_file(0, 0, 0, 0), -1, "err decompress_file");
+	_debug_alloc_failure = false;
+
+	_debug_fail_fstat = true;
+	ASSERT_EQ(decompress_file(0, 0, 0, 0), -1, "err decompress_file");
+	_debug_fail_fstat = false;
 }

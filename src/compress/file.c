@@ -110,20 +110,20 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 STATIC i32 compress_setup_offsets(DecompressState *state, u64 st_size) {
 	u64 offset = state->in_offset, i = 0, file_size = 0, chunk_len = 0;
 
-	state->chunk_offset_allocation = 4096;
-	state->chunk_offsets = smap(state->chunk_offset_allocation);
-	if (!state->chunk_offsets) return -1;
+	state->chunk_offset_allocation = 0;
+	// state->chunk_offsets = smap(state->chunk_offset_allocation);
+	// if (!state->chunk_offsets) return -1;
 
 	while (offset < state->in_len) {
 		pread(state->infd, &chunk_len, sizeof(u32), offset);
 		if ((i + 1) >= (state->chunk_offset_allocation / sizeof(u64))) {
-			u64 *tmp = smap(2 * state->chunk_offset_allocation);
+			u64 *tmp = smap(4096 + state->chunk_offset_allocation);
 			if (!tmp) return -1;
 			fastmemcpy(tmp, state->chunk_offsets,
 				   state->chunk_offset_allocation);
 			munmap(state->chunk_offsets,
 			       state->chunk_offset_allocation);
-			state->chunk_offset_allocation *= 2;
+			state->chunk_offset_allocation += 4096;
 			state->chunk_offsets = tmp;
 		}
 		state->chunk_offsets[i++] = offset + sizeof(u32);
@@ -188,11 +188,7 @@ PUBLIC i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		ret = -1;
 		goto cleanup;
 	}
-	if (fstat(infd, &st) < 0) {
-		ret = -1;
-		goto cleanup;
-	}
-	if (fstat(outfd, &outst) < 0) {
+	if (fstat(infd, &st) < 0 || fstat(outfd, &outst) < 0) {
 		ret = -1;
 		goto cleanup;
 	}
@@ -289,10 +285,11 @@ PUBLIC i32 decompress_stream(i32 infd, u64 in_offset, i32 outfd,
 
 	while (true) {
 		res = pread(infd, &chunk_len, sizeof(u32), in_offset);
-		if (res < sizeof(u32)) {
+		if (res < 0) {
 			errno = EIO;
 			return -1;
 		}
+		if (res < sizeof(u32)) break;
 		in_offset += sizeof(u32);
 		rlen = 0;
 		while (rlen < chunk_len) {

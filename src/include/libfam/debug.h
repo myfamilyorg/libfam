@@ -41,6 +41,7 @@ extern bool _debug_fail_clone;
 extern bool _debug_bible_invalid_hash;
 extern bool _debug_alloc_failure;
 extern bool _debug_no_aesni;
+extern bool _debug_fail_fstat;
 u64 get_heap_bytes(void);
 void heap_bytes_reset(void);
 #endif /* TEST */
