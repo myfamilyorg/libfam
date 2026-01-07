@@ -564,6 +564,48 @@ Test(bible_mine) {
 	bible_destroy(b);
 }
 
+Test(bible_dat) {
+	__attribute__((aligned(32))) static const u8 BIBLE_GEN_DOMAIN[32] = {
+	    0x9e, 0x37, 0x79, 0xb9, 0x7f, 0x4a, 0x7c, 0x15, 0x85, 0xeb,
+	    0xca, 0x6b, 0xc2, 0xb2, 0xae, 0x35, 0x51, 0x7c, 0xc1, 0xb7,
+	    0x27, 0x22, 0x0a, 0x95, 0x07, 0x00, 0x00, 0x01};
+	StormContext ctx;
+	const Bible* b;
+	u8 bible[BIBLE_UNCOMPRESSED_SIZE];
+
+	if (!exists(BIBLE_PATH)) {
+		if (IS_VALGRIND()) return;
+		b = bible_gen(true);
+		bible_store(b, BIBLE_PATH);
+	} else
+		b = bible_load(BIBLE_PATH);
+
+	bible_expand(b, bible);
+
+	storm_init(&ctx, BIBLE_GEN_DOMAIN);
+	__attribute__((aligned(32))) u8 buffer[32];
+	u64 off = 0;
+	while (off < (BIBLE_UNCOMPRESSED_SIZE & ~31U)) {
+		fastmemcpy(buffer, bible + off, 32);
+		storm_next_block(&ctx, buffer);
+		off += 32;
+	}
+
+	const u8* check =
+	    "Genesis||1||1||In the beginning God created the heaven and the "
+	    "earth.";
+
+	ASSERT(!memcmp(bible, check, strlen(check)), "first verse");
+	ASSERT(!memcmp(buffer, (u8[]){40,  57,	160, 40,  170, 236, 126, 115,
+				      174, 135, 8,   248, 200, 93,  24,	 249,
+				      138, 33,	80,  188, 155, 201, 175, 93,
+				      32,  107, 130, 188, 4,   167, 155, 219},
+		       32),
+	       "hash");
+
+	bible_destroy(b);
+}
+
 Test(kem_iter) {
 	KemSecKey sk;
 	KemPubKey pk;
@@ -632,7 +674,8 @@ Test(kem_vector) {
 	rng_init(&rng);
 	rng_test_seed(&rng, seed);
 	keypair(&pk, &sk, &rng);
-	// for (u32 i = 0; i < sizeof(sk); i++) print("{}, ", sk.data[i]);
+	// for (u32 i = 0; i < sizeof(sk); i++) print("{}, ",
+	// sk.data[i]);
 	u8 expected_sk[] = {
 	    2,	 151, 8,   158, 32,  171, 128, 7,   166, 188, 84,  133, 115,
 	    182, 80,  79,  23,	34,  136, 112, 199, 169, 113, 150, 33,	128,
@@ -888,7 +931,8 @@ Test(kem_vector) {
 	    242, 143, 40,  111, 141, 216, 243, 176, 3,	 31,  112, 33,	87,
 	    101};
 	// print("ct: ");
-	// for (u32 i = 0; i < sizeof(ct); i++) print("{}, ", ct.data[i]);
+	// for (u32 i = 0; i < sizeof(ct); i++) print("{}, ",
+	// ct.data[i]);
 	(void)expected_ct;
 	(void)expected_pk;
 	(void)expected_sk;
@@ -989,9 +1033,11 @@ Test(dilithium_vector) {
 
 	rng_test_seed(&rng, seed);
 	keyfrom(seed, &sk, &pk);
-	// for (u32 i = 0; i < sizeof(sk); i++) print("{}, ", sk.data[i]);
+	// for (u32 i = 0; i < sizeof(sk); i++) print("{}, ",
+	// sk.data[i]);
 	sign(msg, &sk, &sig, &rng);
-	// for (u32 i = 0; i < sizeof(sig); i++) print("{}, ", sig.data[i]);
+	// for (u32 i = 0; i < sizeof(sig); i++) print("{}, ",
+	// sig.data[i]);
 	u8 expected_pk[] = {
 	    199, 176, 203, 198, 198, 70,  74,  61,  24,	 222, 203, 9,	152,
 	    163, 52,  104, 207, 250, 32,  74,  71,  177, 7,   40,  128, 2,

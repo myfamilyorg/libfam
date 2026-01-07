@@ -626,8 +626,6 @@ STATIC void compress_build_lookup_table(const CodeLength *code_lengths,
 	}
 }
 
-#include <libfam/format.h>
-
 STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	CodeLength code_lengths[SYMBOL_COUNT] = {0};
 	u32 i;

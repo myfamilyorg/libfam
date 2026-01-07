@@ -2,4 +2,3 @@
 
 sudo ./build cov || exit 1
 
-cat target/cov/objs/crypto/bible.c.gcov

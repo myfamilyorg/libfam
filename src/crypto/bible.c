@@ -34,6 +34,7 @@
 #endif /* USE_AVX2 */
 
 #include <libfam/bible.h>
+#include <libfam/compress.h>
 #include <libfam/format.h>
 #include <libfam/storm.h>
 #include <libfam/string.h>
@@ -128,7 +129,7 @@ PUBLIC const Bible *bible_gen(bool print_status) {
 	return ret;
 }
 
-const Bible *bible_load(const u8 *path) {
+PUBLIC const Bible *bible_load(const u8 *path) {
 	const Bible *ret = NULL;
 	i32 fd = file(path);
 
@@ -155,6 +156,22 @@ INIT:
 CLEANUP:
 	if (fd >= 0) close(fd);
 	RETURN;
+}
+
+PUBLIC void bible_expand(const Bible *b, u8 bible[BIBLE_UNCOMPRESSED_SIZE]) {
+	u64 offset = b->data[25] + 26;
+	u32 blen;
+	u32 boffset = 0;
+	i32 i = 0;
+
+	while (++i < 19) {
+		fastmemcpy(&blen, b->data + offset, sizeof(u32));
+		i32 res = decompress_block(b->data + offset + sizeof(u32), blen,
+					   bible + boffset,
+					   BIBLE_UNCOMPRESSED_SIZE - boffset);
+		offset += blen + sizeof(u32);
+		boffset += res;
+	}
 }
 
 PUBLIC void bible_sbox8_64(u64 sbox[256]) {
