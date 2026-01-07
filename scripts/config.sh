@@ -83,7 +83,7 @@ case "$BUILD_MODE" in
         CFLAGS="$BASE_CFLAGS"
         LDFLAGS="$BASE_LDFLAGS"
         VISIBILITY=""
-        CDEFS="-DSTATIC=static -DTEST=1"
+        CDEFS="-DSTATIC= -DTEST=1"
         COVERAGE=""
         [ "$BUILD_MODE" = "cov" ] && COVERAGE="--coverage -DCOVERAGE" && LDFLAGS="$LDFLAGS"
         LTO=""
