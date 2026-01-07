@@ -339,9 +339,12 @@ Test(wots) {
 
 	wots_keyfrom(key, &pk, &sk);
 	wots_sign(&sk, msg, &sig);
+	for (u32 i = 0; i < 32; i++) {
+		msg[i]++;
+		ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+		msg[i]--;
+	}
 	ASSERT(!wots_verify(&pk, &sig, msg), "verify");
-	msg[0]++;
-	ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 }
 
 #define WOTS_COUNT 1000
@@ -374,8 +377,12 @@ Bench(wotsp) {
 		i32 res = wots_verify(&pk, &sig, msg);
 		verify_sum += cycle_counter() - start;
 		ASSERT(!res, "verify");
-		msg[0]++;
-		ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+		for (u32 i = 0; i < 32; i++) {
+			msg[i]++;
+			ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+			msg[i]--;
+		}
+		ASSERT(!wots_verify(&pk, &sig, msg), "verify");
 	}
 	pwrite(2, "keygen=", 7, 0);
 	write_num(2, keygen_sum / WOTS_COUNT);

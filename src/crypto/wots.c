@@ -66,7 +66,7 @@ void wots_sign(const WotsSecKey *sk, const u8 message[32], WotsSig *sig) {
 	u16 checksum = 0;
 
 	for (u32 i = 0; i < WOTS_LEN1; ++i) {
-		u8 digit = message[i];
+		u8 digit = message[i] ^ message[i + WOTS_LEN1];
 		checksum += (WOTS_W - 1) - digit;
 		u32 steps = digit;
 		wots_chain(&ctx, sig->data + i * WOTS_N, sk->data + i * WOTS_N,
@@ -92,7 +92,7 @@ i32 wots_verify(const WotsPubKey *pk, const WotsSig *sig,
 	i32 ret = 0;
 
 	for (u32 i = 0; i < WOTS_LEN1; ++i) {
-		u8 digit = message[i];
+		u8 digit = message[i] ^ message[i + WOTS_LEN1];
 		checksum += (WOTS_W - 1) - digit;
 		u32 steps = (WOTS_W - 1) - digit;
 		const u8 *revealed = sig->data + i * WOTS_N;
