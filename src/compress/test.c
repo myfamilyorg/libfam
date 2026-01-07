@@ -252,13 +252,16 @@ Test(bible_mine) {
 }
 
 Test(bible_dat) {
+	u8 *bible;
 	__attribute__((aligned(32))) static const u8 BIBLE_GEN_DOMAIN[32] = {
 	    0x9e, 0x37, 0x79, 0xb9, 0x7f, 0x4a, 0x7c, 0x15, 0x85, 0xeb,
 	    0xca, 0x6b, 0xc2, 0xb2, 0xae, 0x35, 0x51, 0x7c, 0xc1, 0xb7,
 	    0x27, 0x22, 0x0a, 0x95, 0x07, 0x00, 0x00, 0x01};
 	StormContext ctx;
 	const Bible *b;
-	u8 bible[BIBLE_UNCOMPRESSED_SIZE];
+
+	bible = map(BIBLE_UNCOMPRESSED_SIZE);
+	ASSERT(bible, "map");
 
 	if (!exists(BIBLE_PATH)) {
 		if (IS_VALGRIND()) return;
@@ -291,5 +294,6 @@ Test(bible_dat) {
 	       "hash");
 
 	bible_destroy(b);
+	munmap(bible, BIBLE_UNCOMPRESSED_SIZE);
 }
 
