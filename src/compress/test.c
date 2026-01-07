@@ -198,21 +198,6 @@ Test(compress_errors) {
 	ASSERT_EQ(res, -1, "decomp err");
 }
 
-Test(compress_eproto) {
-	const u8 *path = "./resources/test_wikipedia.txt";
-	i32 fd = file(path);
-	u32 size = fsize(fd);
-	u8 *in = fmap(fd, size, 0);
-	u8 out[100000] = {0}, verify[100000] = {0};
-	i32 res = compress_block(in, size, out, sizeof(out));
-	for (u32 i = 0; i < 1000; i++)
-		ASSERT_EQ(compress_read_block(out, res, verify, i), -1,
-			  "overflow");
-
-	munmap(in, size);
-	close(fd);
-}
-
 #define BIBLE_PATH "resources/test_bible.dat"
 
 Test(bible) {

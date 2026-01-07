@@ -653,6 +653,7 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 				    book_lookup_table, MAX_BOOK_CODE_LENGTH);
 
 	i = 0;
+	errno = EPROTO;
 	while (i < SYMBOL_COUNT) {
 		if (bits_in_buffer < MAX_BOOK_CODE_LENGTH) {
 			TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, in,
@@ -666,17 +667,11 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 			code_lengths[i++].length = code;
 			last_length = code;
 		} else if (code == REPEAT_VALUE_INDEX) {
-			if (i == 0 || last_length == 0) {
-				errno = EPROTO;
-				return -1;
-			}
+			if (i == 0 || last_length == 0) return -1;
 			u8 repeat = TRY_READ(buffer, bits_in_buffer,
 					     in_bit_offset, in, len, 2) +
 				    3;
-			if (i + repeat > SYMBOL_COUNT) {
-				errno = EPROTO;
-				return -1;
-			}
+			if (i + repeat > SYMBOL_COUNT) return -1;
 			for (u32 j = 0; j < repeat; j++) {
 				code_lengths[i++].length = last_length;
 			}
@@ -684,24 +679,19 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 			u8 zeros = TRY_READ(buffer, bits_in_buffer,
 					    in_bit_offset, in, len, 7) +
 				   11;
-			if (i + zeros > SYMBOL_COUNT) {
-				errno = EPROTO;
-				return -1;
-			}
+			if (i + zeros > SYMBOL_COUNT) errno = EPROTO;
 			for (u32 j = 0; j < zeros; j++)
 				code_lengths[i++].length = 0;
 		} else if (code == REPEAT_ZERO_SHORT_INDEX) {
 			u8 zeros = TRY_READ(buffer, bits_in_buffer,
 					    in_bit_offset, in, len, 3) +
 				   3;
-			if (i + zeros > SYMBOL_COUNT) {
-				errno = EPROTO;
-				return -1;
-			}
+			if (i + zeros > SYMBOL_COUNT) return -1;
 			for (u32 j = 0; j < zeros; j++)
 				code_lengths[i++].length = 0;
 		}
 	}
+	errno = SUCCESS;
 
 	compress_calculate_codes(code_lengths, SYMBOL_COUNT);
 
