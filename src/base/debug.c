@@ -24,11 +24,14 @@
  *******************************************************************************/
 
 #include <libfam/debug.h>
+#include <libfam/limits.h>
 
 bool _debug_no_exit = false;
 bool _debug_no_write = false;
 bool _debug_fail_clone = false;
 bool _debug_fail_fstat = false;
+bool _debug_alloc_failure = false;
+i64 _debug_alloc_count = I64_MAX;
 
 #if TEST == 1
 extern u64 heap_bytes;

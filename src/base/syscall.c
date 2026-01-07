@@ -169,6 +169,7 @@ CLEANUP:
 void *mmap(void *addr, u64 length, i32 prot, i32 flags, i32 fd, i64 offset) {
 #if TEST == 1
 	if (_debug_alloc_failure) return NULL;
+	if (_debug_alloc_count-- == 0) return NULL;
 #endif /* TEST */
 
 	void *ret =
