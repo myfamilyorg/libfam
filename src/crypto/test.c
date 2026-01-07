@@ -503,8 +503,6 @@ Bench(aighthash_bitflips) {
 
 #define BIBLE_PATH "resources/test_bible.dat"
 
-#include <libfam/format.h>
-
 Test(bible) {
 	const Bible* b;
 	u64 sbox[256];
@@ -515,7 +513,7 @@ Test(bible) {
 
 	if (!exists(BIBLE_PATH)) {
 		if (IS_VALGRIND()) return;
-		b = bible_gen(false);
+		b = bible_gen(true);
 		bible_store(b, BIBLE_PATH);
 	} else
 		b = bible_load(BIBLE_PATH);
@@ -523,10 +521,9 @@ Test(bible) {
 	bible_sbox8_64(sbox);
 	bible_hash(b, input, output, sbox);
 
-	u8 expected[32] = {40,	192, 31,  210, 152, 82,	 145, 102,
-			   194, 227, 178, 224, 202, 241, 248, 191,
-			   165, 179, 57,  163, 186, 229, 192, 232,
-			   14,	212, 35,  226, 77,  15,	 127, 228};
+	u8 expected[32] = {33,	40, 83,	 220, 72,  250, 145, 246, 217, 91, 52,
+			   184, 84, 195, 58,  3,   134, 135, 234, 138, 27, 48,
+			   191, 87, 248, 218, 238, 149, 51,  105, 140, 27};
 
 	ASSERT(!memcmp(output, expected, 32), "hash");
 	bible_destroy(b);
@@ -557,11 +554,11 @@ Test(bible_mine) {
 	bible_sbox8_64(sbox);
 	mine_block(b, header, target, output, &nonce, U32_MAX, sbox);
 
-	ASSERT_EQ(nonce, 104304, "nonce");
-	ASSERT(!memcmp(output,
-		       (u8[]){0,  0,   226, 113, 61,  60,  155, 26, 6,	0,   39,
-			      37, 162, 57,  14,	 240, 107, 211, 72, 1,	176, 36,
-			      78, 164, 241, 22,	 173, 150, 17,	52, 71, 242},
+	ASSERT_EQ(nonce, 1682, "nonce");
+	ASSERT(!memcmp(output, (u8[]){0,   0,	202, 230, 204, 247, 157, 53,
+				      207, 38,	139, 187, 111, 82,  184, 143,
+				      43,  232, 37,  206, 152, 37,  225, 170,
+				      194, 22,	97,  10,  73,  210, 54,	 243},
 		       32),
 	       "hash");
 	bible_destroy(b);
