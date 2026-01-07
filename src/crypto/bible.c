@@ -77,6 +77,7 @@ PUBLIC const Bible *bible_gen(bool print_status) {
 
 	Bible *ret = map(sizeof(Bible) + EXTENDED_BIBLE_SIZE);
 	if (!ret) return NULL;
+	fastmemset(ret, 0, sizeof(Bible) + EXTENDED_BIBLE_SIZE);
 	ret->flags = 0;
 	fastmemcpy(ret->data, xxdir_file_0, xxdir_file_size_0);
 
