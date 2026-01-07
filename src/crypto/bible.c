@@ -70,24 +70,25 @@ struct __attribute__((aligned(64))) Bible {
 };
 
 PUBLIC const Bible *bible_gen(bool print_status) {
-	__attribute__((aligned(32))) u8 buffer[32];
+	__attribute__((aligned(32))) u8 buffer[32] = {0};
 	StormContext ctx;
 	u64 last_percent = 0, counter = 0;
 	i64 last_update = 0;
 
 	Bible *ret = map(sizeof(Bible) + EXTENDED_BIBLE_SIZE);
 	if (!ret) return NULL;
-	fastmemset(ret, 0, sizeof(Bible) + EXTENDED_BIBLE_SIZE);
+	memset(ret, 0, sizeof(Bible) + EXTENDED_BIBLE_SIZE);
 	ret->flags = 0;
 	fastmemcpy(ret->data, xxdir_file_0, xxdir_file_size_0);
 
 	storm_init(&ctx, BIBLE_GEN_DOMAIN);
 	u64 off = 0;
-	while (off < xxdir_file_size_0) {
+	while (off < (xxdir_file_size_0 & ~31U)) {
 		fastmemcpy(buffer, xxdir_file_0 + off, 32);
 		storm_next_block(&ctx, buffer);
 		off += 32;
 	}
+	for (u32 i = 0; i < 32; i++) print("{}, ", buffer[i]);
 
 	if (print_status) pwrite(2, "\n", 1, 0);
 	for (u64 offset = (xxdir_file_size_0 + 31) & ~31;
