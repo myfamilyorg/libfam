@@ -513,7 +513,7 @@ Test(bible) {
 
 	if (!exists(BIBLE_PATH)) {
 		if (IS_VALGRIND()) return;
-		b = bible_gen(false);
+		b = bible_gen(true);
 		bible_store(b, BIBLE_PATH);
 	} else
 		b = bible_load(BIBLE_PATH);
