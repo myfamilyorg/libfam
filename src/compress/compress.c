@@ -626,6 +626,8 @@ STATIC void compress_build_lookup_table(const CodeLength *code_lengths,
 	}
 }
 
+#include <libfam/format.h>
+
 STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	CodeLength code_lengths[SYMBOL_COUNT] = {0};
 	u32 i;
@@ -643,9 +645,10 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 
 	fastmemcpy(&in_bit_offset, in, sizeof(u32));
 	in_bit_offset += 32;
-	for (i = 0; i < MAX_BOOK_CODES; i++)
+	for (i = 0; i < MAX_BOOK_CODES; i++) {
 		book_code_lengths[i].length =
 		    TRY_READ(buffer, bits_in_buffer, in_bit_offset, in, len, 3);
+	}
 
 	compress_calculate_codes(book_code_lengths, MAX_BOOK_CODES);
 	compress_build_lookup_table(book_code_lengths, MAX_BOOK_CODES,
@@ -653,9 +656,10 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 
 	i = 0;
 	while (i < SYMBOL_COUNT) {
-		if (bits_in_buffer < MAX_BOOK_CODE_LENGTH)
+		if (bits_in_buffer < MAX_BOOK_CODE_LENGTH) {
 			TRY_LOAD(buffer, bits_in_buffer, in_bit_offset, in,
 				 len);
+		}
 		u8 bits = PEEK_READER(buffer, MAX_BOOK_CODE_LENGTH);
 		HuffmanLookup entry = book_lookup_table[bits];
 		u16 code = entry.symbol;
@@ -904,6 +908,10 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 }
 
 PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
+	if (in == NULL || out == NULL) {
+		errno = EINVAL;
+		return -1;
+	}
 	if (len < 3) {
 		errno = EOVERFLOW;
 		return -1;

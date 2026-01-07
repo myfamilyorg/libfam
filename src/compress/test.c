@@ -24,6 +24,7 @@
  *******************************************************************************/
 
 #include <libfam/compress.h>
+#include <libfam/limits.h>
 #include <libfam/test.h>
 
 Test(compress1) {
@@ -142,4 +143,33 @@ Test(compress_stream) {
 	decompress_stream(fd1, 0, fd2, 0);
 	close(fd1);
 	close(fd2);
+}
+
+i32 compress_read_raw(const u8 *in, u32 len, u8 *out, u32 capacity);
+i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity);
+
+Test(compress_errors) {
+	ASSERT_EQ(compress_block(NULL, 0, NULL, 0), -1, "null input");
+	ASSERT_EQ(decompress_block(NULL, 0, NULL, 0), -1, "null input");
+	ASSERT_EQ(decompress_block("", 0, "", 0), -1, "short");
+	ASSERT_EQ(compress_block("", 0, "", 0), -1, "bound");
+	ASSERT_EQ(compress_read_raw(NULL, 0, NULL, 0), -1, "raw");
+	ASSERT_EQ(compress_read_raw("xxx", 3, NULL, 0), -1, "invalid");
+	ASSERT_EQ(compress_read_raw("xxxx", 4, NULL, 0), -1, "invalid");
+	ASSERT_EQ(compress_read_raw("xxxx", 4, NULL, U32_MAX), -1, "invalid");
+	ASSERT_EQ(compress_read_block("", 0, NULL, 0), -1,
+		  "invalid read block");
+
+	const u8 *path = "./resources/test_wikipedia.txt";
+	i32 fd = file(path);
+	u32 size = fsize(fd);
+	u8 *in = fmap(fd, size, 0);
+	u8 out[100000] = {0}, verify[100000] = {0};
+	i32 res = compress_block(in, size, out, sizeof(out));
+	for (u32 i = 0; i < 1000; i++)
+		ASSERT_EQ(compress_read_block(out, res, verify, i), -1,
+			  "overflow");
+
+	munmap(in, size);
+	close(fd);
 }
