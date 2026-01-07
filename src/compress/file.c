@@ -296,7 +296,7 @@ PUBLIC i32 decompress_stream(i32 infd, u64 in_offset, i32 outfd,
 		in_offset += sizeof(u32);
 		rlen = 0;
 		while (rlen < chunk_len) {
-			res = pread(infd, buffers[0], chunk_len - rlen,
+			res = pread(infd, buffers[0] + rlen, chunk_len - rlen,
 				    in_offset);
 			if (res < 0) return res;
 			if (res == 0) break;

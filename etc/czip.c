@@ -127,18 +127,24 @@ static void decompress(CzipConfig *config) {
 	i32 infd, outfd;
 	u64 atime, mtime;
 	u8 outpath[MAX_PATH] = {0};
+	bool use_stdin = !config->file;
 
+	/*
 	if (!config->file) {
 		println("File name must be specified.");
 		_exit(-1);
 	}
+	*/
 
-	if (!exists(config->file)) {
+	if (!use_stdin && !exists(config->file)) {
 		println("Specified file '{}' does not exist.", config->file);
 		_exit(-1);
 	}
 
-	infd = file(config->file);
+	if (use_stdin)
+		infd = 0;
+	else
+		infd = file(config->file);
 	if (infd < 0) {
 		println("Could not open specified file '{}'", config->file);
 		_exit(-1);
@@ -187,12 +193,12 @@ static void decompress(CzipConfig *config) {
 
 	outfd = config->console ? 1 : file(outpath);
 
-	if (config->console)
+	if (config->console || use_stdin) {
 		decompress_stream(infd, 26 + flen, outfd, 0);
-	else
+	} else
 		decompress_file(infd, 26 + flen, outfd, 0);
 
-	close(infd);
+	if (!use_stdin) close(infd);
 	if (!config->console) {
 		if (!mode) mode = 0600;
 		if (fchmod(outfd, mode) < 0) {
@@ -213,7 +219,8 @@ static void decompress(CzipConfig *config) {
 		close(outfd);
 	}
 
-	if (!config->keep && !config->console) unlink(config->file);
+	if (!config->keep && !config->console && !use_stdin)
+		unlink(config->file);
 }
 
 static void compress(CzipConfig *config) {
@@ -311,8 +318,9 @@ static void compress(CzipConfig *config) {
 
 	if (config->console || use_stdin) {
 		compress_stream(infd, 0, outfd, 26 + flen);
-	} else
+	} else {
 		compress_file(infd, 0, outfd, 26 + flen);
+	}
 
 	if (!use_stdin) close(infd);
 	if (!config->console) close(outfd);
