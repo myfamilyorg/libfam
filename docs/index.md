@@ -11,12 +11,12 @@ Designed for systems programming, embedded, servers, and security-critical appli
 
 Instructions assume ubuntu minimal, but similar commands are possible with other distros. Basically you need to have a c compiler (clang suggested, but gcc supported), assembler for x64 and 'sh'.
 ```
-# sudo apt update
-# sudo apt install clang git
-# git clone https://github.com/myfamilyorg/libfam
-# cd libfam
-# ./build
-# sudo ./build install
+sudo apt update
+sudo apt install clang git
+git clone https://github.com/myfamilyorg/libfam
+cd libfam
+./build
+sudo ./build install
 ```
 
 # Example usage
@@ -33,12 +33,12 @@ Instructions assume ubuntu minimal, but similar commands are possible with other
 ```
 
 ```
-# clang -ffreestanding -nostdlib test.c -lfam
+clang -ffreestanding -nostdlib test.c -lfam
 ```
 
 Test can be run with the following command:
 ```
-# ./build test
+./build test
 ```
 
 Coverage can be calculated with the following command:
