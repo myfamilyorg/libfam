@@ -26,7 +26,6 @@ if [ "${ARCH}" = "aarch64" ]; then
 fi
 
 COMMAND="${CC} -DCOVERAGE ${CDEFS} -fno-builtin -lc -lgcc --coverage -I${INCDIR} -o ${TEST_BIN} ${TEST_SRC} ${OBJECTS}";
-echo ${COMMAND};
 
 if [ "$SILENT" != "1" ]; then
 	echo ${COMMAND};
