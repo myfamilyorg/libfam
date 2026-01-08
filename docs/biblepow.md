@@ -121,4 +121,7 @@ Before ASICs exist for Bible POW, the question may arise: which CPU/GPU is best 
 
 # Bible preservation
 
-It's worth noting that the total size of the built libfam.so shared object is 1.7 MiB. This includes the 1.58 MiB czip compressed bible data and all the tools to decompress and use it (czip, storm, etc). There are no external dependencies (even libc) as the code relies solely on inline assembly calls to the minimal number of linux system calls it uses. So with this small self contained binary, the entire Bible can be transmitted and decompressed. This is meant to help ensure its survival and preservation. As far as we can tell this is the minimal amount of data and code required to preserve the text of the Bible in this form.
+It's worth noting that the complete libfam.so shared object is approximately 1.70 MiB. This includes 1.58 MiB of czip-compressed Bible text alongside the full decompression and processing toolchain (czip, Storm, etc.). The library has no external dependencies — not even libc — relying solely on direct inline-assembly Linux system calls.  As a result, this single, self-contained binary represents both the Bible text and everything needed to recover and use it indefinitely — likely the smallest possible package for preserving the text in executable digital form.
+
+Additionally, the BiblePOW proof-of-work function requires the correct expanded dataset. Even a single bit changed invalidates the entire function, making the Bible text completely immutable — a desirable property.
+
