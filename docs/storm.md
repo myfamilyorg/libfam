@@ -46,3 +46,107 @@ Performance is measured on an AMD Ryzen - zen3 bogomips: 3993.00.
 | **Storm**     | 17.4 GB/s   |
 | AES-256-CTR   | 9.7 GB/s    |
 | AES-256-GCM   | 8.5 GB/s    |
+
+# Examples
+
+```
+// xof.c
+#include <libfam/format.h>
+#include <libfam/main.h>
+#include <libfam/storm.h>
+
+i32 main(i32 argc, u8 **argv, u8 **envp) {
+        StormContext ctx;
+        __attribute__((aligned(32))) u8 buffer[32];
+        __attribute__((aligned(32))) const u8 SEED[32] = {
+            1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+
+        storm_init(&ctx, SEED);
+        storm_next_block(&ctx, buffer);
+        print("random1: [");
+        for (u32 i = 0; i < 32; i++) {
+                print("{X}", buffer[i]);
+                if (i != 31) print(", ");
+        }
+        println("");
+        storm_next_block(&ctx, buffer);
+        print("random2: [");
+        for (u32 i = 0; i < 32; i++) {
+                print("{X}", buffer[i]);
+                if (i != 31) print(", ");
+        }
+        println("");
+
+        storm_next_block(&ctx, buffer);
+        print("random3: [");
+        for (u32 i = 0; i < 32; i++) {
+                print("{X}", buffer[i]);
+                if (i != 31) print(", ");
+        }
+        println("");
+
+        return 0;
+}
+```
+
+```
+clang -ffreestanding -nostdlib xof.c -o xof -lfam
+./xof
+```
+
+```
+// cipher.c
+#include <libfam/format.h>
+#include <libfam/main.h>
+#include <libfam/storm.h>
+
+i32 main(i32 argc, u8 **argv, u8 **envp) {
+        StormContext ctx;
+        __attribute__((aligned(32))) const u8 SEED[32] = {1, 2, 3};
+        __attribute__((aligned(32))) u8 buffer1[32] = {0};
+        __attribute__((aligned(32))) u8 buffer2[32] = {0};
+        __attribute__((aligned(32))) u8 buffer3[32] = {0};
+
+        storm_init(&ctx, SEED);
+        memcpy(buffer1, "test1", 32);
+        storm_xcrypt_buffer(&ctx, buffer1);
+        memcpy(buffer2, "test2", 32);
+        storm_xcrypt_buffer(&ctx, buffer2);
+        memcpy(buffer3, "blahblah", 32);
+        storm_xcrypt_buffer(&ctx, buffer3);
+
+        StormContext ctx2;
+        storm_init(&ctx2, SEED);
+
+        print("buffer1[ciphertext]=[");
+        for (u32 i = 0; i < 32; i++) {
+                print("{}", buffer1[i]);
+                if (i != 31) print(", ");
+        }
+        println("]");
+        storm_xcrypt_buffer(&ctx2, buffer1);
+        println("buffer1[plaintext]='{}'", buffer1);
+        print("buffer2[ciphertext]=[");
+        for (u32 i = 0; i < 32; i++) {
+                print("{}", buffer2[i]);
+                if (i != 31) print(", ");
+        }
+        println("]");
+        storm_xcrypt_buffer(&ctx2, buffer2);
+        println("buffer2[plaintext]='{}'", buffer2);
+        print("buffer3[ciphertext]=[");
+        for (u32 i = 0; i < 32; i++) {
+                print("{}", buffer3[i]);
+                if (i != 31) print(", ");
+        }
+        println("]");
+        storm_xcrypt_buffer(&ctx2, buffer3);
+        println("buffer3[plaintext]='{}'", buffer3);
+        return 0;
+}
+```
+
+```
+clang -ffreestanding -nostdlib cipher.c -o cipher -lfam
+```
