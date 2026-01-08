@@ -19,11 +19,12 @@ czip can then be found in /usr/local/bin.
 - **Test Data**: A 23.17 MB text file containing repeated sections of text. **Five copies of the American King James Version of the bible from github.com/bible-hub**
 - **Hardware**: AMD Ryzen Zen 3 (6-core / 12-thread) @ 2.944 GHz.
 - **Software**: Clang 18.1.3, Linux 6.14.0-33.
-- **Notes**: The `zstd` benchmark was run with --fast=1.
+- **Notes**: The `zstd` benchmark was run with --fast=1. gzip and lz4 are ran with the -1 option (fastest).
 
 | Compression Tool        | Compressed Size | Compression Ratio | Compression Time | Decompression Time | Memory Usage (Compression) | Memory Usage (Decompression) |
 |-------------|-----------------|-------------------|------------------|--------------------|----------------------------|------------------------------|
 | **czip**    | 7.6 MB         | 3.03:1 (33.04%)   | 0.025s           | 0.018s             | 0.7 MB (per core)     | 0.7 MB (per core)                      |
+| **gzip** | 7.9 MB | 2.91 (34.35%) | 0.220s | 0.121s | 1.8 MB (per core) | 1.5 MB (per core) |
 | **zstd**    | 8.5 MB   | 2.71 (36.96%)           | 0.087s           | 0.024s             | 22.8 MB (per core)                    | 5.0 MB (per core)           |
 | **LZ4**     | 11.0 MB        | 2.09:1 (47.82%)   | 0.076s           | 0.034s             | 9.7 MB  (per core)                    | 1.6 MB (per core)  |
 
