@@ -26,6 +26,9 @@
 #ifndef _TYPES_H
 #define _TYPES_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpointer-sign"
+
 #ifndef TEST
 #define TEST 0
 #endif /* TEST */

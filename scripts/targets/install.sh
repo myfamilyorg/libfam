@@ -1,8 +1,7 @@
 #!/bin/sh
 
 # Define the target directory for the library
-LIB_VERSION="1.0.0"
-LIB_DIR="/usr/lib/libfam-${LIB_VERSION}"
+LIB_DIR="/usr/lib";
 CZIP_BIN=./target/bin/czip
 CZIP_INSTALL_DIR=/usr/local/bin
 
@@ -11,9 +10,6 @@ mkdir -p $LIB_DIR;
 
 # Copy the shared library to the subdirectory
 cp target/lib/libfam.so "$LIB_DIR/libfam.so"
-
-# Add ld config
-echo "/usr/lib/libfam-${LIB_VERSION}" > /etc/ld.so.conf.d/fam.conf
 
 # Update the dynamic linker cache
 ldconfig
