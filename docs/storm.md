@@ -149,4 +149,5 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
 
 ```
 clang -ffreestanding -nostdlib cipher.c -o cipher -lfam
+./cipher
 ```
