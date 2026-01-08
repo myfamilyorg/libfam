@@ -41,8 +41,8 @@ can be used to authenticate a stream. The reason this works is because the recip
 
 Performance is measured on an AMD Ryzen - zen3 bogomips: 3993.00.
 
-| Algorithm | Performance |
-| **Storm** | 17.4 GB/s |
-| AES-256-CTR | 9.7 GB/s |
-| AES-256-GCM | 8.5 GB/s |
-
+| Algorithm     | Performance |
+|---------------|-------------|
+| **Storm**     | 17.4 GB/s   |
+| AES-256-CTR   | 9.7 GB/s    |
+| AES-256-GCM   | 8.5 GB/s    |
