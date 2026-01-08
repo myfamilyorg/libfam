@@ -33,7 +33,7 @@ In addition to `storm_next_block`, the library provides `storm_xcrypt_buffer`, w
 
 # Storm as an AEAD
 
-Unlike traditional block ciphers, Storm is inherently stateful — previous states cannot be recreated. This means that even if an attacker knows a counter value x, they cannot replay storm_xcrypt_buffer with x and obtain the same keystream. Consequently, no additional hashing (e.g., Poly1305 or GHASH) is required for authentication.A simple authenticated format is therefore possible:
+Unlike traditional block ciphers, Storm is inherently stateful — previous states cannot be recreated. This means that even if an attacker knows a counter value x, they cannot replay storm_xcrypt_buffer with x and obtain the same keystream. Consequently, no additional hashing (e.g., Poly1305 or GHASH) is required for authentication. A simple authenticated format is therefore possible:
 
 ```
 [message length]
