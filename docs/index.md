@@ -53,6 +53,6 @@ Benches can be run with the following command:
 ```
 
 # Features
-* [Storm](storm.md)
-* [BiblePOW](biblepow.md)
-* [Compression](compression.md)
+* [Storm](storm.md) - A symmetric encryption function.
+* [BiblePOW](biblepow.md) - A Bible-based proof of work function.
+* [Compression](compression.md) - A compression tool.
