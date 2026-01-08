@@ -9,7 +9,8 @@ Designed for systems programming, embedded, servers, and security-critical appli
 
 # Building Libfam
 
-Instructions assume ubuntu minimal, but similar commands are possible with other distros. Basically you need to have a c compiler (clang suggested, but gcc supported), assembler for x64 and 'sh'.
+Instructions assume ubuntu minimal, but similar commands are possible with other distros. Basically you need to have a c compiler (clang suggested, but gcc supported) and 'sh'. Supported platforms: x86_64 and aarch64 Linux.
+
 ```
 sudo apt update
 sudo apt install clang git
