@@ -91,7 +91,9 @@ for t in $TARGETS; do
         install) BUILD_MODE=install ;;
     esac
     export BUILD_MODE
-    echo "→ Running target: $t"
+    if [ "$SILENT" != "1" ]; then
+        echo "→ Running target: $t"
+    fi
     "$PROJECT_DIR/scripts/targets/$t.sh" || exit $?
 done
 

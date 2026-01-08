@@ -1,4 +1,3 @@
-
 # Overview
 
 Libfam is a high-performance, post-quantum-ready, freestanding C library with zero external dependencies.
@@ -44,8 +43,13 @@ Test can be run with the following command:
 
 Coverage can be calculated with the following command:
 ```
-# sudo apt install gcc
-# ./build cov
+sudo apt install gcc
+./build cov
+```
+
+Benches can be run with the following command:
+```
+./build bench
 ```
 
 # Features
