@@ -1,5 +1,5 @@
 # Overview
-Storm is a symmetric encryption algorithm. It uses AES-NI instructions, but is not AES. The core idea is that since the input to the first AES-NI instruction is xored with a secret state, an attacker can never know the input to the AES-NI instructions. Additional, after the first AES-NI instruction, the result is folded from hi to lo and a lane swap occurs. Finally state is saved. This ensures full 256 bit avalanche. At this point, two additional AES-NI instructions separate the output from the state. Since the secret state remains unknown, an attacker would never know the plaintext to the operation and thus not be able to use the standard techniques against AES.
+Storm is a symmetric encryption algorithm. It uses AES-NI instructions, but is not AES. The core idea is that since the input to the first AES-NI instruction is xored with a secret state, an attacker can never know the input to the AES-NI instructions. Additionally, after the first AES-NI instruction, the result is folded from hi to lo and a lane swap occurs. Finally state is saved. This ensures full 256 bit avalanche. At this point, two additional AES-NI instructions separate the output from the state. Since the secret state remains unknown, an attacker would never know the plaintext to the operation and thus not be able to use the standard techniques against AES.
 
 # Code analysis
 
