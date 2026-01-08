@@ -382,6 +382,17 @@ Bench(wotsp) {
 			ASSERT(wots_verify(&pk, &sig, msg), "!verify");
 			msg[i]--;
 		}
+		for (u32 i = 0; i < WOTS_SIG_SIZE; i++) {
+			sig.data[i]++;
+			ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+			sig.data[i]--;
+		}
+		for (u32 i = 0; i < WOTS_PUBKEY_SIZE; i++) {
+			pk.data[i]++;
+			ASSERT(wots_verify(&pk, &sig, msg), "!verify");
+			pk.data[i]--;
+		}
+
 		ASSERT(!wots_verify(&pk, &sig, msg), "verify");
 	}
 	pwrite(2, "keygen=", 7, 0);
