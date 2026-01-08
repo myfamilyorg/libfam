@@ -1,41 +1,46 @@
 # Overview
-Storm is a symmetric encryption algorithm. It uses AES-NI instructions, but is not AES. The core idea is that since the input to the first AES-NI instruction is xored with a secret state, an attacker can never know the input to the AES-NI instructions. Additionally, after the first AES-NI instruction, the result is folded from hi to lo and a lane swap occurs. Finally state is saved. This ensures full 256 bit avalanche. At this point, two additional AES-NI instructions separate the output from the state. Since the secret state remains unknown, an attacker would never know the plaintext to the operation and thus not be able to use the standard techniques against AES.
 
-# Code analysis
+Storm is a symmetric encryption algorithm that leverages AES-NI instructions without being AES itself. Its core security property stems from XORing the plaintext input with a secret internal state before the first AES-NI round. This ensures that an attacker can never observe the true input to any `aesenc` operation.
 
-While, neon and scalar versions exist, we'll analyze the avx2 version.
+After the first round, the result is folded (high lane XORed into low lane) and a lane swap is performed before updating the saved state — guaranteeing full 256-bit avalanche. Two additional keyed AES-NI rounds then further separate the output from the internal state. Because the secret state remains hidden throughout, an attacker lacks the known plaintext-ciphertext pairs needed to apply standard differential or linear cryptanalysis against AES.
 
-```
+# Code Analysis
+
+While NEON and scalar versions exist, we will focus on the AVX2 implementation.
+
+```c
 STATIC void storm_next_block_avx2(StormContext *ctx, u8 buf[32]) {
-        StormContextImpl *st = (StormContextImpl *)ctx; // get opaque type
-        __m256i p = _mm256_load_si256((const __m256i *)buf); // load the input into a SIMD register
-        __m256i x = _mm256_xor_si256(*(const __m256i *)st->state, p); // xor input with secret state
-        x = _mm256_aesenc_epi128(x, *(__m256i *)st->key0); // aesenc operation on input/secret state
-        __m128i lo = _mm256_castsi256_si128(x); // extract low bits
-        __m128i hi = _mm256_extracti128_si256(x, 1); // extract high bits
-        lo = _mm_xor_si128(lo, hi); // fold high bits into low bits
-        *(__m256i *)st->state = _mm256_set_m128i(lo, hi); // lane swap and save state
-        x = _mm256_aesenc_epi128(x, *(__m256i *)st->key1); // aesenc operation
-        x = _mm256_xor_si256(*(__m256i *)st->state, x); // xor with secret state
-        x = _mm256_aesenc_epi128(x, *(__m256i *)st->key2); // separate x from secret state further
-        x = _mm256_aesenc_epi128(x, *(__m256i *)st->key3); // final aesenc
-        _mm256_store_si256((__m256i *)buf, x); // store output to buffer
+        StormContextImpl *st = (StormContextImpl *)ctx; // access opaque implementation
+        __m256i p = _mm256_load_si256((const __m256i *)buf); // load plaintext block
+        __m256i x = _mm256_xor_si256(*(const __m256i *)st->state, p); // mask with secret state
+        x = _mm256_aesenc_epi128(x, *(__m256i *)st->key0); // first keyed AES round
+        __m128i lo = _mm256_castsi256_si128(x); // extract low 128 bits
+        __m128i hi = _mm256_extracti128_si256(x, 1); // extract high 128 bits
+        lo = _mm_xor_si128(lo, hi); // fold high into low for full avalanche
+        *(__m256i *)st->state = _mm256_set_m128i(lo, hi); // lane swap and update state
+        x = _mm256_aesenc_epi128(x, *(__m256i *)st->key1); // second keyed round
+        x = _mm256_xor_si256(*(__m256i *)st->state, x); // second state masking
+        x = _mm256_aesenc_epi128(x, *(__m256i *)st->key2); // third round
+        x = _mm256_aesenc_epi128(x, *(__m256i *)st->key3); // final round
+        _mm256_store_si256((__m256i *)buf, x); // write ciphertext block
 }
 ```
 
 # Storm as a stream cipher
 
-In addition to the storm_next_block function, storm provides a storm_xcrypt_buffer function. This function allows storm to be used as a stream cipher. The function simply incorporates a counter that is used as the input to the storm_next_block function. Since it is called in the same order by sender/reciever, the values are deterministic. Note that all four 64 bit lanes of the counter are incremented in the same operation. This allows for fast updates and 2^64 counter states, which is sufficient.
+In addition to `storm_next_block`, the library provides `storm_xcrypt_buffer`, which turns Storm into a high-performance stream cipher. This function uses an internal 256-bit counter as input to `storm_next_block`. Since sender and receiver call it in identical order, the keystream is deterministic. All four 64-bit counter lanes are incremented simultaneously using a single SIMD addition, enabling fast updates and a 2⁶⁴ block counter space — more than sufficient for any practical use.
+
 
 # Storm as an AEAD
 
-Unlike AES, storm is stateful. Therefore, a previous state cannot be recreated. This means that even if I know that the counter is of value x, I can't call storm_xcrypt_buffer again with the value x and expect the same result. This means that there is no need for any sort of hashing like poly or ghash to authenticate the stream. So, a simple format like:
+Unlike traditional block ciphers, Storm is inherently stateful — previous states cannot be recreated. This means that even if an attacker knows a counter value x, they cannot replay storm_xcrypt_buffer with x and obtain the same keystream. Consequently, no additional hashing (e.g., Poly1305 or GHASH) is required for authentication.A simple authenticated format is therefore possible:
+
 ```
 [message length]
 [payload]
-[16 byte tag - all 0x0]
+[16-32 byte tag - all 0x0]
 ```
-can be used to authenticate a stream. The reason this works is because the recipient knows the message length and therefore expects 16 bytes of 0x0 at the end of the message. If anything other than this is encountered at the end of the message, the message is rejected and the stream is closed. An attacker cannot forge the message because modifying the stream would alter the tag. This is because the state is different.
+The receiver, knowing the declared length, expects the final 16–32 bytes to be zeros after decryption. Any deviation means the message was tampered with, and the stream is rejected. An attacker cannot forge a valid message because any modification alters the internal state evolution, resulting in incorrect padding.
 
 # Performance
 
@@ -69,14 +74,14 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
                 print("{X}", buffer[i]);
                 if (i != 31) print(", ");
         }
-        println("");
+        println("]");
         storm_next_block(&ctx, buffer);
         print("random2: [");
         for (u32 i = 0; i < 32; i++) {
                 print("{X}", buffer[i]);
                 if (i != 31) print(", ");
         }
-        println("");
+        println("]");
 
         storm_next_block(&ctx, buffer);
         print("random3: [");
@@ -84,7 +89,7 @@ i32 main(i32 argc, u8 **argv, u8 **envp) {
                 print("{X}", buffer[i]);
                 if (i != 31) print(", ");
         }
-        println("");
+        println("]");
 
         return 0;
 }
