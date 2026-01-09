@@ -71,7 +71,7 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 		i64 res = pread(state->infd, buffers[0], MAX_COMPRESS_LEN,
 				state->in_offset + chunk * MAX_COMPRESS_LEN);
 		if (res < 0) {
-			__astore32(&state->err, errno);
+			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
 		i32 len =
@@ -85,7 +85,7 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 
 		if (pwrite(state->outfd, buffers[1], len + sizeof(u32),
 			   state->out_offset) < 0) {
-			__astore32(&state->err, errno);
+			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
 		__aadd64(&state->out_offset, len + sizeof(u32));
@@ -104,7 +104,7 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 		i32 res = pread(state->infd, buffers[0], rlen,
 				state->chunk_offsets[chunk]);
 		if (res < 0) {
-			__astore32(&state->err, errno);
+			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
 		res = decompress_block(buffers[0], res, buffers[1],
@@ -116,7 +116,7 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 
 		if (pwrite(state->outfd, buffers[1], res,
 			   state->out_offset + MAX_COMPRESS_LEN * chunk) < 0) {
-			__astore32(&state->err, errno);
+			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
 		__astore64(&state->next_write, chunk + 1);
