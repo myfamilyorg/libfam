@@ -44,6 +44,7 @@ typedef struct {
 	u64 in_offset;
 	i32 outfd;
 	u64 out_offset;
+	u32 err;
 } CompressState;
 
 typedef struct {
@@ -58,6 +59,7 @@ typedef struct {
 	u64 out_offset;
 	u64 *chunk_offsets;
 	u64 chunk_offset_allocation;
+	u32 err;
 } DecompressState;
 
 STATIC void compress_run_proc(u32 id, CompressState *state) {
@@ -68,6 +70,10 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
 		i64 res = pread(state->infd, buffers[0], MAX_COMPRESS_LEN,
 				state->in_offset + chunk * MAX_COMPRESS_LEN);
+		if (res < 0) {
+			__astore32(&state->err, errno);
+			return;
+		}
 		i32 len =
 		    compress_block(buffers[0], res, buffers[1] + sizeof(u32),
 				   MAX_COMPRESS_LEN + 3);
@@ -77,8 +83,11 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 			expected = chunk;
 		} while (!__cas64(&state->next_write, &expected, U64_MAX));
 
-		pwrite(state->outfd, buffers[1], len + sizeof(u32),
-		       state->out_offset);
+		if (pwrite(state->outfd, buffers[1], len + sizeof(u32),
+			   state->out_offset) < 0) {
+			__astore32(&state->err, errno);
+			return;
+		}
 		__aadd64(&state->out_offset, len + sizeof(u32));
 		__astore64(&state->next_write, chunk + 1);
 	}
@@ -92,8 +101,12 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
 		u32 rlen = state->chunk_offsets[chunk + 1] -
 			   state->chunk_offsets[chunk];
-		i64 res = pread(state->infd, buffers[0], rlen,
+		i32 res = pread(state->infd, buffers[0], rlen,
 				state->chunk_offsets[chunk]);
+		if (res < 0) {
+			__astore32(&state->err, errno);
+			return;
+		}
 		res = decompress_block(buffers[0], res, buffers[1],
 				       MAX_COMPRESS_LEN + 3);
 		u64 expected;
@@ -101,8 +114,11 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 			expected = chunk;
 		} while (!__cas64(&state->next_write, &expected, U64_MAX));
 
-		pwrite(state->outfd, buffers[1], res,
-		       state->out_offset + MAX_COMPRESS_LEN * chunk);
+		if (pwrite(state->outfd, buffers[1], res,
+			   state->out_offset + MAX_COMPRESS_LEN * chunk) < 0) {
+			__astore32(&state->err, errno);
+			return;
+		}
 		__astore64(&state->next_write, chunk + 1);
 	}
 }
@@ -113,7 +129,8 @@ STATIC i32 compress_setup_offsets(DecompressState *state, u64 st_size) {
 	state->chunk_offset_allocation = 0;
 
 	while (offset < state->in_len) {
-		pread(state->infd, &chunk_len, sizeof(u32), offset);
+		if (pread(state->infd, &chunk_len, sizeof(u32), offset) < 0)
+			return -1;
 		if ((i + 1) >= (state->chunk_offset_allocation / sizeof(u64))) {
 			u64 *tmp = smap(4096 + state->chunk_offset_allocation);
 			if (!tmp) return -1;
@@ -164,6 +181,10 @@ PUBLIC i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	u32 i;
 	for (i = 0; i < (state->procs - 1); i++) {
 		pids[i] = fork();
+		if (pids[i] < 0) {
+			ret = -1;
+			goto cleanup;
+		}
 		if (!pids[i]) {
 			compress_run_proc(i, state);
 			_exit(0);
@@ -171,6 +192,11 @@ PUBLIC i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	}
 	compress_run_proc(i, state);
 	for (u32 i = 0; i < state->procs; i++) await(pids[i]);
+
+	if (state->err) {
+		errno = state->err;
+		ret = -1;
+	}
 cleanup:
 	if (state) munmap(state, sizeof(CompressState));
 	return ret;
@@ -215,6 +241,10 @@ PUBLIC i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	u64 i;
 	for (i = 0; i < (state->procs - 1); i++) {
 		pids[i] = fork();
+		if (pids[i] < 0) {
+			ret = -1;
+			goto cleanup;
+		}
 		if (!pids[i]) {
 			decompress_run_proc(i, state);
 			_exit(0);
@@ -222,6 +252,10 @@ PUBLIC i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	}
 	decompress_run_proc(i, state);
 	for (u32 i = 0; i < state->procs; i++) await(pids[i]);
+	if (state->err) {
+		errno = state->err;
+		ret = -1;
+	}
 
 cleanup:
 	if (state) {
@@ -283,6 +317,7 @@ PUBLIC i32 decompress_stream(i32 infd, u64 in_offset, i32 outfd,
 
 	while (true) {
 		res = pread(infd, &chunk_len, sizeof(u32), in_offset);
+		if (res < 0) return res;
 		if (res < sizeof(u32)) break;
 		in_offset += sizeof(u32);
 		rlen = 0;
