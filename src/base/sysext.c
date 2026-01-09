@@ -25,6 +25,7 @@
 
 #include <libfam/atomic.h>
 #include <libfam/debug.h>
+#include <libfam/format.h>
 #include <libfam/iouring.h>
 #include <libfam/limits.h>
 #include <libfam/linux.h>
@@ -43,6 +44,10 @@ PUBLIC i64 pwrite(i32 fd, const void *buf, u64 len, u64 offset) {
 	u64 id;
 	i64 res;
 #if TEST == 1
+	if (_debug_pwrite_fail-- == 0) {
+		errno = EIO;
+		return -1;
+	}
 	if ((fd == 1 || fd == 2) && _debug_no_write) return len;
 #endif /* TEST */
 
@@ -57,6 +62,13 @@ PUBLIC i64 pwrite(i32 fd, const void *buf, u64 len, u64 offset) {
 PUBLIC i64 pread(i32 fd, void *buf, u64 len, u64 offset) {
 	u64 id;
 	i64 res;
+
+#if TEST == 1
+	if (_debug_pread_fail-- == 0) {
+		errno = EIO;
+		return -1;
+	}
+#endif /* TEST */
 
 	if (global_iou_init() < 0) return -1;
 	res = iouring_init_pread(__global_iou__, fd, buf, len, offset, U64_MAX);
@@ -124,6 +136,9 @@ PUBLIC i32 nsleep(u64 nsec) {
 PUBLIC i32 usleep(u64 usec) { return nsleep(usec * 1000); }
 
 PUBLIC i32 fork(void) {
+#if TEST == 1
+	if (_debug_fork_fail) return -1;
+#endif /* TEST */
 	i32 ret = clone(SIGCHLD, 0);
 	if (!ret) __global_iou__ = NULL;
 	return ret;

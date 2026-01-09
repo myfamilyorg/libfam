@@ -642,6 +642,7 @@ STATIC i32 compress_read_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	}
 
 	fastmemcpy(&in_bit_offset, in, sizeof(u32));
+
 	in_bit_offset += 32;
 	for (i = 0; i < MAX_BOOK_CODES; i++) {
 		book_code_lengths[i].length =
@@ -904,9 +905,10 @@ PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 		errno = EOVERFLOW;
 		return -1;
 	}
-	if ((in[2] & 0x80) != 0)
+	if ((in[2] & 0x80) != 0) {
 		return compress_read_raw(in, len, out, capacity);
-	else
+	} else {
 		return compress_read_block(in, len, out, capacity);
+	}
 }
 

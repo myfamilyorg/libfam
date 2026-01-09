@@ -63,6 +63,72 @@ Test(compress2) {
 	munmap(in, size);
 }
 
+Test(compressfile_fails) {
+	const u8 *path = "./resources/akjv5.txt";
+	const u8 *outpath = "/tmp/akjv5.txt.tmp";
+	const u8 *outpath2 = "/tmp/akjv5.txt.conf";
+	unlink(outpath);
+	unlink(outpath2);
+
+	i32 infd = file(path);
+	i32 outfd = file(outpath);
+
+	_debug_fork_fail = true;
+	ASSERT_EQ(compress_file(infd, 0, outfd, 0), -1, "compress_file fail");
+	ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
+		  "decompress_file fail");
+	_debug_fork_fail = false;
+
+	_debug_pwrite_fail = 0;
+	ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
+		  "decompress_file fail2");
+	_debug_pwrite_fail = I64_MAX;
+
+	_debug_pread_fail = 0;
+	ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
+		  "decompress_file fail3");
+	_debug_pread_fail = I64_MAX;
+
+	close(infd);
+	close(outfd);
+}
+
+Test(compressfile_fails2) {
+	const u8 *path = "./resources/xxdir/akjv.txt.cz";
+	const u8 *outpath = "/tmp/akjv5.txt.tmp";
+	const u8 *outpath2 = "/tmp/akjv5.txt.conf";
+	unlink(outpath);
+	unlink(outpath2);
+
+	i32 infd = file(path);
+	i32 outfd = file(outpath);
+
+	_debug_pwrite_fail = 0;
+	ASSERT_EQ(compress_file(infd, 0, outfd, 0), -1, "compress_file fail");
+	_debug_pwrite_fail = I64_MAX;
+
+	_debug_pread_fail = 0;
+	ASSERT_EQ(compress_file(infd, 0, outfd, 0), -1, "compress_file fail2");
+	_debug_pread_fail = I64_MAX;
+
+	for (u32 i = 0; i < 10; i++) {
+		_debug_pread_fail = i;
+		ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
+			  "decomp file fail1");
+		_debug_pread_fail = I64_MAX;
+	}
+
+	for (u32 i = 0; i < 10; i++) {
+		_debug_pwrite_fail = i;
+		ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
+			  "decomp file fail2");
+		_debug_pwrite_fail = I64_MAX;
+	}
+
+	close(infd);
+	close(outfd);
+}
+
 Test(compressfile1) {
 	const u8 *path = "./resources/akjv5.txt";
 	const u8 *outpath = "/tmp/akjv5.txt.tmp";

@@ -62,6 +62,23 @@ typedef struct {
 	u32 err;
 } DecompressState;
 
+/*
+extern IoUring *__global_iou__;
+i32 global_iou_init(void);
+
+STATIC i64 pwrite1(i32 fd, const void *buf, u64 len, u64 offset) {
+	u64 id;
+	i64 res;
+
+	if (global_iou_init() < 0) return -1;
+	res =
+	    iouring_init_pwrite(__global_iou__, fd, buf, len, offset, U64_MAX);
+	if (res < 0) return -1;
+	if (iouring_submit(__global_iou__, 1) < 0) return -1;
+	return iouring_wait(__global_iou__, &id);
+}
+*/
+
 STATIC void compress_run_proc(u32 id, CompressState *state) {
 	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
 	u64 chunk;
@@ -77,6 +94,12 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 		i32 len =
 		    compress_block(buffers[0], res, buffers[1] + sizeof(u32),
 				   MAX_COMPRESS_LEN + 3);
+
+		if (len < 0) {
+			__astore32(&state->err, errno == 0 ? EIO : errno);
+			return;
+		}
+
 		fastmemcpy(buffers[1], &len, sizeof(u32));
 		u64 expected;
 		do {
@@ -85,6 +108,7 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 
 		if (pwrite(state->outfd, buffers[1], len + sizeof(u32),
 			   state->out_offset) < 0) {
+			__astore64(&state->next_write, chunk + 1);
 			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
@@ -101,14 +125,23 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
 		u32 rlen = state->chunk_offsets[chunk + 1] -
 			   state->chunk_offsets[chunk];
+		if (rlen > MAX_COMPRESS_LEN + 3 + sizeof(u32)) {
+			__astore32(&state->err, errno == 0 ? EPROTO : errno);
+			return;
+		}
 		i32 res = pread(state->infd, buffers[0], rlen,
 				state->chunk_offsets[chunk]);
 		if (res < 0) {
 			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
+
 		res = decompress_block(buffers[0], res, buffers[1],
 				       MAX_COMPRESS_LEN + 3);
+		if (res < 0) {
+			__astore32(&state->err, errno == 0 ? EIO : errno);
+			return;
+		}
 		u64 expected;
 		do {
 			expected = chunk;
@@ -116,6 +149,7 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 
 		if (pwrite(state->outfd, buffers[1], res,
 			   state->out_offset + MAX_COMPRESS_LEN * chunk) < 0) {
+			__astore64(&state->next_write, chunk + 1);
 			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
@@ -296,7 +330,9 @@ PUBLIC i32 compress_stream(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		wlen = 0;
 		while (wlen < to_write) {
 			res = pwrite(outfd, buffers[1], to_write, out_offset);
-			if (res < 0) return res;
+			if (res < 0) {
+				return res;
+			}
 			wlen += res;
 		}
 		out_offset += to_write;
@@ -337,7 +373,9 @@ PUBLIC i32 decompress_stream(i32 infd, u64 in_offset, i32 outfd,
 		i64 out_offset_update = res;
 		while (res) {
 			i64 wres = pwrite(outfd, buffers[1], res, out_offset);
-			if (wres < 0) return wres;
+			if (wres < 0) {
+				return wres;
+			}
 			res -= wres;
 		}
 
