@@ -74,4 +74,4 @@ v={,w=} test
 
 # Architecture/Design
 
-At its core all the functions use the Formatter type and the functions that are defined for it. They progressively reallocate the buffer as needed using. Based on this core functionality we extend formatting in a number of different directions (print, println, panic, ASSERT, ASSERT_EQ). We iterate efficiently through using an aho corasick-like algorithm for efficient matching. This allows for functionality similar to StringBuilder in java with the formatting syntax similar to Rust.
+At its core all the functions use the Formatter type and the functions that are defined for it. They progressively reallocate the buffer as needed. Based on this core functionality we extend formatting in a number of different directions (print, println, panic, ASSERT, ASSERT_EQ). We iterate efficiently through using an aho corasick-like algorithm for efficient matching. This allows for functionality similar to StringBuilder in java with the formatting syntax similar to Rust.
