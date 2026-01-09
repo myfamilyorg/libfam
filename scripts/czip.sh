@@ -15,7 +15,7 @@ if [ "${CC}" = "" ]; then
 fi
 
 if [ ! -e ${OUT_BIN} ] || [ ${CZIP_SRC} -nt ${OUT_BIN} ]; then
-COMMAND="${CC} -O3 -Wno-pointer-sign -ffreestanding -nostdlib -Ltarget/lib -Isrc/include -o target/bin/czip etc/czip.c -lfam"
+COMMAND="${CC} -O3 -ffreestanding -nostdlib -Ltarget/lib -Isrc/include -o target/bin/czip etc/czip.c -lfam"
 
         echo ${COMMAND}
         ${COMMAND} || exit $?;

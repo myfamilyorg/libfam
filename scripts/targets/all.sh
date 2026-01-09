@@ -24,7 +24,6 @@ fi
 
 COMMAND="${CC} \
 -o ${BIN_DIR}/stormvec \
--Wno-pointer-sign \
 ${STORMVEC_SRC} \
 -I${INCDIR} \
 -nostdlib \
@@ -41,7 +40,6 @@ fi
 
 COMMAND="${CC} \
 -o ${BIN_DIR}/czip \
--Wno-pointer-sign \
 ${CZIP_SRC} \
 -I${INCDIR} \
 -nostdlib \

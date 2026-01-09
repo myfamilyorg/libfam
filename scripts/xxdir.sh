@@ -6,7 +6,7 @@ XXDIR_BIN=${XXDIR_OUT_DIR}/xxdir
 XXDIR_RESOURCES=./resources/xxdir
 XXDIR_HEADER=./src/include/libfam/xxdir_dat.h
 INCLUDE_DIR=./src/include
-XCFLAGS=-Wno-pointer-sign
+XCFLAGS=
 if [ "${CC}" = "" ]; then
 	CC=clang
 fi

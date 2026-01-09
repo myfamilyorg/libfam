@@ -126,8 +126,8 @@ esac
 
 # Clang vs GCC quirks
 case "$CC" in
-    *clang*) COMPILER_FIXES="-fno-builtin -Wno-pointer-sign" ;;
-    *gcc*|*g++) COMPILER_FIXES="-fno-builtin -Wno-pointer-sign" ;;
+    *clang*) COMPILER_FIXES="-fno-builtin" ;;
+    *gcc*|*g++) COMPILER_FIXES="-fno-builtin" ;;
     *) COMPILER_FIXES="" ;;
 esac
 
