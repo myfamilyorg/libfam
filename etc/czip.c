@@ -122,19 +122,13 @@ static CzipConfig parse_argv(i32 argc, u8 **argv) {
 }
 
 static void decompress(CzipConfig *config) {
+	i32 res;
 	u32 magic, mode;
 	u8 version;
 	i32 infd, outfd;
 	u64 atime, mtime;
 	u8 outpath[MAX_PATH] = {0};
 	bool use_stdin = !config->file;
-
-	/*
-	if (!config->file) {
-		println("File name must be specified.");
-		_exit(-1);
-	}
-	*/
 
 	if (!use_stdin && !exists(config->file)) {
 		println("Specified file '{}' does not exist.", config->file);
@@ -194,9 +188,9 @@ static void decompress(CzipConfig *config) {
 	outfd = config->console ? 1 : file(outpath);
 
 	if (config->console || use_stdin) {
-		decompress_stream(infd, 26 + flen, outfd, 0);
+		res = decompress_stream(infd, 26 + flen, outfd, 0);
 	} else
-		decompress_file(infd, 26 + flen, outfd, 0);
+		res = decompress_file(infd, 26 + flen, outfd, 0);
 
 	if (!use_stdin) close(infd);
 	if (!config->console) {
@@ -218,15 +212,15 @@ static void decompress(CzipConfig *config) {
 
 		close(outfd);
 	}
-
-	if (!config->keep && !config->console && !use_stdin)
+	if (res < 0) println("Warning: decompression failed!");
+	if (res >= 0 && !config->keep && !config->console && !use_stdin)
 		unlink(config->file);
 }
 
 static void compress(CzipConfig *config) {
 	u8 vval;
 	u32 wval;
-	i32 infd, outfd;
+	i32 infd, outfd, res;
 	u8 outpath[MAX_PATH] = {0};
 	bool use_stdin = !config->file;
 
@@ -317,15 +311,16 @@ static void compress(CzipConfig *config) {
 	}
 
 	if (config->console || use_stdin) {
-		compress_stream(infd, 0, outfd, 26 + flen);
+		res = compress_stream(infd, 0, outfd, 26 + flen);
 	} else {
-		compress_file(infd, 0, outfd, 26 + flen);
+		res = compress_file(infd, 0, outfd, 26 + flen);
 	}
 
 	if (!use_stdin) close(infd);
 	if (!config->console) close(outfd);
 
-	if (!config->keep && !config->console) unlink(config->file);
+	if (res < 0) println("Warning: compression failed!");
+	if (res >= 0 && !config->keep && !config->console) unlink(config->file);
 }
 
 i32 main(i32 argc, u8 **argv, u8 **envp) {
