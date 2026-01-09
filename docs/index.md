@@ -56,3 +56,4 @@ Benches can be run with the following command:
 * [Storm](storm.md) - A symmetric encryption function.
 * [BiblePOW](biblepow.md) - A Bible-based proof of work function.
 * [Czip](compression.md) - A compression tool.
+* [Formatting](formatting.md) - Formatting.

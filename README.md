@@ -68,6 +68,7 @@ Benches can be run with the following command:
 * [Storm](docs/storm.md) - A symmetric encryption function.
 * [BiblePOW](docs/biblepow.md) - A Bible-based proof of work function.
 * [Czip](docs/compression.md) - A compression tool.
+* [Formatting](docs/formatting.md) - Formatting.
 
 > “Just as a body, though one, has many parts, but all its many parts form one body, so it is with Christ. For we were all baptized by one Spirit so as to form one body—whether Jews or Gentiles, slave or free—and we were all given the one Spirit to drink. Even so the body is not made up of one part but of many.”
 > — **1 Corinthians 12:12-14**
