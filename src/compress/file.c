@@ -125,20 +125,22 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 		u32 rlen = state->chunk_offsets[chunk + 1] -
 			   state->chunk_offsets[chunk];
 		if (rlen > MAX_COMPRESS_LEN + 3 + sizeof(u32)) {
+			pwrite1(2, "x\n", 2, 0);
 			__astore32(&state->err, errno == 0 ? EPROTO : errno);
 			return;
 		}
 		i32 res = pread(state->infd, buffers[0], rlen,
 				state->chunk_offsets[chunk]);
 		if (res < 0) {
-			pwrite1(2, "1\n", 2, 0);
 			__astore32(&state->err, errno == 0 ? EIO : errno);
+			pwrite1(2, "1\n", 2, 0);
 			return;
 		}
 
 		res = decompress_block(buffers[0], res, buffers[1],
 				       MAX_COMPRESS_LEN + 3);
 		if (res < 0) {
+			pwrite1(2, "y\n", 2, 0);
 			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
@@ -149,6 +151,7 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 
 		if (pwrite(state->outfd, buffers[1], res,
 			   state->out_offset + MAX_COMPRESS_LEN * chunk) < 0) {
+			pwrite1(2, "z\n", 2, 0);
 			__astore64(&state->next_write, chunk + 1);
 			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
