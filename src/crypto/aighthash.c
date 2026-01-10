@@ -71,7 +71,7 @@ PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 #ifdef USE_AVX2
 			__m256i x =
 			    _mm256_loadu_si256((const __m256i*)(p + i * 32));
-			x = _mm256_aesenc_epi128(x, key);
+			AESENC256(&x, &x, &key);
 
 			__attribute__((aligned(32))) u64 parts[4];
 			_mm256_store_si256((__m256i*)parts, x);
@@ -108,7 +108,7 @@ PUBLIC u64 aighthash64(const void* data, u64 len, u64 seed) {
 	while (len >= 32) {
 #ifdef USE_AVX2
 		__m256i x = _mm256_loadu_si256((const __m256i*)p);
-		x = _mm256_aesenc_epi128(x, key);
+		AESENC256(&x, &x, &key);
 
 		__attribute__((aligned(32))) u64 parts[4];
 		_mm256_store_si256((__m256i*)parts, x);

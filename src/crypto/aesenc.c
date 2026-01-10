@@ -149,13 +149,12 @@ STATIC __attribute__((unused)) void aesenc128(u8 state[16],
 
 void aesenc256(void *data, const void *key) {
 #ifdef USE_AVX2
-	*(__m256i *)data =
-	    _mm256_aesenc_epi128(*(__m256i *)data, *(__m256i *)key);
+	AESENC256(data, data, key);
 #elif defined(USE_NEON)
 	uint8x16_t d_lo = *(const uint8x16_t *)data;
-	uint8x16_t d_hi = *(const uint8x16_t *)((const uint8_t *)data + 16);
+	uint8x16_t d_hi = *(const uint8x16_t *)((const u8 *)data + 16);
 	uint8x16_t k_lo = *(const uint8x16_t *)key;
-	uint8x16_t k_hi = *(const uint8x16_t *)((const uint8_t *)key + 16);
+	uint8x16_t k_hi = *(const uint8x16_t *)((const u8 *)key + 16);
 
 	uint8x16_t zero = vdupq_n_u8(0);
 	uint8x16_t tmp_lo = vaeseq_u8(d_lo, zero);
@@ -167,7 +166,7 @@ void aesenc256(void *data, const void *key) {
 	uint8x16_t out_hi = veorq_u8(tmp_hi, k_hi);
 
 	*(uint8x16_t *)data = out_lo;
-	*(uint8x16_t *)((uint8_t *)data + 16) = out_hi;
+	*(uint8x16_t *)((u8 *)data + 16) = out_hi;
 #else
 	aesenc128(data, key);
 	aesenc128((u8 *)data + 16, (u8 *)key + 16);

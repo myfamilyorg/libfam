@@ -85,15 +85,15 @@ STATIC void storm_next_block_avx2(StormContext *ctx, u8 buf[32]) {
 	StormContextImpl *st = (StormContextImpl *)ctx;
 	__m256i p = _mm256_load_si256((const __m256i *)buf);
 	__m256i x = _mm256_xor_si256(*(const __m256i *)st->state, p);
-	x = _mm256_aesenc_epi128(x, *(__m256i *)st->key0);
+	AESENC256(&x, &x, st->key0);
 	__m128i lo = _mm256_castsi256_si128(x);
 	__m128i hi = _mm256_extracti128_si256(x, 1);
 	lo = _mm_xor_si128(lo, hi);
 	*(__m256i *)st->state = _mm256_set_m128i(lo, hi);
-	x = _mm256_aesenc_epi128(x, *(__m256i *)st->key1);
+	AESENC256(&x, &x, st->key1);
 	x = _mm256_xor_si256(*(__m256i *)st->state, x);
-	x = _mm256_aesenc_epi128(x, *(__m256i *)st->key2);
-	x = _mm256_aesenc_epi128(x, *(__m256i *)st->key3);
+	AESENC256(&x, &x, st->key2);
+	AESENC256(&x, &x, st->key3);
 	_mm256_store_si256((__m256i *)buf, x);
 }
 

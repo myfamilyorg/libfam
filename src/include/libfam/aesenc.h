@@ -26,6 +26,27 @@
 #ifndef _AESENC_H
 #define _AESENC_H
 
+#ifdef __VAES__
+#define AESENC256(result, data, key) \
+	*(__m256i *)result =         \
+	    _mm256_aesenc_epi128(*(__m256i *)data, *(__m256i *)key);
+#else
+#define AESENC256(result, data, key)                                           \
+	do {                                                                   \
+		__m128i data_lo = _mm256_castsi256_si128(*(__m256i *)data);    \
+		__m128i data_hi =                                              \
+		    _mm256_extracti128_si256(*(__m256i *)data, 1);             \
+                                                                               \
+		__m128i key_lo = _mm256_castsi256_si128(*(__m256i *)key);      \
+		__m128i key_hi = _mm256_extracti128_si256(*(__m256i *)key, 1); \
+                                                                               \
+		data_lo = _mm_aesenc_si128(data_lo, key_lo);                   \
+		data_hi = _mm_aesenc_si128(data_hi, key_hi);                   \
+		fastmemcpy(result, &data_lo, 16);                              \
+		fastmemcpy((u8 *)result + 16, &data_hi, 16);                   \
+	} while (0);
+#endif /* !__VAES__ */
+
 void aesenc256(void *data, const void *key);
 
 #endif /* _AESENC_H */
