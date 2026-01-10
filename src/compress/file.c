@@ -225,12 +225,7 @@ PUBLIC i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		}
 	}
 	compress_run_proc(i, state);
-	pwrite1(2, "awpre\n", 6, 0);
-	for (u32 i = 0; i < state->procs; i++) {
-		await(pids[i]);
-	}
-	pwrite1(2, "awpost\n", 7, 0);
-
+	for (u32 i = 0; i < state->procs; i++) await(pids[i]);
 	if (state->err) {
 		errno = state->err;
 		ret = -1;
@@ -286,13 +281,17 @@ PUBLIC i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		if (!pids[i]) {
 			pwrite1(2, "2\n", 2, 0);
 			decompress_run_proc(i, state);
+			pwrite1(2, "comp\n", 5, 0);
 			_exit(0);
 		}
 	}
 	pwrite1(2, "3\n", 2, 0);
 
 	decompress_run_proc(i, state);
+	pwrite1(2, "awpre\n", 6, 0);
 	for (u32 i = 0; i < state->procs; i++) await(pids[i]);
+	pwrite1(2, "awpost\n", 7, 0);
+
 	if (state->err) {
 		errno = state->err;
 		ret = -1;
