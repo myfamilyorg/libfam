@@ -36,7 +36,7 @@
 u64 open_fds = 0;
 IoUring *__global_iou__ = NULL;
 
-STATIC i32 global_iou_init(void) {
+i32 global_iou_init(void) {
 	if (__global_iou__) return 0;
 	return iouring_init(&__global_iou__, 1);
 }
