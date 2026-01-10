@@ -194,6 +194,7 @@ i32 run_tests(u8 **envp) {
 			pwrite(STDERR_FD, (void *)RESET,
 			       faststrlen((void *)RESET), 0);
 		}
+		ASSERT_BYTES(0);
 	}
 
 	ms = (f64)(micros() - total) / (f64)1000;
@@ -282,6 +283,7 @@ i32 run_benches(u8 **envp) {
 
 			benches[exe_test].test_fn();
 		}
+		ASSERT_BYTES(0);
 	}
 
 	ms = (f64)(micros() - total) / (f64)1000;
