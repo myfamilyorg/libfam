@@ -1050,3 +1050,40 @@ Test(openfds) {
 	ASSERT(!get_open_fds(), "get open fds 0");
 }
 
+Test(pwrite_pread_fail) {
+	_debug_pwrite_fail = 0;
+	ASSERT_EQ(pwrite(2, "x\n", 2, 0), -1, "pwrite err");
+	_debug_pwrite_fail = I64_MAX;
+
+	_debug_pread_fail = 0;
+	u8 buf[2];
+	ASSERT_EQ(pread(0, buf, 2, 0), -1, "pread err");
+	_debug_pread_fail = I64_MAX;
+}
+
+Test(open) {
+	u8 buf[1024] = {0};
+	i32 fd;
+	const u8 *path = "/tmp/open_test1.dat";
+	unlink(path);
+	ASSERT_EQ(open(path, O_RDONLY, 0), -1, "not exist");
+	fd = open(path, O_CREAT | O_RDWR, 0700);
+	ASSERT(fd > 0, "fd");
+	ASSERT_EQ(pwrite(fd, "abc", 3, 0), 3, "pwrite");
+	close(fd);
+	fd = open(path, O_RDONLY, 0);
+	ASSERT(fd > 0, "rdonly");
+	ASSERT_EQ(pread(fd, buf, 3, 0), 3, "pread");
+	ASSERT(!memcmp(buf, "abc", 3), "eq");
+	ASSERT_EQ(pwrite(fd, "xyz", 3, 0), -1, "perm");
+	close(fd);
+	fd = open(path, O_RDWR, 0);
+	ASSERT(fd > 0, "rdwr");
+	ASSERT_EQ(pread(fd, buf, 3, 0), 3, "pread");
+	ASSERT(!memcmp(buf, "abc", 3), "eq");
+	ASSERT_EQ(pwrite(fd, "xyz", 3, 0), 3, "pwrite rdwr");
+	ASSERT_EQ(pread(fd, buf, 3, 0), 3, "pread");
+	ASSERT(!memcmp(buf, "xyz", 3), "eq");
+	close(fd);
+	unlink(path);
+}
