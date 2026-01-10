@@ -108,8 +108,8 @@ case "${ARCH}" in
         MARCH="haswell"
 	mkdir -p ${BINDIR}
 	${CC} etc/mvaes.c -o ${BINDIR}/mvaes
-	RES=`${BINDIR}/mvaes`;
-	if [ "${RES}" = "1" ]; then
+	${BINDIR}/mvaes
+	if [ "$?" = "1" ]; then
             MARCH_EXTRA="-maes"
 	else
             MARCH_EXTRA="-mvaes"
