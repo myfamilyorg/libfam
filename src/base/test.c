@@ -1087,3 +1087,34 @@ Test(open) {
 	close(fd);
 	unlink(path);
 }
+
+Test(iouring2) {
+	const u8 *path = "/tmp/iouring2.dat";
+	unlink(path);
+	IoUring *iou = NULL;
+	ASSERT(!iouring_init(&iou, 30), "iouring_init");
+	i32 fd = file(path);
+	ASSERT(fd > 0, "fd");
+
+	fallocate(fd, 4096 * 30);
+
+	u8 buffer[4096 * 30] = {0};
+	for (u32 i = 0; i < 4096 * 30; i++) buffer[i] = 9;
+	for (u32 i = 0; i < 4096 * 30; i += 4096)
+		ASSERT(!iouring_init_pwrite(iou, fd, buffer + i, 4096, i, i),
+		       "pwrite");
+	ASSERT_EQ(iouring_submit(iou, 30), 30, "submit");
+	bool found[30] = {0};
+
+	for (u32 i = 0; i < 30; i++) {
+		u64 id;
+		iouring_spin(iou, &id);
+		found[id / 4096] = true;
+	}
+
+	for (u32 i = 0; i < 30; i++) ASSERT(found[i], "found");
+
+	close(fd);
+	unlink(path);
+	iouring_destroy(iou);
+}
