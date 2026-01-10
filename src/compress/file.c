@@ -133,7 +133,18 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 				state->chunk_offsets[chunk]);
 		if (res < 0) {
 			__astore32(&state->err, errno == 0 ? EIO : errno);
-			pwrite1(2, "1\n", 2, 0);
+			if (id == 0)
+				pwrite1(2, "v0\n", 3, 0);
+			else if (id == 1)
+				pwrite1(2, "v1\n", 3, 0);
+			else if (id == 2)
+				pwrite1(2, "v2\n", 3, 0);
+			else if (id == 3)
+				pwrite1(2, "v3\n", 3, 0);
+			else if (id == 4)
+				pwrite1(2, "v4\n", 3, 0);
+			else if (id == 5)
+				pwrite1(2, "v5\n", 3, 0);
 			return;
 		}
 
@@ -284,7 +295,19 @@ PUBLIC i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		if (!pids[i]) {
 			pwrite1(2, "2\n", 2, 0);
 			decompress_run_proc(i, state);
-			pwrite1(2, "comp\n", 5, 0);
+			if (i == 0)
+				pwrite1(2, "q0\n", 3, 0);
+			else if (i == 1)
+				pwrite1(2, "q1\n", 3, 0);
+			else if (i == 2)
+				pwrite1(2, "q2\n", 3, 0);
+			else if (i == 3)
+				pwrite1(2, "q3\n", 3, 0);
+			else if (i == 4)
+				pwrite1(2, "q4\n", 3, 0);
+			else if (i == 5)
+				pwrite1(2, "q5\n", 3, 0);
+
 			_exit(0);
 		}
 	}
