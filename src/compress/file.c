@@ -62,6 +62,22 @@ typedef struct {
 	u32 err;
 } DecompressState;
 
+i32 global_iou_init(void);
+#include <libfam/iouring.h>
+extern IoUring *__global_iou__;
+
+i64 pwrite1(i32 fd, const void *buf, u64 len, u64 offset) {
+	u64 id;
+	i64 res;
+
+	if (global_iou_init() < 0) return -1;
+	res =
+	    iouring_init_pwrite(__global_iou__, fd, buf, len, offset, U64_MAX);
+	if (res < 0) return -1;
+	if (iouring_submit(__global_iou__, 1) < 0) return -1;
+	return iouring_wait(__global_iou__, &id);
+}
+
 STATIC void compress_run_proc(u32 id, CompressState *state) {
 	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
 	u64 chunk;
@@ -115,7 +131,7 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 		i32 res = pread(state->infd, buffers[0], rlen,
 				state->chunk_offsets[chunk]);
 		if (res < 0) {
-			println("pread err");
+			pwrite1(2, "1\n", 2, 0);
 			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
@@ -264,10 +280,13 @@ PUBLIC i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 			goto cleanup;
 		}
 		if (!pids[i]) {
+			pwrite1(2, "2\n", 2, 0);
 			decompress_run_proc(i, state);
 			_exit(0);
 		}
 	}
+	pwrite1(2, "3\n", 2, 0);
+
 	decompress_run_proc(i, state);
 	for (u32 i = 0; i < state->procs; i++) await(pids[i]);
 	if (state->err) {
