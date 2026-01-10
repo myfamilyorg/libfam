@@ -120,6 +120,19 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
 	u64 chunk;
 
+	if (id == 0)
+		pwrite1(2, "x0\n", 3, 0);
+	else if (id == 1)
+		pwrite1(2, "x1\n", 3, 0);
+	else if (id == 2)
+		pwrite1(2, "x2\n", 3, 0);
+	else if (id == 3)
+		pwrite1(2, "x3\n", 3, 0);
+	else if (id == 4)
+		pwrite1(2, "x4\n", 3, 0);
+	else if (id == 5)
+		pwrite1(2, "x5\n", 3, 0);
+
 	if (IS_VALGRIND()) fastmemset(buffers, 0, sizeof(buffers));
 	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
 		u32 rlen = state->chunk_offsets[chunk + 1] -
@@ -146,6 +159,19 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 			else if (id == 5)
 				pwrite1(2, "v5\n", 3, 0);
 			return;
+		} else {
+			if (id == 0)
+				pwrite1(2, "m0\n", 3, 0);
+			else if (id == 1)
+				pwrite1(2, "m1\n", 3, 0);
+			else if (id == 2)
+				pwrite1(2, "m2\n", 3, 0);
+			else if (id == 3)
+				pwrite1(2, "m3\n", 3, 0);
+			else if (id == 4)
+				pwrite1(2, "m4\n", 3, 0);
+			else if (id == 5)
+				pwrite1(2, "m5\n", 3, 0);
 		}
 
 		res = decompress_block(buffers[0], res, buffers[1],
