@@ -25,6 +25,7 @@
 
 #include <libfam/builtin.h>
 #include <libfam/compress.h>
+#include <libfam/debug.h>
 #include <libfam/format.h>
 #include <libfam/limits.h>
 #include <libfam/utils.h>
@@ -870,6 +871,10 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 	u32 book_frequencies[MAX_BOOK_CODES] = {0};
 	CodeLength book[MAX_BOOK_CODES] = {0};
 
+#if TEST == 1
+	if (_debug_compress_fail) return -1;
+#endif /* TEST */
+
 	if (in == NULL || out == NULL) {
 		errno = EFAULT;
 		return -1;
@@ -897,6 +902,10 @@ PUBLIC i32 compress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
 }
 
 PUBLIC i32 decompress_block(const u8 *in, u32 len, u8 *out, u32 capacity) {
+#if TEST == 1
+	if (_debug_compress_fail) return -1;
+#endif /* TEST */
+
 	if (in == NULL || out == NULL) {
 		errno = EINVAL;
 		return -1;

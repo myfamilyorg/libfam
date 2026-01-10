@@ -62,23 +62,6 @@ typedef struct {
 	u32 err;
 } DecompressState;
 
-/*
-extern IoUring *__global_iou__;
-i32 global_iou_init(void);
-
-STATIC i64 pwrite1(i32 fd, const void *buf, u64 len, u64 offset) {
-	u64 id;
-	i64 res;
-
-	if (global_iou_init() < 0) return -1;
-	res =
-	    iouring_init_pwrite(__global_iou__, fd, buf, len, offset, U64_MAX);
-	if (res < 0) return -1;
-	if (iouring_submit(__global_iou__, 1) < 0) return -1;
-	return iouring_wait(__global_iou__, &id);
-}
-*/
-
 STATIC void compress_run_proc(u32 id, CompressState *state) {
 	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
 	u64 chunk;

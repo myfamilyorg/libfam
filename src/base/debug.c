@@ -32,6 +32,7 @@ bool _debug_fail_clone = false;
 bool _debug_fail_fstat = false;
 bool _debug_alloc_failure = false;
 bool _debug_fork_fail = false;
+bool _debug_compress_fail = false;
 i64 _debug_pwrite_fail = I64_MAX;
 i64 _debug_pread_fail = I64_MAX;
 i64 _debug_alloc_count = I64_MAX;

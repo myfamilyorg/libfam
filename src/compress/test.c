@@ -110,8 +110,25 @@ Test(compressfile_fails2) {
 	_debug_pread_fail = 0;
 	ASSERT_EQ(compress_file(infd, 0, outfd, 0), -1, "compress_file fail2");
 	_debug_pread_fail = I64_MAX;
+}
 
-	for (u32 i = 0; i < 10; i++) {
+Test(decompressfile_fails) {
+	const u8 *path = "./resources/akjv5.txt";
+	const u8 *outpath = "/tmp/akjv5.txt.tmp";
+	const u8 *outpath2 = "/tmp/akjv5.txt.conf";
+	unlink(outpath);
+	unlink(outpath2);
+
+	i32 infd = file(path);
+	i32 outfd = file(outpath);
+	ASSERT(!compress_file(infd, 0, outfd, 0), "compress_file");
+	close(infd);
+	close(outfd);
+
+	infd = file(outpath);
+	outfd = file(outpath2);
+
+	for (u32 i = 0; i < 100; i++) {
 		_debug_pread_fail = i;
 		ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
 			  "decomp file fail1");
@@ -124,6 +141,27 @@ Test(compressfile_fails2) {
 			  "decomp file fail2");
 		_debug_pwrite_fail = I64_MAX;
 	}
+
+	for (u32 i = 0; i < 10; i++) {
+		_debug_pwrite_fail = i;
+		ASSERT_EQ(compress_stream(infd, 0, outfd, 0), -1,
+			  "decomp file fail3");
+		_debug_pwrite_fail = I64_MAX;
+		_debug_pwrite_fail = i;
+		ASSERT_EQ(decompress_stream(infd, 0, outfd, 0), -1,
+			  "decomp file fail3");
+		_debug_pwrite_fail = I64_MAX;
+	}
+
+	_debug_compress_fail = true;
+	ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
+		  "decomp file fail comp fail");
+	_debug_compress_fail = false;
+
+	_debug_compress_fail = true;
+	ASSERT_EQ(compress_file(infd, 0, outfd, 0), -1,
+		  "decomp file fail comp fail");
+	_debug_compress_fail = false;
 
 	close(infd);
 	close(outfd);
@@ -358,7 +396,8 @@ Test(bible_dat) {
 	}
 
 	const u8 *check =
-	    "Genesis||1||1||In the beginning God created the heaven and the "
+	    "Genesis||1||1||In the beginning God created the heaven "
+	    "and the "
 	    "earth.";
 
 	ASSERT(!memcmp(bible, check, strlen(check)), "first verse");
