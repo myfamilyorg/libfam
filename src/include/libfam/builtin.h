@@ -26,6 +26,9 @@
 #ifndef _BUILTIN_H
 #define _BUILTIN_H
 
+#ifdef __x86_64__
+#include <cpuid.h>
+#endif
 #include <libfam/types.h>
 
 #define USE_COMPILER_BUILTINS
@@ -116,6 +119,26 @@ static __inline void __attribute__((unused)) trap(void) {
 #else
 	__asm__ volatile("ud2" ::: "memory");
 #endif
+}
+
+static inline u32 get_physical_cores_cpuid(void) {
+#ifdef __x86_64__
+	u32 eax = 0, ebx, ecx, edx, logical = 0, threads_per_core = 1, target;
+	target = eax >= 0x80000008 ? 0x80000008 : 1;
+	__cpuid(target, eax, ebx, ecx, edx);
+
+	if (target == 0x80000008) logical = ((ecx & 0xFF) + 1);
+	if (logical <= 1) logical = (ebx >> 16) & 0xFF;
+
+	if (logical <= 0) return 1;
+	__cpuid(1, eax, ebx, ecx, edx);
+	if (edx & (1U << 28)) threads_per_core = 2;
+	__cpuid(0x80000001, eax, ebx, ecx, edx);
+	if ((ecx & (1U << 1)) && (edx & (1U << 28))) threads_per_core = 2;
+	return logical < threads_per_core ? 1 : logical / threads_per_core;
+#else
+	return 2;
+#endif /* !__x86_64__ */
 }
 
 #endif /* _BUILTIN_H */
