@@ -117,12 +117,13 @@ Test(compressfile_fails2) {
 }
 
 Test(decompressfile_fails) {
-	/*
 	const u8 *path = "./resources/akjv5.txt";
 	const u8 *outpath = "/tmp/akjv5.txt.tmp";
 	const u8 *outpath2 = "/tmp/akjv5.txt.conf";
 	unlink(outpath);
 	unlink(outpath2);
+
+	println("a");
 
 	i32 infd = file(path);
 	i32 outfd = file(outpath);
@@ -133,7 +134,10 @@ Test(decompressfile_fails) {
 	infd = file(outpath);
 	outfd = file(outpath2);
 
+	println("b");
+
 	for (u32 i = 0; i < 100; i++) {
+		println("c: {}", i);
 		_debug_pread_fail = i;
 		ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
 			  "decomp file fail1");
@@ -141,6 +145,7 @@ Test(decompressfile_fails) {
 	}
 
 	for (u32 i = 0; i < 10; i++) {
+		println("d: {}", i);
 		_debug_pwrite_fail = i;
 		ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
 			  "decomp file fail2");
@@ -148,6 +153,7 @@ Test(decompressfile_fails) {
 	}
 
 	for (u32 i = 0; i < 10; i++) {
+		println("e: {}", i);
 		_debug_pwrite_fail = i;
 		ASSERT_EQ(compress_stream(infd, 0, outfd, 0), -1,
 			  "decomp file fail3");
@@ -158,19 +164,23 @@ Test(decompressfile_fails) {
 		_debug_pwrite_fail = I64_MAX;
 	}
 
+	println("f");
 	_debug_compress_fail = true;
 	ASSERT_EQ(decompress_file(infd, 0, outfd, 0), -1,
 		  "decomp file fail comp fail");
 	_debug_compress_fail = false;
+
+	println("g");
 
 	_debug_compress_fail = true;
 	ASSERT_EQ(compress_file(infd, 0, outfd, 0), -1,
 		  "decomp file fail comp fail");
 	_debug_compress_fail = false;
 
+	println("h");
+
 	close(infd);
 	close(outfd);
-	*/
 }
 
 Test(compressfile1) {
