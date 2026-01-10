@@ -259,6 +259,7 @@ i32 run_benches(u8 **envp) {
 
 	pwrite(STDERR_FD, (void *)SPACER, faststrlen((void *)SPACER), 0);
 
+	heap_bytes_reset();
 	total = micros();
 
 	for (exe_test = 0; exe_test < cur_benches; exe_test++) {
