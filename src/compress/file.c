@@ -225,7 +225,11 @@ PUBLIC i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		}
 	}
 	compress_run_proc(i, state);
-	for (u32 i = 0; i < state->procs; i++) await(pids[i]);
+	pwrite1(2, "awpre\n", 6, 0);
+	for (u32 i = 0; i < state->procs; i++) {
+		await(pids[i]);
+	}
+	pwrite1(2, "awpost\n", 7, 0);
 
 	if (state->err) {
 		errno = state->err;
