@@ -121,25 +121,11 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 	u8 buffers[2][MAX_COMPRESS_LEN + 3 + sizeof(u32)];
 	u64 chunk;
 
-	if (id == 0)
-		pwrite1(2, "x0\n", 3, 0);
-	else if (id == 1)
-		pwrite1(2, "x1\n", 3, 0);
-	else if (id == 2)
-		pwrite1(2, "x2\n", 3, 0);
-	else if (id == 3)
-		pwrite1(2, "x3\n", 3, 0);
-	else if (id == 4)
-		pwrite1(2, "x4\n", 3, 0);
-	else if (id == 5)
-		pwrite1(2, "x5\n", 3, 0);
-
 	if (IS_VALGRIND()) fastmemset(buffers, 0, sizeof(buffers));
 	while ((chunk = __aadd64(&state->next_chunk, 1)) < state->chunks) {
 		u32 rlen = state->chunk_offsets[chunk + 1] -
 			   state->chunk_offsets[chunk];
 		if (rlen > MAX_COMPRESS_LEN + 3 + sizeof(u32)) {
-			pwrite1(2, "x\n", 2, 0);
 			__astore32(&state->err, errno == 0 ? EPROTO : errno);
 			return;
 		}
@@ -147,38 +133,12 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 				state->chunk_offsets[chunk]);
 		if (res < 0) {
 			__astore32(&state->err, errno == 0 ? EIO : errno);
-			if (id == 0)
-				pwrite1(2, "v0\n", 3, 0);
-			else if (id == 1)
-				pwrite1(2, "v1\n", 3, 0);
-			else if (id == 2)
-				pwrite1(2, "v2\n", 3, 0);
-			else if (id == 3)
-				pwrite1(2, "v3\n", 3, 0);
-			else if (id == 4)
-				pwrite1(2, "v4\n", 3, 0);
-			else if (id == 5)
-				pwrite1(2, "v5\n", 3, 0);
 			return;
-		} else {
-			if (id == 0)
-				pwrite1(2, "m0\n", 3, 0);
-			else if (id == 1)
-				pwrite1(2, "m1\n", 3, 0);
-			else if (id == 2)
-				pwrite1(2, "m2\n", 3, 0);
-			else if (id == 3)
-				pwrite1(2, "m3\n", 3, 0);
-			else if (id == 4)
-				pwrite1(2, "m4\n", 3, 0);
-			else if (id == 5)
-				pwrite1(2, "m5\n", 3, 0);
 		}
 
 		res = decompress_block(buffers[0], res, buffers[1],
 				       MAX_COMPRESS_LEN + 3);
 		if (res < 0) {
-			pwrite1(2, "y\n", 2, 0);
 			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
@@ -190,7 +150,6 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 
 		if (pwrite(state->outfd, buffers[1], res,
 			   state->out_offset + MAX_COMPRESS_LEN * chunk) < 0) {
-			pwrite1(2, "z\n", 2, 0);
 			__astore64(&state->next_write, chunk + 1);
 			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
@@ -321,30 +280,13 @@ PUBLIC i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 			goto cleanup;
 		}
 		if (!pids[i]) {
-			pwrite1(2, "2\n", 2, 0);
 			decompress_run_proc(i, state);
-			if (i == 0)
-				pwrite1(2, "q0\n", 3, 0);
-			else if (i == 1)
-				pwrite1(2, "q1\n", 3, 0);
-			else if (i == 2)
-				pwrite1(2, "q2\n", 3, 0);
-			else if (i == 3)
-				pwrite1(2, "q3\n", 3, 0);
-			else if (i == 4)
-				pwrite1(2, "q4\n", 3, 0);
-			else if (i == 5)
-				pwrite1(2, "q5\n", 3, 0);
-
 			_exit(0);
 		}
 	}
-	pwrite1(2, "3\n", 2, 0);
 
 	decompress_run_proc(i, state);
-	pwrite1(2, "awpre\n", 6, 0);
 	for (u32 i = 0; i < state->procs; i++) await(pids[i]);
-	pwrite1(2, "awpost\n", 7, 0);
 
 	if (state->err) {
 		errno = state->err;
