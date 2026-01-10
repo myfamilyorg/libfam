@@ -1040,3 +1040,13 @@ Test(iouring1) {
 	close(f1);
 }
 
+Test(openfds) {
+	ASSERT(!get_open_fds(), "get open fds");
+	i32 fd = file("/tmp/openfds");
+	ASSERT_EQ(get_open_fds(), 1, "one open");
+	close(fd);
+	ASSERT(!get_open_fds(), "get open fds 0");
+	open_fds_reset();
+	ASSERT(!get_open_fds(), "get open fds 0");
+}
+
