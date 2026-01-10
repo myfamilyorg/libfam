@@ -61,6 +61,7 @@ Test(compress2) {
 	ASSERT_EQ(size, result, "size");
 	ASSERT(!memcmp(in, verify, size), "verify");
 	munmap(in, size);
+	close(fd);
 }
 
 Test(compressfile_fails) {
@@ -110,6 +111,9 @@ Test(compressfile_fails2) {
 	_debug_pread_fail = 0;
 	ASSERT_EQ(compress_file(infd, 0, outfd, 0), -1, "compress_file fail2");
 	_debug_pread_fail = I64_MAX;
+
+	close(infd);
+	close(outfd);
 }
 
 Test(decompressfile_fails) {

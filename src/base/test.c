@@ -1037,5 +1037,6 @@ Test(iouring1) {
 	ASSERT(found11, "found11");
 	ASSERT(found12, "found12");
 	iouring_destroy(iou);
+	close(f1);
 }
 

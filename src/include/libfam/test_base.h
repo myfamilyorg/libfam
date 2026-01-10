@@ -117,4 +117,20 @@ extern TestEntry *active;
 	})
 #endif /* !COVERAGE */
 
+#ifdef COVERAGE
+#define ASSERT_OPEN_FDS(v)
+#else
+#define ASSERT_OPEN_FDS(v)                               \
+	({                                               \
+		u64 _b__ = get_open_fds();               \
+		if (_b__ != (v)) {                       \
+			pwrite(2, "expected=", 9, 0);    \
+			write_num(2, v);                 \
+			pwrite(2, ",actual=", 8, 0);     \
+			write_num(2, _b__);              \
+		}                                        \
+		ASSERT_EQ(_b__, (v), "ASSERT_OPEN_FDS"); \
+	})
+
+#endif /* !COVERAGE */
 #endif /* _TEST_BASE_H */

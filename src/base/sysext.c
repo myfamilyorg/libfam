@@ -33,6 +33,7 @@
 #include <libfam/sysext.h>
 #include <libfam/utils.h>
 
+u64 open_fds = 0;
 IoUring *__global_iou__ = NULL;
 
 STATIC i32 global_iou_init(void) {
@@ -88,6 +89,10 @@ i32 open(const u8 *path, i32 flags, u32 mode) {
 	if (res < 0) return -1;
 	if (iouring_submit(__global_iou__, 1) < 0) return -1;
 	res = iouring_wait(__global_iou__, &id);
+#if TEST == 1
+	if (res >= 0) __aadd64(&open_fds, 1);
+#endif /* TEST */
+
 	return res;
 }
 
@@ -100,6 +105,10 @@ PUBLIC i32 close(i32 fd) {
 	if (res < 0) return -1;
 	if (iouring_submit(__global_iou__, 1) < 0) return -1;
 	res = iouring_wait(__global_iou__, &id);
+#if TEST == 1
+	if (res >= 0) __asub64(&open_fds, 1);
+#endif /* TEST */
+
 	return res;
 }
 

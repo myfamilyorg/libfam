@@ -50,6 +50,8 @@ extern i64 _debug_alloc_count;
 
 u64 get_heap_bytes(void);
 void heap_bytes_reset(void);
+u64 get_open_fds(void);
+void open_fds_reset(void);
 #endif /* TEST */
 
 #endif /* _DEBUG_H */
