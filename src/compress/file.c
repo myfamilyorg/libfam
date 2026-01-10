@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 
+#include <cpuid.h>
 #include <libfam/atomic.h>
 #include <libfam/compress.h>
 #include <libfam/env.h>
@@ -172,6 +173,27 @@ STATIC i32 compress_setup_offsets(DecompressState *state, u64 st_size) {
 	return 0;
 }
 
+STATIC u32 get_physical_cores_cpuid(void) {
+	u32 eax = 0, ebx, ecx, edx, logical = 0, threads_per_core = 1;
+	__cpuid(0x80000000, eax, ebx, ecx, edx);
+	if (eax >= 0x80000008) {
+		__cpuid(0x80000008, eax, ebx, ecx, edx);
+		logical = ((ecx & 0xFF) + 1);
+	}
+
+	if (logical <= 1) {
+		__cpuid(1, eax, ebx, ecx, edx);
+		logical = (ebx >> 16) & 0xFF;
+	}
+
+	if (logical <= 0) return 1;
+	__cpuid(1, eax, ebx, ecx, edx);
+	if (edx & (1U << 28)) threads_per_core = 2;
+	__cpuid(0x80000001, eax, ebx, ecx, edx);
+	if ((ecx & (1U << 1)) && (edx & (1U << 28))) threads_per_core = 2;
+	return logical / threads_per_core;
+}
+
 PUBLIC i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 	i32 ret = 0;
 	CompressState *state = NULL;
@@ -190,7 +212,7 @@ PUBLIC i32 compress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 
 	state->chunks = ((st.st_size - in_offset) + MAX_COMPRESS_LEN - 1) /
 			MAX_COMPRESS_LEN;
-	state->procs = min(MAX_PROCS, state->chunks);
+	state->procs = min(get_physical_cores_cpuid(), state->chunks);
 	state->infd = infd;
 	state->in_offset = in_offset;
 	state->outfd = outfd;
@@ -241,8 +263,9 @@ PUBLIC i32 decompress_file(i32 infd, u64 in_offset, i32 outfd, u64 out_offset) {
 		goto cleanup;
 	}
 
-	state->procs = min(MAX_PROCS - 3, (st.st_size + (MAX_COMPRESS_LEN - 1) /
-							    MAX_COMPRESS_LEN));
+	state->procs =
+	    min(get_physical_cores_cpuid(),
+		(st.st_size + (MAX_COMPRESS_LEN - 1) / MAX_COMPRESS_LEN));
 	state->infd = infd;
 	state->in_offset = in_offset;
 	state->in_len = st.st_size;
