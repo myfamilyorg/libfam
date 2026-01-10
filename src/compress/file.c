@@ -103,6 +103,7 @@ STATIC void compress_run_proc(u32 id, CompressState *state) {
 		u64 expected;
 		do {
 			expected = chunk;
+			if (__aload32(&state->err)) return;
 		} while (!__cas64(&state->next_write, &expected, U64_MAX));
 
 		if (pwrite(state->outfd, buffers[1], len + sizeof(u32),
@@ -184,6 +185,7 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 		u64 expected;
 		do {
 			expected = chunk;
+			if (__aload32(&state->err)) return;
 		} while (!__cas64(&state->next_write, &expected, U64_MAX));
 
 		if (pwrite(state->outfd, buffers[1], res,
