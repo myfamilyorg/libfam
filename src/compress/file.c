@@ -177,24 +177,19 @@ STATIC i32 compress_setup_offsets(DecompressState *state, u64 st_size) {
 
 STATIC u32 get_physical_cores_cpuid(void) {
 #ifdef __x86_64__
-	u32 eax = 0, ebx, ecx, edx, logical = 0, threads_per_core = 1;
-	__cpuid(0x80000000, eax, ebx, ecx, edx);
-	if (eax >= 0x80000008) {
-		__cpuid(0x80000008, eax, ebx, ecx, edx);
-		logical = ((ecx & 0xFF) + 1);
-	}
+	u32 eax = 0, ebx, ecx, edx, logical = 0, threads_per_core = 1, target;
+	target = eax >= 0x80000008 ? 0x80000008 : 1;
+	__cpuid(target, eax, ebx, ecx, edx);
 
-	if (logical <= 1) {
-		__cpuid(1, eax, ebx, ecx, edx);
-		logical = (ebx >> 16) & 0xFF;
-	}
+	if (target == 0x80000008) logical = ((ecx & 0xFF) + 1);
+	if (logical <= 1) logical = (ebx >> 16) & 0xFF;
 
 	if (logical <= 0) return 1;
 	__cpuid(1, eax, ebx, ecx, edx);
 	if (edx & (1U << 28)) threads_per_core = 2;
 	__cpuid(0x80000001, eax, ebx, ecx, edx);
 	if ((ecx & (1U << 1)) && (edx & (1U << 28))) threads_per_core = 2;
-	return logical / threads_per_core;
+	return logical < threads_per_core ? 1 : logical / threads_per_core;
 #else
 	return 2;
 #endif /* !__x86_64__ */
