@@ -115,6 +115,7 @@ STATIC void decompress_run_proc(u32 id, DecompressState *state) {
 		i32 res = pread(state->infd, buffers[0], rlen,
 				state->chunk_offsets[chunk]);
 		if (res < 0) {
+			println("pread err");
 			__astore32(&state->err, errno == 0 ? EIO : errno);
 			return;
 		}
