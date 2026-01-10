@@ -106,6 +106,7 @@ ARCH=$(uname -m);
 case "${ARCH}" in
     x86_64)
         MARCH="haswell"
+	mkdir -p ${BINDIR}
 	${CC} etc/mvaes.c -o ${BINDIR}/mvaes
 	RES=`${BINDIR}/mvaes`;
 	if [ "${RES}" = "1" ]; then
