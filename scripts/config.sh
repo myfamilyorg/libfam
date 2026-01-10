@@ -106,7 +106,13 @@ ARCH=$(uname -m);
 case "${ARCH}" in
     x86_64)
         MARCH="haswell"
-        MARCH_EXTRA="-mvaes"
+	${CC} etc/mvaes.c -o ${BINDIR}/mvaes
+	RES=`${BINDIR}/mvaes`;
+	if [ "${RES}" = "1" ]; then
+            MARCH_EXTRA="-maes"
+	else
+            MARCH_EXTRA="-mvaes"
+	fi
         ;;
     aarch64)
         MARCH="armv8-a+crypto"
